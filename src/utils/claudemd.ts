@@ -25,7 +25,7 @@
  * - Non-existent files are silently ignored
  */
 
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
 import { Lexer } from 'marked'

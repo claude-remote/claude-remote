@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle';
+import { feature } from 'src/utils/feature.js';
 
 // Bugfix for corepack auto-pinning, which adds yarnpkg to peoples' package.jsons
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -32,6 +32,16 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
  */
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  const {
+    resolveLocalHubCommand,
+    runLocalHubCommand
+  } = await import('./localHubCli.js');
+  const localHubCommand = resolveLocalHubCommand(args);
+  if (localHubCommand) {
+    await runLocalHubCommand(localHubCommand);
+    return;
+  }
 
   // Fast-path for --version/-v: zero module loading needed
   if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {

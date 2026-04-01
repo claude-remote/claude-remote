@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import { z } from 'zod/v4'
 import {
   getAllowedChannels,
