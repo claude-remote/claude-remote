@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   ConfigOptions,
   ContextUsage,
   CostSummary,
+  ExportResult,
   McpServerInfo,
   Message,
   PermissionRequest,
@@ -20,7 +21,7 @@ import { useChatStore } from '@/web/stores/chatStore';
 import { useSessionStore } from '@/web/stores/sessionStore';
 import { useWebSocket } from '@/web/hooks/useWebSocket';
 
-import { BranchMenu } from '@/web/components/BranchMenu';
+import { BranchMenu, useBranchMenu } from '@/web/components/BranchMenu';
 import { ChatInput } from '@/web/components/ChatInput';
 import { CompactPrompt } from '@/web/components/CompactPrompt';
 import { ContextIndicator } from '@/web/components/ContextIndicator';
@@ -53,6 +54,21 @@ export function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Header menu state
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+
+  // Export dialog state
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Clear confirmation state
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+
+  // Branch menu
+  const branchMenu = useBranchMenu();
 
   const connectionStatus: ConnectionStatus = connected ? 'connected' : 'disconnected';
 
@@ -102,6 +118,18 @@ export function Chat() {
     [activeTasks],
   );
 
+  // Close header menu when clicking outside
+  useEffect(() => {
+    if (!headerMenuOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) {
+        setHeaderMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [headerMenuOpen]);
+
   // Process incoming WebSocket messages
   useEffect(() => {
     if (!lastMessage) return;
@@ -113,6 +141,15 @@ export function Chat() {
       setMessages(msg.snapshot.recentMessages);
       setHasMore(msg.snapshot.recentMessages.length >= 50);
       return;
+    }
+
+    if (msg.type === 'reply') {
+      const reply = msg as { type: 'reply'; cmdId: string; data: unknown };
+      // Handle export reply
+      if (reply.cmdId.startsWith('export-') && reply.data) {
+        setExportResult(reply.data as ExportResult);
+        setExportLoading(false);
+      }
     }
 
     if (msg.type === 'event') {
@@ -142,6 +179,14 @@ export function Chat() {
           s.id === updatedServer.id ? updatedServer : s,
         );
         setSnapshot({ ...activeSnapshot, mcpServers: updatedServers });
+      }
+
+      if (event.type === 'hub:chat:cleared') {
+        setMessages([]);
+      }
+
+      if (event.type === 'hub:chat:compacted') {
+        // Session was compacted; snapshot will follow
       }
     }
   }, [lastMessage, messages, setMessages, setSnapshot]);
@@ -186,6 +231,7 @@ export function Chat() {
       cmdId: `compact-${Date.now()}`,
       cmd: 'chat:compact',
     });
+    setHeaderMenuOpen(false);
   }, [sendCommand]);
 
   const handleConfigChange = useCallback(
@@ -194,6 +240,50 @@ export function Chat() {
         cmdId: `config-${Date.now()}`,
         cmd: 'config:set',
         patch,
+      });
+    },
+    [sendCommand],
+  );
+
+  const handleExport = useCallback(
+    (format: 'markdown' | 'json') => {
+      setExportLoading(true);
+      sendCommand({
+        cmdId: `export-${Date.now()}`,
+        cmd: 'chat:export',
+        format,
+      });
+    },
+    [sendCommand],
+  );
+
+  const handleExportOpen = useCallback(() => {
+    setExportResult(null);
+    setExportLoading(false);
+    setExportOpen(true);
+    setHeaderMenuOpen(false);
+  }, []);
+
+  const handleClear = useCallback(() => {
+    sendCommand({
+      cmdId: `clear-${Date.now()}`,
+      cmd: 'chat:clear',
+    });
+    setClearConfirmOpen(false);
+    setHeaderMenuOpen(false);
+  }, [sendCommand]);
+
+  const handleClearPrompt = useCallback(() => {
+    setClearConfirmOpen(true);
+    setHeaderMenuOpen(false);
+  }, []);
+
+  const handleBranch = useCallback(
+    (messageId: string) => {
+      sendCommand({
+        cmdId: `branch-${Date.now()}`,
+        cmd: 'chat:branch',
+        messageId,
       });
     },
     [sendCommand],
@@ -221,6 +311,43 @@ export function Chat() {
           <h1 className="truncate text-lg font-semibold text-gray-100">{session.name}</h1>
           <div className="flex items-center gap-2">
             <NotificationCenter />
+            {/* Header menu button */}
+            <div className="relative" ref={headerMenuRef}>
+              <button
+                type="button"
+                onClick={() => setHeaderMenuOpen((prev) => !prev)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                title="Chat options"
+              >
+                &#8943;
+              </button>
+              {headerMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+                  <button
+                    type="button"
+                    onClick={handleExportOpen}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+                  >
+                    Export
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCompact}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+                  >
+                    Compact
+                  </button>
+                  <div className="mx-2 border-t border-gray-800" />
+                  <button
+                    type="button"
+                    onClick={handleClearPrompt}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-800"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
             <span
               className={`h-2 w-2 rounded-full ${
                 connectionStatus === 'connected'
@@ -272,12 +399,64 @@ export function Chat() {
         isStreaming={isStreaming}
         onLoadMore={handleLoadMore}
         hasMore={hasMore}
+        onMessageContextMenu={branchMenu.handleContextMenu}
+        onMessageTouchStart={branchMenu.handleTouchStart}
+        onMessageTouchEnd={branchMenu.handleTouchEnd}
       />
+
+      {/* Branch context menu */}
+      {branchMenu.menuState && (
+        <BranchMenu
+          messageId={branchMenu.menuState.messageId}
+          message={branchMenu.menuState.message}
+          position={branchMenu.menuState.position}
+          onBranch={handleBranch}
+          onClose={branchMenu.closeMenu}
+        />
+      )}
+
+      {/* Export dialog */}
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        onExport={handleExport}
+        result={exportResult}
+        loading={exportLoading}
+      />
+
+      {/* Clear confirmation dialog */}
+      {clearConfirmOpen && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/60"
+          onClick={(e) => { if (e.target === e.currentTarget) setClearConfirmOpen(false); }}
+        >
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-gray-700 bg-gray-900 p-5 shadow-2xl">
+            <h3 className="text-base font-semibold text-gray-100">Clear conversation?</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              This will remove all messages from the current session. This action cannot be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setClearConfirmOpen(false)}
+                className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-200 hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating panels / dialogs */}
       <SkillPalette skills={skills} />
-      <BranchMenu session={session} />
-      <ExportDialog />
       <McpPanel servers={servers} sendCommand={sendCommand} />
       <SettingsDrawer
         open={settingsOpen}
