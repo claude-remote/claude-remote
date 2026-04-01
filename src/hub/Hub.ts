@@ -5,6 +5,7 @@ import {
   type ClientCommand,
   type HubClientInfo,
   type HubResponse,
+  type Session,
 } from './HubProtocol.js'
 import { LocalSocketServer } from './LocalSocketServer.js'
 import { SessionRegistry } from './SessionRegistry.js'
@@ -38,6 +39,10 @@ export class Hub {
       connectionCount: this.sockets.size,
       socketPath: this.options.socketPath,
     }
+  }
+
+  listSessions(): Session[] {
+    return this.registry.listSessions()
   }
 
   async stop(): Promise<void> {
