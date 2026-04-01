@@ -418,6 +418,20 @@ src/
 - Local baseline spec / 本地基线设计: [`docs/superpowers/specs/2026-04-01-local-hub-baseline-design.md`](./docs/superpowers/specs/2026-04-01-local-hub-baseline-design.md)
 - Local baseline plan / 本地基线计划: [`docs/superpowers/plans/2026-04-01-local-hub-baseline.md`](./docs/superpowers/plans/2026-04-01-local-hub-baseline.md)
 
+## Contribution Guardrails / 贡献约束
+
+1. 先阅读设计规格和任务拆分文档。
+2. 在对应 issue 下评论 `/claim`，确认任务已经分配给你。
+3. 选择一个 `Txx` 任务作为单独开发范围。
+4. 以任务号为单位提交 PR，避免跨任务大杂烩。
+5. stub 中的 `TODO(Txx)` 已标出对应实现入口，认领任务时优先从这些文件开始。
+
+The repository now enforces this flow in CI:
+
+- PR 必须链接到一个 issue
+- 该 issue 必须已经通过 `/claim` 被 PR 作者认领
+- 没有先 `/claim` 的 PR 会被 CI 直接拦下
+
 ## Design Screens / UI 设计稿
 
 Stitch project: [Claude Remote - Mobile Web UI](https://stitch.withgoogle.com/projects/9350772801597042)
