@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 
@@ -8,22 +8,123 @@ interface LoginProps {
 
 export function Login({ defaultPort }: LoginProps) {
   const [token, setToken] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // TODO(T12): implement bootstrap-token exchange, cookie auth, and replaceState cleanup.
+  // Bootstrap token auto-auth from URL query param
+  useEffect(() => {
+    const params = new URLSearchParams(globalThis.location?.search ?? '');
+    const bootstrapToken = params.get('token');
+    if (bootstrapToken) {
+      handleBootstrapAuth(bootstrapToken);
+    }
+  }, []);
+
+  async function handleBootstrapAuth(bootstrapToken: string) {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: bootstrapToken }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        // Clear sensitive token from URL before navigating
+        history.replaceState({}, '', '/sessions');
+        globalThis.location.href = '/sessions';
+      } else {
+        setError('Bootstrap token 无效或已过期');
+      }
+    } catch {
+      setError('网络错误');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token.trim()) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        globalThis.location.href = '/sessions';
+      } else if (res.status === 429) {
+        setError('请求过于频繁，请稍后再试');
+      } else {
+        setError('Token 无效');
+      }
+    } catch {
+      setError('网络错误，请检查连接');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <main className="flex min-h-screen flex-col justify-center gap-4 p-6">
-      <p className="text-sm text-stone-400">Claude Remote v{CLAUDE_REMOTE_VERSION}</p>
-      <h1 className="text-3xl font-semibold">登录 Hub</h1>
-      <p className="text-sm text-stone-300">默认端口 {defaultPort}</p>
-      <input
-        className="rounded border border-stone-700 bg-stone-900 px-3 py-2"
-        value={token}
-        onChange={(event) => setToken(event.target.value)}
-        placeholder="输入主 Token"
-      />
-      <button className="rounded bg-orange-500 px-4 py-2 font-medium text-black">
-        连接
-      </button>
+    <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 font-mono">
+      <div className="w-full max-w-md rounded-lg border border-gray-800 bg-gray-900 p-8">
+        <p className="mb-1 text-xs text-gray-500">
+          Claude Remote v{CLAUDE_REMOTE_VERSION}
+        </p>
+        <h1 className="mb-1 text-2xl font-semibold text-gray-100">登录 Hub</h1>
+        <p className="mb-6 text-sm text-gray-400">默认端口 {defaultPort}</p>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="password"
+            className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none transition focus:border-gray-500"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="输入 Hub Token"
+            disabled={loading}
+            autoFocus
+          />
+
+          <button
+            type="submit"
+            disabled={loading || !token.trim()}
+            className="flex items-center justify-center rounded bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? (
+              <svg
+                className="h-4 w-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            ) : (
+              '连接'
+            )}
+          </button>
+        </form>
+
+        {error && (
+          <p className="mt-4 text-center text-sm text-red-400">{error}</p>
+        )}
+      </div>
     </main>
   );
 }
