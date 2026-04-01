@@ -8,6 +8,7 @@ import {
   resolveLogsOptions,
   resolveServeOptions,
 } from '@/cli/commands';
+import { createTuiClient } from '@/cli/TuiClient';
 import { Hub } from '@/hub/Hub';
 import { createServerApp, startServer } from '@/server';
 import { DEFAULT_LOG_DIR, DEFAULT_PORT, DEFAULT_SOCKET_PATH } from '@/shared/constants';
@@ -108,15 +109,23 @@ async function handleStop(_parsed: ParsedArgs): Promise<void> {
   }
 }
 
-function handleAttach(parsed: ParsedArgs): void {
-  const sessionId = parsed.subcommand ?? parsed.positional[0];
-  if (sessionId) {
-    console.log(`Attaching to session ${sessionId}...`);
-  } else {
-    console.log('Attaching to default session...');
+async function handleAttach(parsed: ParsedArgs): Promise<void> {
+  const sessionId = parsed.subcommand ?? parsed.positional[0] ?? undefined;
+  const port =
+    typeof parsed.flags.port === 'string' ? Number.parseInt(parsed.flags.port, 10) : DEFAULT_PORT;
+  const hubUrl =
+    typeof parsed.flags.url === 'string' ? parsed.flags.url : undefined;
+
+  const client = createTuiClient({ port, hubUrl, sessionId });
+
+  try {
+    await client.connect();
+    await client.startRepl();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(message);
+    process.exit(1);
   }
-  // TODO: connect to hub via WebSocket and launch TUI
-  console.log('TUI attach is not yet implemented. Use the web interface instead.');
 }
 
 async function handleTokenRotate(parsed: ParsedArgs): Promise<void> {
@@ -211,7 +220,7 @@ async function main(): Promise<void> {
       await handleStop(parsed);
       break;
     case 'attach':
-      handleAttach(parsed);
+      await handleAttach(parsed);
       break;
     case 'token':
       if (parsed.subcommand === 'rotate') {
