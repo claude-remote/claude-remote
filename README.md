@@ -124,6 +124,7 @@ That means the current goal is not "ship the full product", but "make the archit
 
 Current contribution rules:
 
+- Full workflow: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
 - Claim work by commenting `/claim` on an issue
 - Work one issue per branch and one issue per PR
 - Use branch names like `issue-12-local-hub-client`
