@@ -11,6 +11,7 @@ import type {
   SessionMeta,
   SkillInfo,
   StreamDelta,
+  WriterStatus,
 } from '@/shared/types';
 import type { HubEvent, HubResponse } from '@/shared/protocol';
 
@@ -87,6 +88,7 @@ export function Chat() {
     sessionDuration: 0,
   };
   const permissions: PermissionRequest[] = activeSnapshot?.pendingPermissions ?? [];
+  const writerStatus: WriterStatus = activeSnapshot?.myWriterStatus ?? 'standby';
   const skills: SkillInfo[] = activeSnapshot?.availableSkills ?? [];
   const servers: McpServerInfo[] = activeSnapshot?.mcpServers ?? [];
 
@@ -144,6 +146,22 @@ export function Chat() {
     setIsStreaming(false);
   }, [sendCommand]);
 
+  const handlePermissionRespond = useCallback(
+    (requestId: string, approved: boolean) => {
+      sendCommand({
+        cmdId: `perm-${Date.now()}`,
+        cmd: 'control:respond',
+        requestId,
+        response: {
+          type: 'control_response',
+          requestId,
+          response: { approved },
+        },
+      });
+    },
+    [sendCommand],
+  );
+
   const handleLoadMore = useCallback(() => {
     // Pagination: request older messages
     // This would send a history command; for now it's a no-op placeholder
@@ -179,7 +197,7 @@ export function Chat() {
       {/* Notifications and banners */}
       <div className="shrink-0 space-y-1 px-3 pt-1">
         <NotificationCenter notifications={[]} />
-        <PermissionBanner requests={permissions} />
+        <PermissionBanner requests={permissions} writerStatus={writerStatus} onRespond={handlePermissionRespond} />
         <CompactPrompt usage={usage} />
       </div>
 
