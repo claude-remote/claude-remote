@@ -4,20 +4,61 @@ import type { Message, PermissionRequest } from '@/shared/types';
 
 interface ChatStoreState {
   messages: Message[];
+  streaming: boolean;
   pendingPermissions: PermissionRequest[];
-  setMessages(messages: Message[]): void;
-  setPendingPermissions(requests: PermissionRequest[]): void;
+
+  addMessage: (message: Message) => void;
+  setMessages: (messages: Message[]) => void;
+  setStreaming: (streaming: boolean) => void;
+  addPermission: (request: PermissionRequest) => void;
+  resolvePermission: (id: string) => void;
+  setPendingPermissions: (requests: PermissionRequest[]) => void;
+  clearMessages: () => void;
 }
 
 export const useChatStore = create<ChatStoreState>((set) => ({
   messages: [],
+  streaming: false,
   pendingPermissions: [],
-  setMessages(messages) {
-    // TODO(T14,T15): support streaming append/replace semantics and branch resets.
+
+  addMessage(message: Message) {
+    set((state) => {
+      // Replace message if it already exists (streaming update), otherwise append
+      const idx = state.messages.findIndex((m) => m.id === message.id);
+      if (idx >= 0) {
+        const updated = [...state.messages];
+        updated[idx] = message;
+        return { messages: updated };
+      }
+      return { messages: [...state.messages, message] };
+    });
+  },
+
+  setMessages(messages: Message[]) {
     set({ messages });
   },
-  setPendingPermissions(requests) {
-    // TODO(T16): coordinate active-writer approval state and downgrade broadcasts.
+
+  setStreaming(streaming: boolean) {
+    set({ streaming });
+  },
+
+  addPermission(request: PermissionRequest) {
+    set((state) => ({
+      pendingPermissions: [...state.pendingPermissions, request],
+    }));
+  },
+
+  resolvePermission(id: string) {
+    set((state) => ({
+      pendingPermissions: state.pendingPermissions.filter((p) => p.id !== id),
+    }));
+  },
+
+  setPendingPermissions(requests: PermissionRequest[]) {
     set({ pendingPermissions: requests });
+  },
+
+  clearMessages() {
+    set({ messages: [], streaming: false, pendingPermissions: [] });
   },
 }));

@@ -1,12 +1,13 @@
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
+import './index.css';
 
-import { App } from '@/web/App';
-
-// TODO(T11): mount the app with final global providers, theme tokens, and SW bootstrapping.
-const rootElement = document.getElementById('root');
-
-if (!rootElement) {
-  throw new Error('Missing #root container');
-}
-
-createRoot(rootElement).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>
+);
