@@ -1,177 +1,122 @@
 # Claude Remote
 
-> 将 Claude Code CLI 升级为可远程控制的 AI 开发服务，手机浏览器即可全功能操作。
+> Attach to the AI coding session running on your development machine, instead of opening a second-class remote chat box.
 
-<p align="center">
-  <img src="docs/superpowers/specs/designs/chat.png" alt="Chat 主界面" width="300">
-</p>
+## Why Claude Remote
 
-## 核心特性
+Claude Remote is aimed at a different problem than a generic web chat wrapper.
 
-- **手机远程控制** — 手机浏览器全功能操作，与终端体验对齐
-- **Session Hub 架构** — 常驻后台服务，多 session 管理，持久化存储
-- **多端实时同步** — TUI 和 Web 共享 session，消息/工具/权限实时同步
-- **工具全功能** — 47 个内置工具、103+ 斜杠命令、20 个 Skills，Web 端完整支持
-- **PWA 原生体验** — 添加到主屏幕即像原生 App，支持推送通知
-- **安全远程访问** — Cloudflare Tunnel + Token 双层认证
-- **工作目录管理** — 收藏目录 + 文件浏览器，手机上自由切换项目
+- The session should live on the development machine, not in a browser tab.
+- The real working directory, shell, git state, tools, MCP config, and local credentials should stay where the code is.
+- A phone, terminal, and future desktop client should be able to attach to the same session.
+- Disconnecting the client should not kill the development session.
 
-## UI 设计稿
+That is what this repo means by “real remote”.
 
-Claude 风格的温暖赭石色调，移动优先设计：
+For domestic developers using overseas development machines or overseas network egress, this is also a practical setup: the model-facing environment stays on the remote machine, while your phone or local terminal becomes a thin client with near-local workflow continuity.
 
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/login.png" alt="Login" width="250"><br><b>Login 登录页</b></td>
-    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/sessions.png" alt="Sessions" width="250"><br><b>Sessions 列表</b></td>
-    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/chat.png" alt="Chat" width="250"><br><b>Chat 主界面</b></td>
-  </tr>
-</table>
+## Current Phase
 
-## 架构
+This repo is currently in **Phase 1: Local Hub Baseline + Contributor Onramp**.
 
-```mermaid
-graph TD
-    subgraph Clients
-        A["📱 手机浏览器<br/>(Web SPA)"]
-        B["💻 终端 TUI<br/>(Ink)"]
-        C["💻 另一个终端<br/>(Ink)"]
-    end
+What exists now:
 
-    subgraph Hub["Session Hub (常驻进程)"]
-        direction TB
-        SM["Session Manager<br/>多 Session 管理"]
-        TE["Tool Engine<br/>47 个内置工具"]
-        API["Claude API Client"]
-        EB["Event Bus<br/>实时状态广播"]
-        DB["SQLite (WAL)<br/>持久化存储"]
-        SM --- TE
-        SM --- API
-        SM --- EB
-        SM --- DB
-    end
+- `claude-remote serve`
+- `claude-remote status`
+- `claude-remote attach`
+- Unix socket local hub transport
+- In-memory session registry
+- Minimal socket protocol and local hub client
 
-    A -- "WebSocket" --> Hub
-    B -- "WebSocket / Unix Socket" --> Hub
-    C -- "WebSocket" --> Hub
+What is intentionally not done yet:
 
-    subgraph Network
-        CF["☁️ Cloudflare Tunnel"]
-    end
+- Hub-backed chat execution
+- Web frontend implementation
+- SQLite persistence
+- Tunnel/auth/web session management
+- Full multi-client conflict handling
 
-    Hub -- "HTTPS" --> CF
-    CF -- "公网访问" --> A
+That means the current goal is not “ship the full product”, but “make the architecture and contribution path stable enough that multiple developers can start implementing issues in parallel”.
 
-    style Hub fill:#FDF2EC,stroke:#D4845F,stroke-width:2px
-    style A fill:#D4845F,color:#fff,stroke:#B8704F
-    style B fill:#F5F0EB,stroke:#8B7355
-    style C fill:#F5F0EB,stroke:#8B7355
-    style CF fill:#F0F7FF,stroke:#4A90D9
-```
+## Why Now
 
-**关键设计：**
-- **Hub 是引擎**，客户端（TUI / Web）是纯视图层
-- 每个 Session 独立 AppState + cwd 隔离（`AsyncLocalStorage`）
-- WebSocket 事件驱动，SQLite WAL 模式持久化
-- CLI 退出不影响 Hub，手机可继续操作
+This is the point where other developers can start entering the project **once this branch lands with the contributor docs below**.
 
-## 技术栈
+The minimum bar for contributor onboarding is:
 
-| 层级 | 技术 |
-|------|------|
-| 运行时 | [Bun](https://bun.sh) |
-| 语言 | TypeScript |
-| 服务端 | Hono.js（HTTP + WebSocket） |
-| 前端 | React 19 + Tailwind CSS + Zustand |
-| TUI | React + Ink |
-| 数据库 | SQLite（WAL 模式） |
-| 隧道 | Cloudflare Tunnel |
+1. A stable local `serve/status/attach` baseline
+2. Clear issue claiming and PR rules
+3. A visible project scope and current milestone
+4. Product/design context in-repo, not trapped in chat history
 
-## 快速开始
+The code baseline is already in place on the active branch. The remaining onboarding work is the documentation in this README and [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-### 1. 安装依赖
+## Quick Start
 
-需要 [Bun](https://bun.sh) >= 1.1 和 Node.js >= 18。
+Requirements:
+
+- Bun `>= 1.2`
+- Node.js `>= 18`
+
+Install dependencies:
 
 ```bash
-npm install
+bun install
 ```
 
-### 2. 配置环境变量
+Run the current local hub baseline from the repo:
 
 ```bash
-cp .env.example .env
+./bin/claude-remote status
+./bin/claude-remote serve
+./bin/claude-remote attach
 ```
 
-编辑 `.env`：
+Current expected behavior:
 
-```env
-# API 认证（二选一）
-ANTHROPIC_API_KEY=sk-xxx
-ANTHROPIC_AUTH_TOKEN=sk-xxx
+- `status` prints local hub state
+- `serve` starts the local hub over Unix socket
+- `attach` connects to the hub and attaches to a local session
 
-# API 端点（可选）
-ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
+## Contributor Workflow
 
-# 模型配置
-ANTHROPIC_MODEL=MiniMax-M2.7-highspeed
-```
+The contributor rules live in [`CONTRIBUTING.md`](./CONTRIBUTING.md). The short version:
 
-### 3. 启动
+- Claim work by commenting `/claim` on an issue
+- Work one issue per branch and one issue per PR
+- Use branch names like `issue-12-local-hub-client`
+- Open draft PRs first
+- Move issue/project status through the Project Board columns as work progresses
 
-```bash
-# 启动 Hub 服务（后台常驻）
-claude-remote serve --tunnel
+## Specs And Plans
 
-# 终端连接 Hub
-claude-remote attach
+- Main product spec: [`docs/superpowers/specs/2026-04-01-claude-remote-design.md`](./docs/superpowers/specs/2026-04-01-claude-remote-design.md)
+- Local baseline spec: [`docs/superpowers/specs/2026-04-01-local-hub-baseline-design.md`](./docs/superpowers/specs/2026-04-01-local-hub-baseline-design.md)
+- Local baseline plan: [`docs/superpowers/plans/2026-04-01-local-hub-baseline.md`](./docs/superpowers/plans/2026-04-01-local-hub-baseline.md)
 
-# 传统 TUI 模式（无 Hub）
-claude-remote
+## Design Screens
 
-# 无头模式
-claude-remote -p "your prompt here"
-```
+Stitch project:
+[Claude Remote - Mobile Web UI](https://stitch.withgoogle.com/projects/9350772801597042)
 
-启动后终端会打印公网 URL + QR Code，手机扫码即可访问。
+Current mobile design screens from Stitch are checked into the repo under [`docs/designs/claude-remote/`](./docs/designs/claude-remote).
 
-## 项目结构
+| Login | Sessions List | Sessions List |
+| --- | --- | --- |
+| ![Login](./docs/designs/claude-remote/login.png) | ![Sessions tall](./docs/designs/claude-remote/sessions-list-tall.png) | ![Sessions overview](./docs/designs/claude-remote/sessions-list-overview.png) |
 
-```
-src/
-├── entrypoints/
-│   ├── cli.tsx              # CLI 主入口
-│   └── serve.ts             # Hub 服务入口（新增）
-├── hub/                     # Session Hub 核心（新增）
-│   ├── Hub.ts               # Hub 主类
-│   ├── SessionManager.ts    # Session CRUD + 状态管理
-│   ├── EventBus.ts          # 事件广播系统
-│   ├── ToolEngine.ts        # Tool 执行引擎
-│   └── store/SqliteStore.ts # SQLite 持久化
-├── server/                  # HTTP/WS 服务（新增）
-│   ├── routes/              # REST API
-│   ├── ws/                  # WebSocket 协议
-│   └── auth/                # Token 认证
-├── web/                     # Web 前端 SPA（新增）
-│   ├── pages/               # Login, Sessions, Chat, Files
-│   └── components/          # UI 组件
-├── shared/                  # 前后端共享类型（新增）
-├── tunnel/                  # Cloudflare Tunnel 管理（新增）
-├── screens/REPL.tsx         # TUI 交互界面
-├── tools/                   # 47 个内置工具
-├── commands/                # 103+ 斜杠命令
-├── skills/                  # 20 个 Skills
-└── services/                # API, MCP, OAuth 等服务层
-```
+| Sessions List | Main Chat | Main Chat |
+| --- | --- | --- |
+| ![Sessions compact](./docs/designs/claude-remote/sessions-list-compact.png) | ![Main chat long](./docs/designs/claude-remote/main-chat-long.png) | ![Main chat](./docs/designs/claude-remote/main-chat.png) |
 
-## 设计文档
+| File Browser | File Browser | File Preview |
+| --- | --- | --- |
+| ![File browser](./docs/designs/claude-remote/file-browser.png) | ![File browser variant](./docs/designs/claude-remote/file-browser-variant.png) | ![File preview](./docs/designs/claude-remote/file-preview.png) |
 
-详细设计规格：[`docs/superpowers/specs/2026-04-01-claude-remote-design.md`](docs/superpowers/specs/2026-04-01-claude-remote-design.md)
+## Repo Context
 
-## 基础项目
-
-基于 Claude Code 泄露源码修复的本地可运行版本。原始修复详见 [claude-code-haha](https://github.com/NanmiCoder/claude-code-haha)。
+This repository started from the locally-runnable repair work on the leaked Claude Code source tree and is evolving toward a dedicated `claude-remote` product and workflow.
 
 ## Disclaimer
 
-本仓库基于 2026-03-31 从 Anthropic npm registry 泄露的 Claude Code 源码。所有原始源码版权归 [Anthropic](https://www.anthropic.com) 所有。仅供学习和研究用途。
+This repository is based on the Claude Code source leak that surfaced on 2026-03-31. Original source copyright belongs to Anthropic. This repo is for research and learning purposes.
