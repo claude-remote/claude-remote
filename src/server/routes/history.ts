@@ -1,17 +1,23 @@
-import { Hono } from 'hono';
+import type { Hono } from 'hono';
 
 import type { HistorySearchResult } from '@/shared/types';
-import { Hub } from '@/hub/Hub';
+import type { Hub } from '@/hub/Hub';
 
 export function registerHistoryRoutes(app: Hono, _hub: Hub): Hono {
-  // TODO(T06,T24): search session or global history with highlighted snippets.
+  // GET /api/history/search?q=xxx&scope=session|all&sessionId=xxx&limit=20
   app.get('/api/history/search', (context) => {
+    const query = context.req.query('q') ?? context.req.query('query') ?? '';
+    const scope = context.req.query('scope') ?? 'session';
+    const sessionId = context.req.query('sessionId');
+    const limit = parseInt(context.req.query('limit') ?? '20', 10);
+
+    if (!query.trim()) {
+      return context.json({ error: 'Search query required (q parameter)' }, 400);
+    }
+
+    // TODO(T24): wire to hub history search with SQLite FTS
     const results: HistorySearchResult[] = [];
-    return context.json({
-      query: context.req.query('query') ?? '',
-      scope: context.req.query('scope') ?? 'session',
-      results,
-    });
+    return context.json({ query, scope, sessionId: sessionId ?? null, limit, results });
   });
 
   return app;
