@@ -2,6 +2,24 @@
 
 > Attach to the AI coding session running on your development machine, instead of opening a second-class remote chat box.
 
+## New Contributor Start Here
+
+If you want to start contributing, do this first:
+
+1. Read [`CONTRIBUTING.md`](./CONTRIBUTING.md)
+2. Pick an open issue and comment `/claim`
+3. Create a branch named `issue-<number>-<slug>`
+4. Open a draft PR when the issue-sized slice is ready
+
+Current baseline commands:
+
+```bash
+bun install
+./bin/claude-remote status
+./bin/claude-remote serve
+./bin/claude-remote attach
+```
+
 ## Why Claude Remote
 
 Claude Remote is aimed at a different problem than a generic web chat wrapper.
