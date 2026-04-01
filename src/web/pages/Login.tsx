@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 
-import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
+import { CLAUDE_REMOTE_VERSION, DEFAULT_PORT } from '@/shared/constants';
 
-interface LoginProps {
-  defaultPort: number;
-}
-
-export function Login({ defaultPort }: LoginProps) {
+export function Login() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,10 +31,10 @@ export function Login({ defaultPort }: LoginProps) {
         history.replaceState({}, '', '/sessions');
         globalThis.location.href = '/sessions';
       } else {
-        setError('Bootstrap token 无效或已过期');
+        setError('Bootstrap token is invalid or expired');
       }
     } catch {
-      setError('网络错误');
+      setError('Network error');
     } finally {
       setLoading(false);
     }
@@ -59,12 +55,12 @@ export function Login({ defaultPort }: LoginProps) {
       if (res.ok) {
         globalThis.location.href = '/sessions';
       } else if (res.status === 429) {
-        setError('请求过于频繁，请稍后再试');
+        setError('Too many requests, please try again later');
       } else {
-        setError('Token 无效');
+        setError('Invalid token');
       }
     } catch {
-      setError('网络错误，请检查连接');
+      setError('Network error, please check your connection');
     } finally {
       setLoading(false);
     }
@@ -76,8 +72,8 @@ export function Login({ defaultPort }: LoginProps) {
         <p className="mb-1 text-xs text-gray-500">
           Claude Remote v{CLAUDE_REMOTE_VERSION}
         </p>
-        <h1 className="mb-1 text-2xl font-semibold text-gray-100">登录 Hub</h1>
-        <p className="mb-6 text-sm text-gray-400">默认端口 {defaultPort}</p>
+        <h1 className="mb-1 text-2xl font-semibold text-gray-100">Login to Hub</h1>
+        <p className="mb-6 text-sm text-gray-400">Default port {DEFAULT_PORT}</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
@@ -85,7 +81,7 @@ export function Login({ defaultPort }: LoginProps) {
             className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none transition focus:border-gray-500"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            placeholder="输入 Hub Token"
+            placeholder="Enter Hub Token"
             disabled={loading}
             autoFocus
           />
@@ -116,7 +112,7 @@ export function Login({ defaultPort }: LoginProps) {
                 />
               </svg>
             ) : (
-              '连接'
+              'Connect'
             )}
           </button>
         </form>
