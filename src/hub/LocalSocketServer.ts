@@ -1,18 +1,25 @@
 import { existsSync } from 'fs'
 import { rm } from 'fs/promises'
-import net, { type Server } from 'net'
+import net, { type Server, type Socket } from 'net'
+
+type ConnectionHandler = (socket: Socket) => void
 
 export class LocalSocketServer {
   private server: Server | null = null
 
-  constructor(private readonly socketPath: string) {}
+  constructor(
+    private readonly socketPath: string,
+    private readonly onConnection?: ConnectionHandler,
+  ) {}
 
   async start(): Promise<void> {
     if (existsSync(this.socketPath)) {
       await rm(this.socketPath, { force: true })
     }
 
-    this.server = net.createServer()
+    this.server = net.createServer(socket => {
+      this.onConnection?.(socket)
+    })
 
     await new Promise<void>((resolve, reject) => {
       this.server!.once('error', reject)

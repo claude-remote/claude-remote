@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import type { Session } from './HubProtocol.js'
+import type { HubClientInfo, Session } from './HubProtocol.js'
 
 type CreateSessionInput = {
   cwd: string
@@ -29,5 +29,26 @@ export class SessionRegistry {
 
   listSessions(): Session[] {
     return [...this.sessions.values()]
+  }
+
+  getSession(sessionId: string): Session | undefined {
+    return this.sessions.get(sessionId)
+  }
+
+  attachClient(sessionId: string, client: HubClientInfo): Session | undefined {
+    const session = this.sessions.get(sessionId)
+    if (!session) {
+      return undefined
+    }
+
+    const attachedSession: Session = {
+      ...session,
+      status: 'active',
+      updatedAt: Date.now(),
+      clients: [...session.clients, client],
+    }
+
+    this.sessions.set(sessionId, attachedSession)
+    return attachedSession
   }
 }
