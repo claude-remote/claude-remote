@@ -15,6 +15,54 @@ That is what this repo means by “real remote”.
 
 For domestic developers using overseas development machines or overseas network egress, this is also a practical setup: the model-facing environment stays on the remote machine, while your phone or local terminal becomes a thin client with near-local workflow continuity.
 
+## Architecture Direction
+
+```mermaid
+graph TD
+    subgraph Clients["Clients"]
+        TUI["Terminal TUI"]
+        WEB["Mobile Web"]
+        DESKTOP["Desktop Client (Planned)"]
+    end
+
+    subgraph RemoteEnv["Developer Machine / Remote Dev Box"]
+        HUB["Claude Remote Hub"]
+        REPO["Real Repo + Shell + Git + Tools"]
+    end
+
+    subgraph Access["Access Layer"]
+        TUNNEL["Tunnel / Private Access"]
+    end
+
+    TUI --> HUB
+    WEB --> TUNNEL
+    DESKTOP --> TUNNEL
+    TUNNEL --> HUB
+    HUB --> REPO
+```
+
+The intended direction is:
+
+- The hub runs where the code and tools actually live
+- Mobile web and future desktop clients attach to the same underlying session
+- The desktop plan is to provide a more native, near-local experience without moving execution away from the remote development environment
+
+## Domestic Access Scenario
+
+Claude Remote is not a magic network bypass by itself, but **theoretically it can solve the “domestic device cannot directly use Claude” problem** in a practical way:
+
+- Run Claude Remote on an overseas development machine, overseas VPS, or any environment with stable Claude access
+- Keep model calls on that remote environment
+- Use your phone, browser, terminal, or future desktop client only as an attached control surface
+
+In that setup, the local device does not need to talk directly to Claude. The remote environment does.
+
+Practical boundary:
+
+- This depends on the remote environment actually being able to access Claude reliably
+- This repo does not claim to guarantee legal, policy, or network outcomes
+- The benefit comes from moving the AI execution environment, not from bypassing restrictions on the local device itself
+
 ## Current Phase
 
 This repo is currently in **Phase 1: Local Hub Baseline + Contributor Onramp**.
