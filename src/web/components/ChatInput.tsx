@@ -1,15 +1,57 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { SkillInfo } from '@/shared/types';
+import { SkillPalette } from './SkillPalette';
 
 interface ChatInputProps {
   onSend: (text: string) => void;
   onAbort: () => void;
   isStreaming: boolean;
   disabled: boolean;
+  skills?: SkillInfo[];
+  onSkillInvoke?: (skill: SkillInfo, args?: string) => void;
 }
 
-export function ChatInput({ onSend, onAbort, isStreaming, disabled }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  onAbort,
+  isStreaming,
+  disabled,
+  skills = [],
+  onSkillInvoke,
+}: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Skill palette state
+  const paletteVisible = useMemo(() => text.startsWith('/') && !text.includes(' '), [text]);
+  const paletteQuery = useMemo(() => (paletteVisible ? text.slice(1) : ''), [paletteVisible, text]);
+
+  const handleSkillSelect = useCallback(
+    (skill: SkillInfo) => {
+      if (skill.arguments && skill.arguments.length > 0) {
+        // Skill needs args — fill into input so user can type args
+        setText(`/${skill.name} `);
+        textareaRef.current?.focus();
+      } else if (onSkillInvoke) {
+        // No args needed — invoke directly
+        onSkillInvoke(skill);
+        setText('');
+      } else {
+        // Fallback: send as text
+        onSend(`/${skill.name}`);
+        setText('');
+      }
+    },
+    [onSend, onSkillInvoke],
+  );
+
+  const handlePaletteClose = useCallback(() => {
+    // Clear the slash to dismiss palette
+    if (text === '/') {
+      setText('');
+    }
+    textareaRef.current?.focus();
+  }, [text]);
 
   const autoResize = useCallback(() => {
     const el = textareaRef.current;
@@ -61,12 +103,21 @@ export function ChatInput({ onSend, onAbort, isStreaming, disabled }: ChatInputP
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // When palette is visible, let it handle navigation keys
+      if (paletteVisible && ['ArrowUp', 'ArrowDown', 'Tab', 'Escape'].includes(e.key)) {
+        // These are handled by SkillPalette's global keydown listener
+        return;
+      }
+      if (paletteVisible && e.key === 'Enter' && !e.shiftKey) {
+        // Let the palette handle Enter for selection
+        return;
+      }
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
     },
-    [handleSend],
+    [handleSend, paletteVisible],
   );
 
   return (
@@ -74,7 +125,14 @@ export function ChatInput({ onSend, onAbort, isStreaming, disabled }: ChatInputP
       id="chat-input-bar"
       className="fixed right-0 bottom-0 left-0 border-t border-gray-800 bg-gray-950 p-3"
     >
-      <div className="mx-auto flex max-w-3xl items-end gap-2">
+      <div className="relative mx-auto flex max-w-3xl items-end gap-2">
+        <SkillPalette
+          visible={paletteVisible}
+          query={paletteQuery}
+          skills={skills}
+          onSelect={handleSkillSelect}
+          onClose={handlePaletteClose}
+        />
         <textarea
           ref={textareaRef}
           value={text}
