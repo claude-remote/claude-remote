@@ -1,5 +1,6 @@
 import { basename } from 'path'
 import { cwd } from 'process'
+import { HUB_CHAT_NOT_IMPLEMENTED_NOTICE } from '../../hub/client/HubReplAdapter.js'
 import { HubClient } from '../../hub/client/HubClient.js'
 import { getHubSocketPath } from '../../hub/paths.js'
 
@@ -30,6 +31,7 @@ export async function attachHubHandler(): Promise<void> {
       `Attached to ${snapshot.session.name}`,
       `Session: ${snapshot.session.id}`,
       `CWD: ${snapshot.session.cwd}`,
+      HUB_CHAT_NOT_IMPLEMENTED_NOTICE,
     ].join('\n') + '\n',
   )
 
