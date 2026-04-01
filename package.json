@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "bun@1.2.9",
   "bin": {
-    "claude-remote": "./bin/claude-remote"
+    "claude-remote": "./bin/claude-remote",
+    "claude-remote-hub": "./src/entrypoints/serve.ts"
   },
   "scripts": {
     "claude-remote": "./bin/claude-remote",
