@@ -126,10 +126,10 @@ claude-remote serve --tunnel
 claude-remote attach
 
 # 传统 TUI 模式（无 Hub）
-./bin/claude-haha
+claude-remote
 
 # 无头模式
-./bin/claude-haha -p "your prompt here"
+claude-remote -p "your prompt here"
 ```
 
 启动后终端会打印公网 URL + QR Code，手机扫码即可访问。
