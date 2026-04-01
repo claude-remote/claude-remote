@@ -22,6 +22,8 @@ Read these first:
 
 ## Claiming Work
 
+Claiming work is mandatory. Do not open a PR for an issue you have not claimed.
+
 Use issue comments to claim work.
 
 Claim format:
@@ -35,6 +37,7 @@ Claim rules:
 - Do not start coding an issue that is already claimed by someone else
 - One contributor should own one issue at a time unless explicitly coordinating a larger slice
 - If you stop working on an issue, leave a comment so someone else can pick it up
+- Opening a PR without first commenting `/claim` is not allowed; CI will block the PR
 
 Recommended claim follow-up comment:
 
@@ -61,11 +64,13 @@ Examples:
 
 PR rules:
 
+- You must claim the linked issue before opening the PR
 - Open a **draft PR first**
 - Keep scope tight to the claimed issue
 - Link the issue in the PR description
 - Do not mix unrelated cleanup into the same PR
 - If you discover a separate problem, open or reference another issue
+- If the PR is not linked to a claimed issue owned by you, the PR check will fail
 
 ## Project Board Flow
 
