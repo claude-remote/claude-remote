@@ -1,11 +1,9 @@
 export type SessionStatus = 'active' | 'idle' | 'interrupted' | 'archived';
-export type ClientRole = 'writer' | 'standby';
-export type PermissionMode = 'ask' | 'approve' | 'bypass';
-export type ToolExecutionStatus = 'running' | 'completed' | 'failed' | 'interrupted' | 'crashed';
+export type ClientType = 'tui' | 'web';
+export type WriterStatus = 'active' | 'standby';
+export type SessionPermissionMode = 'ask' | 'approve' | 'bypass';
+export type EffortLevel = 'low' | 'medium' | 'high';
 
-/**
- * 消息流增量片段。
- */
 export interface StreamDelta {
   messageId: string;
   contentBlockIndex: number;
@@ -14,26 +12,17 @@ export interface StreamDelta {
   partialJson?: string;
 }
 
-/**
- * 工具调用块。
- */
 export interface ToolUseBlock {
   id: string;
   name: string;
   input: Record<string, unknown>;
 }
 
-/**
- * 纯文本内容块。
- */
 export interface TextContentBlock {
   type: 'text';
   text: string;
 }
 
-/**
- * 工具调用返回内容块。
- */
 export interface ToolResultContentBlock {
   type: 'tool_result';
   toolUseId: string;
@@ -41,9 +30,6 @@ export interface ToolResultContentBlock {
   isError?: boolean;
 }
 
-/**
- * 图片内容块。
- */
 export interface ImageContentBlock {
   type: 'image';
   source: {
@@ -59,157 +45,128 @@ export type MessageContentBlock =
   | ToolResultContentBlock
   | ImageContentBlock;
 
-/**
- * Claude 消息对象。
- */
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: MessageContentBlock[];
-  created_at: number;
-  updated_at: number;
+  createdAt: number;
+  updatedAt: number;
+  model?: string;
+  stopReason?: string;
 }
 
-/**
- * 任务定义。
- */
 export interface Task {
   id: string;
+  sessionId: string;
+  subject: string;
   description: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'interrupted' | 'crashed' | 'killed';
-  assignee: string;
-  session_id: string;
-  created_at: number;
-  updated_at: number;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'killed';
+  activeForm?: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
-/**
- * 客户端连接信息。
- */
-export interface ClientConnection {
-  id: string;
-  role: ClientRole;
-  connected_at: number;
-}
-
-/**
- * 工具执行记录。
- */
-export interface ToolExecution {
-  id: string;
-  name: string;
-  status: ToolExecutionStatus;
-}
-
-/**
- * 权限请求。
- */
 export interface PermissionRequest {
   id: string;
-  tool: string;
-  params: Record<string, unknown>;
-  requestId: string;
-  created_at: number;
+  sessionId: string;
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  createdAt: number;
 }
 
-/**
- * 上下文窗口使用情况。
- */
-export interface ContextUsage {
-  used_tokens: number;
-  max_tokens: number;
-  percentage: number;
+export interface ClientConnection {
+  id: string;
+  type: ClientType;
+  writerStatus: WriterStatus;
+  connectedAt: number;
+  userAgent?: string;
 }
 
-/**
- * 费用摘要。
- */
-export interface CostSummary {
-  session_cost: number;
-  total_cost: number;
-  currency: string;
-}
-
-/**
- * MCP 服务信息。
- */
-export interface McpServerInfo {
+export interface SessionMeta {
+  id: string;
   name: string;
-  status: 'connected' | 'disconnected' | 'error';
-  tools_count: number;
-  enabled: boolean;
+  cwd: string;
+  status: SessionStatus;
+  createdAt: number;
+  updatedAt: number;
+  clientCount: number;
+  hasActiveWriter: boolean;
 }
 
-/**
- * Skill 信息。
- */
 export interface SkillInfo {
   name: string;
   description: string;
-  args_hint?: string[];
+  aliases?: string[];
+  userInvocable: boolean;
+  arguments?: string[];
+  source: 'bundled' | 'plugin' | 'project' | 'user';
 }
 
-/**
- * 对话导出结果。
- */
+export interface SessionConfig {
+  model: string;
+  effortLevel: EffortLevel;
+  permissionMode: SessionPermissionMode;
+  maxThinkingTokens?: number;
+}
+
+export interface ContextUsage {
+  usedTokens: number;
+  maxTokens: number;
+  percentage: number;
+  breakdown: Array<{
+    label: string;
+    tokens: number;
+  }>;
+}
+
+export interface CostSummary {
+  sessionCost: number;
+  formattedCost: string;
+  inputTokens: number;
+  outputTokens: number;
+  apiCalls: number;
+  sessionDuration: number;
+}
+
+export interface ConfigOptions {
+  availableModels: Array<{
+    id: string;
+    name: string;
+    supportsImages: boolean;
+  }>;
+  effortLevels: EffortLevel[];
+  permissionModes: SessionPermissionMode[];
+}
+
 export interface ExportResult {
-  format: 'markdown' | 'json';
   content: string;
+  format: 'markdown' | 'json';
   filename: string;
 }
 
-/**
- * 历史搜索结果。
- */
 export interface HistorySearchResult {
-  message_id: string;
-  session_id: string;
+  sessionId: string;
+  sessionName: string;
+  messageId: string;
+  role: 'user' | 'assistant';
   snippet: string;
   timestamp: number;
 }
 
-/**
- * 配置项定义。
- */
-export interface ConfigOptions {
-  available_models: {
-    id: string;
-    name: string;
-    supports_images: boolean;
-  }[];
-}
-
-/**
- * 会话配置。
- */
-export interface SessionConfig {
-  model: string;
-  permissions_mode: PermissionMode;
-  system_prompt: string;
-}
-
-/**
- * 会话元信息（列表视图）。
- */
-export interface SessionMeta {
+export interface McpServerInfo {
   id: string;
   name: string;
-  status: SessionStatus;
-  cwd: string;
-  tags: string[];
-  config: SessionConfig;
-  created_at: number;
-  updated_at: number;
-  idle_timeout_ms: number;
+  type: 'stdio' | 'sse' | 'http';
+  status: 'connected' | 'disconnected' | 'error';
+  enabled: boolean;
+  toolCount: number;
+  error?: string;
 }
 
-/**
- * 会话快照（WS 重连恢复）。
- */
 export interface SessionSnapshot {
   meta: SessionMeta;
-  messages: Message[];
-  tasks: Task[];
+  recentMessages: Message[];
+  activeTasks: Task[];
   pendingPermissions: PermissionRequest[];
   clients: ClientConnection[];
   availableSkills: SkillInfo[];
@@ -218,52 +175,13 @@ export interface SessionSnapshot {
   contextUsage: ContextUsage;
   costSummary: CostSummary;
   mcpServers: McpServerInfo[];
-  myWriterStatus: ClientRole;
+  myWriterStatus: WriterStatus;
   lastSeq: number;
 }
 
-/**
- * 完整会话对象。
- */
 export interface Session extends SessionMeta {
   messages: Message[];
   tasks: Task[];
   pendingPermissions: PermissionRequest[];
   clients: ClientConnection[];
 }
-
-// ---- compatibility aliases ----
-type EffortLevel = 'low' | 'medium' | 'high';
-type LegacyWriterStatus = 'active' | 'standby';
-
-type LegacyClientType = 'tui' | 'web';
-
-type LegacyTaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'killed';
-
-export interface LegacyMessage extends Message {
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface LegacyTask extends Omit<Task, 'status' | 'assignee'> {
-  subject: string;
-  activeForm?: string;
-  sessionId: string;
-  status: LegacyTaskStatus;
-}
-
-export interface LegacyPermissionRequest extends PermissionRequest {
-  sessionId: string;
-  toolName: string;
-  toolInput: Record<string, unknown>;
-  createdAt: number;
-}
-
-export interface LegacyClientConnection extends ClientConnection {
-  type: LegacyClientType;
-  writerStatus: LegacyWriterStatus;
-  connectedAt: number;
-}
-
-export type ClientType = LegacyClientType;
-export type WriterStatus = LegacyWriterStatus;

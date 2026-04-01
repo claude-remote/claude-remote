@@ -1,11 +1,8 @@
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
-
 import type {
   ClientConnection,
   ConfigOptions,
-  CostSummary,
   ContextUsage,
+  CostSummary,
   ExportResult,
   HistorySearchResult,
   McpServerInfo,
@@ -13,167 +10,136 @@ import type {
   SessionConfig,
   SessionMeta,
   SessionSnapshot,
+  SessionStatus,
   SkillInfo,
-  Task,
-  ToolExecution,
-  ToolExecutionStatus,
-} from './types.js'
+} from '@/shared/types';
 
-type HubSeqEvent = { seq: number }
+export interface SDKMessage {
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface SDKControlRequest {
+  type: 'control_request';
+  requestId: string;
+  request: Record<string, unknown>;
+}
+
+export interface SDKControlCancelRequest {
+  type: 'control_cancel';
+  requestId: string;
+}
+
+export interface SDKControlResponse {
+  type: 'control_response';
+  requestId: string;
+  response: Record<string, unknown>;
+}
 
 export type HubEvent =
-  // SDK passthrough
-  | ({ type: 'sdk:message'; sessionId: string; payload: SDKMessage } & HubSeqEvent)
-  // Session lifecycle / writer management
-  | ({ type: 'hub:session:created'; session: SessionMeta } & HubSeqEvent)
-  | ({
-      type: 'hub:session:statusChanged'
-      sessionId: string
-      status: SessionMeta['status']
-    } & HubSeqEvent)
-  | ({ type: 'hub:session:archived'; sessionId: string; reason?: string } & HubSeqEvent)
-  | ({
-      type: 'hub:writer:changed'
-      sessionId: string
-      newWriterId: string | null
-    } & HubSeqEvent)
-  // Permission & context/cost updates
-  | ({
-      type: 'hub:permission:requested'
-      sessionId: string
-      request: PermissionRequest
-    } & HubSeqEvent)
-  | ({
-      type: 'hub:permission:resolved'
-      sessionId: string
-      requestId: string
-      status: ToolExecutionStatus | 'approved' | 'denied'
-    } & HubSeqEvent)
-  | ({ type: 'hub:context:updated'; sessionId: string; usage: ContextUsage } & HubSeqEvent)
-  | ({ type: 'hub:cost:updated'; sessionId: string; cost: CostSummary } & HubSeqEvent)
-  // MCP / config / skills / tasks / notification
-  | ({ type: 'hub:mcp:statusChanged'; server: McpServerInfo } & HubSeqEvent)
-  | ({ type: 'hub:config:changed'; sessionId: string; config: SessionConfig } & HubSeqEvent)
-  | ({
-      type: 'hub:notification'
-      sessionId?: string
-      message: string
-      severity: 'info' | 'warning' | 'error'
-    } & HubSeqEvent)
-  | ({ type: 'hub:client:joined'; sessionId: string; client: ClientConnection } & HubSeqEvent)
-  | ({ type: 'hub:client:left'; sessionId: string; clientId: string } & HubSeqEvent)
-  | ({ type: 'hub:task:updated'; sessionId: string; task: Task } & HubSeqEvent)
-  | ({ type: 'hub:error'; sessionId?: string; error: string } & HubSeqEvent)
-  | ({ type: 'hub:auth:revoked'; reason?: string } & HubSeqEvent)
-  | ({ type: 'hub:shutdown'; reason?: string } & HubSeqEvent)
-  | ({ type: 'hub:skill:list'; skills: SkillInfo[]; sessionId?: string } & HubSeqEvent)
-
-export type ClientCommand =
-  | { cmdId: string; cmd: 'chat'; text: string; images?: string[]; sessionId?: string }
-  | { cmdId: string; cmd: 'chat:abort'; sessionId?: string }
+  | { type: 'sdk:message'; sessionId: string; seq: number; payload: SDKMessage }
+  | { type: 'sdk:control'; sessionId: string; seq: number; payload: SDKControlRequest }
+  | { type: 'sdk:control:cancel'; sessionId: string; seq: number; payload: SDKControlCancelRequest }
+  | { type: 'sdk:control:response'; sessionId: string; seq: number; payload: SDKControlResponse }
+  | { type: 'hub:session:created'; seq: number; session: SessionMeta }
+  | { type: 'hub:session:cwdChanged'; seq: number; sessionId: string; cwd: string }
   | {
-      cmdId: string
-      cmd: 'control:respond'
-      requestId: string
-      response: SDKControlResponse
+      type: 'hub:session:statusChanged';
+      seq: number;
+      sessionId: string;
+      status: SessionStatus;
     }
-  | { cmdId: string; cmd: 'session:create'; cwd: string; name?: string }
-  | { cmdId: string; cmd: 'session:archive'; sessionId: string }
-  | { cmdId: string; cmd: 'session:rename'; sessionId: string; name: string }
-  | { cmdId: string; cmd: 'session:setTags'; sessionId: string; tags: string[] }
-  | { cmdId: string; cmd: 'session:switchCwd'; sessionId: string; cwd: string }
-  | { cmdId: string; cmd: 'config:set'; sessionId: string; patch: Partial<SessionConfig> }
-  | { cmdId: string; cmd: 'context:get'; sessionId: string }
-  | { cmdId: string; cmd: 'cost:get'; sessionId: string }
-  | { cmdId: string; cmd: 'mcp:list' }
-  | { cmdId: string; cmd: 'mcp:reconnect'; serverId: string }
+  | { type: 'hub:client:joined'; seq: number; sessionId: string; client: ClientConnection }
+  | { type: 'hub:client:left'; seq: number; sessionId: string; clientId: string }
+  | { type: 'hub:writer:changed'; seq: number; sessionId: string; newWriterId: string | null }
   | {
-      cmdId: string
-      cmd: 'chat:branch'
-      sessionId: string
-      messageId: string
-      name?: string
+      type: 'hub:takeOver:request';
+      seq: number;
+      sessionId: string;
+      requesterId: string;
+      requesterType: ClientConnection['type'];
     }
-  | { cmdId: string; cmd: 'chat:export'; sessionId: string; format: ExportResult['format'] }
-  | { cmdId: string; cmd: 'chat:compact'; sessionId: string }
-  | { cmdId: string; cmd: 'chat:clear'; sessionId: string }
-  | { cmdId: string; cmd: 'skill:list'; sessionId: string }
-  | { cmdId: string; cmd: 'skill:invoke'; sessionId: string; name: string; args?: string }
-  | { cmdId: string; cmd: 'file:list'; sessionId: string; path: string }
+  | { type: 'hub:config:changed'; seq: number; sessionId: string; config: SessionConfig }
+  | { type: 'hub:context:updated'; seq: number; sessionId: string; usage: ContextUsage }
+  | { type: 'hub:cost:updated'; seq: number; sessionId: string; cost: CostSummary }
+  | { type: 'hub:chat:cleared'; seq: number; sessionId: string }
   | {
-      cmdId: string
-      cmd: 'file:read'
-      sessionId: string
-      path: string
-      offset?: number
-      limit?: number
+      type: 'hub:chat:branched';
+      seq: number;
+      sessionId: string;
+      newSession: SessionMeta;
+      fromMessageId: string;
     }
+  | { type: 'hub:chat:compacted'; seq: number; sessionId: string }
+  | { type: 'hub:skills:updated'; seq: number; sessionId: string; skills: SkillInfo[] }
+  | { type: 'hub:mcp:statusChanged'; seq: number; server: McpServerInfo }
   | {
-      cmdId: string
-      cmd: 'history:search'
-      query: string
-      scope?: 'session' | 'all'
-      sessionId?: string
-      limit?: number
+      type: 'hub:rateLimited';
+      seq: number;
+      sessionId: string;
+      retryAfterMs: number;
+      scope: 'global' | 'session';
     }
-  | { cmdId: string; cmd: 'writer:takeOver'; sessionId: string }
+  | { type: 'hub:auth:revoked' }
+  | { type: 'hub:shutdown' };
 
-export interface HubResponse {
-  cmdId: string
-  ok: boolean
-  data?: unknown
-  error?: string
-}
+export type ClientCommand = { cmdId: string } & (
+  | { cmd: 'chat'; text: string; images?: string[] }
+  | { cmd: 'chat:abort' }
+  | { cmd: 'control:respond'; requestId: string; response: SDKControlResponse }
+  | { cmd: 'session:create'; cwd: string; name?: string }
+  | { cmd: 'session:list' }
+  | { cmd: 'session:switch'; sessionId: string }
+  | { cmd: 'session:rename'; name: string }
+  | { cmd: 'session:archive'; sessionId: string }
+  | { cmd: 'session:takeOver' }
+  | { cmd: 'session:takeOver:approve' }
+  | { cmd: 'session:takeOver:reject' }
+  | { cmd: 'session:releaseWriter' }
+  | { cmd: 'cwd:change'; path: string }
+  | { cmd: 'cwd:browse'; path: string }
+  | { cmd: 'cwd:favorites' }
+  | { cmd: 'cwd:addFavorite'; path: string; label?: string }
+  | { cmd: 'skill:list' }
+  | { cmd: 'skill:invoke'; name: string; args?: string }
+  | { cmd: 'config:get' }
+  | { cmd: 'config:set'; patch: Partial<SessionConfig> }
+  | { cmd: 'context:usage' }
+  | { cmd: 'cost:get' }
+  | { cmd: 'mcp:list' }
+  | { cmd: 'mcp:toggle'; serverId: string; enabled: boolean }
+  | { cmd: 'mcp:reconnect'; serverId: string }
+  | { cmd: 'chat:branch'; messageId: string; name?: string }
+  | { cmd: 'chat:compact' }
+  | { cmd: 'chat:export'; format: 'markdown' | 'json' }
+  | { cmd: 'chat:clear' }
+  | { cmd: 'file:read'; path: string; offset?: number; limit?: number }
+  | { cmd: 'file:list'; path: string; pattern?: string }
+  | { cmd: 'file:search'; pattern: string; path?: string }
+  | { cmd: 'history:search'; query: string; scope: 'session' | 'all'; limit?: number }
+);
 
-export interface HubMessageHello {
-  type: 'hello'
-  version: number
-  hubVersion: string
-}
+export type HubReplyData =
+  | SessionSnapshot
+  | SessionMeta[]
+  | PermissionRequest
+  | SkillInfo[]
+  | SessionConfig
+  | { config: SessionConfig; options: ConfigOptions }
+  | ContextUsage
+  | CostSummary
+  | McpServerInfo[]
+  | ExportResult
+  | HistorySearchResult[]
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, unknown>;
 
-export interface HubMessageSnapshot {
-  type: 'snapshot'
-  snapshot: SessionSnapshot
-}
-
-export interface HubMessageEvent {
-  type: 'event'
-  event: HubEvent
-}
-
-export interface HubMessageReply {
-  type: 'reply'
-  cmdId: string
-  data: unknown
-}
-
-export interface HubMessageError {
-  type: 'error'
-  cmdId: string
-  error: string
-}
-
-export type HubResponseEnvelope =
-  | HubMessageHello
-  | HubMessageSnapshot
-  | HubMessageEvent
-  | HubMessageReply
-  | HubMessageError
-  | ({ type: 'reply'; response: HubResponse } & HubSeqEvent)
-  | ({ type: 'error'; response: HubResponse } & HubSeqEvent)
-
-export {
-  ConfigOptions,
-  CostSummary,
-  ContextUsage,
-  ExportResult,
-  HistorySearchResult,
-  McpServerInfo,
-  PermissionRequest,
-  SessionConfig,
-  SessionMeta,
-  SessionSnapshot,
-  SkillInfo,
-  Task,
-  ToolExecution,
-}
+export type HubResponse =
+  | { type: 'hello'; version: number; hubVersion: string }
+  | { type: 'snapshot'; snapshot: SessionSnapshot }
+  | { type: 'event'; event: HubEvent }
+  | { type: 'reply'; cmdId: string; data: HubReplyData }
+  | { type: 'error'; cmdId?: string; error: string };
