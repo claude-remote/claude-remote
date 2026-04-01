@@ -1,1 +1,1 @@
-export type AgentWizardData = any;
+export type AgentWizardData = Record<string, any>;

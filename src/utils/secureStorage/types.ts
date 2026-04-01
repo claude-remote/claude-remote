@@ -1,7 +1,13 @@
-export type SecureStorageValue = any;
+export type SecureStorageData = {
+  trustedDeviceToken?: string;
+  pluginSecrets?: Record<string, any>;
+  [key: string]: any;
+};
 
 export interface SecureStorage {
-  get(key: string): Promise<SecureStorageValue>;
-  set(key: string, value: SecureStorageValue): Promise<void>;
-  delete(key: string): Promise<void>;
+  name: string;
+  read(): SecureStorageData | null;
+  readAsync(): Promise<SecureStorageData | null>;
+  update(data: SecureStorageData): { success: boolean; warning?: string };
+  delete(): boolean;
 }

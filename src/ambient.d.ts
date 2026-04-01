@@ -197,8 +197,9 @@ declare module '*commands/plugin/unifiedTypes.js' {
 }
 
 declare module '*wizard/types.js' {
-  const types: any;
-  export = types;
+  export type WizardContextValue = any;
+  export type WizardProviderProps<T = any> = any;
+  export type WizardStepComponent<T = any> = any;
 }
 
 declare module '*components/agents/new-agent-creation/types.js' {
@@ -207,8 +208,13 @@ declare module '*components/agents/new-agent-creation/types.js' {
 }
 
 declare module '*components/mcp/types.js' {
-  const types: any;
-  export = types;
+  export type AgentMcpServerInfo = any;
+  export type MCPViewState = any;
+  export type ServerInfo = any;
+  export type ClaudeAIServerInfo = any;
+  export type HTTPServerInfo = any;
+  export type SSEServerInfo = any;
+  export type StdioServerInfo = any;
 }
 
 declare module '*utils/secureStorage/types.js' {

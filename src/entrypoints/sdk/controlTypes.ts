@@ -13,5 +13,6 @@ export type SDKControlMcpSetServersResponse = any;
 export type SDKControlReloadPluginsResponse = any;
 export type SDKControlElicitationResponse = any;
 export type SDKResultSuccess = any;
+export type SDKPartialAssistantMessage = any;
 export type StdinMessage = any;
 export type StdoutMessage = any;
