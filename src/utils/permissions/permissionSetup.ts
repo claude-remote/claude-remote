@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import { relative } from 'path'
 import {
   getOriginalCwd,

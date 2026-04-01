@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import { useEffect, useRef } from 'react'
 import {
   type AppState,

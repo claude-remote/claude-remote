@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import { writeFile } from 'fs/promises'
 import { z } from 'zod/v4'
 import {
