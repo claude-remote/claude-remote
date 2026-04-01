@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { Message, MessageContentBlock } from '@/shared/types';
 
@@ -30,33 +30,59 @@ function formatTime(ts: number): string {
   });
 }
 
+/**
+ * Build a lookup from toolUseId -> ToolResultContentBlock across all messages,
+ * so we can pair tool_use blocks with their results.
+ */
+function buildToolResultMap(
+  messages: Message[],
+): Map<string, import('@/shared/types').ToolResultContentBlock> {
+  const map = new Map<string, import('@/shared/types').ToolResultContentBlock>();
+  for (const msg of messages) {
+    for (const block of msg.content) {
+      if (block.type === 'tool_result') {
+        map.set(block.toolUseId, block);
+      }
+    }
+  }
+  return map;
+}
+
 function renderContentBlock(
   block: MessageContentBlock,
   index: number,
   isLast: boolean,
   isStreaming: boolean,
+  toolResultMap?: Map<string, import('@/shared/types').ToolResultContentBlock>,
+  messageCreatedAt?: number,
 ): React.ReactNode {
   switch (block.type) {
     case 'text':
-      return (
-        <StreamingText key={index} text={block.text} isStreaming={isLast && isStreaming} />
-      );
-    case 'tool_use':
+      return <StreamingText key={index} text={block.text} isStreaming={isLast && isStreaming} />;
+    case 'tool_use': {
+      const result = toolResultMap?.get(block.id);
+      const status = result
+        ? result.isError
+          ? ('failed' as const)
+          : ('completed' as const)
+        : isStreaming
+          ? ('running' as const)
+          : ('completed' as const);
       return (
         <ToolCard
           key={index}
-          title={block.name}
-          body={JSON.stringify(block.input, null, 2)}
+          toolUse={block}
+          toolResult={result}
+          status={status}
+          startedAt={messageCreatedAt}
+          finishedAt={result ? messageCreatedAt : undefined}
         />
       );
+    }
     case 'tool_result':
-      return (
-        <ToolCard
-          key={index}
-          title={block.isError ? 'Error' : 'Result'}
-          body={typeof block.content === 'string' ? block.content : JSON.stringify(block.content, null, 2)}
-        />
-      );
+      // tool_result blocks are rendered inline with their tool_use via pairing above.
+      // Only render standalone if no matching tool_use was found.
+      return null;
     case 'image':
       return (
         <img
@@ -98,6 +124,8 @@ export function MessageList({
     }
   }, [hasMore, onLoadMore]);
 
+  const toolResultMap = useMemo(() => buildToolResultMap(messages), [messages]);
+
   if (messages.length === 0) {
     return (
       <section className="flex flex-1 items-center justify-center">
@@ -126,7 +154,9 @@ export function MessageList({
           return (
             <div key={message.id} className="flex justify-center">
               <div className="max-w-md rounded-lg px-4 py-2 text-center text-xs text-gray-500">
-                {message.content.map((block, i) => renderContentBlock(block, i, false, false))}
+                {message.content.map((block, i) =>
+                  renderContentBlock(block, i, false, false, toolResultMap, message.createdAt),
+                )}
                 <span className="mt-1 block text-[10px] text-gray-600">
                   {formatTime(message.createdAt)}
                 </span>
@@ -136,19 +166,12 @@ export function MessageList({
         }
 
         return (
-          <div
-            key={message.id}
-            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`flex max-w-[85%] gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
-            >
+          <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className={`flex max-w-[85%] gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
               {/* Role icon */}
               <div
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                  isAssistant
-                    ? 'bg-gray-700 text-gray-300'
-                    : 'bg-indigo-700 text-indigo-200'
+                  isAssistant ? 'bg-gray-700 text-gray-300' : 'bg-indigo-700 text-indigo-200'
                 }`}
               >
                 {roleIcon(message.role)}
@@ -169,6 +192,8 @@ export function MessageList({
                       i,
                       isLastMessage && i === message.content.length - 1,
                       isStreaming && isAssistant,
+                      toolResultMap,
+                      message.createdAt,
                     ),
                   )}
                 </div>
@@ -176,9 +201,7 @@ export function MessageList({
                   className={`mt-1 text-[10px] ${isUser ? 'text-right' : 'text-left'} text-gray-500`}
                 >
                   {formatTime(message.createdAt)}
-                  {message.model && isAssistant && (
-                    <span className="ml-2">{message.model}</span>
-                  )}
+                  {message.model && isAssistant && <span className="ml-2">{message.model}</span>}
                 </div>
               </div>
             </div>
