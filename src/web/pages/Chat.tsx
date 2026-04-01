@@ -20,6 +20,7 @@ import type { HubEvent, HubResponse } from '@/shared/protocol';
 import { useChatStore } from '@/web/stores/chatStore';
 import { useSessionStore } from '@/web/stores/sessionStore';
 import { useWebSocket } from '@/web/hooks/useWebSocket';
+import { usePushNotificationFromMessages } from '@/web/hooks/usePushNotifications';
 
 import { BranchMenu, useBranchMenu } from '@/web/components/BranchMenu';
 import { ChatInput } from '@/web/components/ChatInput';
@@ -50,6 +51,9 @@ export function Chat() {
   const { connected, lastMessage, sendCommand } = useWebSocket();
   const { messages, setMessages } = useChatStore();
   const { activeSnapshot, setSnapshot } = useSessionStore();
+
+  // Push notifications for background tab events
+  usePushNotificationFromMessages({ sessionId, lastMessage });
 
   const [isStreaming, setIsStreaming] = useState(false);
   const [hasMore, setHasMore] = useState(false);
