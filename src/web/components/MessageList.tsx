@@ -10,6 +10,9 @@ interface MessageListProps {
   isStreaming?: boolean;
   onLoadMore?: () => void;
   hasMore?: boolean;
+  onMessageContextMenu?: (e: React.MouseEvent, messageId: string, message: Message) => void;
+  onMessageTouchStart?: (e: React.TouchEvent, messageId: string, message: Message) => void;
+  onMessageTouchEnd?: () => void;
 }
 
 function roleIcon(role: Message['role']): string {
@@ -106,6 +109,9 @@ export function MessageList({
   isStreaming = false,
   onLoadMore,
   hasMore = false,
+  onMessageContextMenu,
+  onMessageTouchStart,
+  onMessageTouchEnd,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -166,7 +172,14 @@ export function MessageList({
         }
 
         return (
-          <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+          <div
+            key={message.id}
+            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+            onContextMenu={onMessageContextMenu ? (e) => onMessageContextMenu(e, message.id, message) : undefined}
+            onTouchStart={onMessageTouchStart ? (e) => onMessageTouchStart(e, message.id, message) : undefined}
+            onTouchEnd={onMessageTouchEnd}
+            onTouchCancel={onMessageTouchEnd}
+          >
             <div className={`flex max-w-[85%] gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
               {/* Role icon */}
               <div
