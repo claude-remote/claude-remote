@@ -174,7 +174,8 @@ export function Chat() {
       <header className="shrink-0 border-b border-gray-800 px-4 py-2">
         <div className="flex items-center justify-between">
           <h1 className="truncate text-lg font-semibold text-gray-100">{session.name}</h1>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <NotificationCenter />
             <span
               className={`h-2 w-2 rounded-full ${
                 connectionStatus === 'connected'
@@ -194,9 +195,8 @@ export function Chat() {
         </div>
       </header>
 
-      {/* Notifications and banners */}
+      {/* Banners */}
       <div className="shrink-0 space-y-1 px-3 pt-1">
-        <NotificationCenter notifications={[]} />
         <PermissionBanner requests={permissions} writerStatus={writerStatus} onRespond={handlePermissionRespond} />
         <CompactPrompt usage={usage} />
       </div>
