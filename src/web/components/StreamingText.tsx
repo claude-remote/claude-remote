@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface StreamingTextProps {
   text: string;
@@ -39,24 +39,49 @@ function renderMarkdown(source: string): string {
   return html;
 }
 
+/** Characters to advance per animation frame during streaming */
+const CHARS_PER_FRAME = 5;
+
 export function StreamingText({ text, isStreaming = false }: StreamingTextProps) {
   const [displayLength, setDisplayLength] = useState(isStreaming ? 0 : text.length);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isStreaming) {
       setDisplayLength(text.length);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
       return;
     }
 
-    // Stream characters in when new text arrives beyond current display
-    if (displayLength >= text.length) return;
+    // Use requestAnimationFrame for smooth streaming instead of setTimeout
+    function tick() {
+      setDisplayLength((prev) => {
+        const next = Math.min(prev + CHARS_PER_FRAME, text.length);
+        // If we haven't caught up, schedule another frame
+        if (next < text.length) {
+          rafRef.current = requestAnimationFrame(tick);
+        } else {
+          rafRef.current = 0;
+        }
+        return next;
+      });
+    }
 
-    const timer = setTimeout(() => {
-      setDisplayLength((prev) => Math.min(prev + 3, text.length));
-    }, 8);
+    // Only start animation if we need to catch up
+    if (displayLength < text.length && !rafRef.current) {
+      rafRef.current = requestAnimationFrame(tick);
+    }
 
-    return () => clearTimeout(timer);
-  }, [text, displayLength, isStreaming]);
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+    };
+  }, [text, isStreaming]);
 
   // Reset display when text changes significantly (new message)
   useEffect(() => {
@@ -66,6 +91,8 @@ export function StreamingText({ text, isStreaming = false }: StreamingTextProps)
   }, [text, isStreaming]);
 
   const displayText = isStreaming ? text.slice(0, displayLength) : text;
+
+  // Lazy markdown: only parse when the text is actually visible / settled
   const rendered = useMemo(() => renderMarkdown(displayText), [displayText]);
 
   return (
