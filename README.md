@@ -58,25 +58,40 @@ For domestic developers using overseas development machines or overseas network 
 ```mermaid
 graph TD
     subgraph Clients["Clients"]
-        TUI["Terminal TUI"]
-        WEB["Mobile Web"]
-        DESKTOP["Desktop Client (Planned)"]
+        A["📱 Mobile Browser<br/>(Web SPA)"]
+        B["💻 Terminal TUI<br/>(Ink)"]
+        C["💻 Another Terminal<br/>(Ink)"]
     end
 
-    subgraph RemoteEnv["Developer Machine / Remote Dev Box"]
-        HUB["Claude Remote Hub"]
-        REPO["Real Repo + Shell + Git + Tools"]
+    subgraph Hub["Session Hub (Persistent Process)"]
+        direction TB
+        SM["Session Manager<br/>Multi-Session Management"]
+        TE["Tool Engine<br/>47 Built-in Tools"]
+        API["Claude API Client"]
+        EB["Event Bus<br/>Real-Time State Broadcast"]
+        DB["SQLite (WAL)<br/>Persistent Storage"]
+        SM --- TE
+        SM --- API
+        SM --- EB
+        SM --- DB
     end
 
-    subgraph Access["Access Layer"]
-        TUNNEL["Tunnel / Private Access"]
+    A -- "WebSocket" --> Hub
+    B -- "WebSocket / Unix Socket" --> Hub
+    C -- "WebSocket" --> Hub
+
+    subgraph Network
+        CF["☁️ Cloudflare Tunnel"]
     end
 
-    TUI --> HUB
-    WEB --> TUNNEL
-    DESKTOP --> TUNNEL
-    TUNNEL --> HUB
-    HUB --> REPO
+    Hub -- "HTTPS" --> CF
+    CF -- "Public Access" --> A
+
+    style Hub fill:#FDF2EC,stroke:#D4845F,stroke-width:2px
+    style A fill:#D4845F,color:#fff,stroke:#B8704F
+    style B fill:#F5F0EB,stroke:#8B7355
+    style C fill:#F5F0EB,stroke:#8B7355
+    style CF fill:#F0F7FF,stroke:#4A90D9
 ```
 
 Key design decisions:
