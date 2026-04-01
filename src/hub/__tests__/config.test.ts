@@ -171,4 +171,25 @@ allowed_roots = ["${join(homeDir, 'missing')}"]
       }),
     ).toThrow(/port|allowed_roots/i)
   })
+
+  it('rejects non-string entries in path arrays', () => {
+    const homeDir = makeTempDir('hub-config-array-types-')
+    const configPath = join(homeDir, '.claude-remote', 'config.toml')
+    mkdirSync(join(homeDir, '.claude-remote'), { recursive: true })
+    writeFileSync(
+      configPath,
+      `
+[files]
+allowed_roots = [123]
+excluded_dirs = [456]
+`.trim(),
+    )
+
+    expect(() =>
+      loadHubConfig({
+        configPath,
+        env: { HOME: homeDir },
+      }),
+    ).toThrow(/allowed_roots|excluded_dirs/i)
+  })
 })

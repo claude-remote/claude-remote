@@ -214,6 +214,12 @@ function validateHubConfig(
   if (!Array.isArray(config.excludedDirs)) {
     throw new Error('excludedDirs must be an array')
   }
+  if (!config.allowedRoots.every(root => typeof root === 'string')) {
+    throw new Error('allowed_roots must be an array of strings')
+  }
+  if (!config.excludedDirs.every(dir => typeof dir === 'string')) {
+    throw new Error('excluded_dirs must be an array of strings')
+  }
 
   const allowedRoots = config.allowedRoots.map(root =>
     normalizeRootPath(root, options),
