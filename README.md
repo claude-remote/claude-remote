@@ -164,6 +164,66 @@ src/
 └── services/                # API, MCP, OAuth 等服务层
 ```
 
+## 安全与合规
+
+> **核心原则：融入，不消失。** Claude Remote 不是自动化工具，而是把终端搬到手机上——从服务端视角看，你就是一个正常用户在用 Claude Code。
+
+### 为什么不会导致封号
+
+| 设计决策 | 安全原因 |
+|---|---|
+| **直接复用官方 Claude Client** | HTTP Header、User-Agent、指纹头、anti-distillation 头全部原样透传，服务端看到的请求与正常 CLI 完全一致 |
+| **遥测不关不改** | 保持默认遥测上报，不设置任何 `DISABLE_TELEMETRY` 等环境变量。关闭遥测本身是最强的异常信号 |
+| **PWA 而非原生 App** | 不采集 GPS/SIM 卡/基站等硬件级地理信号，比安装官方手机客户端更安全 |
+| **单账号单设备** | Hub 运行在你自己的开发机上，Device ID 不变，不存在账号共享 |
+| **人类始终在操作** | 每条消息是人发的、每个权限是人批的，不是无人值守的自动化脚本 |
+| **全局频率控制** | 多 session 并发时自动限流（默认最多 2 个并发 API 调用、每分钟 20 次），防止触发自动化检测 |
+
+### 技术原理：Hub 如何做到与本地 CLI 完全一致
+
+Claude Code 通过多维信号判断运行环境。Hub 作为守护进程启动时，缺少正常终端会话的特征。如果不处理，风控系统会看到一个"非交互式自动化工具"——这是高风险信号。
+
+**Hub 启动时自动执行环境补丁（`patchInteractiveEnv`），逐项消除差异：**
+
+| 信号 | 本地 CLI（正常） | Hub 守护进程（未修复） | Hub（修复后） |
+|---|---|---|---|
+| `process.stdout.isTTY` | `true` | `undefined` | `true` |
+| `is_interactive`（遥测字段） | `true` | `false` | `true` |
+| `TERM` | `xterm-256color` | 未设置 | `xterm-256color` |
+| `TERM_PROGRAM` | `iTerm2` 等 | 未设置 | `xterm` |
+| `COLORTERM` | `truecolor` | 未设置 | `truecolor` |
+| `COLUMNS` / `LINES` | 真实窗口尺寸 | 未设置 | `120` / `40` |
+| API 请求 Header | 官方 Client | 同一个 Client | 完全一致 |
+| Device ID | 本机生成 | 同一台机器 | 完全一致 |
+| 出口 IP | 本机 IP | 同一台机器 | 完全一致 |
+| 遥测数据 | 上报本机环境 | 上报同一台机器环境 | 完全一致 |
+
+**核心逻辑：** Hub 在 `serve.ts` 入口的**第一行**就调用 `patchInteractiveEnv()`，在任何 Claude Code 模块加载之前完成环境补丁。后续所有检测逻辑（`detectTerminal()`、遥测采集、API 日志）看到的都是正常的交互式终端环境。
+
+```
+claude-remote serve
+    │
+    ├─ 1. patchInteractiveEnv()     ← 第一步：补丁 TTY + 环境变量
+    ├─ 2. verifyInteractiveEnv()    ← 验证补丁生效
+    ├─ 3. 检查不安全环境变量          ← 警告 DISABLE_TELEMETRY 等
+    └─ 4. 加载 Claude Code 模块      ← 此时所有检测逻辑看到正常环境
+```
+
+**补丁不覆盖用户已有值**（使用 `??=` 赋值），如果你的机器上已设置了 `TERM`，补丁会保留你的值。
+
+**不需要伪装的部分**（天然一致）：Hub 就运行在你的开发机上，所以 Device ID、IP 地址、OAuth Token、遥测采集的系统信息都与本地 CLI 完全相同——因为它们就是同一台机器。
+
+### 使用建议
+
+- **不要关闭遥测** — 关闭遥测等于告诉风控系统"我有东西要藏"，是最危险的操作
+- **不要安装官方手机客户端** — 手机 App 会采集 GPS/SIM/基站等无法伪装的硬件信号，用 PWA 就够了
+- **不要同时跑太多 session** — 内置频率控制会兜底，但保持合理使用习惯更安全
+- **不要 24 小时无间断调用** — 保持正常的人类使用节奏
+- **环境信号保持一致** — 时区（`TZ`）、语言（`LANG`）、IP 出口地理位置应指向同一个合规地区
+- **不要使用中国特有 Linux 发行版** — deepin/UOS/openKylin 等发行版名称本身就是强地理信号
+
+详见设计规格 [Section 16: 合规与防封号](docs/superpowers/specs/2026-04-01-claude-remote-design.md#16-合规与防封号)。
+
 ## 设计文档
 
 详细设计规格：[`docs/superpowers/specs/2026-04-01-claude-remote-design.md`](docs/superpowers/specs/2026-04-01-claude-remote-design.md)

@@ -105,6 +105,15 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Fast-path for `claude-remote serve`: start Hub with interactive env patch.
+  // MUST import serve.ts (which calls patchInteractiveEnv) BEFORE any module
+  // that reads isTTY or isInteractive state.
+  if (args[0] === 'serve') {
+    profileCheckpoint('cli_serve_path');
+    await import('./serve.js');
+    return;
+  }
+
   // Fast-path for `claude remote-control` (also accepts legacy `claude remote` / `claude sync` / `claude bridge`):
   // serve local machine as bridge environment.
   // feature() must stay inline for build-time dead code elimination;

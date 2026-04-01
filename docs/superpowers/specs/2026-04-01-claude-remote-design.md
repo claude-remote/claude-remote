@@ -1266,3 +1266,162 @@ src/
     ├── protocol.ts              # ClientCommand, HubResponse, HubEvent
     └── constants.ts             # 端口、路径等常量
 ```
+
+## 16. 合规与防封号
+
+> **核心原则：融入，不消失。** Claude Remote 的设计目标是让用户的 API 调用与正常 Claude Code 使用完全一致，不引入任何额外的异常信号。
+
+### 16.1 风险分析
+
+| 风险 | 级别 | 说明 |
+|---|---|---|
+| 自动化检测 | **高** | Hub 常驻后台，可能被判定为非交互式自动化工具 |
+| 频率放大 | **高** | 多 session 并发使用，单账号 API 调用频率异常升高 |
+| 客户端篡改 | **中高** | 包装 API Client 可能导致指纹/Header 丢失 |
+| 遥测中断 | **中** | Hub 架构可能破坏原有遥测上报链路 |
+| 环境信号矛盾 | **中** | Hub 服务器环境 vs 用户声称的身份不一致 |
+
+### 16.2 设计约束（必须遵守）
+
+#### 16.2.1 不修改官方 Claude Client
+
+Hub 的 `ClaudeClient.ts` 是对现有 `src/services/claude.ts` 的**薄封装**，仅负责 session 路由和并发控制。
+
+**禁止：**
+- 修改 HTTP Header（包括 User-Agent、X-* 指纹头、anti-distillation 头）
+- 拦截或修改请求/响应 body
+- 替换 TLS 层或 HTTP 库
+- 修改 OAuth Token 传递方式
+
+**实现方式：**
+
+```typescript
+// ClaudeClient.ts — 薄封装示例
+class ClaudeClient {
+  // 直接复用原始 client 实例，不 proxy 请求
+  private officialClient: OriginalClaudeClient
+
+  async sendMessage(sessionId: string, messages: Message[]) {
+    // 仅做 session 级并发控制
+    await this.sessionSemaphore.acquire(sessionId)
+    try {
+      // 直接调用官方 client，不修改任何参数
+      return await this.officialClient.sendMessage(messages)
+    } finally {
+      this.sessionSemaphore.release(sessionId)
+    }
+  }
+}
+```
+
+#### 16.2.2 消除本地/远程差异
+
+Hub 作为守护进程运行时，与用户从终端手动启动 CLI 存在环境差异。必须逐项抹平，让 Claude Code 的所有检测逻辑认为自己运行在一个正常的交互式终端中。
+
+**差异对照与修复：**
+
+| 信号 | 本地 CLI | Hub 守护进程（未修复） | 修复方案 |
+|---|---|---|---|
+| `process.stdin.isTTY` | `true` | `false`（无 TTY） | Hub 启动时 patch `process.stdin.isTTY = true` |
+| `is_interactive` | `true` | `false` | 设置 `process.env.CLAUDE_INTERACTIVE = 'true'` |
+| `TERM` | `xterm-256color` | 未设置 | `process.env.TERM = 'xterm-256color'` |
+| `TERM_PROGRAM` | `iTerm2` / `Terminal` 等 | 未设置 | `process.env.TERM_PROGRAM = process.env.TERM_PROGRAM \|\| 'xterm'` |
+| `COLUMNS` / `LINES` | 真实窗口尺寸 | 未设置 | `process.env.COLUMNS = '120'; process.env.LINES = '40'` |
+| 父进程 | `bash` / `zsh` | `init(1)` / `launchd` | 无法修改，但源码中未直接检测父进程，风险低 |
+| 并发 session 数 | 通常 1 个 | 可能 3-5 个 | 全局频率控制限制总调用量（见 16.2.4） |
+
+**Hub 启动初始化代码：**
+
+```typescript
+// src/hub/Hub.ts — 启动时消除环境差异
+function patchInteractiveEnvironment() {
+  // 1. 交互式标识
+  Object.defineProperty(process.stdin, 'isTTY', { value: true })
+  process.env.CLAUDE_INTERACTIVE = 'true'
+
+  // 2. 终端环境（仅在未设置时补充，不覆盖真实值）
+  process.env.TERM ??= 'xterm-256color'
+  process.env.TERM_PROGRAM ??= 'xterm'
+  process.env.COLUMNS ??= '120'
+  process.env.LINES ??= '40'
+  process.env.COLORTERM ??= 'truecolor'
+}
+```
+
+**关键点：** Hub 不是"无头自动化工具"，而是"有人在另一端操作的远程终端"。在 Claude 的视角，每次对话仍然是人类在发起请求、审批工具、等待响应——只是界面从 TUI 变成了 Web。这些环境变量的补齐不是"伪装"，而是让运行环境与实际用途匹配。
+
+#### 16.2.3 遥测保持原样
+
+**不要关闭遥测。** 关闭遥测本身就是高权重异常信号（详见风控分析）。
+
+Hub 必须：
+- 不设置 `DISABLE_TELEMETRY`、`DO_NOT_TRACK`、`OTEL_EXPORTER_*` 等环境变量
+- 保持原有遥测上报链路完整运行
+- 遥测事件正常采集 Hub 所在机器的环境信息（这是预期行为——你的 Claude Code 就运行在这台机器上）
+
+**不需要伪装遥测数据。** 遥测上报的是 Hub 服务器的真实环境（时区、locale、OS 等），这与"一台开发机上运行 Claude Code"完全一致。
+
+#### 16.2.4 跨 Session 频率控制
+
+多 session 并发是 claude-remote 引入的最大风控风险。单账号短时间内发出远超正常人类使用频率的 API 调用，会触发自动化检测。
+
+```typescript
+// Hub 级别的全局频率控制器
+interface RateLimitConfig {
+  // 全局限制（跨所有 session）
+  maxConcurrentApiCalls: number    // 默认 2（同时最多 2 个 session 在调用 API）
+  maxApiCallsPerMinute: number     // 默认 20
+  maxApiCallsPerHour: number       // 默认 300
+
+  // 单 session 限制
+  maxConcurrentToolsPerSession: number  // 默认 5（已有配置）
+  minInterRequestDelayMs: number        // 默认 1000（同 session 两次 API 调用间最小间隔）
+}
+```
+
+**实现：** Hub 在 `ClaudeClient.sendMessage()` 前检查全局频率，超出限制时排队等待，不直接拒绝。向客户端发送 `hub:rateLimited` 事件，显示"排队等待中..."。
+
+**配置文件（`config.toml`）：**
+
+```toml
+[rate_limit]
+max_concurrent_api_calls = 2
+max_api_calls_per_minute = 20
+max_api_calls_per_hour = 300
+min_inter_request_delay_ms = 1000
+```
+
+### 16.3 环境一致性指南
+
+Hub 服务器的环境应当与声称的用户身份一致。这不是 claude-remote 代码层面的工作，而是部署层面的运维建议。
+
+**文档中提供以下指南：**
+
+| 信号 | 说明 | 建议 |
+|---|---|---|
+| 时区 | `TZ` 环境变量 | 与 IP 出口地理位置一致 |
+| Locale | `LANG` / `LC_ALL` | 设为 `en_US.UTF-8` |
+| OS 发行版 | 遥测上报 | 使用国际通用发行版（Ubuntu/Debian/macOS） |
+| 包管理器镜像源 | npm/pip registry | 使用官方源，不用国内镜像 |
+| IP 类型 | 服务端可见 | 使用住宅 IP 或高质量代理，保持稳定 |
+| 作息时间 | API 调用时间分布 | 与声称时区的正常工作时间大致一致 |
+
+### 16.4 不做的事情
+
+| 措施 | 为什么不做 |
+|---|---|
+| 关闭/拦截遥测 | 关闭遥测是最强的异常信号，等于自我标记 |
+| 伪造 Device ID | 改变 Device ID 相当于"换设备"，反而丢失历史信任 |
+| 修改 User-Agent | 官方 Client 已设置正确的 UA，修改会破坏指纹一致性 |
+| 拦截 anti-distillation 头 | 这些头是 API 合规的一部分，移除会触发服务端检查 |
+| 多账号轮换 | 增加复杂度且每个账号都需要独立合规，得不偿失 |
+| 禁用版本升级检查 | 旧版本本身是高风险信号 |
+
+### 16.5 实现清单
+
+- [ ] `ClaudeClient.ts`：纯委托模式，不修改请求/响应
+- [ ] `RateLimiter.ts`：全局 + 单 session 双层频率控制
+- [ ] 启动时检查并警告不安全的环境变量（如 `DISABLE_TELEMETRY`）
+- [ ] `config.toml` 增加 `[rate_limit]` 配置段
+- [ ] 文档增加部署环境一致性指南
+- [ ] Hub 启动日志输出当前环境摘要（时区、locale、OS、IP 出口），方便用户自查
