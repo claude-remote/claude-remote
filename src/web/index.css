@@ -5,3 +5,18 @@
 body {
   @apply bg-gray-950 text-gray-100 font-mono antialiased;
 }
+
+@keyframes skill-palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-skill-palette-in {
+  animation: skill-palette-in 0.15s ease-out;
+}
