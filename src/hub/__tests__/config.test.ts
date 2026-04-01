@@ -192,4 +192,20 @@ excluded_dirs = [456]
       }),
     ).toThrow(/allowed_roots|excluded_dirs/i)
   })
+
+  it('rejects malformed numeric env values instead of truncating them', () => {
+    const homeDir = makeTempDir('hub-config-invalid-env-number-')
+
+    expect(() =>
+      loadHubConfig({
+        env: {
+          HOME: homeDir,
+          CLAUDE_REMOTE_PORT: '3456abc',
+        },
+        cli: {
+          allowedRoots: [homeDir],
+        },
+      }),
+    ).toThrow(/CLAUDE_REMOTE_PORT/i)
+  })
 })

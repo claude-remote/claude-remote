@@ -270,11 +270,12 @@ function parseInteger(
     return undefined
   }
 
-  const parsed = Number.parseInt(value, 10)
-  if (Number.isNaN(parsed)) {
+  const trimmed = value.trim()
+  if (!/^-?\d+$/.test(trimmed)) {
     throw new Error(`Invalid ${field}: ${value}`)
   }
 
+  const parsed = Number.parseInt(trimmed, 10)
   return parsed
 }
 
