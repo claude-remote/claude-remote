@@ -1,41 +1,68 @@
-# Claude Code Haha
+# Claude Remote
 
-基于 Claude Code 泄露源码修复的**本地可运行版本**，支持接入任意 Anthropic 兼容 API（如 MiniMax、OpenRouter 等）。
-
-> 原始泄露源码无法直接运行。本仓库修复了启动链路中的多个阻塞问题，使完整的 Ink TUI 交互界面可以在本地工作。
+> 将 Claude Code CLI 升级为可远程控制的 AI 开发服务，手机浏览器即可全功能操作。
 
 <p align="center">
-  <img src="docs/00runtime.png" alt="运行截图" width="800">
+  <img src="docs/superpowers/specs/designs/chat.png" alt="Chat 主界面" width="300">
 </p>
 
-## 功能
+## 核心特性
 
-- 完整的 Ink TUI 交互界面（与官方 Claude Code 一致）
-- `--print` 无头模式（脚本/CI 场景）
-- 支持 MCP 服务器、插件、Skills
-- 支持自定义 API 端点和模型
-- 降级 Recovery CLI 模式
+- **手机远程控制** — 手机浏览器全功能操作，与终端体验对齐
+- **Session Hub 架构** — 常驻后台服务，多 session 管理，持久化存储
+- **多端实时同步** — TUI 和 Web 共享 session，消息/工具/权限实时同步
+- **工具全功能** — 47 个内置工具、103+ 斜杠命令、20 个 Skills，Web 端完整支持
+- **安全远程访问** — Cloudflare Tunnel + Token 双层认证
+- **工作目录管理** — 收藏目录 + 文件浏览器，手机上自由切换项目
 
----
+## UI 设计稿
 
-## 架构概览
+Claude 风格的温暖赭石色调，移动优先设计：
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src="docs/01-overall-architecture.png" alt="整体架构"><br><b>整体架构</b></td>
-    <td align="center" width="25%"><img src="docs/02-request-lifecycle.png" alt="请求生命周期"><br><b>请求生命周期</b></td>
-    <td align="center" width="25%"><img src="docs/03-tool-system.png" alt="工具系统"><br><b>工具系统</b></td>
-    <td align="center" width="25%"><img src="docs/04-multi-agent.png" alt="多 Agent 架构"><br><b>多 Agent 架构</b></td>
-  </tr>
-  <tr>
-    <td align="center" width="25%"><img src="docs/05-terminal-ui.png" alt="终端 UI"><br><b>终端 UI</b></td>
-    <td align="center" width="25%"><img src="docs/06-permission-security.png" alt="权限与安全"><br><b>权限与安全</b></td>
-    <td align="center" width="25%"><img src="docs/07-services-layer.png" alt="服务层"><br><b>服务层</b></td>
-    <td align="center" width="25%"><img src="docs/08-state-data-flow.png" alt="状态与数据流"><br><b>状态与数据流</b></td>
+    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/login.png" alt="Login" width="250"><br><b>Login 登录页</b></td>
+    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/sessions.png" alt="Sessions" width="250"><br><b>Sessions 列表</b></td>
+    <td align="center" width="33%"><img src="docs/superpowers/specs/designs/chat.png" alt="Chat" width="250"><br><b>Chat 主界面</b></td>
   </tr>
 </table>
 
----
+## 架构
+
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│  手机浏览器   │     │  终端 TUI    │     │  另一个终端   │
+│  (Web SPA)  │     │  (Ink)      │     │  (Ink)       │
+└──────┬──────┘     └──────┬──────┘     └──────┬───────┘
+       │ WebSocket         │ WebSocket         │
+       ▼                   ▼                   ▼
+┌──────────────────────────────────────────────────────┐
+│                   Session Hub（常驻进程）               │
+│                                                      │
+│  Tool Engine · Claude API · SQLite · Event Bus       │
+│  Hono HTTP/WS Server (:3456)                        │
+└──────────────────────────────────────────────────────┘
+       │
+  Cloudflare Tunnel → 公网访问
+```
+
+**关键设计：**
+- Hub 是引擎，客户端（TUI/Web）是纯视图层
+- 每个 Session 独立 AppState + cwd 隔离（`AsyncLocalStorage`）
+- WebSocket 事件驱动，SQLite WAL 模式持久化
+- CLI 退出不影响 Hub，手机可继续操作
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 运行时 | [Bun](https://bun.sh) |
+| 语言 | TypeScript |
+| 服务端 | Hono.js（HTTP + WebSocket） |
+| 前端 | React 19 + Tailwind CSS + Zustand |
+| TUI | React + Ink |
+| 数据库 | SQLite（WAL 模式） |
+| 隧道 | Cloudflare Tunnel |
 
 ## 快速开始
 
@@ -49,8 +76,6 @@ npm install
 
 ### 2. 配置环境变量
 
-复制示例文件并填入你的 API Key：
-
 ```bash
 cp .env.example .env
 ```
@@ -59,122 +84,70 @@ cp .env.example .env
 
 ```env
 # API 认证（二选一）
-ANTHROPIC_API_KEY=sk-xxx          # 标准 API Key（x-api-key 头）
-ANTHROPIC_AUTH_TOKEN=sk-xxx       # Bearer Token（Authorization 头）
+ANTHROPIC_API_KEY=sk-xxx
+ANTHROPIC_AUTH_TOKEN=sk-xxx
 
-# API 端点（可选，默认 Anthropic 官方）
+# API 端点（可选）
 ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
 
 # 模型配置
 ANTHROPIC_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_SONNET_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_HAIKU_MODEL=MiniMax-M2.7-highspeed
-ANTHROPIC_DEFAULT_OPUS_MODEL=MiniMax-M2.7-highspeed
-
-# 超时（毫秒）
-API_TIMEOUT_MS=3000000
-
-# 禁用遥测和非必要网络请求
-DISABLE_TELEMETRY=1
-CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 ```
 
 ### 3. 启动
 
 ```bash
-# 交互 TUI 模式（完整界面）
+# 启动 Hub 服务（后台常驻）
+claude-remote serve --tunnel
+
+# 终端连接 Hub
+claude-remote attach
+
+# 传统 TUI 模式（无 Hub）
 ./bin/claude-haha
 
-# 无头模式（单次问答）
+# 无头模式
 ./bin/claude-haha -p "your prompt here"
-
-# 管道输入
-echo "explain this code" | ./bin/claude-haha -p
-
-# 查看所有选项
-./bin/claude-haha --help
 ```
 
----
-
-## 环境变量说明
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `ANTHROPIC_API_KEY` | 二选一 | API Key，通过 `x-api-key` 头发送 |
-| `ANTHROPIC_AUTH_TOKEN` | 二选一 | Auth Token，通过 `Authorization: Bearer` 头发送 |
-| `ANTHROPIC_BASE_URL` | 否 | 自定义 API 端点，默认 Anthropic 官方 |
-| `ANTHROPIC_MODEL` | 否 | 默认模型 |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | 否 | Sonnet 级别模型映射 |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | 否 | Haiku 级别模型映射 |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | 否 | Opus 级别模型映射 |
-| `API_TIMEOUT_MS` | 否 | API 请求超时，默认 600000 (10min) |
-| `DISABLE_TELEMETRY` | 否 | 设为 `1` 禁用遥测 |
-| `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` | 否 | 设为 `1` 禁用非必要网络请求 |
-
----
-
-## 降级模式
-
-如果完整 TUI 出现问题，可以使用简化版 readline 交互模式：
-
-```bash
-CLAUDE_CODE_FORCE_RECOVERY_CLI=1 ./bin/claude-haha
-```
-
----
-
-## 相对于原始泄露源码的修复
-
-泄露的源码无法直接运行，主要修复了以下问题：
-
-| 问题 | 根因 | 修复 |
-|------|------|------|
-| TUI 不启动 | 入口脚本把无参数启动路由到了 recovery CLI | 恢复走 `cli.tsx` 完整入口 |
-| 启动卡死 | `verify` skill 导入缺失的 `.md` 文件，Bun text loader 无限挂起 | 创建 stub `.md` 文件 |
-| `--print` 卡死 | `filePersistence/types.ts` 缺失 | 创建类型桩文件 |
-| `--print` 卡死 | `ultraplan/prompt.txt` 缺失 | 创建资源桩文件 |
-| **Enter 键无响应** | `modifiers-napi` native 包缺失，`isModifierPressed()` 抛异常导致 `handleEnter` 中断，`onSubmit` 永远不执行 | 加 try-catch 容错 |
-| setup 被跳过 | `preload.ts` 自动设置 `LOCAL_RECOVERY=1` 跳过全部初始化 | 移除默认设置 |
-
----
+启动后终端会打印公网 URL + QR Code，手机扫码即可访问。
 
 ## 项目结构
 
 ```
-bin/claude-haha          # 入口脚本
-preload.ts               # Bun preload（设置 MACRO 全局变量）
-.env.example             # 环境变量模板
 src/
-├── entrypoints/cli.tsx  # CLI 主入口
-├── main.tsx             # TUI 主逻辑（Commander.js + React/Ink）
-├── localRecoveryCli.ts  # 降级 Recovery CLI
-├── setup.ts             # 启动初始化
-├── screens/REPL.tsx     # 交互 REPL 界面
-├── ink/                 # Ink 终端渲染引擎
-├── components/          # UI 组件
-├── tools/               # Agent 工具（Bash, Edit, Grep 等）
-├── commands/            # 斜杠命令（/commit, /review 等）
-├── skills/              # Skill 系统
-├── services/            # 服务层（API, MCP, OAuth 等）
-├── hooks/               # React hooks
-└── utils/               # 工具函数
+├── entrypoints/
+│   ├── cli.tsx              # CLI 主入口
+│   └── serve.ts             # Hub 服务入口（新增）
+├── hub/                     # Session Hub 核心（新增）
+│   ├── Hub.ts               # Hub 主类
+│   ├── SessionManager.ts    # Session CRUD + 状态管理
+│   ├── EventBus.ts          # 事件广播系统
+│   ├── ToolEngine.ts        # Tool 执行引擎
+│   └── store/SqliteStore.ts # SQLite 持久化
+├── server/                  # HTTP/WS 服务（新增）
+│   ├── routes/              # REST API
+│   ├── ws/                  # WebSocket 协议
+│   └── auth/                # Token 认证
+├── web/                     # Web 前端 SPA（新增）
+│   ├── pages/               # Login, Sessions, Chat, Files
+│   └── components/          # UI 组件
+├── shared/                  # 前后端共享类型（新增）
+├── tunnel/                  # Cloudflare Tunnel 管理（新增）
+├── screens/REPL.tsx         # TUI 交互界面
+├── tools/                   # 47 个内置工具
+├── commands/                # 103+ 斜杠命令
+├── skills/                  # 20 个 Skills
+└── services/                # API, MCP, OAuth 等服务层
 ```
 
----
+## 设计文档
 
-## 技术栈
+详细设计规格：[`docs/superpowers/specs/2026-04-01-claude-remote-design.md`](docs/superpowers/specs/2026-04-01-claude-remote-design.md)
 
-| 类别 | 技术 |
-|------|------|
-| 运行时 | [Bun](https://bun.sh) |
-| 语言 | TypeScript |
-| 终端 UI | React + [Ink](https://github.com/vadimdemedes/ink) |
-| CLI 解析 | Commander.js |
-| API | Anthropic SDK |
-| 协议 | MCP, LSP |
+## 基础项目
 
----
+基于 Claude Code 泄露源码修复的本地可运行版本。原始修复详见 [claude-code-haha](https://github.com/NanmiCoder/claude-code-haha)。
 
 ## Disclaimer
 
