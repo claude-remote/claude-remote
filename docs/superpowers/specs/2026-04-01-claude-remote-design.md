@@ -365,6 +365,7 @@ interface SessionSnapshot {
   clients: ClientConnection[]
   availableSkills: SkillInfo[]     // 当前 cwd 下可用的 skill 列表
   config: SessionConfig            // 当前 session 配置
+  configOptions: ConfigOptions     // 可选值列表（模型列表、effort 选项等），UI 用于渲染下拉
   contextUsage: ContextUsage       // 上下文窗口使用情况
   costSummary: CostSummary         // 费用摘要
   mcpServers: McpServerInfo[]      // MCP 服务状态列表（Hub 全局，非 session 级，所有 session 共享）
@@ -806,9 +807,10 @@ Web 端完整支持 TUI 中的斜杠命令体验：
 └───────────────────────────┘
 ```
 
+- MCP 服务是 **Hub 全局资源**（非 session 级），所有 session 共享同一组 MCP 服务
 - 显示每个 MCP 服务的名称、状态、tool 数量
-- 支持启用/禁用（`mcp:toggle`）和重连（`mcp:reconnect`）
-- 状态变化通过 `hub:mcp:statusChanged` 事件实时更新
+- 支持启用/禁用（`mcp:toggle`）和重连（`mcp:reconnect`），需 active writer
+- 状态变化通过 `hub:mcp:statusChanged` 事件广播给所有已连接客户端（不限 session）
 
 #### 8.6.5 通知系统
 
@@ -861,6 +863,59 @@ WebSocket 断开
 ### 8.8 UI 设计
 
 使用 Google Stitch MCP 进行界面设计，移动优先，确保手机端操作体验流畅。
+
+### 8.9 PWA 支持
+
+Web 端作为 PWA（Progressive Web App）发布，支持 iOS/Android "添加到主屏幕"后以原生 App 体验运行。
+
+**manifest.json：**
+
+```json
+{
+  "name": "Claude Remote",
+  "short_name": "Claude",
+  "description": "远程控制你的 AI 开发助手",
+  "start_url": "/sessions",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#D4845F",
+  "background_color": "#FAFAF8",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+```
+
+**iOS 适配（index.html meta 标签）：**
+
+```html
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Claude Remote">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+```
+
+**Service Worker：**
+
+- **静态资源缓存**：HTML/CSS/JS/字体等 App Shell 资源使用 Cache First 策略，更新时后台刷新
+- **API 请求不缓存**：所有 `/api/*` 和 WebSocket 连接走网络，不经过 SW
+- **推送通知**：注册 Push 订阅，Hub 在权限请求到来时发送推送
+  - 通知标题："Claude 请求权限"
+  - 通知正文：显示待执行的命令
+  - 点击通知 → 打开对应 session 的 Chat 页面
+- **离线页面**：无网络时显示 "等待连接 Hub..." 的离线提示页
+
+**体验效果：**
+
+| 能力 | Safari 书签 | PWA (添加到主屏) |
+|---|---|---|
+| 全屏显示 | 有浏览器导航栏 | 无导航栏，原生 App 体验 |
+| 主屏图标 | 无 | 有自定义图标 |
+| 推送通知 | 不支持 | 支持（iOS 16.4+） |
+| 后台保活 | 切换 App 可能断连 | Service Worker 维持连接 |
+| 启动速度 | 每次加载完整页面 | App Shell 缓存，秒开 |
 
 ## 9. 目录管理 + 文件浏览器
 
