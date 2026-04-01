@@ -126,7 +126,8 @@ export function ChatInput({
   return (
     <div
       id="chat-input-bar"
-      className="fixed right-0 bottom-0 left-0 border-t border-gray-800 bg-gray-950 p-3"
+      className="fixed right-0 bottom-14 left-0 border-t border-gray-800 bg-gray-950 p-3 md:bottom-0"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
     >
       <div className="relative mx-auto flex max-w-3xl items-end gap-2">
         <SkillPalette
