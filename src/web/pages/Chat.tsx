@@ -503,8 +503,8 @@ export function Chat() {
       {/* Status bar above input */}
       <StatusBar config={config} usage={usage} cost={cost} />
 
-      {/* Input bar - fixed at bottom, with padding for the fixed element */}
-      <div className="shrink-0 h-16" />
+      {/* Input bar - fixed at bottom, with padding for the fixed element + mobile nav */}
+      <div className="shrink-0 h-16 md:h-16" />
       <ChatInput
         onSend={handleSend}
         onAbort={handleAbort}
