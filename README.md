@@ -29,25 +29,47 @@ Claude 风格的温暖赭石色调，移动优先设计：
 
 ## 架构
 
-```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐
-│  手机浏览器   │     │  终端 TUI    │     │  另一个终端   │
-│  (Web SPA)  │     │  (Ink)      │     │  (Ink)       │
-└──────┬──────┘     └──────┬──────┘     └──────┬───────┘
-       │ WebSocket         │ WebSocket         │
-       ▼                   ▼                   ▼
-┌──────────────────────────────────────────────────────┐
-│                   Session Hub（常驻进程）               │
-│                                                      │
-│  Tool Engine · Claude API · SQLite · Event Bus       │
-│  Hono HTTP/WS Server (:3456)                        │
-└──────────────────────────────────────────────────────┘
-       │
-  Cloudflare Tunnel → 公网访问
+```mermaid
+graph TD
+    subgraph Clients
+        A["📱 手机浏览器<br/>(Web SPA)"]
+        B["💻 终端 TUI<br/>(Ink)"]
+        C["💻 另一个终端<br/>(Ink)"]
+    end
+
+    subgraph Hub["Session Hub (常驻进程)"]
+        direction TB
+        SM["Session Manager<br/>多 Session 管理"]
+        TE["Tool Engine<br/>47 个内置工具"]
+        API["Claude API Client"]
+        EB["Event Bus<br/>实时状态广播"]
+        DB["SQLite (WAL)<br/>持久化存储"]
+        SM --- TE
+        SM --- API
+        SM --- EB
+        SM --- DB
+    end
+
+    A -- "WebSocket" --> Hub
+    B -- "WebSocket / Unix Socket" --> Hub
+    C -- "WebSocket" --> Hub
+
+    subgraph Network
+        CF["☁️ Cloudflare Tunnel"]
+    end
+
+    Hub -- "HTTPS" --> CF
+    CF -- "公网访问" --> A
+
+    style Hub fill:#FDF2EC,stroke:#D4845F,stroke-width:2px
+    style A fill:#D4845F,color:#fff,stroke:#B8704F
+    style B fill:#F5F0EB,stroke:#8B7355
+    style C fill:#F5F0EB,stroke:#8B7355
+    style CF fill:#F0F7FF,stroke:#4A90D9
 ```
 
 **关键设计：**
-- Hub 是引擎，客户端（TUI/Web）是纯视图层
+- **Hub 是引擎**，客户端（TUI / Web）是纯视图层
 - 每个 Session 独立 AppState + cwd 隔离（`AsyncLocalStorage`）
 - WebSocket 事件驱动，SQLite WAL 模式持久化
 - CLI 退出不影响 Hub，手机可继续操作
