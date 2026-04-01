@@ -44,7 +44,7 @@ function createContext(headers: HeaderMap) {
     async run() {
       await authMiddleware(context as never, async () => {
         nextCalled = true;
-      });
+      })
 
       return { nextCalled, response };
     },
@@ -91,7 +91,7 @@ describe('auth middleware', () => {
 
     const result = await request.run();
 
-    expect(result.nextCalled).toBe(false);
+    expect(result.nextCalled).toBe(false)
     expect(result.response).toEqual({
       body: { error: 'Unauthorized' },
       status: 401,
