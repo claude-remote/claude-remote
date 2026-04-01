@@ -24,6 +24,7 @@ import { ChatInput } from '@/web/components/ChatInput';
 import { CompactPrompt } from '@/web/components/CompactPrompt';
 import { ContextIndicator } from '@/web/components/ContextIndicator';
 import { CostBadge } from '@/web/components/CostBadge';
+import { StatusBar } from '@/web/components/StatusBar';
 import { ExportDialog } from '@/web/components/ExportDialog';
 import { McpPanel } from '@/web/components/McpPanel';
 import { MessageList } from '@/web/components/MessageList';
@@ -162,6 +163,13 @@ export function Chat() {
     [sendCommand],
   );
 
+  const handleCompact = useCallback(() => {
+    sendCommand({
+      cmdId: `compact-${Date.now()}`,
+      cmd: 'chat:compact',
+    });
+  }, [sendCommand]);
+
   const handleLoadMore = useCallback(() => {
     // Pagination: request older messages
     // This would send a history command; for now it's a no-op placeholder
@@ -190,7 +198,7 @@ export function Chat() {
         </div>
         <div className="flex gap-2 pt-1">
           <ModelSelector config={config} options={options} />
-          <ContextIndicator usage={usage} />
+          <ContextIndicator usage={usage} modelName={config.model} />
           <CostBadge cost={cost} />
         </div>
       </header>
@@ -198,7 +206,7 @@ export function Chat() {
       {/* Banners */}
       <div className="shrink-0 space-y-1 px-3 pt-1">
         <PermissionBanner requests={permissions} writerStatus={writerStatus} onRespond={handlePermissionRespond} />
-        <CompactPrompt usage={usage} />
+        <CompactPrompt usage={usage} onCompact={handleCompact} />
       </div>
 
       {/* Message list */}
@@ -215,6 +223,9 @@ export function Chat() {
       <ExportDialog />
       <McpPanel servers={servers} />
       <SettingsDrawer config={config} servers={servers} />
+
+      {/* Status bar above input */}
+      <StatusBar config={config} usage={usage} cost={cost} />
 
       {/* Input bar - fixed at bottom, with padding for the fixed element */}
       <div className="shrink-0 h-16" />
