@@ -154,6 +154,11 @@ export interface HistorySearchResult {
   timestamp: number;
 }
 
+export interface McpToolInfo {
+  name: string;
+  description?: string;
+}
+
 export interface McpServerInfo {
   id: string;
   name: string;
@@ -161,6 +166,7 @@ export interface McpServerInfo {
   status: 'connected' | 'disconnected' | 'error';
   enabled: boolean;
   toolCount: number;
+  tools?: McpToolInfo[];
   error?: string;
 }
 
