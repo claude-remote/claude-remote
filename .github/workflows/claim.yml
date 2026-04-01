@@ -1,0 +1,143 @@
+# /claim 与 /unclaim 自动认领工作流
+# 当用户在 issue 下评论 /claim 时，自动分配任务；评论 /unclaim 时，释放任务。
+name: Issue Claim
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  claim:
+    # 仅在 issue（非 PR）评论且以 /claim 或 /unclaim 开头时运行
+    if: >-
+      !github.event.issue.pull_request &&
+      (startsWith(github.event.comment.body, '/claim') || startsWith(github.event.comment.body, '/unclaim'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: 处理认领与释放
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const comment = context.payload.comment;
+            const issue = context.payload.issue;
+            const commenter = comment.user.login;
+            const body = comment.body.trim();
+
+            // ============ /unclaim：释放任务 ============
+            if (body.startsWith('/unclaim')) {
+              // 移除 assignee
+              await github.rest.issues.removeAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                assignees: [commenter],
+              });
+
+              // 尝试移除 claimed 标签（如果不存在则忽略错误）
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  name: 'claimed',
+                });
+              } catch (e) {
+                // 标签可能不存在，忽略
+              }
+
+              // 回复确认
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `🔓 @${commenter} 已释放此任务，其他人可以认领。`,
+              });
+
+              return;
+            }
+
+            // ============ /claim：认领任务 ============
+
+            // 1. 检查是否已有 assignee
+            if (issue.assignees && issue.assignees.length > 0) {
+              const current = issue.assignees.map(a => `@${a.login}`).join(', ');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `⚠️ 此任务已被 ${current} 认领，请关注其他任务。`,
+              });
+              return;
+            }
+
+            // 2. 检查该用户当前已认领的 issue 数量（最多 2 个）
+            const assigned = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              assignee: commenter,
+              state: 'open',
+            });
+
+            if (assigned.data.length >= 2) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `⚠️ @${commenter} 你当前已认领 ${assigned.data.length} 个任务，已达上限（最多 2 个）。请先完成或释放已有任务后再认领新任务。`,
+              });
+              return;
+            }
+
+            // 3. 确保 claimed 标签存在（不存在则创建）
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'claimed',
+              });
+            } catch (e) {
+              // 标签不存在，创建它
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'claimed',
+                color: '0E8A16',
+                description: '已被认领的任务',
+              });
+            }
+
+            // 4. 分配 issue 给评论者
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              assignees: [commenter],
+            });
+
+            // 5. 添加 claimed 标签
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: ['claimed'],
+            });
+
+            // 6. 生成简短描述（取 issue 标题前 30 个字符，转为 kebab-case）
+            const shortDesc = issue.title
+              .toLowerCase()
+              .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-')
+              .replace(/^-|-$/g, '')
+              .substring(0, 30);
+
+            // 7. 回复确认
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `✅ @${commenter} 已认领此任务！请在 7 天内提交第一个 commit。分支命名：\`feat/task-${issue.number}-${shortDesc}\``,
+            });
