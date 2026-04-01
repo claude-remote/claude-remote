@@ -1,4 +1,4 @@
-import { feature } from 'bun:bundle'
+import { feature } from 'src/utils/feature.js'
 import { stat } from 'fs/promises'
 import { getClientType } from '../bootstrap/state.js'
 import {

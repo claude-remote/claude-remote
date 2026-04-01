@@ -18,7 +18,7 @@ import { ensureKeychainPrefetchCompleted, startKeychainPrefetch } from './utils/
 
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 startKeychainPrefetch();
-import { feature } from 'bun:bundle';
+import { feature } from 'src/utils/feature.js';
 import { Command as CommanderCommand, InvalidArgumentError, Option } from '@commander-js/extra-typings';
 import chalk from 'chalk';
 import { readFileSync } from 'fs';
@@ -3961,6 +3961,19 @@ async function run(): Promise<CommanderCommand> {
       mcpResetChoicesHandler
     } = await import('./cli/handlers/mcp.js');
     await mcpResetChoicesHandler();
+  });
+
+  program.command('serve').description('Start the local Claude Remote hub').action(async () => {
+    const {
+      serveHubHandler
+    } = await import('./cli/handlers/hub.js');
+    await serveHubHandler();
+  });
+  program.command('status').description('Show local Claude Remote hub status').action(async () => {
+    const {
+      statusHubHandler
+    } = await import('./cli/handlers/hub.js');
+    await statusHubHandler();
   });
 
   // claude server

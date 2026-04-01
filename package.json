@@ -1,14 +1,14 @@
 {
-  "name": "claude-code-local",
+  "name": "claude-remote",
   "version": "999.0.0-local",
   "private": true,
   "type": "module",
   "bin": {
-    "claude-haha": "./bin/claude-haha"
+    "claude-remote": "./bin/claude-remote"
   },
   "scripts": {
-    "claude-haha": "bun run ./bin/claude-haha",
-    "start": "bun run ./bin/claude-haha"
+    "claude-remote": "./bin/claude-remote",
+    "start": "./bin/claude-remote"
   },
   "dependencies": {
     "@anthropic-ai/sandbox-runtime": "^0.0.44",

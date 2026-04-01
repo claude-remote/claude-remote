@@ -271,7 +271,7 @@ Expected: PASS
 
 - [ ] **Step 7: Run a manual smoke check**
 
-Run: `bun run ./bin/claude-haha status`
+Run: `bun run ./bin/claude-remote status`
 Expected: Prints “not running” or equivalent without crashing.
 
 - [ ] **Step 8: Commit**
@@ -348,7 +348,7 @@ Expected: PASS
 
 - [ ] **Step 7: Run a manual smoke check**
 
-Run: `bun run ./bin/claude-haha attach`
+Run: `bun run ./bin/claude-remote attach`
 Expected: Starts or connects to the local hub and prints an attach success message or enters the TUI without crashing.
 
 - [ ] **Step 8: Commit**
@@ -413,8 +413,8 @@ Expected: PASS
 Run:
 
 ```bash
-bun run ./bin/claude-haha serve
-bun run ./bin/claude-haha attach
+bun run ./bin/claude-remote serve
+bun run ./bin/claude-remote attach
 ```
 
 Expected: Typing a prompt in the REPL yields a clear structured “Hub baseline connected, chat not implemented yet” notice instead of silent failure.
@@ -513,10 +513,10 @@ Expected: PASS
 Run:
 
 ```bash
-bun run ./bin/claude-haha status
-bun run ./bin/claude-haha serve
-bun run ./bin/claude-haha status
-bun run ./bin/claude-haha attach
+bun run ./bin/claude-remote status
+bun run ./bin/claude-remote serve
+bun run ./bin/claude-remote status
+bun run ./bin/claude-remote attach
 ```
 
 Expected:

@@ -25,7 +25,7 @@ import { TeammateMessageContent } from './UserTeammateMessage.js';
 import { isShutdownApproved } from '../../utils/teammateMailbox.js';
 import { CtrlOToExpand } from '../CtrlOToExpand.js';
 import { FilePathLink } from '../FilePathLink.js';
-import { feature } from 'bun:bundle';
+import { feature } from 'src/utils/feature.js';
 import { useSelectedMessageBg } from '../messageActions.js';
 type Props = {
   addMargin: boolean;
