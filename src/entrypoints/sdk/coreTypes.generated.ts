@@ -1,3 +1,52 @@
 // Local recovery stub for missing generated SDK types.
 // The leaked source tree does not include this codegen artifact.
-export {}
+
+export type HookEvent = any;
+export type HookInput = any;
+export type HookJSONOutput = any;
+export type ModelInfo = any;
+export type ModelUsage = any;
+export type McpServerConfigForProcessTransport = any;
+export type McpServerStatus = any;
+export type PermissionResult = any;
+export type PermissionUpdate = any;
+export type RewindFilesResult = any;
+export type SDKAPIRetryMessage = any;
+export type SDKAssistantMessage = any;
+export type SDKAssistantMessageError = any;
+export type SDKCompactBoundaryMessage = any;
+export type SDKCompactMetadata = any;
+export type SDKElicitationCompleteMessage = any;
+export type SDKFilesPersistedEventData = any;
+export type SDKHookProgress = any;
+export type SDKHookProgressMessage = any;
+export type SDKHookResponseMessage = any;
+export type SDKHookStartedMessage = any;
+export type SDKLocalCommandOutputMessage = any;
+export type SDKMessage = any;
+export type SDKMessages = any;
+export type SDKPartialAssistantMessage = any;
+export type SDKPermissionDenial = any;
+export type SDKPostTurnSummaryMessage = any;
+export type SDKPromptSuggestionMessage = any;
+export type SDKRateLimitEvent = any;
+export type SDKRateLimitInfo = any;
+export type SDKResultError = any;
+export type SDKResultMessage = any;
+export type SDKResultSuccess = any;
+export type SDKSessionInfo = any;
+export type SDKSessionStateChangedMessage = any;
+export type SDKStatus = any;
+export type SDKStatusMessage = any;
+export type SDKStreamlinedTextMessage = any;
+export type SDKStreamlinedToolUseSummaryMessage = any;
+export type SDKSystemMessage = any;
+export type SDKTaskNotificationMessage = any;
+export type SDKTaskProgress = any;
+export type SDKTaskProgressMessage = any;
+export type SDKTaskStartedMessage = any;
+export type SDKToolProgress = any;
+export type SDKToolProgressMessage = any;
+export type SDKToolUseSummaryMessage = any;
+export type SDKUserMessage = any;
+export type SDKUserMessageReplay = any;

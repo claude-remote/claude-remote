@@ -1,21 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "strict": true,
+    "strict": false,
     "noEmit": true,
-    "allowJs": false,
+    "allowJs": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
+    "types": ["bun-types", "react", "react-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@ant/claude-for-chrome-mcp": ["./stubs/ant-claude-for-chrome-mcp.ts"],
+      "color-diff-napi": ["./stubs/color-diff-napi.ts"],
+      "src/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"]
