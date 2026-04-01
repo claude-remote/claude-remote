@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, startTransition, useState } from 'react';
 
 import type {
   ConfigOptions,
@@ -134,6 +134,25 @@ export function Chat() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [headerMenuOpen]);
 
+  // Batch WebSocket event processing at ~60fps (16ms) to avoid excessive re-renders
+  const pendingDeltasRef = useRef<StreamDelta[]>([]);
+  const batchRafRef = useRef<number>(0);
+
+  const flushDeltas = useCallback(() => {
+    batchRafRef.current = 0;
+    const deltas = pendingDeltasRef.current;
+    if (deltas.length === 0) return;
+    pendingDeltasRef.current = [];
+
+    setMessages((prev: Message[]) => {
+      let updated = prev;
+      for (const delta of deltas) {
+        updated = applyDelta(updated, delta);
+      }
+      return updated;
+    });
+  }, [setMessages]);
+
   // Process incoming WebSocket messages
   useEffect(() => {
     if (!lastMessage) return;
@@ -161,18 +180,28 @@ export function Chat() {
 
       if (event.type === 'sdk:message') {
         const payload = event.payload;
-        // Handle streaming deltas
+        // Handle streaming deltas - batch for next animation frame
         if (payload.type === 'assistant:delta') {
           setIsStreaming(true);
           const delta = payload as unknown as { type: string; delta: StreamDelta };
-          setMessages(
-            applyDelta(messages, delta.delta),
-          );
+          pendingDeltasRef.current.push(delta.delta);
+          if (!batchRafRef.current) {
+            batchRafRef.current = requestAnimationFrame(flushDeltas);
+          }
         } else if (payload.type === 'assistant:done') {
+          // Flush any remaining deltas immediately, then mark done
+          if (pendingDeltasRef.current.length > 0) {
+            cancelAnimationFrame(batchRafRef.current);
+            batchRafRef.current = 0;
+            flushDeltas();
+          }
           setIsStreaming(false);
         } else if (payload.type === 'message:added') {
           const addedMsg = payload as unknown as { type: string; message: Message };
-          setMessages([...messages, addedMsg.message]);
+          // Use startTransition for non-urgent state updates (new messages)
+          startTransition(() => {
+            setMessages((prev: Message[]) => [...prev, addedMsg.message]);
+          });
         }
       }
 
@@ -193,7 +222,7 @@ export function Chat() {
         // Session was compacted; snapshot will follow
       }
     }
-  }, [lastMessage, messages, setMessages, setSnapshot]);
+  }, [lastMessage, setMessages, setSnapshot, flushDeltas]);
 
   const handleSend = useCallback(
     (text: string) => {
