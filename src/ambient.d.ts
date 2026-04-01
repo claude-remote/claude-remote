@@ -14,6 +14,17 @@ type PromiseWithResolvers<T> = {
   reject(reason?: unknown): void;
 };
 
+declare function resolveAntModel(...args: any[]): any;
+declare function getAntModels(...args: any[]): any;
+declare function getAntModelOverrideConfig(...args: any[]): any;
+
+declare namespace JSX {
+  interface Element {}
+  interface IntrinsicElements {
+    [elemName: string]: any;
+  }
+}
+
 declare module 'react/compiler-runtime' {
   export const c: any;
 }
@@ -31,7 +42,23 @@ declare module 'ws' {
 
 declare module '@anthropic-ai/claude-agent-sdk' {
   const sdk: any;
+  export type PermissionMode = any;
   export default sdk;
+}
+
+declare module '@aws-sdk/client-bedrock' {
+  const bedrock: any;
+  export = bedrock;
+}
+
+declare module '@anthropic-ai/mcpb' {
+  const mcpb: any;
+  export = mcpb;
+}
+
+declare module 'fflate' {
+  const fflate: any;
+  export = fflate;
 }
 
 declare module '@opentelemetry/exporter-metrics-otlp-grpc' {
@@ -90,6 +117,8 @@ declare module '*types/message.js' {
   export type RenderableMessage = any;
   export type SystemAPIErrorMessage = any;
   export type SystemBridgeStatusMessage = any;
+  export type SystemCompactBoundaryMessage = any;
+  export type SystemFileSnapshotMessage = any;
   export type SystemInformationalMessage = any;
   export type SystemMemorySavedMessage = any;
   export type SystemMessage = any;
@@ -122,16 +151,22 @@ declare module '*constants/querySource.js' {
 }
 
 declare module '*assistant/index.js' {
+  export const isAssistantMode: any;
   const assistant: any;
   export default assistant;
 }
 
 declare module '*proactive/index.js' {
+  export const activateProactive: any;
+  export const deactivateProactive: any;
+  export const isProactiveActive: any;
+  export const isProactivePaused: any;
   const proactive: any;
   export default proactive;
 }
 
 declare module '*postCommitAttribution.js' {
+  export const installPrepareCommitMsgHook: any;
   const postCommitAttribution: any;
   export default postCommitAttribution;
 }
@@ -140,4 +175,128 @@ declare module '*Transport.js' {
   export type Transport = any;
   const transport: any;
   export default transport;
+}
+
+declare module '*services/oauth/types.js' {
+  export type OAuthTokens = any;
+}
+
+declare module '*commands/install-github-app/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*commands/plugin/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*commands/plugin/unifiedTypes.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*wizard/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*components/agents/new-agent-creation/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*components/mcp/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*utils/secureStorage/types.js' {
+  const types: any;
+  export = types;
+}
+
+declare module '*services/contextCollapse/index.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/contextCollapse/operations.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/contextCollapse/persist.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/skillSearch/localSearch.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*commands/workflows/index.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*commands/peers/index.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*commands/fork/index.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*commands/buddy/index.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/WorkflowTool/createWorkflowCommand.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/attributionHooks.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/lsp/types.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*memdir/memoryShapeTelemetry.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*types/messageQueueTypes.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*types/notebook.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/TerminalCaptureTool/prompt.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/OverflowTestTool/OverflowTestTool.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/VerifyPlanExecutionTool/constants.js' {
+  const mod: any;
+  export = mod;
 }
