@@ -9,6 +9,8 @@ interface ChatInputProps {
   disabled: boolean;
   skills?: SkillInfo[];
   onSkillInvoke?: (skill: SkillInfo, args?: string) => void;
+  /** Custom placeholder text (e.g. for plan mode). */
+  placeholder?: string;
 }
 
 export function ChatInput({
@@ -18,6 +20,7 @@ export function ChatInput({
   disabled,
   skills = [],
   onSkillInvoke,
+  placeholder,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,7 +141,7 @@ export function ChatInput({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={disabled ? 'Not connected...' : 'Send a message...'}
+          placeholder={disabled ? 'Not connected...' : (placeholder ?? 'Send a message...')}
           disabled={disabled}
           rows={1}
           className="min-h-[40px] flex-1 resize-none rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none transition-colors focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"

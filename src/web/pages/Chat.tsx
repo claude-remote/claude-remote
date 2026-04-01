@@ -11,6 +11,7 @@ import type {
   SessionMeta,
   SkillInfo,
   StreamDelta,
+  Task,
   WriterStatus,
 } from '@/shared/types';
 import type { HubEvent, HubResponse } from '@/shared/protocol';
@@ -31,6 +32,7 @@ import { MessageList } from '@/web/components/MessageList';
 import { ModelSelector } from '@/web/components/ModelSelector';
 import { NotificationCenter } from '@/web/components/NotificationCenter';
 import { PermissionBanner } from '@/web/components/PermissionBanner';
+import { PlanViewer } from '@/web/components/PlanViewer';
 import { SettingsDrawer } from '@/web/components/SettingsDrawer';
 import { SkillPalette } from '@/web/components/SkillPalette';
 
@@ -92,6 +94,12 @@ export function Chat() {
   const writerStatus: WriterStatus = activeSnapshot?.myWriterStatus ?? 'standby';
   const skills: SkillInfo[] = activeSnapshot?.availableSkills ?? [];
   const servers: McpServerInfo[] = activeSnapshot?.mcpServers ?? [];
+  const activeTasks: Task[] = activeSnapshot?.activeTasks ?? [];
+
+  const isPlanMode = useMemo(
+    () => activeTasks.some((t) => t.activeForm === 'plan'),
+    [activeTasks],
+  );
 
   // Process incoming WebSocket messages
   useEffect(() => {
@@ -176,6 +184,14 @@ export function Chat() {
     setHasMore(false);
   }, []);
 
+  const handleExitPlanMode = useCallback(() => {
+    sendCommand({
+      cmdId: `plan-exit-${Date.now()}`,
+      cmd: 'chat',
+      text: '/plan:exit',
+    });
+  }, [sendCommand]);
+
   return (
     <main className="flex h-[100dvh] flex-col bg-gray-950">
       {/* Header */}
@@ -202,6 +218,15 @@ export function Chat() {
           <CostBadge cost={cost} />
         </div>
       </header>
+
+      {/* Plan mode viewer */}
+      <div className="shrink-0">
+        <PlanViewer
+          tasks={activeTasks}
+          messages={messages}
+          onExitPlanMode={handleExitPlanMode}
+        />
+      </div>
 
       {/* Banners */}
       <div className="shrink-0 space-y-1 px-3 pt-1">
@@ -234,6 +259,7 @@ export function Chat() {
         onAbort={handleAbort}
         isStreaming={isStreaming}
         disabled={!connected}
+        placeholder={isPlanMode ? 'Discuss the plan...' : undefined}
       />
     </main>
   );
