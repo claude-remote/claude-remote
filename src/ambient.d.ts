@@ -52,8 +52,162 @@ declare module '@aws-sdk/client-bedrock' {
 }
 
 declare module '@anthropic-ai/mcpb' {
+  export type McpbManifest = any;
+  export type McpbUserConfigurationOption = any;
   const mcpb: any;
   export = mcpb;
+}
+
+declare module '@ant/computer-use-mcp' {
+  export type ComputerExecutor = any;
+  export type DisplayGeometry = any;
+  export type FrontmostApp = any;
+  export type InstalledApp = any;
+  export type ResolvePrepareCaptureResult = any;
+  export type RunningApp = any;
+  export type ScreenshotResult = any;
+  export type ComputerUseSessionContext = any;
+  export type CuCallToolResult = any;
+  export type CuPermissionRequest = any;
+  export type CuPermissionResponse = any;
+  export type ScreenshotDims = any;
+  export const API_RESIZE_PARAMS: any;
+  export const DEFAULT_GRANT_FLAGS: any;
+  export const bindSessionContext: any;
+  export const buildComputerUseTools: any;
+  export const createComputerUseMcpServer: any;
+  export const targetImageSize: any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '@ant/computer-use-mcp/sentinelApps' {
+  export const getSentinelCategory: any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '@ant/computer-use-mcp/types' {
+  export type ComputerUseHostAdapter = any;
+  export type CoordinateMode = any;
+  export type CuPermissionRequest = any;
+  export type CuPermissionResponse = any;
+  export type CuSubGates = any;
+  export const DEFAULT_GRANT_FLAGS: any;
+  export type Logger = any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '@ant/computer-use-input' {
+  export type ComputerUseInput = any;
+  export type ComputerUseInputAPI = any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '@ant/computer-use-swift' {
+  export type ComputerUseAPI = any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '@anthropic-ai/bedrock-sdk' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@anthropic-ai/foundry-sdk' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@anthropic-ai/vertex-sdk' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@aws-sdk/client-sts' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@aws-sdk/credential-providers' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'vitest' {
+  export const afterAll: any;
+  export const afterEach: any;
+  export const beforeAll: any;
+  export const beforeEach: any;
+  export const describe: any;
+  export const expect: any;
+  export const it: any;
+  export const test: any;
+  export const vi: any;
+}
+
+declare module 'vscode-languageserver-protocol' {
+  export type InitializeParams = any;
+  export type InitializeResult = any;
+  export type PublishDiagnosticsParams = any;
+  export type ServerCapabilities = any;
+  const mod: any;
+  export = mod;
+}
+
+declare module 'plist' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'sharp' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'turndown' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'cacache' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'cli-highlight' {
+  export const highlight: any;
+  export const listLanguages: any;
+  const mod: any;
+  export default mod;
+}
+
+declare module 'audio-capture-napi' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'image-processor-napi' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'url-handler-napi' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '@azure/identity' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*.md' {
+  const content: string;
+  export default content;
 }
 
 declare module 'fflate' {
@@ -105,6 +259,19 @@ declare module '*types/message.js' {
   export type AssistantMessage = any;
   export type AttachmentMessage = any;
   export type CollapsedReadSearchGroup = any;
+  export type CollapsibleMessage = any;
+  export type CompactMetadata = any;
+  export type MessageOrigin = any;
+  export type RequestStartEvent = any;
+  export type StopHookInfo = any;
+  export type StreamEvent = any;
+  export type SystemAgentsKilledMessage = any;
+  export type SystemAwaySummaryMessage = any;
+  export type SystemLocalCommandMessage = any;
+  export type SystemPermissionRetryMessage = any;
+  export type SystemScheduledTaskFireMessage = any;
+  export type TombstoneMessage = any;
+  export type ToolUseSummaryMessage = any;
   export type GroupedToolUseMessage = any;
   export type HookProgressMessage = any;
   export type HookResultMessage = any;
@@ -178,7 +345,227 @@ declare module '*Transport.js' {
 }
 
 declare module '*services/oauth/types.js' {
+  export type BillingType = any;
   export type OAuthTokens = any;
+  export type OAuthTokenExchangeResponse = any;
+  export type OAuthProfileResponse = any;
+  export type RateLimitTier = any;
+  export type ReferralCampaign = any;
+  export type ReferralEligibilityResponse = any;
+  export type ReferralRedemptionsResponse = any;
+  export type ReferrerRewardInfo = any;
+  export type SubscriptionType = any;
+  export type UserRolesResponse = any;
+}
+
+declare module '*types/messageQueueTypes.js' {
+  export type QueueOperation = any;
+  export type QueueOperationMessage = any;
+}
+
+declare module '*types/notebook.js' {
+  export type NotebookCell = any;
+  export type NotebookCellOutput = any;
+  export type NotebookCellSource = any;
+  export type NotebookCellSourceOutput = any;
+  export type NotebookContent = any;
+  export type NotebookOutputImage = any;
+}
+
+declare module '*services/lsp/types.js' {
+  export type LspServerConfig = any;
+  export type ScopedLspServerConfig = any;
+  export type LspServerState = any;
+}
+
+declare module '*tools/SendUserFileTool/prompt.js' {
+  export const SEND_USER_FILE_TOOL_NAME: string;
+}
+
+declare module '*tools/DiscoverSkillsTool/prompt.js' {
+  export const DISCOVER_SKILLS_TOOL_NAME: string;
+}
+
+declare module '*tools/SnipTool/prompt.js' {
+  export const SNIP_TOOL_NAME: string;
+}
+
+declare module '*assistant/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*bridge/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*cli/bg.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*cli/handlers/ant.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*cli/handlers/templateJobs.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*daemon/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*environment-runner/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*self-hosted-runner/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*jobs/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*query/transitions.js' {
+  export const Continue: any;
+  export const Terminal: any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/*/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/compact/cachedMCConfig.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/compact/cachedMicrocompact.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*compact/cachedMicrocompact.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/sessionTranscript/sessionTranscript.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*sessionTranscript/sessionTranscript.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/skillSearch/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*skillSearch/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*skills/mcpSkills.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ssh/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tasks/LocalWorkflowTask/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tasks/MonitorMcpTask/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/MonitorTool/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/ReviewArtifactTool/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/WorkflowTool/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*tools/WebBrowserTool/WebBrowserPanel.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ui/option.js' {
+  export const Option: any;
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/ccshareResume.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/eventLoopStallDetector.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/sdkHeapDumpMonitor.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/sessionDataUploader.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/taskSummary.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/udsClient.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/udsMessaging.js' {
+  const mod: any;
+  export = mod;
 }
 
 declare module '*commands/install-github-app/types.js' {

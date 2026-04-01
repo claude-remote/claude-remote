@@ -25,6 +25,8 @@ import { getStartupPerfLogPath, isDetailedProfilingEnabled } from 'src/utils/sta
 import { EmergencyTip } from './EmergencyTip.js';
 import { VoiceModeNotice } from './VoiceModeNotice.js';
 import { Opus1mMergeNotice } from './Opus1mMergeNotice.js';
+import { GateOverridesWarning } from './GateOverridesWarning.js';
+import { ExperimentEnrollmentNotice } from './ExperimentEnrollmentNotice.js';
 import { feature } from 'src/utils/feature.js';
 
 // Conditional require so ChannelsNotice.tsx tree-shakes when both flags are

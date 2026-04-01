@@ -60,6 +60,12 @@ import type {
   SessionMessage,
   SessionMutationOptions,
 } from './sdk/runtimeTypes.js'
+import type {
+  ApiKeySource as InternalApiKeySource,
+} from '../utils/auth.js'
+import type {
+  PermissionMode as InternalPermissionMode,
+} from '../types/permissions.js'
 
 export type {
   ListSessionsOptions,
@@ -69,6 +75,34 @@ export type {
   ForkSessionResult,
   SDKSessionInfo,
 }
+
+export type ApiKeySource = InternalApiKeySource
+export type PermissionMode = InternalPermissionMode
+export type EffortLevel = any
+export type NotificationHookInput = any
+export type PostToolUseHookInput = any
+export type PostToolUseFailureHookInput = any
+export type PermissionDeniedHookInput = any
+export type PreCompactHookInput = any
+export type PostCompactHookInput = any
+export type PreToolUseHookInput = any
+export type SessionStartHookInput = any
+export type SessionEndHookInput = any
+export type SetupHookInput = any
+export type StopFailureHookInput = any
+export type SubagentStartHookInput = any
+export type SubagentStopHookInput = any
+export type TeammateIdleHookInput = any
+export type TaskCreatedHookInput = any
+export type TaskCompletedHookInput = any
+export type ConfigChangeHookInput = any
+export type CwdChangedHookInput = any
+export type FileChangedHookInput = any
+export type InstructionsLoadedHookInput = any
+export type UserPromptSubmitHookInput = any
+export type PermissionRequestHookInput = any
+export type ElicitationHookInput = any
+export type ElicitationResultHookInput = any
 
 export function tool<Schema extends AnyZodRawShape>(
   _name: string,
