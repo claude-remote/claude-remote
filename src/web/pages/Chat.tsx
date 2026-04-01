@@ -134,6 +134,15 @@ export function Chat() {
           setMessages([...messages, addedMsg.message]);
         }
       }
+
+      // Handle MCP server status changes
+      if (event.type === 'hub:mcp:statusChanged' && activeSnapshot) {
+        const updatedServer = event.server;
+        const updatedServers = activeSnapshot.mcpServers.map((s) =>
+          s.id === updatedServer.id ? updatedServer : s,
+        );
+        setSnapshot({ ...activeSnapshot, mcpServers: updatedServers });
+      }
     }
   }, [lastMessage, messages, setMessages, setSnapshot]);
 
@@ -269,7 +278,7 @@ export function Chat() {
       <SkillPalette skills={skills} />
       <BranchMenu session={session} />
       <ExportDialog />
-      <McpPanel servers={servers} />
+      <McpPanel servers={servers} sendCommand={sendCommand} />
       <SettingsDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
