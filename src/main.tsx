@@ -3975,6 +3975,12 @@ async function run(): Promise<CommanderCommand> {
     } = await import('./cli/handlers/hub.js');
     await statusHubHandler();
   });
+  program.command('attach').description('Attach the TUI to the local Claude Remote hub').action(async () => {
+    const {
+      attachHubHandler
+    } = await import('./cli/handlers/hubAttach.js');
+    await attachHubHandler();
+  });
 
   // claude server
   if (feature('DIRECT_CONNECT')) {
