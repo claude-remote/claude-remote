@@ -91,6 +91,7 @@ export interface SessionMeta {
   updatedAt: number;
   clientCount: number;
   hasActiveWriter: boolean;
+  tags?: string[];
 }
 
 export interface SkillInfo {
