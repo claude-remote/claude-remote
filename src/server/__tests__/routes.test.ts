@@ -13,7 +13,7 @@ import { registerHistoryRoutes } from '@/server/routes/history';
 import { registerMcpRoutes } from '@/server/routes/mcp';
 import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
-import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
+import { CLAUDE_REMOTE_VERSION, SESSION_COOKIE_NAME } from '@/shared/constants';
 import type { McpServerInfo, Message, SessionConfig } from '@/shared/types';
 
 type MockRouteSession = {
@@ -248,6 +248,15 @@ function createMockHub() {
     getSession(sessionId: string) {
       return sessions.find((item) => item.id === sessionId) ?? null;
     },
+    setSessionCwd(sessionId: string, cwd: string) {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) {
+        return null;
+      }
+      session.cwd = cwd;
+      session.updatedAt = 4600;
+      return session;
+    },
     updateSessionConfig(
       sessionId: string,
       updates: Partial<SessionConfig>,
@@ -325,7 +334,7 @@ function createTestApp() {
   registerMcpRoutes(app, hub);
   registerHistoryRoutes(app, hub);
 
-  return { app, tokenService };
+  return { app, hub, tokenService };
 }
 
 describe('health routes', () => {
@@ -346,17 +355,19 @@ describe('health routes', () => {
 
 describe('auth routes', () => {
   test('POST /api/auth/login with valid token returns ok', async () => {
-    const { app } = createTestApp();
+    const { app, tokenService } = createTestApp();
+    const masterToken = await tokenService.loadOrCreateMasterToken();
     const res = await app.request('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: 'test-master-token' }),
+      body: JSON.stringify({ token: masterToken }),
     });
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.sessionToken).toBeDefined();
+    expect(res.headers.get('set-cookie')).toContain(`${SESSION_COOKIE_NAME}=`);
   });
 
   test('POST /api/auth/login without token returns 401', async () => {
@@ -370,6 +381,19 @@ describe('auth routes', () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBeDefined();
+  });
+
+  test('POST /api/auth/login with invalid token returns 401', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: 'invalid-token' }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe('Invalid token');
   });
 
   test('POST /api/auth/bootstrap with valid token succeeds', async () => {
@@ -386,6 +410,7 @@ describe('auth routes', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.sessionToken).toBeDefined();
+    expect(res.headers.get('set-cookie')).toContain(`${SESSION_COOKIE_NAME}=`);
   });
 
   test('POST /api/auth/bootstrap with invalid token returns 401', async () => {
@@ -637,6 +662,26 @@ describe('file routes', () => {
       const body = await res.json();
       expect(body.path).toBe(fixtureDir);
       expect(body.dirs).toEqual([join(fixtureDir, 'alpha'), join(fixtureDir, 'beta')]);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  test('GET /api/files uses session cwd for legacy callers', async () => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), 'claude-remote-file-legacy-'));
+    writeFileSync(join(fixtureDir, 'legacy.txt'), 'legacy');
+
+    const { app, hub } = createTestApp();
+    hub.setSessionCwd('sess-1', fixtureDir);
+    const res = await app.request('/api/files?sessionId=sess-1');
+
+    try {
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.session.id).toBe('sess-1');
+      expect(body.path).toBe(fixtureDir);
+      expect(body.entries).toHaveLength(1);
+      expect(body.entries[0].name).toBe('legacy.txt');
     } finally {
       rmSync(fixtureDir, { recursive: true, force: true });
     }

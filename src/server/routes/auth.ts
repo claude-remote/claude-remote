@@ -1,7 +1,17 @@
 import type { Hono } from 'hono';
 
 import type { TokenService } from '@/server/auth/token';
+import { DEFAULT_SESSION_TOKEN_TTL_MS, SESSION_COOKIE_NAME } from '@/shared/constants';
 import type { SessionMeta } from '@/shared/types';
+
+function setSessionCookie(context: { header: (name: string, value: string) => void }, token: string): void {
+  const maxAge = Math.floor(DEFAULT_SESSION_TOKEN_TTL_MS / 1000);
+  const expires = new Date(Date.now() + DEFAULT_SESSION_TOKEN_TTL_MS).toUTCString();
+  context.header(
+    'Set-Cookie',
+    `${SESSION_COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}; Expires=${expires}`,
+  );
+}
 
 export function registerAuthRoutes(app: Hono, tokenService: TokenService): Hono {
   // POST /api/auth/login — exchange master token for httpOnly session cookie
@@ -11,12 +21,16 @@ export function registerAuthRoutes(app: Hono, tokenService: TokenService): Hono 
       return context.json({ error: 'Token required' }, 401);
     }
 
-    // TODO(T04): validate against master token from hub.token file
+    const masterToken = await tokenService.loadOrCreateMasterToken();
+    if (body.token !== masterToken) {
+      return context.json({ error: 'Invalid token' }, 401);
+    }
+
     const session = await tokenService.issueSessionToken({ id: 'web-client' } satisfies Pick<
       SessionMeta,
       'id'
     >);
-    // TODO(T04): set httpOnly cookie with session token
+    setSessionCookie(context, session.sessionToken);
     return context.json({ ok: true, ...session });
   });
 
@@ -32,7 +46,7 @@ export function registerAuthRoutes(app: Hono, tokenService: TokenService): Hono 
       return context.json({ error: 'Invalid bootstrap token' }, 401);
     }
 
-    // TODO(T04): set httpOnly cookie
+    setSessionCookie(context, session.sessionToken);
     return context.json({ ok: true, ...session });
   });
 

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { TokenService } from '@/server/auth/token';
 import { registerAuthRoutes } from '@/server/routes/auth';
+import { SESSION_COOKIE_NAME } from '@/shared/constants';
 
 describe('auth routes', () => {
   test('registers bootstrap token exchange route', async () => {
@@ -28,14 +29,21 @@ describe('auth routes', () => {
       req: {
         json: async () => ({ token: bootstrap.token }),
       },
+      header(name: string, value: string) {
+        this.headers[name] = value;
+      },
+      headers: {} as Record<string, string>,
       json(body: unknown, status = 200) {
-        return { body, status };
+        return { body, status, headers: this.headers };
       },
     });
 
     expect(okResult).toEqual({
       body: expect.objectContaining({
         sessionToken: expect.any(String),
+      }),
+      headers: expect.objectContaining({
+        'Set-Cookie': expect.stringContaining(`${SESSION_COOKIE_NAME}=`),
       }),
       status: 200,
     });
@@ -44,13 +52,18 @@ describe('auth routes', () => {
       req: {
         json: async () => ({ token: 'nope' }),
       },
+      header(name: string, value: string) {
+        this.headers[name] = value;
+      },
+      headers: {} as Record<string, string>,
       json(body: unknown, status = 200) {
-        return { body, status };
+        return { body, status, headers: this.headers };
       },
     });
 
     expect(invalidResult).toEqual({
       body: { error: 'Invalid bootstrap token' },
+      headers: {},
       status: 401,
     });
   });

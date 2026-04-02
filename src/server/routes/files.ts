@@ -22,7 +22,28 @@ interface FileContent {
   modified: string;
 }
 
-export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
+function listEntries(dirPath: string): FileEntry[] {
+  return readdirSync(dirPath, { withFileTypes: true })
+    .map((entry) => {
+      const path = join(dirPath, entry.name);
+      const stats = statSync(path);
+      return {
+        name: entry.name,
+        path,
+        type: entry.isDirectory() ? 'directory' : entry.isSymbolicLink() ? 'symlink' : 'file',
+        size: entry.isDirectory() ? undefined : stats.size,
+        modifiedAt: stats.mtimeMs,
+      } satisfies FileEntry;
+    })
+    .sort((a, b) => {
+      if (a.type === b.type) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.type === 'directory' ? -1 : 1;
+    });
+}
+
+export function registerFileRoutes(app: Hono, hub: Hub): Hono {
   // GET /api/files/list?path=xxx — list directory contents
   app.get('/api/files/list', (context) => {
     const dirPath = context.req.query('path');
@@ -31,29 +52,7 @@ export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
     }
 
     try {
-      const entries: FileEntry[] = readdirSync(dirPath, { withFileTypes: true })
-        .map((entry) => {
-          const path = join(dirPath, entry.name);
-          const stats = statSync(path);
-          return {
-            name: entry.name,
-            path,
-            type: entry.isDirectory()
-              ? 'directory'
-              : entry.isSymbolicLink()
-                ? 'symlink'
-                : 'file',
-            size: entry.isDirectory() ? undefined : stats.size,
-            modifiedAt: stats.mtimeMs,
-          } satisfies FileEntry;
-        })
-        .sort((a, b) => {
-          if (a.type === b.type) {
-            return a.name.localeCompare(b.name);
-          }
-          return a.type === 'directory' ? -1 : 1;
-        });
-      return context.json({ path: dirPath, entries });
+      return context.json({ path: dirPath, entries: listEntries(dirPath) });
     } catch (error) {
       return context.json({ error: (error as Error).message }, 404);
     }
@@ -110,8 +109,25 @@ export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
 
   // GET /api/files — legacy endpoint (backward compat)
   app.get('/api/files', (context) => {
-    const sessionId = context.req.query('sessionId') ?? 'unknown';
-    return context.json({ session: { id: sessionId }, entries: [] });
+    const sessionId = context.req.query('sessionId');
+    if (!sessionId) {
+      return context.json({ error: 'sessionId query parameter required' }, 400);
+    }
+
+    const session = hub.getSession(sessionId);
+    if (!session) {
+      return context.json({ error: `session ${sessionId} not found` }, 404);
+    }
+
+    try {
+      return context.json({
+        session: { id: sessionId },
+        path: session.cwd,
+        entries: listEntries(session.cwd),
+      });
+    } catch (error) {
+      return context.json({ error: (error as Error).message }, 404);
+    }
   });
 
   return app;
