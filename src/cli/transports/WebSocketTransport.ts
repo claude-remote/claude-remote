@@ -248,7 +248,7 @@ export class WebSocketTransport implements Transport {
     this.handleOpenEvent()
     if (!ws) return
     // Check for last-id in upgrade response headers (ws package only)
-    const nws = ws as unknown as WsWebSocket & {
+    const nws = ws as any as {
       upgradeReq?: { headers?: Record<string, string> }
     }
     const upgradeResponse = nws.upgradeReq
@@ -368,7 +368,7 @@ export class WebSocketTransport implements Transport {
       // 'pong' is Bun-specific — not in DOM typings
       nws.removeEventListener('pong' as 'message', this.onPong)
     } else {
-      const nws = ws as unknown as WsWebSocket
+      const nws = ws as any
       nws.off('open', this.onNodeOpen)
       nws.off('message', this.onNodeMessage)
       nws.off('error', this.onNodeError)

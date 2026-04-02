@@ -23,6 +23,7 @@ type Props = {
   /** Called when the phase 2 waiting state is dismissed (URL elicitations only). */
   onWaitingDismiss?: (action: 'dismiss' | 'retry' | 'cancel') => void;
 };
+type SchemaRecord = Record<string, PrimitiveSchemaDefinition & Record<string, any>>;
 const isTextField = (s: PrimitiveSchemaDefinition) => ['string', 'number', 'integer'].includes(s.type);
 const RESOLVING_SPINNER_CHARS = '\u280B\u2819\u2839\u2838\u283C\u2834\u2826\u2827\u2807\u280F';
 const advanceSpinnerFrame = (f: number) => (f + 1) % RESOLVING_SPINNER_CHARS.length;
@@ -156,24 +157,21 @@ function ElicitationFormDialog({
     message,
     requestedSchema
   } = request;
-  const hasFields = Object.keys(requestedSchema.properties).length > 0;
+  const schemaProperties = requestedSchema.properties as SchemaRecord;
+  const hasFields = Object.keys(schemaProperties).length > 0;
   const [focusedButton, setFocusedButton] = useState<'accept' | 'decline' | null>(hasFields ? null : 'accept');
   const [formValues, setFormValues] = useState<Record<string, string | number | boolean | string[]>>(() => {
     const initialValues: Record<string, string | number | boolean | string[]> = {};
-    if (requestedSchema.properties) {
-      for (const [propName, propSchema] of Object.entries(requestedSchema.properties)) {
-        if (typeof propSchema === 'object' && propSchema !== null) {
-          if (propSchema.default !== undefined) {
-            initialValues[propName] = propSchema.default;
-          }
-        }
+    for (const [propName, propSchema] of Object.entries(schemaProperties)) {
+      if (propSchema.default !== undefined) {
+        initialValues[propName] = propSchema.default;
       }
     }
     return initialValues;
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>(() => {
     const initialErrors: Record<string, string> = {};
-    for (const [propName_0, propSchema_0] of Object.entries(requestedSchema.properties)) {
+    for (const [propName_0, propSchema_0] of Object.entries(schemaProperties)) {
       if (isTextField(propSchema_0) && propSchema_0?.default !== undefined) {
         const validation = validateElicitationInput(String(propSchema_0.default), propSchema_0);
         if (!validation.isValid && validation.error) {
@@ -199,12 +197,12 @@ function ElicitationFormDialog({
   }, [signal, onResponse]);
   const schemaFields = useMemo(() => {
     const requiredFields = requestedSchema.required ?? [];
-    return Object.entries(requestedSchema.properties).map(([name, schema]) => ({
+    return Object.entries(schemaProperties).map(([name, schema]) => ({
       name,
       schema,
       isRequired: requiredFields.includes(name)
     }));
-  }, [requestedSchema]);
+  }, [requestedSchema.required, schemaProperties]);
   const [currentFieldIndex, setCurrentFieldIndex] = useState<number | undefined>(hasFields ? 0 : undefined);
   const [textInputValue, setTextInputValue] = useState(() => {
     // Initialize from the first field's value if it's a text field
@@ -651,7 +649,7 @@ function ElicitationFormDialog({
     const {
       schema: schema_5,
       name: name_0
-    } = currentField;
+    } = currentField as { name: string; schema: PrimitiveSchemaDefinition & Record<string, any> };
     const value_1 = formValues[name_0];
 
     // Boolean: Space to toggle, Enter to move on
@@ -789,7 +787,8 @@ function ElicitationFormDialog({
           name: name_1,
           schema: schema_6,
           isRequired
-        } = field_0;
+        } = field_0 as { name: string; schema: PrimitiveSchemaDefinition & Record<string, any>; isRequired: boolean };
+        const displaySchema = schema_6 as PrimitiveSchemaDefinition & Record<string, any>;
         const isActive = index_0 === currentFieldIndex && !focusedButton;
         const value_3 = formValues[name_1];
         const hasValue = value_3 !== undefined && (!Array.isArray(value_3) || value_3.length > 0);
@@ -805,21 +804,21 @@ function ElicitationFormDialog({
         const selectionColor = error_0 ? 'error' : hasValue ? 'success' : isRequired ? 'error' : 'suggestion';
         const activeColor = isActive ? selectionColor : undefined;
         const label = <Text color={activeColor} bold={isActive}>
-                {schema_6.title || name_1}
+                {displaySchema.title || name_1}
               </Text>;
 
         // Render the value portion based on field type
         let valueContent: React.ReactNode;
         let accordionContent: React.ReactNode = null;
-        if (isMultiSelectEnumSchema(schema_6)) {
-          const msValues_0 = getMultiSelectValues(schema_6);
+        if (isMultiSelectEnumSchema(displaySchema)) {
+          const msValues_0 = getMultiSelectValues(displaySchema);
           const selected_1 = value_3 as string[] | undefined ?? [];
           const isExpanded = expandedAccordion === name_1 && isActive;
           if (isExpanded) {
             valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>;
             accordionContent = <Box flexDirection="column" marginLeft={6}>
                     {msValues_0.map((optVal, optIdx) => {
-                const optLabel = getMultiSelectLabel(schema_6, optVal);
+                const optLabel = getMultiSelectLabel(displaySchema, optVal);
                 const isChecked = selected_1.includes(optVal);
                 const isFocused = optIdx === accordionOptionIndex;
                 return <Box key={optVal} gap={1}>
@@ -839,7 +838,7 @@ function ElicitationFormDialog({
             // Collapsed: ▸ arrow then comma-joined selected items
             const arrow = isActive ? <Text dimColor>{figures.triangleRightSmall} </Text> : null;
             if (selected_1.length > 0) {
-              const displayLabels = selected_1.map(v_4 => getMultiSelectLabel(schema_6, v_4));
+              const displayLabels = selected_1.map(v_4 => getMultiSelectLabel(displaySchema, v_4));
               valueContent = <Text>
                       {arrow}
                       <Text color={activeColor} bold={isActive}>
@@ -855,14 +854,14 @@ function ElicitationFormDialog({
                     </Text>;
             }
           }
-        } else if (isEnumSchema(schema_6)) {
-          const enumValues_0 = getEnumValues(schema_6);
+        } else if (isEnumSchema(displaySchema)) {
+          const enumValues_0 = getEnumValues(displaySchema);
           const isExpanded_0 = expandedAccordion === name_1 && isActive;
           if (isExpanded_0) {
             valueContent = <Text dimColor>{figures.triangleDownSmall}</Text>;
             accordionContent = <Box flexDirection="column" marginLeft={6}>
                     {enumValues_0.map((optVal_0, optIdx_0) => {
-                const optLabel_0 = getEnumLabel(schema_6, optVal_0);
+                const optLabel_0 = getEnumLabel(displaySchema, optVal_0);
                 const isSelected = value_3 === optVal_0;
                 const isFocused_0 = optIdx_0 === accordionOptionIndex;
                 return <Box key={optVal_0} gap={1}>
@@ -885,7 +884,7 @@ function ElicitationFormDialog({
               valueContent = <Text>
                       {arrow_0}
                       <Text color={activeColor} bold={isActive}>
-                        {getEnumLabel(schema_6, value_3 as string)}
+                        {getEnumLabel(displaySchema, value_3 as string)}
                       </Text>
                     </Text>;
             } else {
@@ -897,7 +896,7 @@ function ElicitationFormDialog({
                     </Text>;
             }
           }
-        } else if (schema_6.type === 'boolean') {
+        } else if (displaySchema.type === 'boolean') {
           if (isActive) {
             valueContent = hasValue ? <Text color={activeColor} bold>
                     {value_3 ? figures.checkboxOn : figures.checkboxOff}
@@ -909,11 +908,11 @@ function ElicitationFormDialog({
                     not set
                   </Text>;
           }
-        } else if (isTextField(schema_6)) {
+        } else if (isTextField(displaySchema)) {
           if (isActive) {
             valueContent = <TextInput value={textInputValue} onChange={handleTextInputChange} onSubmit={handleTextInputSubmit} placeholder={`Type something\u{2026}`} columns={Math.min(columns - 20, 60)} cursorOffset={textInputCursorOffset} onChangeCursorOffset={setTextInputCursorOffset} focus showCursor />;
           } else {
-            const displayValue = hasValue && isDateTimeSchema(schema_6) ? formatDateDisplay(String(value_3), schema_6) : String(value_3);
+            const displayValue = hasValue && isDateTimeSchema(displaySchema) ? formatDateDisplay(String(value_3), displaySchema) : String(value_3);
             valueContent = hasValue ? <Text>{displayValue}</Text> : <Text dimColor italic>
                     not set
                   </Text>;
@@ -936,8 +935,8 @@ function ElicitationFormDialog({
                   </Box>
                 </Box>
                 {accordionContent}
-                {schema_6.description && <Box marginLeft={6}>
-                    <Text dimColor>{schema_6.description}</Text>
+                {displaySchema.description && <Box marginLeft={6}>
+                    <Text dimColor>{displaySchema.description}</Text>
                   </Box>}
                 <Box marginLeft={6} height={1}>
                   {error_0 ? <Text color="error" italic>

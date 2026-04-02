@@ -12,6 +12,11 @@ import {
   parseNaturalLanguageDateTime,
 } from './dateTimeParser.js'
 
+type AnyPrimitiveSchemaDefinition = any
+type AnyEnumSchema = any
+type AnyMultiSelectEnumSchema = any
+type AnyStringSchema = any
+
 export type ValidationResult = {
   value?: string | number | boolean
   isValid: boolean
@@ -41,8 +46,8 @@ const STRING_FORMATS = {
  * Check if schema is a single-select enum (either legacy `enum` format or new `oneOf` format)
  */
 export const isEnumSchema = (
-  schema: PrimitiveSchemaDefinition,
-): schema is EnumSchema => {
+  schema: AnyPrimitiveSchemaDefinition,
+): boolean => {
   return schema.type === 'string' && ('enum' in schema || 'oneOf' in schema)
 }
 
@@ -50,8 +55,8 @@ export const isEnumSchema = (
  * Check if schema is a multi-select enum (`type: "array"` with `items.enum` or `items.anyOf`)
  */
 export function isMultiSelectEnumSchema(
-  schema: PrimitiveSchemaDefinition,
-): schema is MultiSelectEnumSchema {
+  schema: AnyPrimitiveSchemaDefinition,
+): boolean {
   return (
     schema.type === 'array' &&
     'items' in schema &&
@@ -64,7 +69,9 @@ export function isMultiSelectEnumSchema(
 /**
  * Get values from a multi-select enum schema
  */
-export function getMultiSelectValues(schema: MultiSelectEnumSchema): string[] {
+export function getMultiSelectValues(
+  schema: AnyPrimitiveSchemaDefinition,
+): string[] {
   if ('anyOf' in schema.items) {
     return schema.items.anyOf.map(item => item.const)
   }
@@ -77,7 +84,9 @@ export function getMultiSelectValues(schema: MultiSelectEnumSchema): string[] {
 /**
  * Get display labels from a multi-select enum schema
  */
-export function getMultiSelectLabels(schema: MultiSelectEnumSchema): string[] {
+export function getMultiSelectLabels(
+  schema: AnyPrimitiveSchemaDefinition,
+): string[] {
   if ('anyOf' in schema.items) {
     return schema.items.anyOf.map(item => item.title)
   }
@@ -91,7 +100,7 @@ export function getMultiSelectLabels(schema: MultiSelectEnumSchema): string[] {
  * Get label for a specific value in a multi-select enum
  */
 export function getMultiSelectLabel(
-  schema: MultiSelectEnumSchema,
+  schema: AnyPrimitiveSchemaDefinition,
   value: string,
 ): string {
   const index = getMultiSelectValues(schema).indexOf(value)
@@ -101,7 +110,7 @@ export function getMultiSelectLabel(
 /**
  * Get enum values from EnumSchema (handles both legacy `enum` and new `oneOf` formats)
  */
-export function getEnumValues(schema: EnumSchema): string[] {
+export function getEnumValues(schema: AnyPrimitiveSchemaDefinition): string[] {
   if ('oneOf' in schema) {
     return schema.oneOf.map(item => item.const)
   }
@@ -114,7 +123,7 @@ export function getEnumValues(schema: EnumSchema): string[] {
 /**
  * Get enum display labels from EnumSchema
  */
-export function getEnumLabels(schema: EnumSchema): string[] {
+export function getEnumLabels(schema: AnyPrimitiveSchemaDefinition): string[] {
   if ('oneOf' in schema) {
     return schema.oneOf.map(item => item.title)
   }
@@ -127,12 +136,15 @@ export function getEnumLabels(schema: EnumSchema): string[] {
 /**
  * Get label for a specific enum value
  */
-export function getEnumLabel(schema: EnumSchema, value: string): string {
+export function getEnumLabel(
+  schema: AnyPrimitiveSchemaDefinition,
+  value: string,
+): string {
   const index = getEnumValues(schema).indexOf(value)
   return index >= 0 ? (getEnumLabels(schema)[index] ?? value) : value
 }
 
-function getZodSchema(schema: PrimitiveSchemaDefinition): z.ZodTypeAny {
+function getZodSchema(schema: AnyPrimitiveSchemaDefinition): z.ZodTypeAny {
   if (isEnumSchema(schema)) {
     const [first, ...rest] = getEnumValues(schema)
     if (!first) {
@@ -224,7 +236,7 @@ function getZodSchema(schema: PrimitiveSchemaDefinition): z.ZodTypeAny {
 
 export function validateElicitationInput(
   stringValue: string,
-  schema: PrimitiveSchemaDefinition,
+  schema: AnyPrimitiveSchemaDefinition,
 ): ValidationResult {
   const zodSchema = getZodSchema(schema)
   const parseResult = zodSchema.safeParse(stringValue)
@@ -243,8 +255,8 @@ export function validateElicitationInput(
 }
 
 const hasStringFormat = (
-  schema: PrimitiveSchemaDefinition,
-): schema is StringSchema & { format: string } => {
+  schema: AnyPrimitiveSchemaDefinition,
+): boolean => {
   return (
     schema.type === 'string' &&
     'format' in schema &&
@@ -256,7 +268,7 @@ const hasStringFormat = (
  * Returns a helpful placeholder/hint for a given format
  */
 export function getFormatHint(
-  schema: PrimitiveSchemaDefinition,
+  schema: AnyPrimitiveSchemaDefinition,
 ): string | undefined {
   if (schema.type === 'string') {
     if (!hasStringFormat(schema)) {
@@ -291,8 +303,8 @@ export function getFormatHint(
  * Check if a schema is a date or date-time format that supports NL parsing
  */
 export function isDateTimeSchema(
-  schema: PrimitiveSchemaDefinition,
-): schema is StringSchema & { format: 'date' | 'date-time' } {
+  schema: AnyPrimitiveSchemaDefinition,
+): boolean {
   return (
     schema.type === 'string' &&
     'format' in schema &&
@@ -306,7 +318,7 @@ export function isDateTimeSchema(
  */
 export async function validateElicitationInputAsync(
   stringValue: string,
-  schema: PrimitiveSchemaDefinition,
+  schema: AnyPrimitiveSchemaDefinition,
   signal: AbortSignal,
 ): Promise<ValidationResult> {
   const syncResult = validateElicitationInput(stringValue, schema)

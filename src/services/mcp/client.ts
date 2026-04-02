@@ -966,7 +966,7 @@ export const connectToServer = memoize(
       let stderrHandler: ((data: Buffer) => void) | undefined
       let stderrOutput = ''
       if (serverRef.type === 'stdio' || !serverRef.type) {
-        const stdioTransport = transport as StdioClientTransport
+        const stdioTransport = transport as any
         if (stdioTransport.stderr) {
           stderrHandler = (data: Buffer) => {
             // Cap stderr accumulation to prevent unbounded memory growth
@@ -1419,7 +1419,7 @@ export const connectToServer = memoize(
 
         // Remove stderr event listener to prevent memory leaks
         if (stderrHandler && (serverRef.type === 'stdio' || !serverRef.type)) {
-          const stdioTransport = transport as StdioClientTransport
+          const stdioTransport = transport as any
           stdioTransport.stderr?.off('data', stderrHandler)
         }
 
@@ -1428,7 +1428,7 @@ export const connectToServer = memoize(
         // (especially Docker containers) need explicit SIGINT/SIGTERM signals to trigger graceful shutdown
         if (serverRef.type === 'stdio') {
           try {
-            const stdioTransport = transport as StdioClientTransport
+            const stdioTransport = transport as any
             const childPid = stdioTransport.pid
 
             if (childPid) {
@@ -2052,7 +2052,9 @@ export const fetchCommandsForClient = memoizeWithLRU(
 
       // Convert MCP prompts to our Command format
       return promptsToProcess.map(prompt => {
-        const argNames = Object.values(prompt.arguments ?? {}).map(k => k.name)
+        const argNames = Object.values(
+          (prompt.arguments ?? {}) as Record<string, { name?: string }>,
+        ).map((k) => k.name ?? '')
         return {
           type: 'prompt' as const,
           name: 'mcp__' + normalizeNameForMCP(client.name) + '__' + prompt.name,

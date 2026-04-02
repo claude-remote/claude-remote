@@ -15,7 +15,11 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
       clientCount: s.clients?.length ?? 0,
-      hasActiveWriter: s.clients?.some((c) => c.writerStatus === 'active') ?? false,
+      hasActiveWriter:
+        s.clients?.some(
+          (c) =>
+            (c as { writerStatus?: string | null }).writerStatus === 'active',
+        ) ?? false,
     }));
 
     if (statusFilter) {

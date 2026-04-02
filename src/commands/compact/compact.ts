@@ -179,10 +179,18 @@ async function compactViaReactive(
     )
 
     if (!outcome.ok) {
+      const failedOutcome = outcome as {
+        reason:
+          | 'too_few_groups'
+          | 'aborted'
+          | 'exhausted'
+          | 'error'
+          | 'media_unstrippable'
+      }
       // The outer catch in `call` translates these: aborted → "Compaction
       // canceled." (via abortController.signal.aborted check), NOT_ENOUGH →
       // re-thrown as-is, everything else → "Error during compaction: …".
-      switch (outcome.reason) {
+      switch (failedOutcome.reason) {
         case 'too_few_groups':
           throw new Error(ERROR_MESSAGE_NOT_ENOUGH_MESSAGES)
         case 'aborted':
@@ -207,14 +215,19 @@ async function compactViaReactive(
     // they can merge its userDisplayMessage with PostCompact's here. This
     // caller additionally runs it concurrently with getCacheSharingParams.
     const combinedMessage =
-      [hookResult.userDisplayMessage, outcome.result.userDisplayMessage]
+      [
+        hookResult.userDisplayMessage,
+        (outcome as {
+          result: { userDisplayMessage?: string }
+        }).result.userDisplayMessage,
+      ]
         .filter(Boolean)
         .join('\n') || undefined
 
     return {
       type: 'compact',
       compactionResult: {
-        ...outcome.result,
+        ...((outcome as unknown as { result: CompactionResult }).result),
         userDisplayMessage: combinedMessage,
       },
       displayText: buildDisplayText(context, combinedMessage),

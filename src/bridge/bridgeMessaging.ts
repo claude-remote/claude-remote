@@ -347,12 +347,13 @@ export function handleServerControlRequest(
           },
         }
       } else {
+        const failedVerdict = verdict as { error?: string }
         response = {
           type: 'control_response',
           response: {
             subtype: 'error',
             request_id: request.request_id,
-            error: verdict.error,
+            error: failedVerdict.error ?? 'Unknown error',
           },
         }
       }

@@ -373,9 +373,10 @@ export class CCRClient {
           'client events',
         )
         if (!result.ok) {
+          const failedResult = result as { retryAfterMs?: number }
           throw new RetryableError(
             'client event POST failed',
-            result.retryAfterMs,
+            failedResult.retryAfterMs,
           )
         }
       },
@@ -396,9 +397,10 @@ export class CCRClient {
           'internal events',
         )
         if (!result.ok) {
+          const failedResult = result as { retryAfterMs?: number }
           throw new RetryableError(
             'internal event POST failed',
-            result.retryAfterMs,
+            failedResult.retryAfterMs,
           )
         }
       },
@@ -427,7 +429,11 @@ export class CCRClient {
           'delivery batch',
         )
         if (!result.ok) {
-          throw new RetryableError('delivery POST failed', result.retryAfterMs)
+          const failedResult = result as { retryAfterMs?: number }
+          throw new RetryableError(
+            'delivery POST failed',
+            failedResult.retryAfterMs,
+          )
         }
       },
       baseDelayMs: 500,

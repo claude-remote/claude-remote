@@ -8,12 +8,12 @@ async function _temp2() {
   return messages.map(_temp);
 }
 function _temp(message, index) {
-  let priority = "low";
+  let priority = "low" as const;
   if (message.type === "error" || message.userActionRequired) {
-    priority = "high";
+    priority = "high" as const;
   } else {
     if (message.type === "path" || message.type === "alias") {
-      priority = "medium";
+      priority = "medium" as const;
     }
   }
   return {

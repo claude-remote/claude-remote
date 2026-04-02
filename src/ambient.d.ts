@@ -46,6 +46,141 @@ declare module '@anthropic-ai/claude-agent-sdk' {
   export default sdk;
 }
 
+declare module '@modelcontextprotocol/sdk/types.js' {
+  export const CallToolRequestSchema: any;
+  export const CallToolResultSchema: any;
+  export const ElicitRequestSchema: any;
+  export const ElicitationCompleteNotificationSchema: any;
+  export const JSONRPCMessageSchema: any;
+  export const ListToolsRequestSchema: any;
+  export const ListToolsResultSchema: any;
+  export const ListPromptsResultSchema: any;
+  export const ListResourcesResultSchema: any;
+  export const ListRootsRequestSchema: any;
+  export const PromptListChangedNotificationSchema: any;
+  export const ResourceListChangedNotificationSchema: any;
+  export const ToolListChangedNotificationSchema: any;
+  export type CallToolResult = any;
+  export type ElicitRequestParams = any;
+  export type ElicitRequestFormParams = any;
+  export type ElicitRequestURLParams = any;
+  export type ElicitResult = any;
+  export type EnumSchema = any;
+  export const ErrorCode: any;
+  export type JSONRPCMessage = any;
+  export type ListToolsResult = any;
+  export type ListPromptsResult = any;
+  export type MultiSelectEnumSchema = any;
+  export const McpError: any;
+  export type PromptMessage = any;
+  export type PrimitiveSchemaDefinition = any;
+  export type ReadResourceResultSchema = any;
+  export type ReadResourceResult = any;
+  export type Resource = any;
+  export type ResourceLink = any;
+  export type ServerCapabilities = any;
+  export type StringSchema = any;
+  export type Tool = any;
+  export type ToolAnnotations = any;
+}
+
+declare module '@modelcontextprotocol/sdk/server/index.js' {
+  export const Server: any;
+}
+
+declare module '@modelcontextprotocol/sdk/server/stdio.js' {
+  export const StdioServerTransport: any;
+}
+
+declare module '@modelcontextprotocol/sdk/client/index.js' {
+  export type Client = any;
+  export const Client: any;
+}
+
+declare module '@modelcontextprotocol/sdk/client/sse.js' {
+  export type SSEClientTransportOptions = any;
+  export const SSEClientTransport: any;
+}
+
+declare module '@modelcontextprotocol/sdk/client/stdio.js' {
+  export const StdioClientTransport: any;
+}
+
+declare module '@modelcontextprotocol/sdk/client/streamableHttp.js' {
+  export type StreamableHTTPClientTransportOptions = any;
+  export const StreamableHTTPClientTransport: any;
+}
+
+declare module '@modelcontextprotocol/sdk/client/auth.js' {
+  export const auth: any;
+  export const discoverAuthorizationServerMetadata: any;
+  export const discoverOAuthServerInfo: any;
+  export const exchangeAuthorization: any;
+  export const refreshAuthorization: any;
+  export const startAuthorization: any;
+  export const UnauthorizedError: any;
+  export type OAuthClientProvider = any;
+  export type OAuthDiscoveryState = any;
+}
+
+declare module '@modelcontextprotocol/sdk/server/auth/errors.js' {
+  export const InvalidGrantError: any;
+  export const OAuthError: any;
+  export const ServerError: any;
+  export const TemporarilyUnavailableError: any;
+  export const TooManyRequestsError: any;
+}
+
+declare module '@modelcontextprotocol/sdk/shared/auth.js' {
+  export const OAuthErrorResponseSchema: any;
+  export const OAuthMetadataSchema: any;
+  export const OAuthTokensSchema: any;
+  export const OpenIdProviderDiscoveryMetadataSchema: any;
+  export type AuthorizationServerMetadata = any;
+  export type OAuthClientInformation = any;
+  export type OAuthClientInformationFull = any;
+  export type OAuthClientMetadata = any;
+  export type OpenIdProviderDiscoveryMetadata = any;
+  export type OAuthTokens = any;
+}
+
+declare module '@modelcontextprotocol/sdk/shared/transport.js' {
+  export const createFetchWithInit: any;
+  export type FetchLike = any;
+  export type Transport = any;
+}
+
+declare module 'hono' {
+  export class Hono {
+    use(...args: any[]): any
+    get(...args: any[]): any
+    patch(...args: any[]): any
+    post(...args: any[]): any
+    request(...args: any[]): Promise<Response>
+    fetch(...args: any[]): any
+  }
+  export type MiddlewareHandler = any;
+}
+
+declare module 'hono/cors' {
+  export const cors: any
+}
+
+declare module 'hono/logger' {
+  export const logger: any
+}
+
+declare module 'usehooks-ts' {
+  export function useInterval(...args: any[]): any
+  export function useDebounceCallback(...args: any[]): any
+  export function useEventCallback(...args: any[]): any
+}
+
+declare module 'fuse.js' {
+  const Fuse: any;
+  export default Fuse;
+}
+
 declare module '@aws-sdk/client-bedrock' {
   const bedrock: any;
   export = bedrock;
@@ -854,6 +989,10 @@ declare module '*services/skillSearch/featureCheck.js' {
 declare module '*assistant/AssistantSessionChooser.js' {
   const mod: any;
   export = mod;
+}
+
+declare module '*assistant/sessionDiscovery.js' {
+  export type AssistantSession = any;
 }
 
 declare module '*commands/assistant/assistant.js' {

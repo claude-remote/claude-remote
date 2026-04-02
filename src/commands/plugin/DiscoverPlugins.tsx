@@ -245,10 +245,11 @@ export function DiscoverPlugins({
       if (result.success) {
         successCount_0++;
       } else {
+        const failedResult = result as { error?: string }
         failureCount++;
         newFailedPlugins.push({
           name: plugin_0.entry.name,
-          reason: result.error
+          reason: failedResult.error ?? 'Unknown error'
         });
       }
     }
@@ -306,7 +307,7 @@ export function DiscoverPlugins({
       });
     } else {
       setIsInstalling(false);
-      setInstallError(result_0.error);
+      setInstallError((result_0 as { error?: string }).error ?? 'Unknown error');
     }
   };
 

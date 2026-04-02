@@ -1646,10 +1646,14 @@ function runHeadlessStreaming(
         connection.config.type === 'stdio' ||
         connection.config.type === undefined
       ) {
+        const stdioConfig = connection.config as {
+          command?: string
+          args?: string[]
+        }
         config = {
           type: 'stdio' as const,
-          command: connection.config.command,
-          args: connection.config.args,
+          command: stdioConfig.command,
+          args: stdioConfig.args,
         }
       }
       const serverTools =
@@ -4435,7 +4439,11 @@ async function handleInitializeRequest(
   if (request.hooks) {
     const hooks: Partial<Record<HookEvent, HookCallbackMatcher[]>> = {}
     for (const [event, matchers] of Object.entries(request.hooks)) {
-      hooks[event as HookEvent] = matchers.map(matcher => {
+      hooks[event as HookEvent] = (matchers as Array<{
+        matcher: string
+        timeout?: number
+        hookCallbackIds: string[]
+      }>).map(matcher => {
         const callbacks = matcher.hookCallbackIds.map(callbackId => {
           return structuredIO.createHookCallback(callbackId, matcher.timeout)
         })

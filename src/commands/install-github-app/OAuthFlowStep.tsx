@@ -45,7 +45,7 @@ export function OAuthFlowStep({
   const [cursorOffset, setCursorOffset] = useState(0);
   const [showPastePrompt, setShowPastePrompt] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
-  const timersRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   // Separate ref so startOAuth's timer clear doesn't cancel the urlCopied reset
   const urlCopiedTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const terminalSize = useTerminalSize();
@@ -135,7 +135,7 @@ export function OAuthFlowStep({
         });
         // Auto-continue after brief delay to show success
         const timer2 = setTimeout(onSuccess_0, 1000, accessToken);
-        timersRef_0.current.add(timer2);
+        timersRef_0.current.add(timer2 as ReturnType<typeof setTimeout>);
       }, 100, setOAuthStatus, result.accessToken, onSuccess, timersRef);
       timersRef.current.add(timer1);
     } catch (err_0) {

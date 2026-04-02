@@ -13,6 +13,16 @@ export interface AuthenticatedVariables {
   session?: Pick<SessionMeta, 'id'>;
 }
 
+type AuthContext = {
+  req: {
+    header: (name: string) => string | undefined;
+    url: string;
+  };
+  header: (name: string, value: string) => void;
+  json: (body: unknown, status?: number) => Response;
+  set: (key: string, value: unknown) => void;
+};
+
 const AUTH_SCHEME = /^bearer\s+(.+)$/i;
 
 function extractBearer(headerValue?: string): string | undefined {
@@ -38,7 +48,7 @@ function extractCookie(cookieHeader?: string): string | undefined {
   return undefined;
 }
 
-function normalizeIp(context: Parameters<MiddlewareHandler>[0]): string {
+function normalizeIp(context: AuthContext): string {
   return (
     context.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
     context.req.header('x-real-ip') ||
@@ -48,7 +58,7 @@ function normalizeIp(context: Parameters<MiddlewareHandler>[0]): string {
   );
 }
 
-function getExpectedHost(context: Parameters<MiddlewareHandler>[0]): string | undefined {
+function getExpectedHost(context: AuthContext): string | undefined {
   const explicitHost = context.req.header('x-forwarded-host') || context.req.header('host');
   if (explicitHost) {
     return explicitHost;
@@ -61,7 +71,7 @@ function getExpectedHost(context: Parameters<MiddlewareHandler>[0]): string | un
   }
 }
 
-function isOriginAllowed(context: Parameters<MiddlewareHandler>[0]): boolean {
+function isOriginAllowed(context: AuthContext): boolean {
   const origin = context.req.header('origin');
   const expectedHost = getExpectedHost(context);
   if (!origin || !expectedHost) {
@@ -75,7 +85,7 @@ function isOriginAllowed(context: Parameters<MiddlewareHandler>[0]): boolean {
   }
 }
 
-function setSessionCookie(context: Parameters<MiddlewareHandler>[0], token: string): void {
+function setSessionCookie(context: AuthContext, token: string): void {
   const maxAge = Math.floor(DEFAULT_SESSION_TOKEN_TTL_MS / 1000);
   const expires = new Date(Date.now() + DEFAULT_SESSION_TOKEN_TTL_MS).toUTCString();
   context.header(
@@ -84,12 +94,15 @@ function setSessionCookie(context: Parameters<MiddlewareHandler>[0], token: stri
   );
 }
 
-function unauthorized(context: Parameters<MiddlewareHandler>[0], ip: string): Response {
+function unauthorized(context: AuthContext, ip: string): Response {
   recordAuthFailure(ip);
   return context.json({ error: 'Unauthorized' }, 401);
 }
 
-export const requireAuth: MiddlewareHandler = async (context, next) => {
+export const requireAuth: MiddlewareHandler = async (
+  context: AuthContext,
+  next: () => Promise<void>,
+) => {
   const ip = normalizeIp(context);
   if (isIpBanned(ip)) {
     return context.json({ error: 'Too many failed attempts' }, 401);
