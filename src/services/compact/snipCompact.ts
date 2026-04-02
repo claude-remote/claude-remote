@@ -12,3 +12,15 @@ export function isSnipRuntimeEnabled(): boolean {
 export function shouldNudgeForSnips(_messages: any[]): boolean {
   return false;
 }
+
+export function snipCompactIfNeeded(...args: any[]): {
+  messages: any[];
+  tokensFreed: number;
+  boundaryMessage: null;
+} {
+  return {
+    messages: args[0] ?? [],
+    tokensFreed: 0,
+    boundaryMessage: null,
+  };
+}

@@ -257,7 +257,7 @@ declare module '@opentelemetry/exporter-trace-otlp-proto' {
 
 declare module '*types/message.js' {
   export type AssistantMessage = any;
-  export type AttachmentMessage = any;
+  export type AttachmentMessage<T = any> = any;
   export type CollapsedReadSearchGroup = any;
   export type CollapsibleMessage = any;
   export type CompactMetadata = any;
@@ -276,19 +276,22 @@ declare module '*types/message.js' {
   export type HookProgressMessage = any;
   export type HookResultMessage = any;
   export type Message = any;
-  export type NormalizedAssistantMessage = any;
+  export type NormalizedAssistantMessage<T = any> = any;
   export type NormalizedMessage = any;
   export type NormalizedUserMessage = any;
   export type PartialCompactDirection = any;
-  export type ProgressMessage = any;
+  export type ProgressMessage<T = any> = any;
   export type RenderableMessage = any;
   export type SystemAPIErrorMessage = any;
+  export type SystemApiMetricsMessage = any;
   export type SystemBridgeStatusMessage = any;
   export type SystemCompactBoundaryMessage = any;
   export type SystemFileSnapshotMessage = any;
   export type SystemInformationalMessage = any;
   export type SystemMemorySavedMessage = any;
   export type SystemMessage = any;
+  export type SystemMessageLevel = any;
+  export type SystemMicrocompactBoundaryMessage = any;
   export type SystemStopHookSummaryMessage = any;
   export type SystemThinkingMessage = any;
   export type SystemTurnDurationMessage = any;
@@ -612,6 +615,108 @@ declare module '*utils/secureStorage/types.js' {
 declare module '*services/contextCollapse/index.js' {
   const mod: any;
   export = mod;
+}
+
+declare module '*assistant/index.js' {
+  export const initializeAssistantTeam: any;
+  export const markAssistantForced: any;
+  export const isAssistantForced: any;
+  export const getAssistantSystemPromptAddendum: any;
+  export const getAssistantActivationPath: any;
+}
+
+declare module '*assistant/gate.js' {
+  export const isKairosEnabled: any;
+}
+
+declare module '*assistant/sessionDiscovery.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ssh/createSSHSession.js' {
+  export type SSHSession = any;
+  export const createSSHSession: any;
+}
+
+declare module '*server/parseConnectUrl.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/server.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/sessionManager.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/backends/dangerousBackend.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/serverBanner.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/serverLog.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/lockfile.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*server/connectHeadless.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*components/agents/SnapshotUpdateDialog.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*components/FeedbackSurvey/useFrustrationDetection.js' {
+  export const useFrustrationDetection: any;
+}
+
+declare module '*hooks/notifs/useAntOrgWarningNotification.js' {
+  export const useAntOrgWarningNotification: any;
+}
+
+declare module 'src/cli/up.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module 'src/cli/rollback.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/skillSearch/prefetch.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*jobs/classifier.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*query/transitions.js' {
+  export type Continue = any;
+  export type Terminal = any;
+  export const Continue: any;
+  export const Terminal: any;
 }
 
 declare module '*services/contextCollapse/operations.js' {

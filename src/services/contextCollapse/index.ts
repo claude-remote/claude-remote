@@ -34,3 +34,22 @@ export function isContextCollapseEnabled(): boolean {
 export function subscribe(_listener: () => void): () => void {
   return () => {};
 }
+
+export async function applyCollapsesIfNeeded(...args: any[]): Promise<{
+  messages: any[];
+}> {
+  return { messages: args[0] ?? [] };
+}
+
+export function isWithheldPromptTooLong(..._args: any[]): boolean {
+  return false;
+}
+
+export function recoverFromOverflow(...args: any[]): {
+  committed: number;
+  messages: any[];
+} {
+  return { committed: 0, messages: args[0] ?? [] };
+}
+
+export function resetContextCollapse(): void {}

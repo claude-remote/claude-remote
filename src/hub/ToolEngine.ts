@@ -104,7 +104,7 @@ export class ToolEngine {
   async execute(
     input: ToolExecutionInput,
     /** The actual work to run. Receives an AbortSignal for cancellation. */
-    runner: (signal: AbortSignal) => Promise<string>,
+    runner?: (signal: AbortSignal) => Promise<string>,
   ): Promise<ToolExecutionResult> {
     const { sessionId, toolName } = input;
     const executionId = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -262,7 +262,7 @@ export class ToolEngine {
   private async runOne(
     executionId: string,
     input: ToolExecutionInput,
-    runner: (signal: AbortSignal) => Promise<string>,
+    runner?: (signal: AbortSignal) => Promise<string>,
   ): Promise<ToolExecutionResult> {
     const abortController = new AbortController();
 
@@ -291,7 +291,9 @@ export class ToolEngine {
     }
 
     try {
-      const output = await runner(abortController.signal);
+      const output = runner
+        ? await runner(abortController.signal)
+        : `Tool ${input.toolName} not implemented`;
 
       this.deps.store.updateToolExecution(executionId, {
         status: 'completed',

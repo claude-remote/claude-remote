@@ -1,6 +1,7 @@
 // Local recovery stub for missing SDK runtime type exports.
 
 export type AnyZodRawShape = any;
+export type EffortLevel = 'low' | 'medium' | 'high' | 'max';
 export type ForkSessionOptions = any;
 export type ForkSessionResult = any;
 export type GetSessionInfoOptions = any;

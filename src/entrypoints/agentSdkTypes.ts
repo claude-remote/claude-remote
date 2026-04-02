@@ -89,6 +89,7 @@ export type PreToolUseHookInput = any
 export type SessionStartHookInput = any
 export type SessionEndHookInput = any
 export type SetupHookInput = any
+export type StopHookInput = any
 export type StopFailureHookInput = any
 export type SubagentStartHookInput = any
 export type SubagentStopHookInput = any
@@ -103,6 +104,9 @@ export type UserPromptSubmitHookInput = any
 export type PermissionRequestHookInput = any
 export type ElicitationHookInput = any
 export type ElicitationResultHookInput = any
+export type AsyncHookJSONOutput = any
+export type ExitReason = any
+export type SyncHookJSONOutput = any
 
 export function tool<Schema extends AnyZodRawShape>(
   _name: string,

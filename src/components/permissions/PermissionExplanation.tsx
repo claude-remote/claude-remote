@@ -89,7 +89,9 @@ function createExplanationPromise(props: PermissionExplanationProps): Promise<Pe
  * Creates the fetch promise lazily (only when user hits Ctrl+E)
  * to avoid consuming tokens for explanations users never view.
  */
-export function usePermissionExplainerUI(props) {
+export function usePermissionExplainerUI(
+  props: PermissionExplanationProps,
+): ExplainerState {
   const $ = _c(9);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -153,7 +155,9 @@ export function usePermissionExplainerUI(props) {
 function _temp(v) {
   return !v;
 }
-function ExplanationResult(t0) {
+function ExplanationResult(t0: {
+  promise: Promise<PermissionExplanationType | null>;
+}) {
   const $ = _c(21);
   const {
     promise

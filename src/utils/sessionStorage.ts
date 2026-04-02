@@ -1747,11 +1747,12 @@ export function getFirstMeaningfulUserMessageTextContent<T extends Message>(
   transcript: T[],
 ): string | undefined {
   for (const msg of transcript) {
-    if (msg.type !== 'user' || msg.isMeta) continue
+    const candidate = msg as any
+    if (candidate.type !== 'user' || candidate.isMeta) continue
     // Skip compact summary messages - they should not be treated as the first prompt
-    if ('isCompactSummary' in msg && msg.isCompactSummary) continue
+    if ('isCompactSummary' in candidate && candidate.isCompactSummary) continue
 
-    const content = msg.message?.content
+    const content = candidate.message?.content
     if (!content) continue
 
     // Collect all text values. For array content (common in VS Code where
@@ -3655,46 +3656,49 @@ export async function loadTranscriptFile(
           contextCollapseCommits.length = 0
           contextCollapseSnapshot = undefined
         }
-      } else if (entry.type === 'summary' && entry.leafUuid) {
-        summaries.set(entry.leafUuid, entry.summary)
-      } else if (entry.type === 'custom-title' && entry.sessionId) {
-        customTitles.set(entry.sessionId, entry.customTitle)
-      } else if (entry.type === 'tag' && entry.sessionId) {
-        tags.set(entry.sessionId, entry.tag)
-      } else if (entry.type === 'agent-name' && entry.sessionId) {
-        agentNames.set(entry.sessionId, entry.agentName)
-      } else if (entry.type === 'agent-color' && entry.sessionId) {
-        agentColors.set(entry.sessionId, entry.agentColor)
-      } else if (entry.type === 'agent-setting' && entry.sessionId) {
-        agentSettings.set(entry.sessionId, entry.agentSetting)
-      } else if (entry.type === 'mode' && entry.sessionId) {
-        modes.set(entry.sessionId, entry.mode)
-      } else if (entry.type === 'worktree-state' && entry.sessionId) {
-        worktreeStates.set(entry.sessionId, entry.worktreeSession)
-      } else if (entry.type === 'pr-link' && entry.sessionId) {
-        prNumbers.set(entry.sessionId, entry.prNumber)
-        prUrls.set(entry.sessionId, entry.prUrl)
-        prRepositories.set(entry.sessionId, entry.prRepository)
-      } else if (entry.type === 'file-history-snapshot') {
-        fileHistorySnapshots.set(entry.messageId, entry)
-      } else if (entry.type === 'attribution-snapshot') {
-        attributionSnapshots.set(entry.messageId, entry)
-      } else if (entry.type === 'content-replacement') {
+      } else {
+        const event = entry as any
+        if (event.type === 'summary' && event.leafUuid) {
+          summaries.set(event.leafUuid, event.summary)
+        } else if (event.type === 'custom-title' && event.sessionId) {
+          customTitles.set(event.sessionId, event.customTitle)
+        } else if (event.type === 'tag' && event.sessionId) {
+          tags.set(event.sessionId, event.tag)
+        } else if (event.type === 'agent-name' && event.sessionId) {
+          agentNames.set(event.sessionId, event.agentName)
+        } else if (event.type === 'agent-color' && event.sessionId) {
+          agentColors.set(event.sessionId, event.agentColor)
+        } else if (event.type === 'agent-setting' && event.sessionId) {
+          agentSettings.set(event.sessionId, event.agentSetting)
+        } else if (event.type === 'mode' && event.sessionId) {
+          modes.set(event.sessionId, event.mode)
+        } else if (event.type === 'worktree-state' && event.sessionId) {
+          worktreeStates.set(event.sessionId, event.worktreeSession)
+        } else if (event.type === 'pr-link' && event.sessionId) {
+          prNumbers.set(event.sessionId, event.prNumber)
+          prUrls.set(event.sessionId, event.prUrl)
+          prRepositories.set(event.sessionId, event.prRepository)
+        } else if (event.type === 'file-history-snapshot') {
+          fileHistorySnapshots.set(event.messageId, event)
+        } else if (event.type === 'attribution-snapshot') {
+          attributionSnapshots.set(event.messageId, event)
+        } else if (event.type === 'content-replacement') {
         // Subagent decisions key by agentId (sidechain resume); main-thread
         // decisions key by sessionId (/resume).
-        if (entry.agentId) {
-          const existing = agentContentReplacements.get(entry.agentId) ?? []
-          agentContentReplacements.set(entry.agentId, existing)
-          existing.push(...entry.replacements)
-        } else {
-          const existing = contentReplacements.get(entry.sessionId) ?? []
-          contentReplacements.set(entry.sessionId, existing)
-          existing.push(...entry.replacements)
+          if (event.agentId) {
+            const existing = agentContentReplacements.get(event.agentId) ?? []
+            agentContentReplacements.set(event.agentId, existing)
+            existing.push(...event.replacements)
+          } else {
+            const existing = contentReplacements.get(event.sessionId) ?? []
+            contentReplacements.set(event.sessionId, existing)
+            existing.push(...event.replacements)
+          }
+        } else if (event.type === 'marble-origami-commit') {
+          contextCollapseCommits.push(event)
+        } else if (event.type === 'marble-origami-snapshot') {
+          contextCollapseSnapshot = event
         }
-      } else if (entry.type === 'marble-origami-commit') {
-        contextCollapseCommits.push(entry)
-      } else if (entry.type === 'marble-origami-snapshot') {
-        contextCollapseSnapshot = entry
       }
     }
   } catch {

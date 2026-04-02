@@ -1,4 +1,10 @@
-export type SpinnerMode = 'requesting' | 'tool-use' | 'thinking' | 'idle';
+export type SpinnerMode =
+  | 'requesting'
+  | 'responding'
+  | 'tool-input'
+  | 'tool-use'
+  | 'thinking'
+  | 'idle';
 
 export type RGBColor = {
   r: number;

@@ -853,19 +853,9 @@ export function isToolUseResultMessage(
 
 // Re-order, to move result messages to be after their tool use messages
 export function reorderMessagesInUI(
-  messages: (
-    | NormalizedUserMessage
-    | NormalizedAssistantMessage
-    | AttachmentMessage
-    | SystemMessage
-  )[],
-  syntheticStreamingToolUseMessages: NormalizedAssistantMessage[],
-): (
-  | NormalizedUserMessage
-  | NormalizedAssistantMessage
-  | AttachmentMessage
-  | SystemMessage
-)[] {
+  messages: any[],
+  syntheticStreamingToolUseMessages: any[],
+): any[] {
   // Maps tool use ID to its related messages
   const toolUseGroups = new Map<
     string,
@@ -879,9 +869,10 @@ export function reorderMessagesInUI(
 
   // First pass: group messages by tool use ID
   for (const message of messages) {
+    const current = message as any
     // Handle tool use messages
-    if (isToolUseRequestMessage(message)) {
-      const toolUseID = message.message.content[0]?.id
+    if (isToolUseRequestMessage(current)) {
+      const toolUseID = current.message.content[0]?.id
       if (toolUseID) {
         if (!toolUseGroups.has(toolUseID)) {
           toolUseGroups.set(toolUseID, {
@@ -891,17 +882,17 @@ export function reorderMessagesInUI(
             postHooks: [],
           })
         }
-        toolUseGroups.get(toolUseID)!.toolUse = message
+        toolUseGroups.get(toolUseID)!.toolUse = current
       }
       continue
     }
 
     // Handle pre-tool-use hooks
     if (
-      isHookAttachmentMessage(message) &&
-      message.attachment.hookEvent === 'PreToolUse'
+      isHookAttachmentMessage(current) &&
+      current.attachment.hookEvent === 'PreToolUse'
     ) {
-      const toolUseID = message.attachment.toolUseID
+      const toolUseID = current.attachment.toolUseID
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -910,16 +901,16 @@ export function reorderMessagesInUI(
           postHooks: [],
         })
       }
-      toolUseGroups.get(toolUseID)!.preHooks.push(message)
+      toolUseGroups.get(toolUseID)!.preHooks.push(current)
       continue
     }
 
     // Handle tool results
     if (
-      message.type === 'user' &&
-      message.message.content[0]?.type === 'tool_result'
+      current.type === 'user' &&
+      current.message.content[0]?.type === 'tool_result'
     ) {
-      const toolUseID = message.message.content[0].tool_use_id
+      const toolUseID = current.message.content[0].tool_use_id
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -928,16 +919,16 @@ export function reorderMessagesInUI(
           postHooks: [],
         })
       }
-      toolUseGroups.get(toolUseID)!.toolResult = message
+      toolUseGroups.get(toolUseID)!.toolResult = current
       continue
     }
 
     // Handle post-tool-use hooks
     if (
-      isHookAttachmentMessage(message) &&
-      message.attachment.hookEvent === 'PostToolUse'
+      isHookAttachmentMessage(current) &&
+      current.attachment.hookEvent === 'PostToolUse'
     ) {
-      const toolUseID = message.attachment.toolUseID
+      const toolUseID = current.attachment.toolUseID
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -946,24 +937,20 @@ export function reorderMessagesInUI(
           postHooks: [],
         })
       }
-      toolUseGroups.get(toolUseID)!.postHooks.push(message)
+      toolUseGroups.get(toolUseID)!.postHooks.push(current)
       continue
     }
   }
 
   // Second pass: reconstruct the message list in the correct order
-  const result: (
-    | NormalizedUserMessage
-    | NormalizedAssistantMessage
-    | AttachmentMessage
-    | SystemMessage
-  )[] = []
+  const result: any[] = []
   const processedToolUses = new Set<string>()
 
   for (const message of messages) {
+    const current = message as any
     // Check if this is a tool use
-    if (isToolUseRequestMessage(message)) {
-      const toolUseID = message.message.content[0]?.id
+    if (isToolUseRequestMessage(current)) {
+      const toolUseID = current.message.content[0]?.id
       if (toolUseID && !processedToolUses.has(toolUseID)) {
         processedToolUses.add(toolUseID)
         const group = toolUseGroups.get(toolUseID)
@@ -982,29 +969,30 @@ export function reorderMessagesInUI(
 
     // Check if this message is part of a tool use group
     if (
-      isHookAttachmentMessage(message) &&
-      (message.attachment.hookEvent === 'PreToolUse' ||
-        message.attachment.hookEvent === 'PostToolUse')
+      isHookAttachmentMessage(current) &&
+      (current.attachment.hookEvent === 'PreToolUse' ||
+        current.attachment.hookEvent === 'PostToolUse')
     ) {
       // Skip - already handled in tool use groups
       continue
     }
 
     if (
-      message.type === 'user' &&
-      message.message.content[0]?.type === 'tool_result'
+      current.type === 'user' &&
+      current.message.content[0]?.type === 'tool_result'
     ) {
       // Skip - already handled in tool use groups
       continue
     }
 
     // Handle api error messages (only keep the last one)
-    if (message.type === 'system' && message.subtype === 'api_error') {
+    if (current.type === 'system' && current.subtype === 'api_error') {
       const last = result.at(-1)
-      if (last?.type === 'system' && last.subtype === 'api_error') {
-        result[result.length - 1] = message
+      const previous = last as any
+      if (previous?.type === 'system' && previous.subtype === 'api_error') {
+        result[result.length - 1] = current
       } else {
-        result.push(message)
+        result.push(current)
       }
       continue
     }
@@ -1459,17 +1447,17 @@ export function hasUnresolvedHooksFromLookup(
 }
 
 export function getToolUseIDs(
-  normalizedMessages: NormalizedMessage[],
+  normalizedMessages: any[],
 ): Set<string> {
   return new Set(
     normalizedMessages
       .filter(
-        (_): _ is NormalizedAssistantMessage<BetaToolUseBlock> =>
-          _.type === 'assistant' &&
-          Array.isArray(_.message.content) &&
+        (_: any) =>
+          _?.type === 'assistant' &&
+          Array.isArray(_?.message?.content) &&
           _.message.content[0]?.type === 'tool_use',
       )
-      .map(_ => _.message.content[0].id),
+      .map((_: any) => _.message.content[0].id),
   )
 }
 
@@ -2558,8 +2546,9 @@ function smooshIntoToolResult(
   // blocks are text — this is the common case (hook reminders into Bash/Read
   // results) and matches the legacy smoosh output shape.
   if (allText && (existing === undefined || typeof existing === 'string')) {
+    const existingText = typeof existing === 'string' ? existing : ''
     const joined = [
-      (existing ?? '').trim(),
+      existingText.trim(),
       ...blocks.map(b => (b as TextBlockParam).text.trim()),
     ]
       .filter(Boolean)

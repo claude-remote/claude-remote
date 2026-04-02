@@ -154,10 +154,14 @@ export function TreeSelect(t0) {
     t5 = $[3];
   }
   const isExpanded = t5;
-  let result;
+  let result: FlattenedNode<any>[];
   if ($[4] !== isExpanded || $[5] !== nodes) {
     result = [];
-    function traverse(node, depth, parentId) {
+    function traverse(
+      node: TreeNode<any>,
+      depth: number,
+      parentId?: string | number,
+    ): void {
       const hasChildren = !!node.children && node.children.length > 0;
       const nodeIsExpanded = isExpanded(node.id);
       result.push({

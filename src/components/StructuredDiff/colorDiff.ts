@@ -22,12 +22,16 @@ export function getColorModuleUnavailableReason(): ColorModuleUnavailableReason 
   return null
 }
 
-export function expectColorDiff(): typeof ColorDiff | null {
-  return getColorModuleUnavailableReason() === null ? ColorDiff : null
+export function expectColorDiff(): any | null {
+  return (getColorModuleUnavailableReason() === null
+    ? ColorDiff
+    : null) as any
 }
 
-export function expectColorFile(): typeof ColorFile | null {
-  return getColorModuleUnavailableReason() === null ? ColorFile : null
+export function expectColorFile(): any | null {
+  return (getColorModuleUnavailableReason() === null
+    ? ColorFile
+    : null) as any
 }
 
 export function getSyntaxTheme(themeName: string): SyntaxTheme | null {
