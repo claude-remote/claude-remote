@@ -28,6 +28,7 @@ function createMockEventBus() {
       mockEventBus.seqBySession.set(sessionId, next);
       return next;
     }),
+    getSeq: mock((sessionId: string) => mockEventBus.seqBySession.get(sessionId) ?? 0),
     publish: mock(async () => {}),
   };
 }
@@ -118,6 +119,71 @@ describe('SessionManager CRUD', () => {
   test('operations on nonexistent session throw', () => {
     expect(() => manager.renameSession('bad-id', 'x')).toThrow('session not found');
     expect(() => manager.switchCwd('bad-id', '/')).toThrow('session not found');
+  });
+
+  test('getSnapshot returns reconnect-safe session snapshot', () => {
+    const meta = manager.createSession({ cwd: '/tmp', name: 'snapshot-session' });
+    const session = manager.getSession(meta.id);
+    expect(session).not.toBeNull();
+
+    session!.messages.push({
+      id: 'msg-1',
+      role: 'user',
+      content: [{ type: 'text', text: 'hello' }],
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    session!.tasks.push({
+      id: 'task-1',
+      sessionId: meta.id,
+      subject: 'Do work',
+      description: 'Do work',
+      status: 'in_progress',
+      createdAt: 1000,
+      updatedAt: 1000,
+    });
+    session!.tasks.push({
+      id: 'task-2',
+      sessionId: meta.id,
+      subject: 'Done work',
+      description: 'Done work',
+      status: 'completed',
+      createdAt: 1001,
+      updatedAt: 1001,
+    });
+    session!.pendingPermissions.push({
+      id: 'perm-1',
+      sessionId: meta.id,
+      toolName: 'bash',
+      toolInput: { cmd: 'ls' },
+      createdAt: 1000,
+    });
+    session!.clients.push({
+      id: 'client-1',
+      type: 'web',
+      writerStatus: 'active',
+      connectedAt: 1000,
+    });
+    mockEventBus.seqBySession.set(meta.id, 7);
+    manager.assignWriter(meta.id, 'client-1');
+
+    const snapshot = manager.getSnapshot(meta.id, 'client-1');
+
+    expect(snapshot.meta.id).toBe(meta.id);
+    expect(snapshot.meta.name).toBe('snapshot-session');
+    expect(snapshot.meta.clientCount).toBe(1);
+    expect(snapshot.meta.hasActiveWriter).toBe(true);
+    expect(snapshot.recentMessages).toHaveLength(1);
+    expect(snapshot.activeTasks).toHaveLength(1);
+    expect(snapshot.activeTasks[0]?.id).toBe('task-1');
+    expect(snapshot.pendingPermissions).toHaveLength(1);
+    expect(snapshot.clients).toHaveLength(1);
+    expect(snapshot.myWriterStatus).toBe('active');
+    expect(snapshot.lastSeq).toBe(7);
+  });
+
+  test('getSnapshot throws for unknown session', () => {
+    expect(() => manager.getSnapshot('missing', 'client-1')).toThrow('session not found');
   });
 });
 

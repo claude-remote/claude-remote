@@ -470,23 +470,14 @@ export class WebSocketHandler {
   // ── Snapshot builder ──────────────────────────────────────────────
 
   private buildSnapshot(sessionId: string, _clientId: string, role: WriterStatus): SessionSnapshot {
-    const session = this.sessionManager.getSession(sessionId)!;
+    const snapshot = this.sessionManager.getSnapshot(sessionId, _clientId);
     return {
+      ...snapshot,
       meta: {
-        id: session.id,
-        name: session.name,
-        cwd: session.cwd,
-        status: session.status,
-        createdAt: session.createdAt,
-        updatedAt: session.updatedAt,
+        ...snapshot.meta,
         clientCount: this.connectionManager.countBySession(sessionId),
         hasActiveWriter: this.connectionManager.getWriter(sessionId) !== null,
       },
-      recentMessages: session.messages.slice(-50),
-      activeTasks: session.tasks.filter(
-        (t) => t.status === 'pending' || t.status === 'in_progress',
-      ),
-      pendingPermissions: session.pendingPermissions,
       clients: this.connectionManager.getBySession(sessionId).map((c) => ({
         id: c.clientId,
         type: c.clientType,
@@ -494,27 +485,6 @@ export class WebSocketHandler {
         connectedAt: c.connectedAt,
         userAgent: c.userAgent,
       })),
-      availableSkills: [],
-      config: {
-        model: 'claude-sonnet-4-20250514',
-        effortLevel: 'high',
-        permissionMode: 'ask',
-      },
-      configOptions: {
-        availableModels: [],
-        effortLevels: ['low', 'medium', 'high'],
-        permissionModes: ['ask', 'approve', 'bypass'],
-      },
-      contextUsage: { usedTokens: 0, maxTokens: 200000, percentage: 0, breakdown: [] },
-      costSummary: {
-        sessionCost: 0,
-        formattedCost: '$0.00',
-        inputTokens: 0,
-        outputTokens: 0,
-        apiCalls: 0,
-        sessionDuration: 0,
-      },
-      mcpServers: [],
       myWriterStatus: role,
       lastSeq: this.eventBus.getSeq(sessionId),
     };

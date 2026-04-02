@@ -125,8 +125,49 @@ export class SessionManager {
   }
 
   getSnapshot(_sessionId: string, _clientId: string): SessionSnapshot {
-    // TODO(T03): build a reconnect-safe snapshot for a specific client connection.
-    throw new Error('Not implemented');
+    const session = this.requireSession(_sessionId);
+    const lastSeq =
+      typeof (this.eventBus as { getSeq?: (sessionId: string) => number }).getSeq === 'function'
+        ? (this.eventBus as { getSeq: (sessionId: string) => number }).getSeq(_sessionId)
+        : 0;
+
+    return {
+      meta: this.toMeta(session),
+      recentMessages: session.messages.slice(-50),
+      activeTasks: session.tasks.filter(
+        (task) => task.status === 'pending' || task.status === 'in_progress',
+      ),
+      pendingPermissions: session.pendingPermissions,
+      clients: session.clients,
+      availableSkills: [],
+      config: {
+        model: 'claude-sonnet-4-20250514',
+        effortLevel: 'high',
+        permissionMode: 'ask',
+      },
+      configOptions: {
+        availableModels: [],
+        effortLevels: ['low', 'medium', 'high'],
+        permissionModes: ['ask', 'approve', 'bypass'],
+      },
+      contextUsage: {
+        usedTokens: 0,
+        maxTokens: 200000,
+        percentage: 0,
+        breakdown: [],
+      },
+      costSummary: {
+        sessionCost: 0,
+        formattedCost: '$0.00',
+        inputTokens: 0,
+        outputTokens: 0,
+        apiCalls: 0,
+        sessionDuration: 0,
+      },
+      mcpServers: [],
+      myWriterStatus: this.getActiveWriter(_sessionId) === _clientId ? 'active' : 'standby',
+      lastSeq,
+    };
   }
 
   // ── Status machine ──────────────────────────────────────────────────

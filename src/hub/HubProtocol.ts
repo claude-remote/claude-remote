@@ -1,4 +1,6 @@
-export type SessionStatus = 'active' | 'idle';
+import type { Message, PermissionRequest, Task } from '@/shared/types';
+
+export type SessionStatus = 'active' | 'idle' | 'archived';
 
 export type HubClientInfo = {
   id: string;
@@ -14,8 +16,10 @@ export type Session = {
   updatedAt: number;
   status: SessionStatus;
   clients: HubClientInfo[];
-  messages: [];
-  tasks: [];
+  messages: Message[];
+  tasks: Task[];
+  pendingPermissions?: PermissionRequest[];
+  tags?: string[];
 };
 
 export type Snapshot = {

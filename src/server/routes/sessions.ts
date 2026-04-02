@@ -40,16 +40,17 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
     const cwd = body.cwd ?? process.cwd();
     const name = body.name;
 
-    // TODO(T03): wire to hub.createSession() once available
+    const created = hub.createSession({ cwd, name });
     const session: SessionMeta = {
-      id: crypto.randomUUID(),
-      name: name ?? 'Untitled session',
-      cwd,
-      status: 'active',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      clientCount: 0,
-      hasActiveWriter: false,
+      id: created.id,
+      name: created.name,
+      cwd: created.cwd,
+      status: created.status,
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+      clientCount: created.clients.length,
+      hasActiveWriter: created.clients.length > 0,
+      tags: created.tags ?? [],
     };
 
     return context.json({ session }, 201);
@@ -59,8 +60,7 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   app.get('/api/sessions/:id', (context) => {
     const sessionId = context.req.param('id');
 
-    // TODO(T03): wire to hub.getSessionSnapshot()
-    const snapshot: SessionSnapshot | null = null;
+    const snapshot: SessionSnapshot | null = hub.getSessionSnapshot(sessionId);
     if (!snapshot) {
       return context.json({ error: 'Session not found' }, 404);
     }
@@ -72,7 +72,10 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   app.post('/api/sessions/:id/archive', (context) => {
     const sessionId = context.req.param('id');
 
-    // TODO(T03): wire to hub.archiveSession()
+    const session = hub.archiveSession(sessionId);
+    if (!session) {
+      return context.json({ error: 'Session not found' }, 404);
+    }
     return context.json({ ok: true, sessionId, status: 'archived' });
   });
 
@@ -85,7 +88,13 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
       config?: Partial<SessionConfig>;
     };
 
-    // TODO(T03): wire to hub.updateSession()
+    const session = hub.updateSession(sessionId, {
+      name: body.name,
+      tags: body.tags,
+    });
+    if (!session) {
+      return context.json({ error: 'Session not found' }, 404);
+    }
     return context.json({ ok: true, sessionId, updated: body });
   });
 
@@ -95,8 +104,13 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
     const offset = Number.parseInt(context.req.query('offset') ?? '0', 10);
     const limit = Number.parseInt(context.req.query('limit') ?? '50', 10);
 
-    // TODO(T03): wire to hub.getSessionMessages()
-    return context.json({ sessionId, messages: [], offset, limit, total: 0 });
+    const session = hub.getSession(sessionId);
+    if (!session) {
+      return context.json({ error: 'Session not found' }, 404);
+    }
+
+    const messages = session.messages.slice(offset, offset + limit);
+    return context.json({ sessionId, messages, offset, limit, total: session.messages.length });
   });
 
   // POST /api/sessions/:id/chat — send message (SSE streaming)
@@ -117,12 +131,40 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
     const sessionId = context.req.param('id');
     const format = context.req.query('format') ?? 'markdown';
 
-    // TODO(T03): wire to hub.exportSession()
+    const session = hub.getSession(sessionId);
+    if (!session) {
+      return context.json({ error: 'Session not found' }, 404);
+    }
+
+    const filename = `session-${sessionId}.${format === 'json' ? 'json' : 'md'}`;
+    const content =
+      format === 'json'
+        ? JSON.stringify(session, null, 2)
+        : [
+            `# ${session.name}`,
+            '',
+            `- Session ID: ${session.id}`,
+            `- CWD: ${session.cwd}`,
+            `- Status: ${session.status}`,
+            '',
+            ...session.messages.flatMap((message) => [
+              `## ${message.role} @ ${new Date(message.createdAt).toISOString()}`,
+              '',
+              ...message.content.map((block) => {
+                if (block.type === 'text') {
+                  return `**${message.role}**: ${block.text}`;
+                }
+                return `**${message.role}**: [${block.type}]`;
+              }),
+              '',
+            ]),
+          ].join('\n');
+
     return context.json({
       sessionId,
-      content: '',
+      content,
       format,
-      filename: `session-${sessionId}.${format === 'json' ? 'json' : 'md'}`,
+      filename,
     });
   });
 

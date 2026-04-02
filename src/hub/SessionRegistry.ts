@@ -21,6 +21,8 @@ export class SessionRegistry {
       clients: [],
       messages: [],
       tasks: [],
+      pendingPermissions: [],
+      tags: [],
     };
 
     this.sessions.set(session.id, session);
@@ -33,6 +35,43 @@ export class SessionRegistry {
 
   getSession(sessionId: string): Session | undefined {
     return this.sessions.get(sessionId);
+  }
+
+  archiveSession(sessionId: string): Session | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return undefined;
+    }
+
+    const archivedSession: Session = {
+      ...session,
+      status: 'archived',
+      updatedAt: Date.now(),
+    };
+    this.sessions.set(sessionId, archivedSession);
+    return archivedSession;
+  }
+
+  updateSession(
+    sessionId: string,
+    updates: {
+      name?: string;
+      tags?: string[];
+    },
+  ): Session | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return undefined;
+    }
+
+    const updatedSession: Session = {
+      ...session,
+      name: updates.name ?? session.name,
+      tags: updates.tags ?? session.tags ?? [],
+      updatedAt: Date.now(),
+    };
+    this.sessions.set(sessionId, updatedSession);
+    return updatedSession;
   }
 
   attachClient(sessionId: string, client: HubClientInfo): Session | undefined {

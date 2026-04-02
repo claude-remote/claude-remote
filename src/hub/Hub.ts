@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
+import type { SessionSnapshot } from '@/shared/types';
 import {
   type ClientCommand,
   type HubClientInfo,
@@ -42,6 +43,86 @@ export class Hub {
 
   listSessions(): Session[] {
     return this.registry.listSessions();
+  }
+
+  createSession(input: { cwd: string; name?: string }): Session {
+    return this.registry.createSession(input);
+  }
+
+  getSession(sessionId: string): Session | undefined {
+    return this.registry.getSession(sessionId);
+  }
+
+  archiveSession(sessionId: string): Session | undefined {
+    return this.registry.archiveSession(sessionId);
+  }
+
+  updateSession(
+    sessionId: string,
+    updates: {
+      name?: string;
+      tags?: string[];
+    },
+  ): Session | undefined {
+    return this.registry.updateSession(sessionId, updates);
+  }
+
+  getSessionSnapshot(sessionId: string): SessionSnapshot | null {
+    const session = this.registry.getSession(sessionId);
+    if (!session) {
+      return null;
+    }
+
+    return {
+      meta: {
+        id: session.id,
+        name: session.name,
+        cwd: session.cwd,
+        status: session.status,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        clientCount: session.clients.length,
+        hasActiveWriter: session.clients.length > 0,
+        tags: session.tags ?? [],
+      },
+      recentMessages: session.messages,
+      activeTasks: session.tasks,
+      pendingPermissions: session.pendingPermissions ?? [],
+      clients: session.clients.map((client, index) => ({
+        id: client.id,
+        type: client.type,
+        writerStatus: index === 0 ? 'active' : 'standby',
+        connectedAt: client.connectedAt,
+      })),
+      availableSkills: [],
+      config: {
+        model: 'claude-sonnet',
+        effortLevel: 'medium',
+        permissionMode: 'ask',
+      },
+      configOptions: {
+        availableModels: [],
+        effortLevels: ['low', 'medium', 'high'],
+        permissionModes: ['ask', 'approve', 'bypass'],
+      },
+      contextUsage: {
+        usedTokens: 0,
+        maxTokens: 200000,
+        percentage: 0,
+        breakdown: [],
+      },
+      costSummary: {
+        sessionCost: 0,
+        formattedCost: '$0.00',
+        inputTokens: 0,
+        outputTokens: 0,
+        apiCalls: 0,
+        sessionDuration: 0,
+      },
+      mcpServers: [],
+      myWriterStatus: session.clients.length > 0 ? 'active' : 'standby',
+      lastSeq: 0,
+    };
   }
 
   async stop(): Promise<void> {
@@ -94,7 +175,7 @@ export class Hub {
 
     switch (command.cmd) {
       case 'session:create': {
-        const session = this.registry.createSession({
+        const session = this.createSession({
           cwd: command.cwd,
           name: command.name,
         });
@@ -109,7 +190,7 @@ export class Hub {
         this.writeResponse(socket, {
           type: 'reply',
           cmdId: command.cmdId,
-          data: this.registry.listSessions(),
+          data: this.listSessions(),
         });
         return;
       case 'session:attach': {

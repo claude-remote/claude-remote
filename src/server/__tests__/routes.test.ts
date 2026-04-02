@@ -12,39 +12,179 @@ import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 
+type MockRouteSession = {
+  id: string;
+  name: string;
+  cwd: string;
+  createdAt: number;
+  updatedAt: number;
+  status: 'active' | 'idle' | 'archived';
+  clients: Array<{
+    id: string;
+    type: 'web';
+    writerStatus: 'active' | 'standby';
+    connectedAt: number;
+  }>;
+  messages: unknown[];
+  tasks: unknown[];
+  pendingPermissions: unknown[];
+  tags: string[];
+};
+
 // Minimal Hub stub for testing routes
 function createMockHub() {
+  const sessions: MockRouteSession[] = [
+    {
+      id: 'sess-1',
+      name: 'Test Session',
+      cwd: '/tmp/test',
+      createdAt: 1000,
+      updatedAt: 2000,
+      status: 'active' as const,
+      clients: [
+        { id: 'c1', type: 'web' as const, writerStatus: 'active' as const, connectedAt: 1000 },
+      ],
+      messages: [
+        {
+          id: 'msg-1',
+          role: 'user' as const,
+          content: [{ type: 'text' as const, text: 'hello' }],
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+        {
+          id: 'msg-2',
+          role: 'assistant' as const,
+          content: [{ type: 'text' as const, text: 'hi there' }],
+          createdAt: 1001,
+          updatedAt: 1001,
+        },
+      ],
+      tasks: [],
+      pendingPermissions: [],
+      tags: [],
+    },
+    {
+      id: 'sess-2',
+      name: 'Idle Session',
+      cwd: '/tmp/idle',
+      createdAt: 500,
+      updatedAt: 1500,
+      status: 'idle' as const,
+      clients: [],
+      messages: [],
+      tasks: [],
+      pendingPermissions: [],
+      tags: [],
+    },
+  ];
+
+  const buildSnapshot = (sessionId: string) => {
+    const session = sessions.find((item) => item.id === sessionId);
+    if (!session) {
+      return null;
+    }
+
+    return {
+      meta: {
+        id: session.id,
+        name: session.name,
+        cwd: session.cwd,
+        status: session.status,
+        createdAt: session.createdAt,
+        updatedAt: session.updatedAt,
+        clientCount: session.clients.length,
+        hasActiveWriter: session.clients.some((client) => client.writerStatus === 'active'),
+        tags: session.tags,
+      },
+      recentMessages: session.messages,
+      activeTasks: session.tasks,
+      pendingPermissions: session.pendingPermissions,
+      clients: session.clients,
+      availableSkills: [],
+      config: {
+        model: 'claude-sonnet',
+        effortLevel: 'medium' as const,
+        permissionMode: 'ask' as const,
+      },
+      configOptions: {
+        availableModels: [],
+        effortLevels: ['low', 'medium', 'high'] as const,
+        permissionModes: ['ask', 'approve', 'bypass'] as const,
+      },
+      contextUsage: { usedTokens: 0, maxTokens: 200000, percentage: 0, breakdown: [] },
+      costSummary: {
+        sessionCost: 0,
+        formattedCost: '$0.00',
+        inputTokens: 0,
+        outputTokens: 0,
+        apiCalls: 0,
+        sessionDuration: 0,
+      },
+      mcpServers: [],
+      myWriterStatus: 'active' as const,
+      lastSeq: 0,
+    };
+  };
+
   return {
     getStatus() {
       return { running: true, sessionCount: 2, connectionCount: 3, socketPath: '/tmp/test.sock' };
     },
     listSessions() {
-      return [
-        {
-          id: 'sess-1',
-          name: 'Test Session',
-          cwd: '/tmp/test',
-          createdAt: 1000,
-          updatedAt: 2000,
-          status: 'active' as const,
-          clients: [
-            { id: 'c1', type: 'web' as const, writerStatus: 'active' as const, connectedAt: 1000 },
-          ],
-          messages: [],
-          tasks: [],
-        },
-        {
-          id: 'sess-2',
-          name: 'Idle Session',
-          cwd: '/tmp/idle',
-          createdAt: 500,
-          updatedAt: 1500,
-          status: 'idle' as const,
-          clients: [],
-          messages: [],
-          tasks: [],
-        },
-      ];
+      return sessions;
+    },
+    createSession(input: { cwd: string; name?: string }) {
+      const session = {
+        id: `sess-${sessions.length + 1}`,
+        name: input.name ?? 'Untitled session',
+        cwd: input.cwd,
+        createdAt: 3000,
+        updatedAt: 3000,
+        status: 'active' as const,
+        clients: [],
+        messages: [],
+        tasks: [],
+        pendingPermissions: [],
+        tags: [],
+      };
+      sessions.unshift(session);
+      return session;
+    },
+    getSessionSnapshot(sessionId: string) {
+      return buildSnapshot(sessionId);
+    },
+    getSession(sessionId: string) {
+      return sessions.find((item) => item.id === sessionId) ?? null;
+    },
+    archiveSession(sessionId: string) {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) {
+        return null;
+      }
+      session.status = 'archived';
+      session.updatedAt = 4000;
+      return session;
+    },
+    updateSession(
+      sessionId: string,
+      updates: { name?: string; tags?: string[]; config?: Record<string, unknown> },
+    ) {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) {
+        return null;
+      }
+      if (updates.name !== undefined) {
+        session.name = updates.name;
+      }
+      if (updates.tags !== undefined) {
+        session.tags = updates.tags;
+      }
+      session.updatedAt = 5000;
+      return {
+        session,
+        updated: updates,
+      };
     },
   } as any;
 }
@@ -178,6 +318,21 @@ describe('session routes', () => {
     expect(body.session.name).toBe('New Session');
     expect(body.session.cwd).toBe('/tmp/new');
     expect(body.session.status).toBe('active');
+
+    const listRes = await app.request('/api/sessions');
+    const listBody = await listRes.json();
+    expect(listBody.sessions[0].name).toBe('New Session');
+  });
+
+  test('GET /api/sessions/:id returns snapshot for existing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/sess-1');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.snapshot.meta.id).toBe('sess-1');
+    expect(body.snapshot.meta.name).toBe('Test Session');
   });
 
   test('GET /api/sessions/:id returns 404 for nonexistent session', async () => {
@@ -195,6 +350,10 @@ describe('session routes', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.status).toBe('archived');
+
+    const detailRes = await app.request('/api/sessions/sess-1');
+    const detailBody = await detailRes.json();
+    expect(detailBody.snapshot.meta.status).toBe('archived');
   });
 
   test('PATCH /api/sessions/:id updates session', async () => {
@@ -209,6 +368,39 @@ describe('session routes', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.updated.name).toBe('Renamed');
+
+    const detailRes = await app.request('/api/sessions/sess-1');
+    const detailBody = await detailRes.json();
+    expect(detailBody.snapshot.meta.name).toBe('Renamed');
+  });
+
+  test('GET /api/sessions/:id/messages returns paginated history', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/sess-1/messages?offset=1&limit=1');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.total).toBe(2);
+    expect(body.offset).toBe(1);
+    expect(body.limit).toBe(1);
+    expect(body.messages).toHaveLength(1);
+    expect(body.messages[0].id).toBe('msg-2');
+  });
+
+  test('GET /api/sessions/:id/export returns markdown transcript', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/sess-1/export?format=markdown');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.format).toBe('markdown');
+    expect(body.filename).toBe('session-sess-1.md');
+    expect(body.content).toContain('# Test Session');
+    expect(body.content).toContain('**user**');
+    expect(body.content).toContain('hello');
+    expect(body.content).toContain('**assistant**');
   });
 });
 
