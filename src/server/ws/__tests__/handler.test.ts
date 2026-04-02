@@ -313,6 +313,110 @@ describe('WebSocketHandler command routing', () => {
     handler.handleDisconnect(clientId2!);
     handler.destroy();
   });
+
+  test('returns session config for config:get', async () => {
+    const meta = sessionManager.createSession({ cwd: '/tmp' });
+
+    const handler = new WebSocketHandler({
+      sessionManager,
+      eventBus,
+      connectionManager,
+      ticketValidator: createValidTicketValidator({ sessionId: meta.id }),
+      heartbeatIntervalMs: 999999,
+    });
+
+    const ws = createMockWs();
+    const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
+    ws.sentMessages.length = 0;
+
+    await handler.handleMessage(clientId!, JSON.stringify({ cmdId: 'c1', cmd: 'config:get' }));
+
+    const reply = parseSent(ws, 0);
+    expect(reply.type).toBe('reply');
+    expect((reply as any).data.config.model).toBeDefined();
+    expect(Array.isArray((reply as any).data.options.effortLevels)).toBe(true);
+
+    handler.handleDisconnect(clientId!);
+    handler.destroy();
+  });
+
+  test('returns available skills for skill:list', async () => {
+    const meta = sessionManager.createSession({ cwd: '/tmp' });
+
+    const handler = new WebSocketHandler({
+      sessionManager,
+      eventBus,
+      connectionManager,
+      ticketValidator: createValidTicketValidator({ sessionId: meta.id }),
+      heartbeatIntervalMs: 999999,
+    });
+
+    const ws = createMockWs();
+    const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
+    ws.sentMessages.length = 0;
+
+    await handler.handleMessage(clientId!, JSON.stringify({ cmdId: 'c1', cmd: 'skill:list' }));
+
+    const reply = parseSent(ws, 0);
+    expect(reply.type).toBe('reply');
+    expect(Array.isArray((reply as any).data.skills)).toBe(true);
+    expect((reply as any).data.skills.length).toBeGreaterThan(0);
+
+    handler.handleDisconnect(clientId!);
+    handler.destroy();
+  });
+
+  test('returns context usage for context:usage', async () => {
+    const meta = sessionManager.createSession({ cwd: '/tmp' });
+
+    const handler = new WebSocketHandler({
+      sessionManager,
+      eventBus,
+      connectionManager,
+      ticketValidator: createValidTicketValidator({ sessionId: meta.id }),
+      heartbeatIntervalMs: 999999,
+    });
+
+    const ws = createMockWs();
+    const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
+    ws.sentMessages.length = 0;
+
+    await handler.handleMessage(clientId!, JSON.stringify({ cmdId: 'c1', cmd: 'context:usage' }));
+
+    const reply = parseSent(ws, 0);
+    expect(reply.type).toBe('reply');
+    expect(typeof (reply as any).data.usedTokens).toBe('number');
+    expect(typeof (reply as any).data.maxTokens).toBe('number');
+
+    handler.handleDisconnect(clientId!);
+    handler.destroy();
+  });
+
+  test('returns cost summary for cost:get', async () => {
+    const meta = sessionManager.createSession({ cwd: '/tmp' });
+
+    const handler = new WebSocketHandler({
+      sessionManager,
+      eventBus,
+      connectionManager,
+      ticketValidator: createValidTicketValidator({ sessionId: meta.id }),
+      heartbeatIntervalMs: 999999,
+    });
+
+    const ws = createMockWs();
+    const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
+    ws.sentMessages.length = 0;
+
+    await handler.handleMessage(clientId!, JSON.stringify({ cmdId: 'c1', cmd: 'cost:get' }));
+
+    const reply = parseSent(ws, 0);
+    expect(reply.type).toBe('reply');
+    expect(typeof (reply as any).data.sessionCost).toBe('number');
+    expect(typeof (reply as any).data.formattedCost).toBe('string');
+
+    handler.handleDisconnect(clientId!);
+    handler.destroy();
+  });
 });
 
 // ── Heartbeat tests ─────────────────────────────────────────────────

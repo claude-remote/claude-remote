@@ -385,12 +385,38 @@ export class WebSocketHandler {
       }
 
       // Read-only commands — return placeholder acknowledgments
-      // In a full implementation these would delegate to the respective subsystems
-      case 'context:usage':
-      case 'cost:get':
-      case 'config:get':
-      case 'mcp:list':
-      case 'skill:list':
+      case 'context:usage': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        return { type: 'reply', cmdId: command.cmdId, data: snapshot.contextUsage };
+      }
+
+      case 'cost:get': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        return { type: 'reply', cmdId: command.cmdId, data: snapshot.costSummary };
+      }
+
+      case 'config:get': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        return {
+          type: 'reply',
+          cmdId: command.cmdId,
+          data: {
+            config: snapshot.config,
+            options: snapshot.configOptions,
+          },
+        };
+      }
+
+      case 'mcp:list': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        return { type: 'reply', cmdId: command.cmdId, data: snapshot.mcpServers };
+      }
+
+      case 'skill:list': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        return { type: 'reply', cmdId: command.cmdId, data: { skills: snapshot.availableSkills } };
+      }
+
       case 'cwd:favorites':
       case 'cwd:browse':
       case 'file:read':

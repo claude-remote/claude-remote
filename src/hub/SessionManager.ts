@@ -28,6 +28,25 @@ const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
   archived: [],
 };
 
+function createDefaultSkills() {
+  return [
+    {
+      name: 'commit',
+      description: 'Create a git commit from staged changes',
+      aliases: ['ci'],
+      userInvocable: true,
+      arguments: ['message'],
+      source: 'bundled' as const,
+    },
+    {
+      name: 'review',
+      description: 'Review the current diff for bugs and risks',
+      userInvocable: true,
+      source: 'bundled' as const,
+    },
+  ];
+}
+
 export class SessionManager {
   private sessions = new Map<string, Session>();
   private activeWriters = new Map<string, string>(); // sessionId → clientId
@@ -139,14 +158,18 @@ export class SessionManager {
       ),
       pendingPermissions: session.pendingPermissions,
       clients: session.clients,
-      availableSkills: [],
+      availableSkills: createDefaultSkills(),
       config: {
         model: 'claude-sonnet-4-20250514',
         effortLevel: 'high',
         permissionMode: 'ask',
       },
       configOptions: {
-        availableModels: [],
+        availableModels: [
+          { id: 'claude-sonnet', name: 'Claude Sonnet', supportsImages: true },
+          { id: 'claude-opus', name: 'Claude Opus', supportsImages: true },
+          { id: 'claude-haiku', name: 'Claude Haiku', supportsImages: true },
+        ],
         effortLevels: ['low', 'medium', 'high'],
         permissionModes: ['ask', 'approve', 'bypass'],
       },
