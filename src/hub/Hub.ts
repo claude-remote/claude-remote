@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { DEFAULT_HUB_CONFIG } from '@/hub/config';
-import type { ConfigOptions, Message, SessionConfig, SessionSnapshot } from '@/shared/types';
+import type {
+  ConfigOptions,
+  McpServerInfo,
+  Message,
+  SessionConfig,
+  SessionSnapshot,
+} from '@/shared/types';
 import {
   type ClientCommand,
   type HubClientInfo,
@@ -45,6 +51,7 @@ function createDefaultConfigOptions(): ConfigOptions {
 
 export class Hub {
   private readonly registry = new SessionRegistry();
+  private readonly mcpServers = new Map<string, McpServerInfo>();
   private readonly socketServer: LocalSocketServer;
   private readonly sessionConfigs = new Map<string, SessionConfig>();
   private readonly sockets = new Set<Socket>();
@@ -141,6 +148,44 @@ export class Hub {
     return this.globalConfig;
   }
 
+  listMcpServers(): McpServerInfo[] {
+    return Array.from(this.mcpServers.values());
+  }
+
+  getMcpServer(name: string): McpServerInfo | undefined {
+    return this.mcpServers.get(name);
+  }
+
+  reconnectMcpServer(name: string): McpServerInfo | undefined {
+    const server = this.mcpServers.get(name);
+    if (!server) {
+      return undefined;
+    }
+
+    const updated = {
+      ...server,
+      status: 'connected',
+      error: undefined,
+    } satisfies McpServerInfo;
+    this.mcpServers.set(name, updated);
+    return updated;
+  }
+
+  toggleMcpServer(name: string, enabled: boolean): McpServerInfo | undefined {
+    const server = this.mcpServers.get(name);
+    if (!server) {
+      return undefined;
+    }
+
+    const updated = {
+      ...server,
+      enabled,
+      status: enabled ? 'connected' : 'disconnected',
+    } satisfies McpServerInfo;
+    this.mcpServers.set(name, updated);
+    return updated;
+  }
+
   getSessionSnapshot(sessionId: string): SessionSnapshot | null {
     const session = this.registry.getSession(sessionId);
     if (!session) {
@@ -185,7 +230,7 @@ export class Hub {
         apiCalls: 0,
         sessionDuration: 0,
       },
-      mcpServers: [],
+      mcpServers: this.listMcpServers(),
       myWriterStatus: session.clients.length > 0 ? 'active' : 'standby',
       lastSeq: 0,
     };

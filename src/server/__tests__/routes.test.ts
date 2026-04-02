@@ -14,7 +14,7 @@ import { registerMcpRoutes } from '@/server/routes/mcp';
 import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
-import type { Message, SessionConfig } from '@/shared/types';
+import type { McpServerInfo, Message, SessionConfig } from '@/shared/types';
 
 type MockRouteSession = {
   id: string;
@@ -106,6 +106,20 @@ function createMockHub() {
     maxSessions: 10,
     maxConcurrentTools: 5,
   };
+  const mcpServers = new Map<string, McpServerInfo>([
+    [
+      'test-server',
+      {
+        id: 'mcp-1',
+        name: 'test-server',
+        type: 'stdio',
+        status: 'connected',
+        enabled: true,
+        toolCount: 2,
+        tools: [{ name: 'search', description: 'Search docs' }],
+      },
+    ],
+  ]);
 
   const buildSnapshot = (sessionId: string) => {
     const session = sessions.find((item) => item.id === sessionId);
@@ -171,6 +185,37 @@ function createMockHub() {
         ...updates,
       };
       return globalConfig;
+    },
+    listMcpServers() {
+      return Array.from(mcpServers.values());
+    },
+    getMcpServer(name: string) {
+      return mcpServers.get(name) ?? null;
+    },
+    reconnectMcpServer(name: string) {
+      const server = mcpServers.get(name);
+      if (!server) {
+        return null;
+      }
+      const updated = {
+        ...server,
+        status: 'connected' as const,
+      };
+      mcpServers.set(name, updated);
+      return updated;
+    },
+    toggleMcpServer(name: string, enabled: boolean) {
+      const server = mcpServers.get(name);
+      if (!server) {
+        return null;
+      }
+      const updated = {
+        ...server,
+        enabled,
+        status: enabled ? 'connected' : 'disconnected',
+      } satisfies McpServerInfo;
+      mcpServers.set(name, updated);
+      return updated;
     },
     listSessions() {
       return sessions;
@@ -754,6 +799,26 @@ describe('mcp routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.servers)).toBe(true);
+    expect(body.servers).toHaveLength(1);
+    expect(body.servers[0].name).toBe('test-server');
+    expect(body.servers[0].status).toBe('connected');
+  });
+
+  test('GET /api/mcp/servers/:name returns server details', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/mcp/servers/test-server');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.server.name).toBe('test-server');
+    expect(body.server.toolCount).toBe(2);
+  });
+
+  test('GET /api/mcp/servers/:name returns 404 for missing server', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/mcp/servers/missing');
+
+    expect(res.status).toBe(404);
   });
 
   test('POST /api/mcp/servers/:name/reconnect returns ok', async () => {
@@ -763,7 +828,23 @@ describe('mcp routes', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    expect(body.status).toBe('reconnecting');
+    expect(body.server.name).toBe('test-server');
+    expect(body.server.status).toBe('connected');
+  });
+
+  test('POST /api/mcp/servers/:name/toggle updates enabled state', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/mcp/servers/test-server/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.server.enabled).toBe(false);
+    expect(body.server.status).toBe('disconnected');
   });
 });
 
