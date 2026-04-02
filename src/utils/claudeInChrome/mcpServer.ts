@@ -1,46 +1,42 @@
+import { format } from 'node:util';
 import {
   type ClaudeForChromeContext,
-  createClaudeForChromeMcpServer,
   type Logger,
   type PermissionMode,
-} from '@ant/claude-for-chrome-mcp'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { format } from 'util'
-import { shutdownDatadog } from '../../services/analytics/datadog.js'
-import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+  createClaudeForChromeMcpServer,
+} from '@ant/claude-for-chrome-mcp';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { shutdownDatadog } from '../../services/analytics/datadog.js';
+import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../services/analytics/index.js'
-import { initializeAnalyticsSink } from '../../services/analytics/sink.js'
-import { getClaudeAIOAuthTokens } from '../auth.js'
-import { enableConfigs, getGlobalConfig, saveGlobalConfig } from '../config.js'
-import { logForDebugging } from '../debug.js'
-import { isEnvTruthy } from '../envUtils.js'
-import { sideQuery } from '../sideQuery.js'
-import { getAllSocketPaths, getSecureSocketPath } from './common.js'
+} from '../../services/analytics/index.js';
+import { initializeAnalyticsSink } from '../../services/analytics/sink.js';
+import { getClaudeAIOAuthTokens } from '../auth.js';
+import { enableConfigs, getGlobalConfig, saveGlobalConfig } from '../config.js';
+import { logForDebugging } from '../debug.js';
+import { isEnvTruthy } from '../envUtils.js';
+import { sideQuery } from '../sideQuery.js';
+import { getAllSocketPaths, getSecureSocketPath } from './common.js';
 
-const EXTENSION_DOWNLOAD_URL = 'https://claude.ai/chrome'
+const EXTENSION_DOWNLOAD_URL = 'https://claude.ai/chrome';
 const BUG_REPORT_URL =
-  'https://github.com/anthropics/claude-code/issues/new?labels=bug,claude-in-chrome'
+  'https://github.com/anthropics/claude-code/issues/new?labels=bug,claude-in-chrome';
 
 // String metadata keys safe to forward to analytics. Keys like error_message
 // are excluded because they could contain page content or user data.
-const SAFE_BRIDGE_STRING_KEYS = new Set([
-  'bridge_status',
-  'error_type',
-  'tool_name',
-])
+const SAFE_BRIDGE_STRING_KEYS = new Set(['bridge_status', 'error_type', 'tool_name']);
 
 const PERMISSION_MODES: readonly PermissionMode[] = [
   'ask',
   'skip_all_permission_checks',
   'follow_a_plan',
-]
+];
 
 function isPermissionMode(raw: string): raw is PermissionMode {
-  return PERMISSION_MODES.some(m => m === raw)
+  return PERMISSION_MODES.some((m) => m === raw);
 }
 
 /**
@@ -51,54 +47,45 @@ function isPermissionMode(raw: string): raw is PermissionMode {
 function getChromeBridgeUrl(): string | undefined {
   const bridgeEnabled =
     process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_copper_bridge', false)
+    getFeatureValue_CACHED_MAY_BE_STALE('tengu_copper_bridge', false);
 
   if (!bridgeEnabled) {
-    return undefined
+    return undefined;
   }
 
-  if (
-    isEnvTruthy(process.env.USE_LOCAL_OAUTH) ||
-    isEnvTruthy(process.env.LOCAL_BRIDGE)
-  ) {
-    return 'ws://localhost:8765'
+  if (isEnvTruthy(process.env.USE_LOCAL_OAUTH) || isEnvTruthy(process.env.LOCAL_BRIDGE)) {
+    return 'ws://localhost:8765';
   }
 
   if (isEnvTruthy(process.env.USE_STAGING_OAUTH)) {
-    return 'wss://bridge-staging.claudeusercontent.com'
+    return 'wss://bridge-staging.claudeusercontent.com';
   }
 
-  return 'wss://bridge.claudeusercontent.com'
+  return 'wss://bridge.claudeusercontent.com';
 }
 
 function isLocalBridge(): boolean {
-  return (
-    isEnvTruthy(process.env.USE_LOCAL_OAUTH) ||
-    isEnvTruthy(process.env.LOCAL_BRIDGE)
-  )
+  return isEnvTruthy(process.env.USE_LOCAL_OAUTH) || isEnvTruthy(process.env.LOCAL_BRIDGE);
 }
 
 /**
  * Build the ClaudeForChromeContext used by both the subprocess MCP server
  * and the in-process path in the MCP client.
  */
-export function createChromeContext(
-  env?: Record<string, string>,
-): ClaudeForChromeContext {
-  const logger = new DebugLogger()
-  const chromeBridgeUrl = getChromeBridgeUrl()
-  logger.info(`Bridge URL: ${chromeBridgeUrl ?? 'none (using native socket)'}`)
+export function createChromeContext(env?: Record<string, string>): ClaudeForChromeContext {
+  const logger = new DebugLogger();
+  const chromeBridgeUrl = getChromeBridgeUrl();
+  logger.info(`Bridge URL: ${chromeBridgeUrl ?? 'none (using native socket)'}`);
   const rawPermissionMode =
-    env?.CLAUDE_CHROME_PERMISSION_MODE ??
-    process.env.CLAUDE_CHROME_PERMISSION_MODE
-  let initialPermissionMode: PermissionMode | undefined
+    env?.CLAUDE_CHROME_PERMISSION_MODE ?? process.env.CLAUDE_CHROME_PERMISSION_MODE;
+  let initialPermissionMode: PermissionMode | undefined;
   if (rawPermissionMode) {
     if (isPermissionMode(rawPermissionMode)) {
-      initialPermissionMode = rawPermissionMode
+      initialPermissionMode = rawPermissionMode;
     } else {
       logger.warn(
         `Invalid CLAUDE_CHROME_PERMISSION_MODE "${rawPermissionMode}". Valid values: ${PERMISSION_MODES.join(', ')}`,
-      )
+      );
     }
   }
   return {
@@ -110,18 +97,18 @@ export function createChromeContext(
     onAuthenticationError: () => {
       logger.warn(
         'Authentication error occurred. Please ensure you are logged into the Claude browser extension with the same claude.ai account as Claude Code.',
-      )
+      );
     },
     onToolCallDisconnected: () => {
-      return `Browser extension is not connected. Please ensure the Claude browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Claude Code. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`
+      return `Browser extension is not connected. Please ensure the Claude browser extension is installed and running (${EXTENSION_DOWNLOAD_URL}), and that you are logged into claude.ai with the same account as Claude Code. If this is your first time connecting to Chrome, you may need to restart Chrome for the installation to take effect. If you continue to experience issues, please report a bug: ${BUG_REPORT_URL}`;
     },
     onExtensionPaired: (deviceId: string, name: string) => {
-      saveGlobalConfig(config => {
+      saveGlobalConfig((config) => {
         if (
           config.chromeExtension?.pairedDeviceId === deviceId &&
           config.chromeExtension?.pairedDeviceName === name
         ) {
-          return config
+          return config;
         }
         return {
           ...config,
@@ -129,21 +116,21 @@ export function createChromeContext(
             pairedDeviceId: deviceId,
             pairedDeviceName: name,
           },
-        }
-      })
-      logger.info(`Paired with "${name}" (${deviceId.slice(0, 8)})`)
+        };
+      });
+      logger.info(`Paired with "${name}" (${deviceId.slice(0, 8)})`);
     },
     getPersistedDeviceId: () => {
-      return getGlobalConfig().chromeExtension?.pairedDeviceId
+      return getGlobalConfig().chromeExtension?.pairedDeviceId;
     },
     ...(chromeBridgeUrl && {
       bridgeConfig: {
         url: chromeBridgeUrl,
         getUserId: async () => {
-          return getGlobalConfig().oauthAccount?.accountUuid
+          return getGlobalConfig().oauthAccount?.accountUuid;
         },
         getOAuthToken: async () => {
-          return getClaudeAIOAuthTokens()?.accessToken ?? ''
+          return getClaudeAIOAuthTokens()?.accessToken ?? '';
         },
         ...(isLocalBridge() && { devUserId: 'dev_user_local' }),
       },
@@ -169,16 +156,16 @@ export function createChromeContext(
     // the package's exported types and the dep can be bumped.
     ...(process.env.USER_TYPE === 'ant' && {
       callAnthropicMessages: async (req: {
-        model: string
-        max_tokens: number
-        system: string
-        messages: Parameters<typeof sideQuery>[0]['messages']
-        stop_sequences?: string[]
-        signal?: AbortSignal
+        model: string;
+        max_tokens: number;
+        system: string;
+        messages: Parameters<typeof sideQuery>[0]['messages'];
+        stop_sequences?: string[];
+        signal?: AbortSignal;
       }): Promise<{
-        content: Array<{ type: 'text'; text: string }>
-        stop_reason: string | null
-        usage?: { input_tokens: number; output_tokens: number }
+        content: Array<{ type: 'text'; text: string }>;
+        stop_reason: string | null;
+        usage?: { input_tokens: number; output_tokens: number };
       }> => {
         // sideQuery handles OAuth attribution fingerprint, proxy, model betas.
         // skipSystemPromptPrefix: the lightning prompt is complete on its own;
@@ -196,13 +183,13 @@ export function createChromeContext(
           skipSystemPromptPrefix: true,
           tools: [],
           querySource: 'chrome_mcp',
-        })
+        });
         // BetaContentBlock is TextBlock | ThinkingBlock | ToolUseBlock | ...
         // Only text blocks carry the model's command output.
-        const textBlocks: Array<{ type: 'text'; text: string }> = []
+        const textBlocks: Array<{ type: 'text'; text: string }> = [];
         for (const b of response.content) {
           if (b.type === 'text') {
-            textBlocks.push({ type: 'text', text: b.text })
+            textBlocks.push({ type: 'text', text: b.text });
           }
         }
         return {
@@ -212,7 +199,7 @@ export function createChromeContext(
             input_tokens: response.usage.input_tokens,
             output_tokens: response.usage.output_tokens,
           },
-        }
+        };
       },
     }),
     trackEvent: (eventName, metadata) => {
@@ -221,73 +208,70 @@ export function createChromeContext(
           | boolean
           | number
           | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-          | undefined
-      } = {}
+          | undefined;
+      } = {};
       if (metadata) {
         for (const [key, value] of Object.entries(metadata)) {
           // Rename 'status' to 'bridge_status' to avoid Datadog's reserved field
-          const safeKey = key === 'status' ? 'bridge_status' : key
+          const safeKey = key === 'status' ? 'bridge_status' : key;
           if (typeof value === 'boolean' || typeof value === 'number') {
-            safeMetadata[safeKey] = value
-          } else if (
-            typeof value === 'string' &&
-            SAFE_BRIDGE_STRING_KEYS.has(safeKey)
-          ) {
+            safeMetadata[safeKey] = value;
+          } else if (typeof value === 'string' && SAFE_BRIDGE_STRING_KEYS.has(safeKey)) {
             // Only forward allowlisted string keys — fields like error_message
             // could contain page content or user data
             safeMetadata[safeKey] =
-              value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+              value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
           }
         }
       }
-      logEvent(eventName, safeMetadata)
+      logEvent(eventName, safeMetadata);
     },
-  }
+  };
 }
 
 export async function runClaudeInChromeMcpServer(): Promise<void> {
-  enableConfigs()
-  initializeAnalyticsSink()
-  const context = createChromeContext()
+  enableConfigs();
+  initializeAnalyticsSink();
+  const context = createChromeContext();
 
-  const server = createClaudeForChromeMcpServer(context)
-  const transport = new StdioServerTransport()
+  const server = createClaudeForChromeMcpServer(context);
+  const transport = new StdioServerTransport();
 
   // Exit when parent process dies (stdin pipe closes).
   // Flush analytics before exiting so final-batch events (e.g. disconnect) aren't lost.
-  let exiting = false
+  let exiting = false;
   const shutdownAndExit = async (): Promise<void> => {
     if (exiting) {
-      return
+      return;
     }
-    exiting = true
-    await shutdown1PEventLogging()
-    await shutdownDatadog()
+    exiting = true;
+    await shutdown1PEventLogging();
+    await shutdownDatadog();
     // eslint-disable-next-line custom-rules/no-process-exit
-    process.exit(0)
-  }
-  process.stdin.on('end', () => void shutdownAndExit())
-  process.stdin.on('error', () => void shutdownAndExit())
+    process.exit(0);
+  };
+  process.stdin.on('end', () => void shutdownAndExit());
+  process.stdin.on('error', () => void shutdownAndExit());
 
-  logForDebugging('[Claude in Chrome] Starting MCP server')
-  await server.connect(transport)
-  logForDebugging('[Claude in Chrome] MCP server started')
+  logForDebugging('[Claude in Chrome] Starting MCP server');
+  await server.connect(transport);
+  logForDebugging('[Claude in Chrome] MCP server started');
 }
 
 class DebugLogger implements Logger {
   silly(message: string, ...args: unknown[]): void {
-    logForDebugging(format(message, ...args), { level: 'debug' })
+    logForDebugging(format(message, ...args), { level: 'debug' });
   }
   debug(message: string, ...args: unknown[]): void {
-    logForDebugging(format(message, ...args), { level: 'debug' })
+    logForDebugging(format(message, ...args), { level: 'debug' });
   }
   info(message: string, ...args: unknown[]): void {
-    logForDebugging(format(message, ...args), { level: 'info' })
+    logForDebugging(format(message, ...args), { level: 'info' });
   }
   warn(message: string, ...args: unknown[]): void {
-    logForDebugging(format(message, ...args), { level: 'warn' })
+    logForDebugging(format(message, ...args), { level: 'warn' });
   }
   error(message: string, ...args: unknown[]): void {
-    logForDebugging(format(message, ...args), { level: 'error' })
+    logForDebugging(format(message, ...args), { level: 'error' });
   }
 }

@@ -36,8 +36,8 @@
  * - Message IDs are preserved through the entire flow for proper correlation
  */
 
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
-import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Callback function to send an MCP message and get the response
@@ -45,7 +45,7 @@ import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 export type SendMcpMessageCallback = (
   serverName: string,
   message: JSONRPCMessage,
-) => Promise<JSONRPCMessage>
+) => Promise<JSONRPCMessage>;
 
 /**
  * CLI-side transport for SDK MCP servers.
@@ -58,11 +58,11 @@ export type SendMcpMessageCallback = (
  * through stdout/stdin to the SDK process.
  */
 export class SdkControlClientTransport implements Transport {
-  private isClosed = false
+  private isClosed = false;
 
-  onclose?: () => void
-  onerror?: (error: Error) => void
-  onmessage?: (message: JSONRPCMessage) => void
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
 
   constructor(
     private serverName: string,
@@ -73,24 +73,24 @@ export class SdkControlClientTransport implements Transport {
 
   async send(message: JSONRPCMessage): Promise<void> {
     if (this.isClosed) {
-      throw new Error('Transport is closed')
+      throw new Error('Transport is closed');
     }
 
     // Send the message and wait for the response
-    const response = await this.sendMcpMessage(this.serverName, message)
+    const response = await this.sendMcpMessage(this.serverName, message);
 
     // Pass the response back to the MCP client
     if (this.onmessage) {
-      this.onmessage(response)
+      this.onmessage(response);
     }
   }
 
   async close(): Promise<void> {
     if (this.isClosed) {
-      return
+      return;
     }
-    this.isClosed = true
-    this.onclose?.()
+    this.isClosed = true;
+    this.onclose?.();
   }
 }
 
@@ -107,30 +107,30 @@ export class SdkControlClientTransport implements Transport {
  * Note: Query handles all request/response correlation and async flow.
  */
 export class SdkControlServerTransport implements Transport {
-  private isClosed = false
+  private isClosed = false;
 
   constructor(private sendMcpMessage: (message: JSONRPCMessage) => void) {}
 
-  onclose?: () => void
-  onerror?: (error: Error) => void
-  onmessage?: (message: JSONRPCMessage) => void
+  onclose?: () => void;
+  onerror?: (error: Error) => void;
+  onmessage?: (message: JSONRPCMessage) => void;
 
   async start(): Promise<void> {}
 
   async send(message: JSONRPCMessage): Promise<void> {
     if (this.isClosed) {
-      throw new Error('Transport is closed')
+      throw new Error('Transport is closed');
     }
 
     // Simply pass the response back through the callback
-    this.sendMcpMessage(message)
+    this.sendMcpMessage(message);
   }
 
   async close(): Promise<void> {
     if (this.isClosed) {
-      return
+      return;
     }
-    this.isClosed = true
-    this.onclose?.()
+    this.isClosed = true;
+    this.onclose?.();
   }
 }

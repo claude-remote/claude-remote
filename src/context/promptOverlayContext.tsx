@@ -1,4 +1,3 @@
-import { c as _c } from "react/compiler-runtime";
 /**
  * Portal for content that floats above the prompt so it escapes
  * FullscreenLayout's bottom-slot `overflowY:hidden` clip.
@@ -20,6 +19,7 @@ import { c as _c } from "react/compiler-runtime";
  * their own writes — the setter contexts are stable.
  */
 import React, { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { SuggestionItem } from '../components/PromptInput/PromptInputFooterSuggestions.js';
 export type PromptOverlayData = {
   suggestions: SuggestionItem[];
@@ -33,9 +33,7 @@ const DialogContext = createContext<ReactNode>(null);
 const SetDialogContext = createContext<Setter<ReactNode> | null>(null);
 export function PromptOverlayProvider(t0) {
   const $ = _c(6);
-  const {
-    children
-  } = t0;
+  const { children } = t0;
   const [data, setData] = useState(null);
   const [dialog, setDialog] = useState(null);
   let t1;
@@ -49,7 +47,13 @@ export function PromptOverlayProvider(t0) {
   }
   let t2;
   if ($[3] !== data || $[4] !== t1) {
-    t2 = <SetContext.Provider value={setData}><SetDialogContext.Provider value={setDialog}><DataContext.Provider value={data}>{t1}</DataContext.Provider></SetDialogContext.Provider></SetContext.Provider>;
+    t2 = (
+      <SetContext.Provider value={setData}>
+        <SetDialogContext.Provider value={setDialog}>
+          <DataContext.Provider value={data}>{t1}</DataContext.Provider>
+        </SetDialogContext.Provider>
+      </SetContext.Provider>
+    );
     $[3] = data;
     $[4] = t1;
     $[5] = t2;

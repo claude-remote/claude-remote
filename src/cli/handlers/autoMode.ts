@@ -3,26 +3,23 @@
  * critique user-written rules. Dynamically imported when `claude auto-mode ...` runs.
  */
 
-import { errorMessage } from '../../utils/errors.js'
-import {
-  getMainLoopModel,
-  parseUserSpecifiedModel,
-} from '../../utils/model/model.js'
+import { errorMessage } from '../../utils/errors.js';
+import { getMainLoopModel, parseUserSpecifiedModel } from '../../utils/model/model.js';
 import {
   type AutoModeRules,
   buildDefaultExternalSystemPrompt,
   getDefaultExternalAutoModeRules,
-} from '../../utils/permissions/yoloClassifier.js'
-import { getAutoModeConfig } from '../../utils/settings/settings.js'
-import { sideQuery } from '../../utils/sideQuery.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+} from '../../utils/permissions/yoloClassifier.js';
+import { getAutoModeConfig } from '../../utils/settings/settings.js';
+import { sideQuery } from '../../utils/sideQuery.js';
+import { jsonStringify } from '../../utils/slowOperations.js';
 
 function writeRules(rules: AutoModeRules): void {
-  process.stdout.write(jsonStringify(rules, null, 2) + '\n')
+  process.stdout.write(`${jsonStringify(rules, null, 2)}\n`);
 }
 
 export function autoModeDefaultsHandler(): void {
-  writeRules(getDefaultExternalAutoModeRules())
+  writeRules(getDefaultExternalAutoModeRules());
 }
 
 /**
@@ -33,17 +30,13 @@ export function autoModeDefaultsHandler(): void {
  * falls through to defaults).
  */
 export function autoModeConfigHandler(): void {
-  const config = getAutoModeConfig()
-  const defaults = getDefaultExternalAutoModeRules()
+  const config = getAutoModeConfig();
+  const defaults = getDefaultExternalAutoModeRules();
   writeRules({
     allow: config?.allow?.length ? config.allow : defaults.allow,
-    soft_deny: config?.soft_deny?.length
-      ? config.soft_deny
-      : defaults.soft_deny,
-    environment: config?.environment?.length
-      ? config.environment
-      : defaults.environment,
-  })
+    soft_deny: config?.soft_deny?.length ? config.soft_deny : defaults.soft_deny,
+    environment: config?.environment?.length ? config.environment : defaults.environment,
+  });
 }
 
 const CRITIQUE_SYSTEM_PROMPT =
@@ -68,49 +61,39 @@ const CRITIQUE_SYSTEM_PROMPT =
   '4. **Actionability**: Is the rule specific enough for the classifier to act on?\n' +
   '\n' +
   'Be concise and constructive. Only comment on rules that could be improved. ' +
-  'If all rules look good, say so.'
+  'If all rules look good, say so.';
 
 export async function autoModeCritiqueHandler(options: {
-  model?: string
+  model?: string;
 }): Promise<void> {
-  const config = getAutoModeConfig()
+  const config = getAutoModeConfig();
   const hasCustomRules =
     (config?.allow?.length ?? 0) > 0 ||
     (config?.soft_deny?.length ?? 0) > 0 ||
-    (config?.environment?.length ?? 0) > 0
+    (config?.environment?.length ?? 0) > 0;
 
   if (!hasCustomRules) {
     process.stdout.write(
       'No custom auto mode rules found.\n\n' +
         'Add rules to your settings file under autoMode.{allow, soft_deny, environment}.\n' +
         'Run `claude auto-mode defaults` to see the default rules for reference.\n',
-    )
-    return
+    );
+    return;
   }
 
-  const model = options.model
-    ? parseUserSpecifiedModel(options.model)
-    : getMainLoopModel()
+  const model = options.model ? parseUserSpecifiedModel(options.model) : getMainLoopModel();
 
-  const defaults = getDefaultExternalAutoModeRules()
-  const classifierPrompt = buildDefaultExternalSystemPrompt()
+  const defaults = getDefaultExternalAutoModeRules();
+  const classifierPrompt = buildDefaultExternalSystemPrompt();
 
   const userRulesSummary =
     formatRulesForCritique('allow', config?.allow ?? [], defaults.allow) +
-    formatRulesForCritique(
-      'soft_deny',
-      config?.soft_deny ?? [],
-      defaults.soft_deny,
-    ) +
-    formatRulesForCritique(
-      'environment',
-      config?.environment ?? [],
-      defaults.environment,
-    )
+    formatRulesForCritique('soft_deny', config?.soft_deny ?? [], defaults.soft_deny) +
+    formatRulesForCritique('environment', config?.environment ?? [], defaults.environment);
 
-  process.stdout.write('Analyzing your auto mode rules…\n\n')
+  process.stdout.write('Analyzing your auto mode rules…\n\n');
 
-  let response
+  let response;
   try {
     response = await sideQuery({
       querySource: 'auto_mode_critique',
@@ -121,30 +104,21 @@ export async function autoModeCritiqueHandler(options: {
       messages: [
         {
           role: 'user',
-          content:
-            'Here is the full classifier system prompt that the auto mode classifier receives:\n\n' +
-            '<classifier_system_prompt>\n' +
-            classifierPrompt +
-            '\n</classifier_system_prompt>\n\n' +
-            "Here are the user's custom rules that REPLACE the corresponding default sections:\n\n" +
-            userRulesSummary +
-            '\nPlease critique these custom rules.',
+          content: `Here is the full classifier system prompt that the auto mode classifier receives:\n\n<classifier_system_prompt>\n${classifierPrompt}\n</classifier_system_prompt>\n\nHere are the user's custom rules that REPLACE the corresponding default sections:\n\n${userRulesSummary}\nPlease critique these custom rules.`,
         },
       ],
-    })
+    });
   } catch (error) {
-    process.stderr.write(
-      'Failed to analyze rules: ' + errorMessage(error) + '\n',
-    )
-    process.exitCode = 1
-    return
+    process.stderr.write(`Failed to analyze rules: ${errorMessage(error)}\n`);
+    process.exitCode = 1;
+    return;
   }
 
-  const textBlock = response.content.find(block => block.type === 'text')
+  const textBlock = response.content.find((block) => block.type === 'text');
   if (textBlock?.type === 'text') {
-    process.stdout.write(textBlock.text + '\n')
+    process.stdout.write(`${textBlock.text}\n`);
   } else {
-    process.stdout.write('No critique was generated. Please try again.\n')
+    process.stdout.write('No critique was generated. Please try again.\n');
   }
 }
 
@@ -153,18 +127,8 @@ function formatRulesForCritique(
   userRules: string[],
   defaultRules: string[],
 ): string {
-  if (userRules.length === 0) return ''
-  const customLines = userRules.map(r => '- ' + r).join('\n')
-  const defaultLines = defaultRules.map(r => '- ' + r).join('\n')
-  return (
-    '## ' +
-    section +
-    ' (custom rules replacing defaults)\n' +
-    'Custom:\n' +
-    customLines +
-    '\n\n' +
-    'Defaults being replaced:\n' +
-    defaultLines +
-    '\n\n'
-  )
+  if (userRules.length === 0) return '';
+  const customLines = userRules.map((r) => `- ${r}`).join('\n');
+  const defaultLines = defaultRules.map((r) => `- ${r}`).join('\n');
+  return `## ${section} (custom rules replacing defaults)\nCustom:\n${customLines}\n\nDefaults being replaced:\n${defaultLines}\n\n`;
 }

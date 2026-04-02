@@ -1,13 +1,16 @@
-import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React, { useCallback, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Dialog } from '../../components/design-system/Dialog.js';
-import { stringWidth } from '../../ink/stringWidth.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw text input for config dialog
 import { Box, Text, useInput } from '../../ink.js';
+import { stringWidth } from '../../ink/stringWidth.js';
 import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
 import { isEnvTruthy } from '../../utils/envUtils.js';
-import type { PluginOptionSchema, PluginOptionValues } from '../../utils/plugins/pluginOptionsStorage.js';
+import type {
+  PluginOptionSchema,
+  PluginOptionValues,
+} from '../../utils/plugins/pluginOptionsStorage.js';
 
 /**
  * Build the onSave payload from collected string inputs.
@@ -21,7 +24,12 @@ import type { PluginOptionSchema, PluginOptionValues } from '../../utils/plugins
  *
  * Exported for unit testing.
  */
-export function buildFinalValues(fields: string[], collected: Record<string, string>, configSchema: PluginOptionSchema, initialValues: PluginOptionValues | undefined): PluginOptionValues {
+export function buildFinalValues(
+  fields: string[],
+  collected: Record<string, string>,
+  configSchema: PluginOptionSchema,
+  initialValues: PluginOptionValues | undefined,
+): PluginOptionValues {
   const finalValues: PluginOptionValues = {};
   for (const fieldKey of fields) {
     const schema = configSchema[fieldKey];
@@ -54,14 +62,7 @@ type Props = {
 };
 export function PluginOptionsDialog(t0) {
   const $ = _c(70);
-  const {
-    title,
-    subtitle,
-    configSchema,
-    initialValues,
-    onSave,
-    onCancel
-  } = t0;
+  const { title, subtitle, configSchema, initialValues, onSave, onCancel } = t0;
   let t1;
   if ($[0] !== configSchema) {
     t1 = Object.keys(configSchema);
@@ -73,12 +74,12 @@ export function PluginOptionsDialog(t0) {
   const fields = t1;
   let t2;
   if ($[2] !== configSchema || $[3] !== initialValues) {
-    t2 = key => {
+    t2 = (key) => {
       if (configSchema[key]?.sensitive === true) {
-        return "";
+        return '';
       }
       const v = initialValues?.[key];
-      return v === undefined ? "" : String(v);
+      return v === undefined ? '' : String(v);
     };
     $[2] = configSchema;
     $[3] = initialValues;
@@ -89,7 +90,7 @@ export function PluginOptionsDialog(t0) {
   const initialFor = t2;
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0);
   let t3;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[5] === Symbol.for('react.memo_cache_sentinel')) {
     t3 = {};
     $[5] = t3;
   } else {
@@ -98,7 +99,7 @@ export function PluginOptionsDialog(t0) {
   const [values, setValues] = useState(t3);
   let t4;
   if ($[6] !== fields[0] || $[7] !== initialFor) {
-    t4 = () => fields[0] ? initialFor(fields[0]) : "";
+    t4 = () => (fields[0] ? initialFor(fields[0]) : '');
     $[6] = fields[0];
     $[7] = initialFor;
     $[8] = t4;
@@ -109,26 +110,32 @@ export function PluginOptionsDialog(t0) {
   const currentField = fields[currentFieldIndex];
   const fieldSchema = currentField ? configSchema[currentField] : null;
   let t5;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
     t5 = {
-      context: "Settings"
+      context: 'Settings',
     };
     $[9] = t5;
   } else {
     t5 = $[9];
   }
-  useKeybinding("confirm:no", onCancel, t5);
+  useKeybinding('confirm:no', onCancel, t5);
   let t6;
-  if ($[10] !== currentField || $[11] !== currentFieldIndex || $[12] !== currentInput || $[13] !== fields || $[14] !== initialFor) {
+  if (
+    $[10] !== currentField ||
+    $[11] !== currentFieldIndex ||
+    $[12] !== currentInput ||
+    $[13] !== fields ||
+    $[14] !== initialFor
+  ) {
     t6 = () => {
       if (currentFieldIndex < fields.length - 1 && currentField) {
-        setValues(prev => ({
+        setValues((prev) => ({
           ...prev,
-          [currentField]: currentInput
+          [currentField]: currentInput,
         }));
         setCurrentFieldIndex(_temp);
         const nextKey = fields[currentFieldIndex + 1];
-        setCurrentInput(nextKey ? initialFor(nextKey) : "");
+        setCurrentInput(nextKey ? initialFor(nextKey) : '');
       }
     };
     $[10] = currentField;
@@ -142,14 +149,24 @@ export function PluginOptionsDialog(t0) {
   }
   const handleNextField = t6;
   let t7;
-  if ($[16] !== configSchema || $[17] !== currentField || $[18] !== currentFieldIndex || $[19] !== currentInput || $[20] !== fields || $[21] !== initialFor || $[22] !== initialValues || $[23] !== onSave || $[24] !== values) {
+  if (
+    $[16] !== configSchema ||
+    $[17] !== currentField ||
+    $[18] !== currentFieldIndex ||
+    $[19] !== currentInput ||
+    $[20] !== fields ||
+    $[21] !== initialFor ||
+    $[22] !== initialValues ||
+    $[23] !== onSave ||
+    $[24] !== values
+  ) {
     t7 = () => {
       if (!currentField) {
         return;
       }
       const newValues = {
         ...values,
-        [currentField]: currentInput
+        [currentField]: currentInput,
       };
       if (currentFieldIndex === fields.length - 1) {
         onSave(buildFinalValues(fields, newValues, configSchema, initialValues));
@@ -157,7 +174,7 @@ export function PluginOptionsDialog(t0) {
         setValues(newValues);
         setCurrentFieldIndex(_temp2);
         const nextKey_0 = fields[currentFieldIndex + 1];
-        setCurrentInput(nextKey_0 ? initialFor(nextKey_0) : "");
+        setCurrentInput(nextKey_0 ? initialFor(nextKey_0) : '');
       }
     };
     $[16] = configSchema;
@@ -177,8 +194,8 @@ export function PluginOptionsDialog(t0) {
   let t8;
   if ($[26] !== handleConfirm || $[27] !== handleNextField) {
     t8 = {
-      "confirm:nextField": handleNextField,
-      "confirm:yes": handleConfirm
+      'confirm:nextField': handleNextField,
+      'confirm:yes': handleConfirm,
     };
     $[26] = handleConfirm;
     $[27] = handleNextField;
@@ -187,9 +204,9 @@ export function PluginOptionsDialog(t0) {
     t8 = $[28];
   }
   let t9;
-  if ($[29] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[29] === Symbol.for('react.memo_cache_sentinel')) {
     t9 = {
-      context: "Confirmation"
+      context: 'Confirmation',
     };
     $[29] = t9;
   } else {
@@ -197,14 +214,14 @@ export function PluginOptionsDialog(t0) {
   }
   useKeybindings(t8, t9);
   let t10;
-  if ($[30] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[30] === Symbol.for('react.memo_cache_sentinel')) {
     t10 = (char, key_0) => {
       if (key_0.backspace || key_0.delete) {
         setCurrentInput(_temp3);
         return;
       }
       if (char && !key_0.ctrl && !key_0.meta && !key_0.tab && !key_0.return) {
-        setCurrentInput(prev_3 => prev_3 + char);
+        setCurrentInput((prev_3) => prev_3 + char);
       }
     };
     $[30] = t10;
@@ -219,7 +236,7 @@ export function PluginOptionsDialog(t0) {
   const isRequired = fieldSchema.required === true;
   let t11;
   if ($[31] !== currentInput || $[32] !== isSensitive) {
-    t11 = isSensitive ? "*".repeat(stringWidth(currentInput)) : currentInput;
+    t11 = isSensitive ? '*'.repeat(stringWidth(currentInput)) : currentInput;
     $[31] = currentInput;
     $[32] = isSensitive;
     $[33] = t11;
@@ -238,7 +255,12 @@ export function PluginOptionsDialog(t0) {
   }
   let t14;
   if ($[36] !== t12 || $[37] !== t13) {
-    t14 = <Text bold={true}>{t12}{t13}</Text>;
+    t14 = (
+      <Text bold={true}>
+        {t12}
+        {t13}
+      </Text>
+    );
     $[36] = t12;
     $[37] = t13;
     $[38] = t14;
@@ -254,7 +276,7 @@ export function PluginOptionsDialog(t0) {
     t15 = $[40];
   }
   let t16;
-  if ($[41] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[41] === Symbol.for('react.memo_cache_sentinel')) {
     t16 = <Text>{figures.pointerSmall} </Text>;
     $[41] = t16;
   } else {
@@ -269,7 +291,7 @@ export function PluginOptionsDialog(t0) {
     t17 = $[43];
   }
   let t18;
-  if ($[44] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[44] === Symbol.for('react.memo_cache_sentinel')) {
     t18 = <Text>█</Text>;
     $[44] = t18;
   } else {
@@ -277,7 +299,13 @@ export function PluginOptionsDialog(t0) {
   }
   let t19;
   if ($[45] !== t17) {
-    t19 = <Box marginTop={1}>{t16}{t17}{t18}</Box>;
+    t19 = (
+      <Box marginTop={1}>
+        {t16}
+        {t17}
+        {t18}
+      </Box>
+    );
     $[45] = t17;
     $[46] = t19;
   } else {
@@ -285,7 +313,13 @@ export function PluginOptionsDialog(t0) {
   }
   let t20;
   if ($[47] !== t14 || $[48] !== t15 || $[49] !== t19) {
-    t20 = <Box flexDirection="column">{t14}{t15}{t19}</Box>;
+    t20 = (
+      <Box flexDirection="column">
+        {t14}
+        {t15}
+        {t19}
+      </Box>
+    );
     $[47] = t14;
     $[48] = t15;
     $[49] = t19;
@@ -296,7 +330,11 @@ export function PluginOptionsDialog(t0) {
   const t21 = currentFieldIndex + 1;
   let t22;
   if ($[51] !== fields.length || $[52] !== t21) {
-    t22 = <Text dimColor={true}>Field {t21} of {fields.length}</Text>;
+    t22 = (
+      <Text dimColor={true}>
+        Field {t21} of {fields.length}
+      </Text>
+    );
     $[51] = fields.length;
     $[52] = t21;
     $[53] = t22;
@@ -305,7 +343,9 @@ export function PluginOptionsDialog(t0) {
   }
   let t23;
   if ($[54] !== currentFieldIndex || $[55] !== fields.length) {
-    t23 = currentFieldIndex < fields.length - 1 && <Text dimColor={true}>Tab: Next field · Enter: Save and continue</Text>;
+    t23 = currentFieldIndex < fields.length - 1 && (
+      <Text dimColor={true}>Tab: Next field · Enter: Save and continue</Text>
+    );
     $[54] = currentFieldIndex;
     $[55] = fields.length;
     $[56] = t23;
@@ -314,7 +354,9 @@ export function PluginOptionsDialog(t0) {
   }
   let t24;
   if ($[57] !== currentFieldIndex || $[58] !== fields.length) {
-    t24 = currentFieldIndex === fields.length - 1 && <Text dimColor={true}>Enter: Save configuration</Text>;
+    t24 = currentFieldIndex === fields.length - 1 && (
+      <Text dimColor={true}>Enter: Save configuration</Text>
+    );
     $[57] = currentFieldIndex;
     $[58] = fields.length;
     $[59] = t24;
@@ -323,7 +365,13 @@ export function PluginOptionsDialog(t0) {
   }
   let t25;
   if ($[60] !== t22 || $[61] !== t23 || $[62] !== t24) {
-    t25 = <Box flexDirection="column">{t22}{t23}{t24}</Box>;
+    t25 = (
+      <Box flexDirection="column">
+        {t22}
+        {t23}
+        {t24}
+      </Box>
+    );
     $[60] = t22;
     $[61] = t23;
     $[62] = t24;
@@ -332,8 +380,19 @@ export function PluginOptionsDialog(t0) {
     t25 = $[63];
   }
   let t26;
-  if ($[64] !== onCancel || $[65] !== subtitle || $[66] !== t20 || $[67] !== t25 || $[68] !== title) {
-    t26 = <Dialog title={title} subtitle={subtitle} onCancel={onCancel} isCancelActive={false}>{t20}{t25}</Dialog>;
+  if (
+    $[64] !== onCancel ||
+    $[65] !== subtitle ||
+    $[66] !== t20 ||
+    $[67] !== t25 ||
+    $[68] !== title
+  ) {
+    t26 = (
+      <Dialog title={title} subtitle={subtitle} onCancel={onCancel} isCancelActive={false}>
+        {t20}
+        {t25}
+      </Dialog>
+    );
     $[64] = onCancel;
     $[65] = subtitle;
     $[66] = t20;

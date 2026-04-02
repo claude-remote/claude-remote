@@ -1,4 +1,4 @@
-import { quote } from './shellQuote.js'
+import { quote } from './shellQuote.js';
 
 /**
  * Detects if a command contains a heredoc pattern
@@ -13,12 +13,12 @@ function containsHeredoc(command: string): boolean {
     /\[\[\s*\d+\s*<<\s*\d+\s*\]\]/.test(command) ||
     /\$\(\(.*<<.*\)\)/.test(command)
   ) {
-    return false
+    return false;
   }
 
   // Now check for heredoc patterns
-  const heredocRegex = /<<-?\s*(?:(['"]?)(\w+)\1|\\(\w+))/
-  return heredocRegex.test(command)
+  const heredocRegex = /<<-?\s*(?:(['"]?)(\w+)\1|\\(\w+))/;
+  return heredocRegex.test(command);
 }
 
 /**
@@ -29,12 +29,10 @@ function containsMultilineString(command: string): boolean {
   // Handle escaped quotes by using a more sophisticated pattern
   // Match single quotes: '...\n...' where content can include escaped quotes \'
   // Match double quotes: "...\n..." where content can include escaped quotes \"
-  const singleQuoteMultiline = /'(?:[^'\\]|\\.)*\n(?:[^'\\]|\\.)*'/
-  const doubleQuoteMultiline = /"(?:[^"\\]|\\.)*\n(?:[^"\\]|\\.)*"/
+  const singleQuoteMultiline = /'(?:[^'\\]|\\.)*\n(?:[^'\\]|\\.)*'/;
+  const doubleQuoteMultiline = /"(?:[^"\\]|\\.)*\n(?:[^"\\]|\\.)*"/;
 
-  return (
-    singleQuoteMultiline.test(command) || doubleQuoteMultiline.test(command)
-  )
+  return singleQuoteMultiline.test(command) || doubleQuoteMultiline.test(command);
 }
 
 /**
@@ -43,34 +41,31 @@ function containsMultilineString(command: string): boolean {
  * @param addStdinRedirect Whether to add < /dev/null
  * @returns The properly quoted command
  */
-export function quoteShellCommand(
-  command: string,
-  addStdinRedirect: boolean = true,
-): string {
+export function quoteShellCommand(command: string, addStdinRedirect = true): string {
   // If command contains heredoc or multiline strings, handle specially
   // The shell-quote library incorrectly escapes ! to \! in these cases
   if (containsHeredoc(command) || containsMultilineString(command)) {
     // For heredocs and multiline strings, we need to quote for eval
     // but avoid shell-quote's aggressive escaping
     // We'll use single quotes and escape only single quotes in the command
-    const escaped = command.replace(/'/g, "'\"'\"'")
-    const quoted = `'${escaped}'`
+    const escaped = command.replace(/'/g, "'\"'\"'");
+    const quoted = `'${escaped}'`;
 
     // Don't add stdin redirect for heredocs as they provide their own input
     if (containsHeredoc(command)) {
-      return quoted
+      return quoted;
     }
 
     // For multiline strings without heredocs, add stdin redirect if needed
-    return addStdinRedirect ? `${quoted} < /dev/null` : quoted
+    return addStdinRedirect ? `${quoted} < /dev/null` : quoted;
   }
 
   // For regular commands, use shell-quote
   if (addStdinRedirect) {
-    return quote([command, '<', '/dev/null'])
+    return quote([command, '<', '/dev/null']);
   }
 
-  return quote([command])
+  return quote([command]);
 }
 
 /**
@@ -82,7 +77,7 @@ export function hasStdinRedirect(command: string): boolean {
   // Look for < followed by whitespace and a filename/path
   // Negative lookahead to exclude: <<, <(
   // Must be preceded by whitespace or command separator or start of string
-  return /(?:^|[\s;&|])<(?![<(])\s*\S+/.test(command)
+  return /(?:^|[\s;&|])<(?![<(])\s*\S+/.test(command);
 }
 
 /**
@@ -93,16 +88,16 @@ export function hasStdinRedirect(command: string): boolean {
 export function shouldAddStdinRedirect(command: string): boolean {
   // Don't add stdin redirect for heredocs as it interferes with the heredoc terminator
   if (containsHeredoc(command)) {
-    return false
+    return false;
   }
 
   // Don't add stdin redirect if command already has one
   if (hasStdinRedirect(command)) {
-    return false
+    return false;
   }
 
   // For other commands, stdin redirect is generally safe
-  return true
+  return true;
 }
 
 /**
@@ -121,8 +116,8 @@ export function shouldAddStdinRedirect(command: string): boolean {
  * will also be rewritten. This is acceptable collateral — it's extremely
  * rare and rewriting to `/dev/null` inside a string is harmless.
  */
-const NUL_REDIRECT_REGEX = /(\d?&?>+\s*)[Nn][Uu][Ll](?=\s|$|[|&;)\n])/g
+const NUL_REDIRECT_REGEX = /(\d?&?>+\s*)[Nn][Uu][Ll](?=\s|$|[|&;)\n])/g;
 
 export function rewriteWindowsNullRedirect(command: string): string {
-  return command.replace(NUL_REDIRECT_REGEX, '$1/dev/null')
+  return command.replace(NUL_REDIRECT_REGEX, '$1/dev/null');
 }

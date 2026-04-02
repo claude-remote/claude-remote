@@ -1,12 +1,20 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useInterval } from 'usehooks-ts';
 import { Text } from '../ink.js';
-import { type AutoUpdaterResult, getLatestVersionFromGcs, getMaxVersion, shouldSkipVersion } from '../utils/autoUpdater.js';
+import {
+  type AutoUpdaterResult,
+  getLatestVersionFromGcs,
+  getMaxVersion,
+  shouldSkipVersion,
+} from '../utils/autoUpdater.js';
 import { isAutoUpdaterDisabled } from '../utils/config.js';
 import { logForDebugging } from '../utils/debug.js';
-import { getPackageManager, type PackageManager } from '../utils/nativeInstaller/packageManagers.js';
+import {
+  type PackageManager,
+  getPackageManager,
+} from '../utils/nativeInstaller/packageManagers.js';
 import { gt, gte } from '../utils/semver.js';
 import { getInitialSettings } from '../utils/settings/settings.js';
 type Props = {
@@ -19,26 +27,31 @@ type Props = {
 };
 export function PackageManagerAutoUpdater(t0) {
   const $ = _c(10);
-  const {
-    verbose
-  } = t0;
+  const { verbose } = t0;
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [packageManager, setPackageManager] = useState("unknown");
+  const [packageManager, setPackageManager] = useState('unknown');
   let t1;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = async () => {
       false || false;
       if (isAutoUpdaterDisabled()) {
         return;
       }
-      const [channel, pm] = await Promise.all([Promise.resolve(getInitialSettings()?.autoUpdatesChannel ?? "latest"), getPackageManager()]);
+      const [channel, pm] = await Promise.all([
+        Promise.resolve(getInitialSettings()?.autoUpdatesChannel ?? 'latest'),
+        getPackageManager(),
+      ]);
       setPackageManager(pm);
       let latest = await getLatestVersionFromGcs(channel);
       const maxVersion = await getMaxVersion();
       if (maxVersion && latest && gt(latest, maxVersion)) {
-        logForDebugging(`PackageManagerAutoUpdater: maxVersion ${maxVersion} is set, capping update from ${latest} to ${maxVersion}`);
+        logForDebugging(
+          `PackageManagerAutoUpdater: maxVersion ${maxVersion} is set, capping update from ${latest} to ${maxVersion}`,
+        );
         if (gte(MACRO.VERSION, maxVersion)) {
-          logForDebugging(`PackageManagerAutoUpdater: current version ${MACRO.VERSION} is already at or above maxVersion ${maxVersion}, skipping update`);
+          logForDebugging(
+            `PackageManagerAutoUpdater: current version ${MACRO.VERSION} is already at or above maxVersion ${maxVersion}, skipping update`,
+          );
           setUpdateAvailable(false);
           return;
         }
@@ -47,7 +60,9 @@ export function PackageManagerAutoUpdater(t0) {
       const hasUpdate = latest && !gte(MACRO.VERSION, latest) && !shouldSkipVersion(latest);
       setUpdateAvailable(!!hasUpdate);
       if (hasUpdate) {
-        logForDebugging(`PackageManagerAutoUpdater: Update available ${MACRO.VERSION} -> ${latest}`);
+        logForDebugging(
+          `PackageManagerAutoUpdater: Update available ${MACRO.VERSION} -> ${latest}`,
+        );
       }
     };
     $[0] = t1;
@@ -57,7 +72,7 @@ export function PackageManagerAutoUpdater(t0) {
   const checkForUpdates = t1;
   let t2;
   let t3;
-  if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[1] === Symbol.for('react.memo_cache_sentinel')) {
     t2 = () => {
       checkForUpdates();
     };
@@ -73,10 +88,21 @@ export function PackageManagerAutoUpdater(t0) {
   if (!updateAvailable) {
     return null;
   }
-  const updateCommand = packageManager === "homebrew" ? "brew upgrade claude-code" : packageManager === "winget" ? "winget upgrade Anthropic.ClaudeCode" : packageManager === "apk" ? "apk upgrade claude-code" : "your package manager update command";
+  const updateCommand =
+    packageManager === 'homebrew'
+      ? 'brew upgrade claude-code'
+      : packageManager === 'winget'
+        ? 'winget upgrade Anthropic.ClaudeCode'
+        : packageManager === 'apk'
+          ? 'apk upgrade claude-code'
+          : 'your package manager update command';
   let t4;
   if ($[3] !== verbose) {
-    t4 = verbose && <Text dimColor={true} wrap="truncate">currentVersion: {MACRO.VERSION}</Text>;
+    t4 = verbose && (
+      <Text dimColor={true} wrap="truncate">
+        currentVersion: {MACRO.VERSION}
+      </Text>
+    );
     $[3] = verbose;
     $[4] = t4;
   } else {
@@ -84,7 +110,11 @@ export function PackageManagerAutoUpdater(t0) {
   }
   let t5;
   if ($[5] !== updateCommand) {
-    t5 = <Text color="warning" wrap="truncate">Update available! Run: <Text bold={true}>{updateCommand}</Text></Text>;
+    t5 = (
+      <Text color="warning" wrap="truncate">
+        Update available! Run: <Text bold={true}>{updateCommand}</Text>
+      </Text>
+    );
     $[5] = updateCommand;
     $[6] = t5;
   } else {
@@ -92,7 +122,12 @@ export function PackageManagerAutoUpdater(t0) {
   }
   let t6;
   if ($[7] !== t4 || $[8] !== t5) {
-    t6 = <>{t4}{t5}</>;
+    t6 = (
+      <>
+        {t4}
+        {t5}
+      </>
+    );
     $[7] = t4;
     $[8] = t5;
     $[9] = t6;

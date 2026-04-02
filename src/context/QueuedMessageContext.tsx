@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box } from '../ink.js';
 type QueuedMessageContextValue = {
   isQueued: boolean;
@@ -19,11 +19,7 @@ type Props = {
 };
 export function QueuedMessageProvider(t0) {
   const $ = _c(9);
-  const {
-    isFirst,
-    useBriefLayout,
-    children
-  } = t0;
+  const { isFirst, useBriefLayout, children } = t0;
   const padding = useBriefLayout ? 0 : PADDING_X;
   const t1 = padding * 2;
   let t2;
@@ -31,7 +27,7 @@ export function QueuedMessageProvider(t0) {
     t2 = {
       isQueued: true,
       isFirst,
-      paddingWidth: t1
+      paddingWidth: t1,
     };
     $[0] = isFirst;
     $[1] = t1;

@@ -1,11 +1,12 @@
-import React, { useRef } from 'react';
+import type React from 'react';
+import { useRef } from 'react';
 import stripAnsi from 'strip-ansi';
+import type { Tools } from '../Tool.js';
 import { Messages } from '../components/Messages.js';
 import { KeybindingProvider } from '../keybindings/KeybindingContext.js';
 import { loadKeybindingsSyncWithWarnings } from '../keybindings/loadUserBindings.js';
 import type { KeybindingContextName } from '../keybindings/types.js';
 import { AppStateProvider } from '../state/AppState.js';
-import type { Tools } from '../Tool.js';
 import type { Message } from '../types/message.js';
 import { renderToAnsiString } from './staticRender.js';
 
@@ -15,19 +16,28 @@ import { renderToAnsiString } from './staticRender.js';
  * and would hang in headless renders with no stdin).
  */
 function StaticKeybindingProvider({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }): React.ReactNode {
-  const {
-    bindings
-  } = loadKeybindingsSyncWithWarnings();
+  const { bindings } = loadKeybindingsSyncWithWarnings();
   const pendingChordRef = useRef(null);
   const handlerRegistryRef = useRef(new Map());
   const activeContexts = useRef(new Set<KeybindingContextName>()).current;
-  return <KeybindingProvider bindings={bindings} pendingChordRef={pendingChordRef} pendingChord={null} setPendingChord={() => {}} activeContexts={activeContexts} registerActiveContext={() => {}} unregisterActiveContext={() => {}} handlerRegistryRef={handlerRegistryRef}>
+  return (
+    <KeybindingProvider
+      bindings={bindings}
+      pendingChordRef={pendingChordRef}
+      pendingChord={null}
+      setPendingChord={() => {}}
+      activeContexts={activeContexts}
+      registerActiveContext={() => {}}
+      unregisterActiveContext={() => {}}
+      handlerRegistryRef={handlerRegistryRef}
+    >
       {children}
-    </KeybindingProvider>;
+    </KeybindingProvider>
+  );
 }
 
 // Upper-bound how many NormalizedMessages a Message can produce.
@@ -52,22 +62,46 @@ function normalizedUpperBound(m: Message): number {
  * the full normalized array so tool_use↔tool_result resolves regardless of
  * which chunk each landed in.
  */
-export async function streamRenderedMessages(messages: Message[], tools: Tools, sink: (ansiChunk: string) => void | Promise<void>, {
-  columns,
-  verbose = false,
-  chunkSize = 40,
-  onProgress
-}: {
-  columns?: number;
-  verbose?: boolean;
-  chunkSize?: number;
-  onProgress?: (rendered: number) => void;
-} = {}): Promise<void> {
-  const renderChunk = (range: readonly [number, number]) => renderToAnsiString(<AppStateProvider>
+export async function streamRenderedMessages(
+  messages: Message[],
+  tools: Tools,
+  sink: (ansiChunk: string) => void | Promise<void>,
+  {
+    columns,
+    verbose = false,
+    chunkSize = 40,
+    onProgress,
+  }: {
+    columns?: number;
+    verbose?: boolean;
+    chunkSize?: number;
+    onProgress?: (rendered: number) => void;
+  } = {},
+): Promise<void> {
+  const renderChunk = (range: readonly [number, number]) =>
+    renderToAnsiString(
+      <AppStateProvider>
         <StaticKeybindingProvider>
-          <Messages messages={messages} tools={tools} commands={[]} verbose={verbose} toolJSX={null} toolUseConfirmQueue={[]} inProgressToolUseIDs={new Set()} isMessageSelectorVisible={false} conversationId="export" screen="prompt" streamingToolUses={[]} showAllInTranscript={true} isLoading={false} renderRange={range} />
+          <Messages
+            messages={messages}
+            tools={tools}
+            commands={[]}
+            verbose={verbose}
+            toolJSX={null}
+            toolUseConfirmQueue={[]}
+            inProgressToolUseIDs={new Set()}
+            isMessageSelectorVisible={false}
+            conversationId="export"
+            screen="prompt"
+            streamingToolUses={[]}
+            showAllInTranscript={true}
+            isLoading={false}
+            renderRange={range}
+          />
         </StaticKeybindingProvider>
-      </AppStateProvider>, columns);
+      </AppStateProvider>,
+      columns,
+    );
 
   // renderRange indexes into the post-collapse array whose length we can't
   // see from here — normalize splits each Message into one NormalizedMessage
@@ -88,10 +122,14 @@ export async function streamRenderedMessages(messages: Message[], tools: Tools, 
  * Renders messages to a plain text string suitable for export.
  * Uses the same React rendering logic as the interactive UI.
  */
-export async function renderMessagesToPlainText(messages: Message[], tools: Tools = [], columns?: number): Promise<string> {
+export async function renderMessagesToPlainText(
+  messages: Message[],
+  tools: Tools = [],
+  columns?: number,
+): Promise<string> {
   const parts: string[] = [];
-  await streamRenderedMessages(messages, tools, chunk => void parts.push(stripAnsi(chunk)), {
-    columns
+  await streamRenderedMessages(messages, tools, (chunk) => void parts.push(stripAnsi(chunk)), {
+    columns,
   });
   return parts.join('');
 }

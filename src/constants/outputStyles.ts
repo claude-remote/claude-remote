@@ -1,30 +1,30 @@
-import figures from 'figures'
-import memoize from 'lodash-es/memoize.js'
-import { getOutputStyleDirStyles } from '../outputStyles/loadOutputStylesDir.js'
-import type { OutputStyle } from '../utils/config.js'
-import { getCwd } from '../utils/cwd.js'
-import { logForDebugging } from '../utils/debug.js'
-import { loadPluginOutputStyles } from '../utils/plugins/loadPluginOutputStyles.js'
-import type { SettingSource } from '../utils/settings/constants.js'
-import { getSettings_DEPRECATED } from '../utils/settings/settings.js'
+import figures from 'figures';
+import memoize from 'lodash-es/memoize.js';
+import { getOutputStyleDirStyles } from '../outputStyles/loadOutputStylesDir.js';
+import type { OutputStyle } from '../utils/config.js';
+import { getCwd } from '../utils/cwd.js';
+import { logForDebugging } from '../utils/debug.js';
+import { loadPluginOutputStyles } from '../utils/plugins/loadPluginOutputStyles.js';
+import type { SettingSource } from '../utils/settings/constants.js';
+import { getSettings_DEPRECATED } from '../utils/settings/settings.js';
 
 export type OutputStyleConfig = {
-  name: string
-  description: string
-  prompt: string
-  source: SettingSource | 'built-in' | 'plugin'
-  keepCodingInstructions?: boolean
+  name: string;
+  description: string;
+  prompt: string;
+  source: SettingSource | 'built-in' | 'plugin';
+  keepCodingInstructions?: boolean;
   /**
    * If true, this output style will be automatically applied when the plugin is enabled.
    * Only applicable to plugin output styles.
    * When multiple plugins have forced output styles, only one is chosen (logged via debug).
    */
-  forceForPlugin?: boolean
-}
+  forceForPlugin?: boolean;
+};
 
 export type OutputStyles = {
-  readonly [K in OutputStyle]: OutputStyleConfig | null
-}
+  readonly [K in OutputStyle]: OutputStyleConfig | null;
+};
 
 // Used in both the Explanatory and Learning modes
 const EXPLANATORY_FEATURE_PROMPT = `
@@ -34,17 +34,16 @@ In order to encourage learning, before and after writing code, always provide br
 [2-3 key educational points]
 \`─────────────────────────────────────────────────\`"
 
-These insights should be included in the conversation, not in the codebase. You should generally focus on interesting insights that are specific to the codebase or the code you just wrote, rather than general programming concepts.`
+These insights should be included in the conversation, not in the codebase. You should generally focus on interesting insights that are specific to the codebase or the code you just wrote, rather than general programming concepts.`;
 
-export const DEFAULT_OUTPUT_STYLE_NAME = 'default'
+export const DEFAULT_OUTPUT_STYLE_NAME = 'default';
 
 export const OUTPUT_STYLE_CONFIG: OutputStyles = {
   [DEFAULT_OUTPUT_STYLE_NAME]: null,
   Explanatory: {
     name: 'Explanatory',
     source: 'built-in',
-    description:
-      'Claude explains its implementation choices and codebase patterns',
+    description: 'Claude explains its implementation choices and codebase patterns',
     keepCodingInstructions: true,
     prompt: `You are an interactive CLI tool that helps users with software engineering tasks. In addition to software engineering tasks, you should provide educational insights about the codebase along the way.
 
@@ -56,8 +55,7 @@ ${EXPLANATORY_FEATURE_PROMPT}`,
   Learning: {
     name: 'Learning',
     source: 'built-in',
-    description:
-      'Claude pauses and asks you to write small pieces of code for hands-on practice',
+    description: 'Claude pauses and asks you to write small pieces of code for hands-on practice',
     keepCodingInstructions: true,
     prompt: `You are an interactive CLI tool that helps users with software engineering tasks. In addition to software engineering tasks, you should help users learn more about the codebase through hands-on practice and educational insights.
 
@@ -132,31 +130,25 @@ Share one insight connecting their code to broader patterns or system effects. A
 ## Insights
 ${EXPLANATORY_FEATURE_PROMPT}`,
   },
-}
+};
 
 export const getAllOutputStyles = memoize(async function getAllOutputStyles(
   cwd: string,
 ): Promise<{ [styleName: string]: OutputStyleConfig | null }> {
-  const customStyles = await getOutputStyleDirStyles(cwd)
-  const pluginStyles = await loadPluginOutputStyles()
+  const customStyles = await getOutputStyleDirStyles(cwd);
+  const pluginStyles = await loadPluginOutputStyles();
 
   // Start with built-in modes
   const allStyles = {
     ...OUTPUT_STYLE_CONFIG,
-  }
+  };
 
-  const managedStyles = customStyles.filter(
-    style => style.source === 'policySettings',
-  )
-  const userStyles = customStyles.filter(
-    style => style.source === 'userSettings',
-  )
-  const projectStyles = customStyles.filter(
-    style => style.source === 'projectSettings',
-  )
+  const managedStyles = customStyles.filter((style) => style.source === 'policySettings');
+  const userStyles = customStyles.filter((style) => style.source === 'userSettings');
+  const projectStyles = customStyles.filter((style) => style.source === 'projectSettings');
 
   // Add styles in priority order (lowest to highest): built-in, plugin, managed, user, project
-  const styleGroups = [pluginStyles, userStyles, projectStyles, managedStyles]
+  const styleGroups = [pluginStyles, userStyles, projectStyles, managedStyles];
 
   for (const styles of styleGroups) {
     for (const style of styles) {
@@ -167,50 +159,45 @@ export const getAllOutputStyles = memoize(async function getAllOutputStyles(
         source: style.source,
         keepCodingInstructions: style.keepCodingInstructions,
         forceForPlugin: style.forceForPlugin,
-      }
+      };
     }
   }
 
-  return allStyles
-})
+  return allStyles;
+});
 
 export function clearAllOutputStylesCache(): void {
-  getAllOutputStyles.cache?.clear?.()
+  getAllOutputStyles.cache?.clear?.();
 }
 
 export async function getOutputStyleConfig(): Promise<OutputStyleConfig | null> {
-  const allStyles = await getAllOutputStyles(getCwd())
+  const allStyles = await getAllOutputStyles(getCwd());
 
   // Check for forced plugin output styles
   const forcedStyles = Object.values(allStyles).filter(
     (style): style is OutputStyleConfig =>
-      style !== null &&
-      style.source === 'plugin' &&
-      style.forceForPlugin === true,
-  )
+      style !== null && style.source === 'plugin' && style.forceForPlugin === true,
+  );
 
-  const firstForcedStyle = forcedStyles[0]
+  const firstForcedStyle = forcedStyles[0];
   if (firstForcedStyle) {
     if (forcedStyles.length > 1) {
       logForDebugging(
-        `Multiple plugins have forced output styles: ${forcedStyles.map(s => s.name).join(', ')}. Using: ${firstForcedStyle.name}`,
+        `Multiple plugins have forced output styles: ${forcedStyles.map((s) => s.name).join(', ')}. Using: ${firstForcedStyle.name}`,
         { level: 'warn' },
-      )
+      );
     }
-    logForDebugging(
-      `Using forced plugin output style: ${firstForcedStyle.name}`,
-    )
-    return firstForcedStyle
+    logForDebugging(`Using forced plugin output style: ${firstForcedStyle.name}`);
+    return firstForcedStyle;
   }
 
-  const settings = getSettings_DEPRECATED()
-  const outputStyle = (settings?.outputStyle ||
-    DEFAULT_OUTPUT_STYLE_NAME) as string
+  const settings = getSettings_DEPRECATED();
+  const outputStyle = (settings?.outputStyle || DEFAULT_OUTPUT_STYLE_NAME) as string;
 
-  return allStyles[outputStyle] ?? null
+  return allStyles[outputStyle] ?? null;
 }
 
 export function hasCustomOutputStyle(): boolean {
-  const style = getSettings_DEPRECATED()?.outputStyle
-  return style !== undefined && style !== DEFAULT_OUTPUT_STYLE_NAME
+  const style = getSettings_DEPRECATED()?.outputStyle;
+  return style !== undefined && style !== DEFAULT_OUTPUT_STYLE_NAME;
 }

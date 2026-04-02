@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
-import { feature } from 'src/utils/feature.js';
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
+import { feature } from 'src/utils/feature.js';
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { Box, Text, usePreviewTheme, useTheme, useThemeSetting } from '../ink.js';
@@ -12,10 +12,10 @@ import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
 import type { ThemeSetting } from '../utils/theme.js';
 import { Select } from './CustomSelect/index.js';
+import { StructuredDiff } from './StructuredDiff.js';
+import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
 import { Byline } from './design-system/Byline.js';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js';
-import { getColorModuleUnavailableReason, getSyntaxTheme } from './StructuredDiff/colorDiff.js';
-import { StructuredDiff } from './StructuredDiff.js';
 export type ThemePickerProps = {
   onThemeSelect: (setting: ThemeSetting) => void;
   showIntroText?: boolean;
@@ -36,20 +36,18 @@ export function ThemePicker(t0) {
     showHelpTextBelow: t3,
     hideEscToCancel: t4,
     skipExitHandling: t5,
-    onCancel: onCancelProp
+    onCancel: onCancelProp,
   } = t0;
   const showIntroText = t1 === undefined ? false : t1;
-  const helpText = t2 === undefined ? "" : t2;
+  const helpText = t2 === undefined ? '' : t2;
   const showHelpTextBelow = t3 === undefined ? false : t3;
   const hideEscToCancel = t4 === undefined ? false : t4;
   const skipExitHandling = t5 === undefined ? false : t5;
   const [theme] = useTheme();
   const themeSetting = useThemeSetting();
-  const {
-    columns
-  } = useTerminalSize();
+  const { columns } = useTerminalSize();
   let t6;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t6 = getColorModuleUnavailableReason();
     $[0] = t6;
   } else {
@@ -65,29 +63,29 @@ export function ThemePicker(t0) {
     t7 = $[2];
   }
   const syntaxTheme = t7;
-  const {
-    setPreviewTheme,
-    savePreview,
-    cancelPreview
-  } = usePreviewTheme();
+  const { setPreviewTheme, savePreview, cancelPreview } = usePreviewTheme();
   const syntaxHighlightingDisabled = useAppState(_temp) ?? false;
   const setAppState = useSetAppState();
-  useRegisterKeybindingContext("ThemePicker", true);
-  const syntaxToggleShortcut = useShortcutDisplay("theme:toggleSyntaxHighlighting", "ThemePicker", "ctrl+t");
+  useRegisterKeybindingContext('ThemePicker', true);
+  const syntaxToggleShortcut = useShortcutDisplay(
+    'theme:toggleSyntaxHighlighting',
+    'ThemePicker',
+    'ctrl+t',
+  );
   let t8;
   if ($[3] !== setAppState || $[4] !== syntaxHighlightingDisabled) {
     t8 = () => {
       if (colorModuleUnavailableReason === null) {
         const newValue = !syntaxHighlightingDisabled;
-        updateSettingsForSource("userSettings", {
-          syntaxHighlightingDisabled: newValue
+        updateSettingsForSource('userSettings', {
+          syntaxHighlightingDisabled: newValue,
         });
-        setAppState(prev => ({
+        setAppState((prev) => ({
           ...prev,
           settings: {
             ...prev.settings,
-            syntaxHighlightingDisabled: newValue
-          }
+            syntaxHighlightingDisabled: newValue,
+          },
         }));
       }
     };
@@ -98,40 +96,52 @@ export function ThemePicker(t0) {
     t8 = $[5];
   }
   let t9;
-  if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[6] === Symbol.for('react.memo_cache_sentinel')) {
     t9 = {
-      context: "ThemePicker"
+      context: 'ThemePicker',
     };
     $[6] = t9;
   } else {
     t9 = $[6];
   }
-  useKeybinding("theme:toggleSyntaxHighlighting", t8, t9);
+  useKeybinding('theme:toggleSyntaxHighlighting', t8, t9);
   const exitState = useExitOnCtrlCDWithKeybindings(skipExitHandling ? _temp2 : undefined);
   let t10;
-  if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
-    t10 = [...(feature("AUTO_THEME") ? [{
-      label: "Auto (match terminal)",
-      value: "auto" as const
-    }] : []), {
-      label: "Dark mode",
-      value: "dark"
-    }, {
-      label: "Light mode",
-      value: "light"
-    }, {
-      label: "Dark mode (colorblind-friendly)",
-      value: "dark-daltonized"
-    }, {
-      label: "Light mode (colorblind-friendly)",
-      value: "light-daltonized"
-    }, {
-      label: "Dark mode (ANSI colors only)",
-      value: "dark-ansi"
-    }, {
-      label: "Light mode (ANSI colors only)",
-      value: "light-ansi"
-    }];
+  if ($[7] === Symbol.for('react.memo_cache_sentinel')) {
+    t10 = [
+      ...(feature('AUTO_THEME')
+        ? [
+            {
+              label: 'Auto (match terminal)',
+              value: 'auto' as const,
+            },
+          ]
+        : []),
+      {
+        label: 'Dark mode',
+        value: 'dark',
+      },
+      {
+        label: 'Light mode',
+        value: 'light',
+      },
+      {
+        label: 'Dark mode (colorblind-friendly)',
+        value: 'dark-daltonized',
+      },
+      {
+        label: 'Light mode (colorblind-friendly)',
+        value: 'light-daltonized',
+      },
+      {
+        label: 'Dark mode (ANSI colors only)',
+        value: 'dark-ansi',
+      },
+      {
+        label: 'Light mode (ANSI colors only)',
+        value: 'light-ansi',
+      },
+    ];
     $[7] = t10;
   } else {
     t10 = $[7];
@@ -139,14 +149,20 @@ export function ThemePicker(t0) {
   const themeOptions = t10;
   let t11;
   if ($[8] !== showIntroText) {
-    t11 = showIntroText ? <Text>Let's get started.</Text> : <Text bold={true} color="permission">Theme</Text>;
+    t11 = showIntroText ? (
+      <Text>Let's get started.</Text>
+    ) : (
+      <Text bold={true} color="permission">
+        Theme
+      </Text>
+    );
     $[8] = showIntroText;
     $[9] = t11;
   } else {
     t11 = $[9];
   }
   let t12;
-  if ($[10] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[10] === Symbol.for('react.memo_cache_sentinel')) {
     t12 = <Text bold={true}>Choose the text style that looks best with your terminal</Text>;
     $[10] = t12;
   } else {
@@ -163,7 +179,12 @@ export function ThemePicker(t0) {
   }
   let t14;
   if ($[14] !== t13) {
-    t14 = <Box flexDirection="column">{t12}{t13}</Box>;
+    t14 = (
+      <Box flexDirection="column">
+        {t12}
+        {t13}
+      </Box>
+    );
     $[14] = t13;
     $[15] = t14;
   } else {
@@ -171,7 +192,7 @@ export function ThemePicker(t0) {
   }
   let t15;
   if ($[16] !== setPreviewTheme) {
-    t15 = setting => {
+    t15 = (setting) => {
       setPreviewTheme(setting as ThemeSetting);
     };
     $[16] = setPreviewTheme;
@@ -181,7 +202,7 @@ export function ThemePicker(t0) {
   }
   let t16;
   if ($[18] !== onThemeSelect || $[19] !== savePreview) {
-    t16 = setting_0 => {
+    t16 = (setting_0) => {
       savePreview();
       onThemeSelect(setting_0 as ThemeSetting);
     };
@@ -193,13 +214,15 @@ export function ThemePicker(t0) {
   }
   let t17;
   if ($[21] !== cancelPreview || $[22] !== onCancelProp || $[23] !== skipExitHandling) {
-    t17 = skipExitHandling ? () => {
-      cancelPreview();
-      onCancelProp?.();
-    } : async () => {
-      cancelPreview();
-      await gracefulShutdown(0);
-    };
+    t17 = skipExitHandling
+      ? () => {
+          cancelPreview();
+          onCancelProp?.();
+        }
+      : async () => {
+          cancelPreview();
+          await gracefulShutdown(0);
+        };
     $[21] = cancelPreview;
     $[22] = onCancelProp;
     $[23] = skipExitHandling;
@@ -209,7 +232,17 @@ export function ThemePicker(t0) {
   }
   let t18;
   if ($[25] !== t15 || $[26] !== t16 || $[27] !== t17 || $[28] !== themeSetting) {
-    t18 = <Select options={themeOptions} onFocus={t15} onChange={t16} onCancel={t17} visibleOptionCount={themeOptions.length} defaultValue={themeSetting} defaultFocusValue={themeSetting} />;
+    t18 = (
+      <Select
+        options={themeOptions}
+        onFocus={t15}
+        onChange={t16}
+        onCancel={t17}
+        visibleOptionCount={themeOptions.length}
+        defaultValue={themeSetting}
+        defaultFocusValue={themeSetting}
+      />
+    );
     $[25] = t15;
     $[26] = t16;
     $[27] = t17;
@@ -220,7 +253,13 @@ export function ThemePicker(t0) {
   }
   let t19;
   if ($[30] !== t11 || $[31] !== t14 || $[32] !== t18) {
-    t19 = <Box flexDirection="column" gap={1}>{t11}{t14}{t18}</Box>;
+    t19 = (
+      <Box flexDirection="column" gap={1}>
+        {t11}
+        {t14}
+        {t18}
+      </Box>
+    );
     $[30] = t11;
     $[31] = t14;
     $[32] = t18;
@@ -229,13 +268,18 @@ export function ThemePicker(t0) {
     t19 = $[33];
   }
   let t20;
-  if ($[34] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[34] === Symbol.for('react.memo_cache_sentinel')) {
     t20 = {
       oldStart: 1,
       newStart: 1,
       oldLines: 3,
       newLines: 3,
-      lines: [" function greet() {", "-  console.log(\"Hello, World!\");", "+  console.log(\"Hello, Claude!\");", " }"]
+      lines: [
+        ' function greet() {',
+        '-  console.log("Hello, World!");',
+        '+  console.log("Hello, Claude!");',
+        ' }',
+      ],
     };
     $[34] = t20;
   } else {
@@ -243,16 +287,41 @@ export function ThemePicker(t0) {
   }
   let t21;
   if ($[35] !== columns) {
-    t21 = <Box flexDirection="column" borderTop={true} borderBottom={true} borderLeft={false} borderRight={false} borderStyle="dashed" borderColor="subtle"><StructuredDiff patch={t20} dim={false} filePath="demo.js" firstLine={null} width={columns} /></Box>;
+    t21 = (
+      <Box
+        flexDirection="column"
+        borderTop={true}
+        borderBottom={true}
+        borderLeft={false}
+        borderRight={false}
+        borderStyle="dashed"
+        borderColor="subtle"
+      >
+        <StructuredDiff
+          patch={t20}
+          dim={false}
+          filePath="demo.js"
+          firstLine={null}
+          width={columns}
+        />
+      </Box>
+    );
     $[35] = columns;
     $[36] = t21;
   } else {
     t21 = $[36];
   }
-  const t22 = colorModuleUnavailableReason === "env" ? `Syntax highlighting disabled (via CLAUDE_CODE_SYNTAX_HIGHLIGHT=${process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT})` : syntaxHighlightingDisabled ? `Syntax highlighting disabled (${syntaxToggleShortcut} to enable)` : syntaxTheme ? `Syntax theme: ${syntaxTheme.theme}${syntaxTheme.source ? ` (from ${syntaxTheme.source})` : ""} (${syntaxToggleShortcut} to disable)` : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`;
+  const t22 =
+    colorModuleUnavailableReason === 'env'
+      ? `Syntax highlighting disabled (via CLAUDE_CODE_SYNTAX_HIGHLIGHT=${process.env.CLAUDE_CODE_SYNTAX_HIGHLIGHT})`
+      : syntaxHighlightingDisabled
+        ? `Syntax highlighting disabled (${syntaxToggleShortcut} to enable)`
+        : syntaxTheme
+          ? `Syntax theme: ${syntaxTheme.theme}${syntaxTheme.source ? ` (from ${syntaxTheme.source})` : ''} (${syntaxToggleShortcut} to disable)`
+          : `Syntax highlighting enabled (${syntaxToggleShortcut} to disable)`;
   let t23;
   if ($[37] !== t22) {
-    t23 = <Text dimColor={true}>{" "}{t22}</Text>;
+    t23 = <Text dimColor={true}> {t22}</Text>;
     $[37] = t22;
     $[38] = t23;
   } else {
@@ -260,7 +329,12 @@ export function ThemePicker(t0) {
   }
   let t24;
   if ($[39] !== t21 || $[40] !== t23) {
-    t24 = <Box flexDirection="column" width="100%">{t21}{t23}</Box>;
+    t24 = (
+      <Box flexDirection="column" width="100%">
+        {t21}
+        {t23}
+      </Box>
+    );
     $[39] = t21;
     $[40] = t23;
     $[41] = t24;
@@ -269,7 +343,12 @@ export function ThemePicker(t0) {
   }
   let t25;
   if ($[42] !== t19 || $[43] !== t24) {
-    t25 = <Box flexDirection="column" gap={1}>{t19}{t24}</Box>;
+    t25 = (
+      <Box flexDirection="column" gap={1}>
+        {t19}
+        {t24}
+      </Box>
+    );
     $[42] = t19;
     $[43] = t24;
     $[44] = t25;
@@ -288,7 +367,11 @@ export function ThemePicker(t0) {
     }
     let t27;
     if ($[47] !== helpText || $[48] !== showHelpTextBelow) {
-      t27 = showHelpTextBelow && helpText && <Box marginLeft={3}><Text dimColor={true}>{helpText}</Text></Box>;
+      t27 = showHelpTextBelow && helpText && (
+        <Box marginLeft={3}>
+          <Text dimColor={true}>{helpText}</Text>
+        </Box>
+      );
       $[47] = helpText;
       $[48] = showHelpTextBelow;
       $[49] = t27;
@@ -297,7 +380,20 @@ export function ThemePicker(t0) {
     }
     let t28;
     if ($[50] !== exitState || $[51] !== hideEscToCancel) {
-      t28 = !hideEscToCancel && <Box><Text dimColor={true} italic={true}>{exitState.pending ? <>Press {exitState.keyName} again to exit</> : <Byline><KeyboardShortcutHint shortcut="Enter" action="select" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>}</Text></Box>;
+      t28 = !hideEscToCancel && (
+        <Box>
+          <Text dimColor={true} italic={true}>
+            {exitState.pending ? (
+              <>Press {exitState.keyName} again to exit</>
+            ) : (
+              <Byline>
+                <KeyboardShortcutHint shortcut="Enter" action="select" />
+                <KeyboardShortcutHint shortcut="Esc" action="cancel" />
+              </Byline>
+            )}
+          </Text>
+        </Box>
+      );
       $[50] = exitState;
       $[51] = hideEscToCancel;
       $[52] = t28;
@@ -306,7 +402,12 @@ export function ThemePicker(t0) {
     }
     let t29;
     if ($[53] !== t27 || $[54] !== t28) {
-      t29 = <Box marginTop={1}>{t27}{t28}</Box>;
+      t29 = (
+        <Box marginTop={1}>
+          {t27}
+          {t28}
+        </Box>
+      );
       $[53] = t27;
       $[54] = t28;
       $[55] = t29;
@@ -315,7 +416,12 @@ export function ThemePicker(t0) {
     }
     let t30;
     if ($[56] !== t26 || $[57] !== t29) {
-      t30 = <>{t26}{t29}</>;
+      t30 = (
+        <>
+          {t26}
+          {t29}
+        </>
+      );
       $[56] = t26;
       $[57] = t29;
       $[58] = t30;

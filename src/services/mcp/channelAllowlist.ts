@@ -15,15 +15,15 @@
  * the tag matches what's actually installed before this check runs.
  */
 
-import { z } from 'zod/v4'
-import { lazySchema } from '../../utils/lazySchema.js'
-import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { z } from 'zod/v4';
+import { lazySchema } from '../../utils/lazySchema.js';
+import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js';
 
 export type ChannelAllowlistEntry = {
-  marketplace: string
-  plugin: string
-}
+  marketplace: string;
+  plugin: string;
+};
 
 const ChannelAllowlistSchema = lazySchema(() =>
   z.array(
@@ -32,15 +32,12 @@ const ChannelAllowlistSchema = lazySchema(() =>
       plugin: z.string(),
     }),
   ),
-)
+);
 
 export function getChannelAllowlist(): ChannelAllowlistEntry[] {
-  const raw = getFeatureValue_CACHED_MAY_BE_STALE<unknown>(
-    'tengu_harbor_ledger',
-    [],
-  )
-  const parsed = ChannelAllowlistSchema().safeParse(raw)
-  return parsed.success ? parsed.data : []
+  const raw = getFeatureValue_CACHED_MAY_BE_STALE<unknown>('tengu_harbor_ledger', []);
+  const parsed = ChannelAllowlistSchema().safeParse(raw);
+  return parsed.success ? parsed.data : [];
 }
 
 /**
@@ -49,7 +46,7 @@ export function getChannelAllowlist(): ChannelAllowlistEntry[] {
  * Default false; GrowthBook 5-min refresh.
  */
 export function isChannelsEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor', false)
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor', false);
 }
 
 /**
@@ -64,13 +61,9 @@ export function isChannelsEnabled(): boolean {
  * match the {marketplace, plugin}-keyed ledger) and for @-less sources
  * (builtin/inline — same reason).
  */
-export function isChannelAllowlisted(
-  pluginSource: string | undefined,
-): boolean {
-  if (!pluginSource) return false
-  const { name, marketplace } = parsePluginIdentifier(pluginSource)
-  if (!marketplace) return false
-  return getChannelAllowlist().some(
-    e => e.plugin === name && e.marketplace === marketplace,
-  )
+export function isChannelAllowlisted(pluginSource: string | undefined): boolean {
+  if (!pluginSource) return false;
+  const { name, marketplace } = parsePluginIdentifier(pluginSource);
+  if (!marketplace) return false;
+  return getChannelAllowlist().some((e) => e.plugin === name && e.marketplace === marketplace);
 }

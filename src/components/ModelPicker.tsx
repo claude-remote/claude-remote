@@ -1,23 +1,44 @@
-import { c as _c } from "react/compiler-runtime";
 import capitalize from 'lodash-es/capitalize.js';
 import * as React from 'react';
 import { useCallback, useMemo, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useExitOnCtrlCDWithKeybindings } from 'src/hooks/useExitOnCtrlCDWithKeybindings.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
-import { FAST_MODE_MODEL_DISPLAY, isFastModeAvailable, isFastModeCooldown, isFastModeEnabled } from 'src/utils/fastMode.js';
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from 'src/services/analytics/index.js';
+import {
+  FAST_MODE_MODEL_DISPLAY,
+  isFastModeAvailable,
+  isFastModeCooldown,
+  isFastModeEnabled,
+} from 'src/utils/fastMode.js';
 import { Box, Text } from '../ink.js';
 import { useKeybindings } from '../keybindings/useKeybinding.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
-import { convertEffortValueToLevel, type EffortLevel, getDefaultEffortForModel, modelSupportsEffort, modelSupportsMaxEffort, resolvePickerEffortPersistence, toPersistableEffort } from '../utils/effort.js';
-import { getDefaultMainLoopModel, type ModelSetting, modelDisplayString, parseUserSpecifiedModel } from '../utils/model/model.js';
+import {
+  type EffortLevel,
+  convertEffortValueToLevel,
+  getDefaultEffortForModel,
+  modelSupportsEffort,
+  modelSupportsMaxEffort,
+  resolvePickerEffortPersistence,
+  toPersistableEffort,
+} from '../utils/effort.js';
+import {
+  type ModelSetting,
+  getDefaultMainLoopModel,
+  modelDisplayString,
+  parseUserSpecifiedModel,
+} from '../utils/model/model.js';
 import { getModelOptions } from '../utils/model/modelOptions.js';
 import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js';
 import { Select } from './CustomSelect/index.js';
+import { effortLevelToSymbol } from './EffortIndicator.js';
 import { Byline } from './design-system/Byline.js';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js';
 import { Pane } from './design-system/Pane.js';
-import { effortLevelToSymbol } from './EffortIndicator.js';
 export type Props = {
   initial: string | null;
   sessionModel?: ModelSetting;
@@ -46,7 +67,7 @@ export function ModelPicker(t0) {
     isStandaloneCommand,
     showFastModeNotice,
     headerText,
-    skipSettingsWrite
+    skipSettingsWrite,
   } = t0;
   const setAppState = useSetAppState();
   const exitState = useExitOnCtrlCDWithKeybindings();
@@ -76,7 +97,7 @@ export function ModelPicker(t0) {
   const modelOptions = t3;
   let t4;
   bb0: {
-    if (initial !== null && !modelOptions.some(opt => opt.value === initial)) {
+    if (initial !== null && !modelOptions.some((opt) => opt.value === initial)) {
       let t5;
       if ($[4] !== initial) {
         t5 = modelDisplayString(initial);
@@ -90,7 +111,7 @@ export function ModelPicker(t0) {
         t6 = {
           value: initial,
           label: t5,
-          description: "Current model"
+          description: 'Current model',
         };
         $[6] = initial;
         $[7] = t5;
@@ -124,7 +145,9 @@ export function ModelPicker(t0) {
   const selectOptions = t5;
   let t6;
   if ($[14] !== initialValue || $[15] !== selectOptions) {
-    t6 = selectOptions.some(_ => _.value === initialValue) ? initialValue : selectOptions[0]?.value ?? undefined;
+    t6 = selectOptions.some((_) => _.value === initialValue)
+      ? initialValue
+      : (selectOptions[0]?.value ?? undefined);
     $[14] = initialValue;
     $[15] = selectOptions;
     $[16] = t6;
@@ -136,7 +159,7 @@ export function ModelPicker(t0) {
   const hiddenCount = Math.max(0, selectOptions.length - visibleCount);
   let t7;
   if ($[17] !== focusedValue || $[18] !== selectOptions) {
-    t7 = selectOptions.find(opt_1 => opt_1.value === focusedValue)?.label;
+    t7 = selectOptions.find((opt_1) => opt_1.value === focusedValue)?.label;
     $[17] = focusedValue;
     $[18] = selectOptions;
     $[19] = t7;
@@ -167,10 +190,10 @@ export function ModelPicker(t0) {
     t9 = $[24];
   }
   const focusedDefaultEffort = t9;
-  const displayEffort = effort === "max" && !focusedSupportsMax ? "high" : effort;
+  const displayEffort = effort === 'max' && !focusedSupportsMax ? 'high' : effort;
   let t10;
   if ($[25] !== effortValue || $[26] !== hasToggledEffort) {
-    t10 = value => {
+    t10 = (value) => {
       setFocusedValue(value);
       if (!hasToggledEffort && effortValue === undefined) {
         setEffort(getDefaultEffortLevelForOption(value));
@@ -184,12 +207,18 @@ export function ModelPicker(t0) {
   }
   const handleFocus = t10;
   let t11;
-  if ($[28] !== focusedDefaultEffort || $[29] !== focusedSupportsEffort || $[30] !== focusedSupportsMax) {
-    t11 = direction => {
+  if (
+    $[28] !== focusedDefaultEffort ||
+    $[29] !== focusedSupportsEffort ||
+    $[30] !== focusedSupportsMax
+  ) {
+    t11 = (direction) => {
       if (!focusedSupportsEffort) {
         return;
       }
-      setEffort(prev => cycleEffortLevel(prev ?? focusedDefaultEffort, direction, focusedSupportsMax));
+      setEffort((prev) =>
+        cycleEffortLevel(prev ?? focusedDefaultEffort, direction, focusedSupportsMax),
+      );
       setHasToggledEffort(true);
     };
     $[28] = focusedDefaultEffort;
@@ -203,8 +232,8 @@ export function ModelPicker(t0) {
   let t12;
   if ($[32] !== handleCycleEffort) {
     t12 = {
-      "modelPicker:decreaseEffort": () => handleCycleEffort("left"),
-      "modelPicker:increaseEffort": () => handleCycleEffort("right")
+      'modelPicker:decreaseEffort': () => handleCycleEffort('left'),
+      'modelPicker:increaseEffort': () => handleCycleEffort('right'),
     };
     $[32] = handleCycleEffort;
     $[33] = t12;
@@ -212,9 +241,9 @@ export function ModelPicker(t0) {
     t12 = $[33];
   }
   let t13;
-  if ($[34] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[34] === Symbol.for('react.memo_cache_sentinel')) {
     t13 = {
-      context: "ModelPicker"
+      context: 'ModelPicker',
     };
     $[34] = t13;
   } else {
@@ -222,26 +251,40 @@ export function ModelPicker(t0) {
   }
   useKeybindings(t12, t13);
   let t14;
-  if ($[35] !== effort || $[36] !== hasToggledEffort || $[37] !== onSelect || $[38] !== setAppState || $[39] !== skipSettingsWrite) {
+  if (
+    $[35] !== effort ||
+    $[36] !== hasToggledEffort ||
+    $[37] !== onSelect ||
+    $[38] !== setAppState ||
+    $[39] !== skipSettingsWrite
+  ) {
     t14 = function handleSelect(value_0) {
-      logEvent("tengu_model_command_menu_effort", {
-        effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      logEvent('tengu_model_command_menu_effort', {
+        effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       });
       if (!skipSettingsWrite) {
-        const effortLevel = resolvePickerEffortPersistence(effort, getDefaultEffortLevelForOption(value_0), getSettingsForSource("userSettings")?.effortLevel, hasToggledEffort);
+        const effortLevel = resolvePickerEffortPersistence(
+          effort,
+          getDefaultEffortLevelForOption(value_0),
+          getSettingsForSource('userSettings')?.effortLevel,
+          hasToggledEffort,
+        );
         const persistable = toPersistableEffort(effortLevel);
         if (persistable !== undefined) {
-          updateSettingsForSource("userSettings", {
-            effortLevel: persistable
+          updateSettingsForSource('userSettings', {
+            effortLevel: persistable,
           });
         }
-        setAppState(prev_0 => ({
+        setAppState((prev_0) => ({
           ...prev_0,
-          effortValue: effortLevel
+          effortValue: effortLevel,
         }));
       }
       const selectedModel = resolveOptionModel(value_0);
-      const selectedEffort = hasToggledEffort && selectedModel && modelSupportsEffort(selectedModel) ? effort : undefined;
+      const selectedEffort =
+        hasToggledEffort && selectedModel && modelSupportsEffort(selectedModel)
+          ? effort
+          : undefined;
       if (value_0 === NO_PREFERENCE) {
         onSelect(null, selectedEffort);
         return;
@@ -259,13 +302,19 @@ export function ModelPicker(t0) {
   }
   const handleSelect = t14;
   let t15;
-  if ($[41] === Symbol.for("react.memo_cache_sentinel")) {
-    t15 = <Text color="remember" bold={true}>Select model</Text>;
+  if ($[41] === Symbol.for('react.memo_cache_sentinel')) {
+    t15 = (
+      <Text color="remember" bold={true}>
+        Select model
+      </Text>
+    );
     $[41] = t15;
   } else {
     t15 = $[41];
   }
-  const t16 = headerText ?? "Switch between Claude models. Applies to this session and future Claude Code sessions. For other/previous model names, specify with --model.";
+  const t16 =
+    headerText ??
+    'Switch between Claude models. Applies to this session and future Claude Code sessions. For other/previous model names, specify with --model.';
   let t17;
   if ($[42] !== t16) {
     t17 = <Text dimColor={true}>{t16}</Text>;
@@ -276,7 +325,12 @@ export function ModelPicker(t0) {
   }
   let t18;
   if ($[44] !== sessionModel) {
-    t18 = sessionModel && <Text dimColor={true}>Currently using {modelDisplayString(sessionModel)} for this session (set by plan mode). Selecting a model will undo this.</Text>;
+    t18 = sessionModel && (
+      <Text dimColor={true}>
+        Currently using {modelDisplayString(sessionModel)} for this session (set by plan mode).
+        Selecting a model will undo this.
+      </Text>
+    );
     $[44] = sessionModel;
     $[45] = t18;
   } else {
@@ -284,7 +338,13 @@ export function ModelPicker(t0) {
   }
   let t19;
   if ($[46] !== t17 || $[47] !== t18) {
-    t19 = <Box marginBottom={1} flexDirection="column">{t15}{t17}{t18}</Box>;
+    t19 = (
+      <Box marginBottom={1} flexDirection="column">
+        {t15}
+        {t17}
+        {t18}
+      </Box>
+    );
     $[46] = t17;
     $[47] = t18;
     $[48] = t19;
@@ -293,8 +353,28 @@ export function ModelPicker(t0) {
   }
   const t20 = onCancel ?? _temp4;
   let t21;
-  if ($[49] !== handleFocus || $[50] !== handleSelect || $[51] !== initialFocusValue || $[52] !== initialValue || $[53] !== selectOptions || $[54] !== t20 || $[55] !== visibleCount) {
-    t21 = <Box flexDirection="column"><Select defaultValue={initialValue} defaultFocusValue={initialFocusValue} options={selectOptions} onChange={handleSelect} onFocus={handleFocus} onCancel={t20} visibleOptionCount={visibleCount} /></Box>;
+  if (
+    $[49] !== handleFocus ||
+    $[50] !== handleSelect ||
+    $[51] !== initialFocusValue ||
+    $[52] !== initialValue ||
+    $[53] !== selectOptions ||
+    $[54] !== t20 ||
+    $[55] !== visibleCount
+  ) {
+    t21 = (
+      <Box flexDirection="column">
+        <Select
+          defaultValue={initialValue}
+          defaultFocusValue={initialFocusValue}
+          options={selectOptions}
+          onChange={handleSelect}
+          onFocus={handleFocus}
+          onCancel={t20}
+          visibleOptionCount={visibleCount}
+        />
+      </Box>
+    );
     $[49] = handleFocus;
     $[50] = handleSelect;
     $[51] = initialFocusValue;
@@ -308,7 +388,11 @@ export function ModelPicker(t0) {
   }
   let t22;
   if ($[57] !== hiddenCount) {
-    t22 = hiddenCount > 0 && <Box paddingLeft={3}><Text dimColor={true}>and {hiddenCount} more…</Text></Box>;
+    t22 = hiddenCount > 0 && (
+      <Box paddingLeft={3}>
+        <Text dimColor={true}>and {hiddenCount} more…</Text>
+      </Box>
+    );
     $[57] = hiddenCount;
     $[58] = t22;
   } else {
@@ -316,7 +400,12 @@ export function ModelPicker(t0) {
   }
   let t23;
   if ($[59] !== t21 || $[60] !== t22) {
-    t23 = <Box flexDirection="column" marginBottom={1}>{t21}{t22}</Box>;
+    t23 = (
+      <Box flexDirection="column" marginBottom={1}>
+        {t21}
+        {t22}
+      </Box>
+    );
     $[59] = t21;
     $[60] = t22;
     $[61] = t23;
@@ -324,8 +413,28 @@ export function ModelPicker(t0) {
     t23 = $[61];
   }
   let t24;
-  if ($[62] !== displayEffort || $[63] !== focusedDefaultEffort || $[64] !== focusedModelName || $[65] !== focusedSupportsEffort) {
-    t24 = <Box marginBottom={1} flexDirection="column">{focusedSupportsEffort ? <Text dimColor={true}><EffortLevelIndicator effort={displayEffort} />{" "}{capitalize(displayEffort)} effort{displayEffort === focusedDefaultEffort ? " (default)" : ""}{" "}<Text color="subtle">← → to adjust</Text></Text> : <Text color="subtle"><EffortLevelIndicator effort={undefined} /> Effort not supported{focusedModelName ? ` for ${focusedModelName}` : ""}</Text>}</Box>;
+  if (
+    $[62] !== displayEffort ||
+    $[63] !== focusedDefaultEffort ||
+    $[64] !== focusedModelName ||
+    $[65] !== focusedSupportsEffort
+  ) {
+    t24 = (
+      <Box marginBottom={1} flexDirection="column">
+        {focusedSupportsEffort ? (
+          <Text dimColor={true}>
+            <EffortLevelIndicator effort={displayEffort} /> {capitalize(displayEffort)} effort
+            {displayEffort === focusedDefaultEffort ? ' (default)' : ''}{' '}
+            <Text color="subtle">← → to adjust</Text>
+          </Text>
+        ) : (
+          <Text color="subtle">
+            <EffortLevelIndicator effort={undefined} /> Effort not supported
+            {focusedModelName ? ` for ${focusedModelName}` : ''}
+          </Text>
+        )}
+      </Box>
+    );
     $[62] = displayEffort;
     $[63] = focusedDefaultEffort;
     $[64] = focusedModelName;
@@ -336,7 +445,23 @@ export function ModelPicker(t0) {
   }
   let t25;
   if ($[67] !== showFastModeNotice) {
-    t25 = isFastModeEnabled() ? showFastModeNotice ? <Box marginBottom={1}><Text dimColor={true}>Fast mode is <Text bold={true}>ON</Text> and available with{" "}{FAST_MODE_MODEL_DISPLAY} only (/fast). Switching to other models turn off fast mode.</Text></Box> : isFastModeAvailable() && !isFastModeCooldown() ? <Box marginBottom={1}><Text dimColor={true}>Use <Text bold={true}>/fast</Text> to turn on Fast mode ({FAST_MODE_MODEL_DISPLAY} only).</Text></Box> : null : null;
+    t25 = isFastModeEnabled() ? (
+      showFastModeNotice ? (
+        <Box marginBottom={1}>
+          <Text dimColor={true}>
+            Fast mode is <Text bold={true}>ON</Text> and available with {FAST_MODE_MODEL_DISPLAY}{' '}
+            only (/fast). Switching to other models turn off fast mode.
+          </Text>
+        </Box>
+      ) : isFastModeAvailable() && !isFastModeCooldown() ? (
+        <Box marginBottom={1}>
+          <Text dimColor={true}>
+            Use <Text bold={true}>/fast</Text> to turn on Fast mode ({FAST_MODE_MODEL_DISPLAY}{' '}
+            only).
+          </Text>
+        </Box>
+      ) : null
+    ) : null;
     $[67] = showFastModeNotice;
     $[68] = t25;
   } else {
@@ -344,7 +469,14 @@ export function ModelPicker(t0) {
   }
   let t26;
   if ($[69] !== t19 || $[70] !== t23 || $[71] !== t24 || $[72] !== t25) {
-    t26 = <Box flexDirection="column">{t19}{t23}{t24}{t25}</Box>;
+    t26 = (
+      <Box flexDirection="column">
+        {t19}
+        {t23}
+        {t24}
+        {t25}
+      </Box>
+    );
     $[69] = t19;
     $[70] = t23;
     $[71] = t24;
@@ -355,7 +487,23 @@ export function ModelPicker(t0) {
   }
   let t27;
   if ($[74] !== exitState || $[75] !== isStandaloneCommand) {
-    t27 = isStandaloneCommand && <Text dimColor={true} italic={true}>{exitState.pending ? <>Press {exitState.keyName} again to exit</> : <Byline><KeyboardShortcutHint shortcut="Enter" action="confirm" /><ConfigurableShortcutHint action="select:cancel" context="Select" fallback="Esc" description="exit" /></Byline>}</Text>;
+    t27 = isStandaloneCommand && (
+      <Text dimColor={true} italic={true}>
+        {exitState.pending ? (
+          <>Press {exitState.keyName} again to exit</>
+        ) : (
+          <Byline>
+            <KeyboardShortcutHint shortcut="Enter" action="confirm" />
+            <ConfigurableShortcutHint
+              action="select:cancel"
+              context="Select"
+              fallback="Esc"
+              description="exit"
+            />
+          </Byline>
+        )}
+      </Text>
+    );
     $[74] = exitState;
     $[75] = isStandaloneCommand;
     $[76] = t27;
@@ -364,7 +512,12 @@ export function ModelPicker(t0) {
   }
   let t28;
   if ($[77] !== t26 || $[78] !== t27) {
-    t28 = <Box flexDirection="column">{t26}{t27}</Box>;
+    t28 = (
+      <Box flexDirection="column">
+        {t26}
+        {t27}
+      </Box>
+    );
     $[77] = t26;
     $[78] = t27;
     $[79] = t28;
@@ -389,7 +542,7 @@ function _temp4() {}
 function _temp3(opt_0) {
   return {
     ...opt_0,
-    value: opt_0.value === null ? NO_PREFERENCE : opt_0.value
+    value: opt_0.value === null ? NO_PREFERENCE : opt_0.value,
   };
 }
 function _temp2(s_0) {
@@ -404,11 +557,9 @@ function resolveOptionModel(value?: string): string | undefined {
 }
 function EffortLevelIndicator(t0) {
   const $ = _c(5);
-  const {
-    effort
-  } = t0;
-  const t1 = effort ? "claude" : "subtle";
-  const t2 = effort ?? "low";
+  const { effort } = t0;
+  const t1 = effort ? 'claude' : 'subtle';
+  const t2 = effort ?? 'low';
   let t3;
   if ($[0] !== t2) {
     t3 = effortLevelToSymbol(t2);
@@ -428,17 +579,22 @@ function EffortLevelIndicator(t0) {
   }
   return t4;
 }
-function cycleEffortLevel(current: EffortLevel, direction: 'left' | 'right', includeMax: boolean): EffortLevel {
-  const levels: EffortLevel[] = includeMax ? ['low', 'medium', 'high', 'max'] : ['low', 'medium', 'high'];
+function cycleEffortLevel(
+  current: EffortLevel,
+  direction: 'left' | 'right',
+  includeMax: boolean,
+): EffortLevel {
+  const levels: EffortLevel[] = includeMax
+    ? ['low', 'medium', 'high', 'max']
+    : ['low', 'medium', 'high'];
   // If the current level isn't in the cycle (e.g. 'max' after switching to a
   // non-Opus model), clamp to 'high'.
   const idx = levels.indexOf(current);
   const currentIndex = idx !== -1 ? idx : levels.indexOf('high');
   if (direction === 'right') {
     return levels[(currentIndex + 1) % levels.length]!;
-  } else {
-    return levels[(currentIndex - 1 + levels.length) % levels.length]!;
   }
+  return levels[(currentIndex - 1 + levels.length) % levels.length]!;
 }
 function getDefaultEffortLevelForOption(value?: string): EffortLevel {
   const resolved = resolveOptionModel(value) ?? getDefaultMainLoopModel();

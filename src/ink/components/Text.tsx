@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
 import type { ReactNode } from 'react';
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { Color, Styles, TextStyles } from '../styles.js';
 type BaseProps = {
   /**
@@ -46,66 +46,69 @@ type BaseProps = {
  * Bold and dim are mutually exclusive in terminals.
  * This type ensures you can use one or the other, but not both.
  */
-type WeightProps = {
-  bold?: never;
-  dim?: never;
-} | {
-  bold: boolean;
-  dim?: never;
-} | {
-  dim: boolean;
-  bold?: never;
-};
+type WeightProps =
+  | {
+      bold?: never;
+      dim?: never;
+    }
+  | {
+      bold: boolean;
+      dim?: never;
+    }
+  | {
+      dim: boolean;
+      bold?: never;
+    };
 export type Props = BaseProps & WeightProps;
 const memoizedStylesForWrap: Record<NonNullable<Styles['textWrap']>, Styles> = {
   wrap: {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'wrap'
+    textWrap: 'wrap',
   },
   'wrap-trim': {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'wrap-trim'
+    textWrap: 'wrap-trim',
   },
   end: {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'end'
+    textWrap: 'end',
   },
   middle: {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'middle'
+    textWrap: 'middle',
   },
   'truncate-end': {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'truncate-end'
+    textWrap: 'truncate-end',
   },
   truncate: {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'truncate'
+    textWrap: 'truncate',
   },
   'truncate-middle': {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'truncate-middle'
+    textWrap: 'truncate-middle',
   },
   'truncate-start': {
     flexGrow: 0,
     flexShrink: 1,
     flexDirection: 'row',
-    textWrap: 'truncate-start'
-  }
+    textWrap: 'truncate-start',
+  },
 } as const;
 
 /**
@@ -123,20 +126,20 @@ export default function Text(t0) {
     strikethrough: t3,
     inverse: t4,
     wrap: t5,
-    children
+    children,
   } = t0;
   const italic = t1 === undefined ? false : t1;
   const underline = t2 === undefined ? false : t2;
   const strikethrough = t3 === undefined ? false : t3;
   const inverse = t4 === undefined ? false : t4;
-  const wrap = t5 === undefined ? "wrap" : t5;
+  const wrap = t5 === undefined ? 'wrap' : t5;
   if (children === undefined || children === null) {
     return null;
   }
   let t6;
   if ($[0] !== color) {
     t6 = color && {
-      color
+      color,
     };
     $[0] = color;
     $[1] = t6;
@@ -146,7 +149,7 @@ export default function Text(t0) {
   let t7;
   if ($[2] !== backgroundColor) {
     t7 = backgroundColor && {
-      backgroundColor
+      backgroundColor,
     };
     $[2] = backgroundColor;
     $[3] = t7;
@@ -156,7 +159,7 @@ export default function Text(t0) {
   let t8;
   if ($[4] !== dim) {
     t8 = dim && {
-      dim
+      dim,
     };
     $[4] = dim;
     $[5] = t8;
@@ -166,7 +169,7 @@ export default function Text(t0) {
   let t9;
   if ($[6] !== bold) {
     t9 = bold && {
-      bold
+      bold,
     };
     $[6] = bold;
     $[7] = t9;
@@ -176,7 +179,7 @@ export default function Text(t0) {
   let t10;
   if ($[8] !== italic) {
     t10 = italic && {
-      italic
+      italic,
     };
     $[8] = italic;
     $[9] = t10;
@@ -186,7 +189,7 @@ export default function Text(t0) {
   let t11;
   if ($[10] !== underline) {
     t11 = underline && {
-      underline
+      underline,
     };
     $[10] = underline;
     $[11] = t11;
@@ -196,7 +199,7 @@ export default function Text(t0) {
   let t12;
   if ($[12] !== strikethrough) {
     t12 = strikethrough && {
-      strikethrough
+      strikethrough,
     };
     $[12] = strikethrough;
     $[13] = t12;
@@ -206,7 +209,7 @@ export default function Text(t0) {
   let t13;
   if ($[14] !== inverse) {
     t13 = inverse && {
-      inverse
+      inverse,
     };
     $[14] = inverse;
     $[15] = t13;
@@ -214,7 +217,16 @@ export default function Text(t0) {
     t13 = $[15];
   }
   let t14;
-  if ($[16] !== t10 || $[17] !== t11 || $[18] !== t12 || $[19] !== t13 || $[20] !== t6 || $[21] !== t7 || $[22] !== t8 || $[23] !== t9) {
+  if (
+    $[16] !== t10 ||
+    $[17] !== t11 ||
+    $[18] !== t12 ||
+    $[19] !== t13 ||
+    $[20] !== t6 ||
+    $[21] !== t7 ||
+    $[22] !== t8 ||
+    $[23] !== t9
+  ) {
     t14 = {
       ...t6,
       ...t7,
@@ -223,7 +235,7 @@ export default function Text(t0) {
       ...t10,
       ...t11,
       ...t12,
-      ...t13
+      ...t13,
     };
     $[16] = t10;
     $[17] = t11;
@@ -241,7 +253,11 @@ export default function Text(t0) {
   const t15 = memoizedStylesForWrap[wrap];
   let t16;
   if ($[25] !== children || $[26] !== t15 || $[27] !== textStyles) {
-    t16 = <ink-text style={t15} textStyles={textStyles}>{children}</ink-text>;
+    t16 = (
+      <ink-text style={t15} textStyles={textStyles}>
+        {children}
+      </ink-text>
+    );
     $[25] = children;
     $[26] = t15;
     $[27] = textStyles;

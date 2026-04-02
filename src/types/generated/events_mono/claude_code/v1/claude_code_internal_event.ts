@@ -5,14 +5,14 @@
 // source: events_mono/claude_code/v1/claude_code_internal_event.proto
 
 /* eslint-disable */
-import { Timestamp } from '../../../google/protobuf/timestamp.js'
-import { PublicApiAuth } from '../../common/v1/auth.js'
+import { Timestamp } from '../../../google/protobuf/timestamp.js';
+import { PublicApiAuth } from '../../common/v1/auth.js';
 
 /** GitHubActionsMetadata contains GitHub Actions-specific environment information */
 export interface GitHubActionsMetadata {
-  actor_id?: string | undefined
-  repository_id?: string | undefined
-  repository_owner_id?: string | undefined
+  actor_id?: string | undefined;
+  repository_id?: string | undefined;
+  repository_owner_id?: string | undefined;
 }
 
 /**
@@ -20,44 +20,44 @@ export interface GitHubActionsMetadata {
  * See claude-cli-internal/src/services/statsig.ts for the source of these fields
  */
 export interface EnvironmentMetadata {
-  platform?: string | undefined
-  node_version?: string | undefined
-  terminal?: string | undefined
-  package_managers?: string | undefined
-  runtimes?: string | undefined
-  is_running_with_bun?: boolean | undefined
-  is_ci?: boolean | undefined
-  is_claubbit?: boolean | undefined
-  is_github_action?: boolean | undefined
-  is_claude_code_action?: boolean | undefined
-  is_claude_ai_auth?: boolean | undefined
-  version?: string | undefined
+  platform?: string | undefined;
+  node_version?: string | undefined;
+  terminal?: string | undefined;
+  package_managers?: string | undefined;
+  runtimes?: string | undefined;
+  is_running_with_bun?: boolean | undefined;
+  is_ci?: boolean | undefined;
+  is_claubbit?: boolean | undefined;
+  is_github_action?: boolean | undefined;
+  is_claude_code_action?: boolean | undefined;
+  is_claude_ai_auth?: boolean | undefined;
+  version?: string | undefined;
   /** GitHub Actions specific fields (only present when is_github_action is true) */
-  github_event_name?: string | undefined
-  github_actions_runner_environment?: string | undefined
-  github_actions_runner_os?: string | undefined
-  github_action_ref?: string | undefined
+  github_event_name?: string | undefined;
+  github_actions_runner_environment?: string | undefined;
+  github_actions_runner_os?: string | undefined;
+  github_action_ref?: string | undefined;
   /** WSL specific field */
-  wsl_version?: string | undefined
+  wsl_version?: string | undefined;
   /** GitHub metadata (only present when is_github_action is true) */
-  github_actions_metadata?: GitHubActionsMetadata | undefined
-  arch?: string | undefined
-  is_claude_code_remote?: boolean | undefined
-  remote_environment_type?: string | undefined
-  claude_code_container_id?: string | undefined
-  claude_code_remote_session_id?: string | undefined
-  tags?: string[] | undefined
-  deployment_environment?: string | undefined
-  is_conductor?: boolean | undefined
-  version_base?: string | undefined
-  coworker_type?: string | undefined
-  build_time?: string | undefined
-  is_local_agent_mode?: boolean | undefined
-  linux_distro_id?: string | undefined
-  linux_distro_version?: string | undefined
-  linux_kernel?: string | undefined
-  vcs?: string | undefined
-  platform_raw?: string | undefined
+  github_actions_metadata?: GitHubActionsMetadata | undefined;
+  arch?: string | undefined;
+  is_claude_code_remote?: boolean | undefined;
+  remote_environment_type?: string | undefined;
+  claude_code_container_id?: string | undefined;
+  claude_code_remote_session_id?: string | undefined;
+  tags?: string[] | undefined;
+  deployment_environment?: string | undefined;
+  is_conductor?: boolean | undefined;
+  version_base?: string | undefined;
+  coworker_type?: string | undefined;
+  build_time?: string | undefined;
+  is_local_agent_mode?: boolean | undefined;
+  linux_distro_id?: string | undefined;
+  linux_distro_version?: string | undefined;
+  linux_kernel?: string | undefined;
+  vcs?: string | undefined;
+  platform_raw?: string | undefined;
 }
 
 /**
@@ -66,10 +66,10 @@ export interface EnvironmentMetadata {
  * ClaudeCodeInternalEvent.additional_metadata as JSON.
  */
 export interface SlackContext {
-  slack_team_id?: string | undefined
-  is_enterprise_install?: boolean | undefined
-  trigger?: string | undefined
-  creation_method?: string | undefined
+  slack_team_id?: string | undefined;
+  is_enterprise_install?: boolean | undefined;
+  trigger?: string | undefined;
+  creation_method?: string | undefined;
 }
 
 /**
@@ -79,104 +79,98 @@ export interface SlackContext {
  */
 export interface ClaudeCodeInternalEvent {
   /** Event name (e.g., "tengu_binary_feedback", "tengu_api_success") */
-  event_name?: string | undefined
+  event_name?: string | undefined;
   /** Event timestamp */
-  client_timestamp?: Date | undefined
-  model?: string | undefined
-  session_id?: string | undefined
-  user_type?: string | undefined
-  betas?: string | undefined
+  client_timestamp?: Date | undefined;
+  model?: string | undefined;
+  session_id?: string | undefined;
+  user_type?: string | undefined;
+  betas?: string | undefined;
   /** Environment and runtime information */
-  env?: EnvironmentMetadata | undefined
-  entrypoint?: string | undefined
-  agent_sdk_version?: string | undefined
-  is_interactive?: boolean | undefined
-  client_type?: string | undefined
+  env?: EnvironmentMetadata | undefined;
+  entrypoint?: string | undefined;
+  agent_sdk_version?: string | undefined;
+  is_interactive?: boolean | undefined;
+  client_type?: string | undefined;
   /**
    * Process metrics as JSON string (ant-only)
    * Contains: uptime, rss, heapTotal, heapUsed, external, arrayBuffers,
    * constrainedMemory, cpuUsage
    */
-  process?: string | undefined
+  process?: string | undefined;
   /**
    * Additional metadata passed to logEvent (event-specific)
    * This includes fields like msg_id_A, msg_id_B, gitBranch, gitHead, etc.
    * that vary per event type
    */
-  additional_metadata?: string | undefined
+  additional_metadata?: string | undefined;
   /** Authentication context automatically injected by the API */
-  auth?: PublicApiAuth | undefined
+  auth?: PublicApiAuth | undefined;
   /** Server timestamp automatically injected by the API */
-  server_timestamp?: Date | undefined
+  server_timestamp?: Date | undefined;
   /** Unique identifier for this event (automatically generated by API endpoint) */
-  event_id?: string | undefined
+  event_id?: string | undefined;
   /** Device identifier for the client */
-  device_id?: string | undefined
+  device_id?: string | undefined;
   /** SWE-bench fields */
-  swe_bench_run_id?: string | undefined
-  swe_bench_instance_id?: string | undefined
-  swe_bench_task_id?: string | undefined
-  email?: string | undefined
+  swe_bench_run_id?: string | undefined;
+  swe_bench_instance_id?: string | undefined;
+  swe_bench_task_id?: string | undefined;
+  email?: string | undefined;
   /** Swarm/team agent identification for analytics attribution */
-  agent_id?: string | undefined
-  parent_session_id?: string | undefined
-  agent_type?: string | undefined
+  agent_id?: string | undefined;
+  parent_session_id?: string | undefined;
+  agent_type?: string | undefined;
   /** Claude-in-Slack context (only present for cis_* events) */
-  slack?: SlackContext | undefined
-  team_name?: string | undefined
-  skill_name?: string | undefined
-  plugin_name?: string | undefined
-  marketplace_name?: string | undefined
+  slack?: SlackContext | undefined;
+  team_name?: string | undefined;
+  skill_name?: string | undefined;
+  plugin_name?: string | undefined;
+  marketplace_name?: string | undefined;
 }
 
 function createBaseGitHubActionsMetadata(): GitHubActionsMetadata {
-  return { actor_id: '', repository_id: '', repository_owner_id: '' }
+  return { actor_id: '', repository_id: '', repository_owner_id: '' };
 }
 
 export const GitHubActionsMetadata: MessageFns<GitHubActionsMetadata> = {
   fromJSON(object: any): GitHubActionsMetadata {
     return {
-      actor_id: isSet(object.actor_id)
-        ? globalThis.String(object.actor_id)
-        : '',
-      repository_id: isSet(object.repository_id)
-        ? globalThis.String(object.repository_id)
-        : '',
+      actor_id: isSet(object.actor_id) ? globalThis.String(object.actor_id) : '',
+      repository_id: isSet(object.repository_id) ? globalThis.String(object.repository_id) : '',
       repository_owner_id: isSet(object.repository_owner_id)
         ? globalThis.String(object.repository_owner_id)
         : '',
-    }
+    };
   },
 
   toJSON(message: GitHubActionsMetadata): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.actor_id !== undefined) {
-      obj.actor_id = message.actor_id
+      obj.actor_id = message.actor_id;
     }
     if (message.repository_id !== undefined) {
-      obj.repository_id = message.repository_id
+      obj.repository_id = message.repository_id;
     }
     if (message.repository_owner_id !== undefined) {
-      obj.repository_owner_id = message.repository_owner_id
+      obj.repository_owner_id = message.repository_owner_id;
     }
-    return obj
+    return obj;
   },
 
-  create<I extends Exact<DeepPartial<GitHubActionsMetadata>, I>>(
-    base?: I,
-  ): GitHubActionsMetadata {
-    return GitHubActionsMetadata.fromPartial(base ?? ({} as any))
+  create<I extends Exact<DeepPartial<GitHubActionsMetadata>, I>>(base?: I): GitHubActionsMetadata {
+    return GitHubActionsMetadata.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<GitHubActionsMetadata>, I>>(
     object: I,
   ): GitHubActionsMetadata {
-    const message = createBaseGitHubActionsMetadata()
-    message.actor_id = object.actor_id ?? ''
-    message.repository_id = object.repository_id ?? ''
-    message.repository_owner_id = object.repository_owner_id ?? ''
-    return message
+    const message = createBaseGitHubActionsMetadata();
+    message.actor_id = object.actor_id ?? '';
+    message.repository_id = object.repository_id ?? '';
+    message.repository_owner_id = object.repository_owner_id ?? '';
+    return message;
   },
-}
+};
 
 function createBaseEnvironmentMetadata(): EnvironmentMetadata {
   return {
@@ -215,34 +209,24 @@ function createBaseEnvironmentMetadata(): EnvironmentMetadata {
     linux_kernel: '',
     vcs: '',
     platform_raw: '',
-  }
+  };
 }
 
 export const EnvironmentMetadata: MessageFns<EnvironmentMetadata> = {
   fromJSON(object: any): EnvironmentMetadata {
     return {
-      platform: isSet(object.platform)
-        ? globalThis.String(object.platform)
-        : '',
-      node_version: isSet(object.node_version)
-        ? globalThis.String(object.node_version)
-        : '',
-      terminal: isSet(object.terminal)
-        ? globalThis.String(object.terminal)
-        : '',
+      platform: isSet(object.platform) ? globalThis.String(object.platform) : '',
+      node_version: isSet(object.node_version) ? globalThis.String(object.node_version) : '',
+      terminal: isSet(object.terminal) ? globalThis.String(object.terminal) : '',
       package_managers: isSet(object.package_managers)
         ? globalThis.String(object.package_managers)
         : '',
-      runtimes: isSet(object.runtimes)
-        ? globalThis.String(object.runtimes)
-        : '',
+      runtimes: isSet(object.runtimes) ? globalThis.String(object.runtimes) : '',
       is_running_with_bun: isSet(object.is_running_with_bun)
         ? globalThis.Boolean(object.is_running_with_bun)
         : false,
       is_ci: isSet(object.is_ci) ? globalThis.Boolean(object.is_ci) : false,
-      is_claubbit: isSet(object.is_claubbit)
-        ? globalThis.Boolean(object.is_claubbit)
-        : false,
+      is_claubbit: isSet(object.is_claubbit) ? globalThis.Boolean(object.is_claubbit) : false,
       is_github_action: isSet(object.is_github_action)
         ? globalThis.Boolean(object.is_github_action)
         : false,
@@ -256,9 +240,7 @@ export const EnvironmentMetadata: MessageFns<EnvironmentMetadata> = {
       github_event_name: isSet(object.github_event_name)
         ? globalThis.String(object.github_event_name)
         : '',
-      github_actions_runner_environment: isSet(
-        object.github_actions_runner_environment,
-      )
+      github_actions_runner_environment: isSet(object.github_actions_runner_environment)
         ? globalThis.String(object.github_actions_runner_environment)
         : '',
       github_actions_runner_os: isSet(object.github_actions_runner_os)
@@ -267,9 +249,7 @@ export const EnvironmentMetadata: MessageFns<EnvironmentMetadata> = {
       github_action_ref: isSet(object.github_action_ref)
         ? globalThis.String(object.github_action_ref)
         : '',
-      wsl_version: isSet(object.wsl_version)
-        ? globalThis.String(object.wsl_version)
-        : '',
+      wsl_version: isSet(object.wsl_version) ? globalThis.String(object.wsl_version) : '',
       github_actions_metadata: isSet(object.github_actions_metadata)
         ? GitHubActionsMetadata.fromJSON(object.github_actions_metadata)
         : undefined,
@@ -292,18 +272,10 @@ export const EnvironmentMetadata: MessageFns<EnvironmentMetadata> = {
       deployment_environment: isSet(object.deployment_environment)
         ? globalThis.String(object.deployment_environment)
         : '',
-      is_conductor: isSet(object.is_conductor)
-        ? globalThis.Boolean(object.is_conductor)
-        : false,
-      version_base: isSet(object.version_base)
-        ? globalThis.String(object.version_base)
-        : '',
-      coworker_type: isSet(object.coworker_type)
-        ? globalThis.String(object.coworker_type)
-        : '',
-      build_time: isSet(object.build_time)
-        ? globalThis.String(object.build_time)
-        : '',
+      is_conductor: isSet(object.is_conductor) ? globalThis.Boolean(object.is_conductor) : false,
+      version_base: isSet(object.version_base) ? globalThis.String(object.version_base) : '',
+      coworker_type: isSet(object.coworker_type) ? globalThis.String(object.coworker_type) : '',
+      build_time: isSet(object.build_time) ? globalThis.String(object.build_time) : '',
       is_local_agent_mode: isSet(object.is_local_agent_mode)
         ? globalThis.Boolean(object.is_local_agent_mode)
         : false,
@@ -313,182 +285,170 @@ export const EnvironmentMetadata: MessageFns<EnvironmentMetadata> = {
       linux_distro_version: isSet(object.linux_distro_version)
         ? globalThis.String(object.linux_distro_version)
         : '',
-      linux_kernel: isSet(object.linux_kernel)
-        ? globalThis.String(object.linux_kernel)
-        : '',
+      linux_kernel: isSet(object.linux_kernel) ? globalThis.String(object.linux_kernel) : '',
       vcs: isSet(object.vcs) ? globalThis.String(object.vcs) : '',
-      platform_raw: isSet(object.platform_raw)
-        ? globalThis.String(object.platform_raw)
-        : '',
-    }
+      platform_raw: isSet(object.platform_raw) ? globalThis.String(object.platform_raw) : '',
+    };
   },
 
   toJSON(message: EnvironmentMetadata): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.platform !== undefined) {
-      obj.platform = message.platform
+      obj.platform = message.platform;
     }
     if (message.node_version !== undefined) {
-      obj.node_version = message.node_version
+      obj.node_version = message.node_version;
     }
     if (message.terminal !== undefined) {
-      obj.terminal = message.terminal
+      obj.terminal = message.terminal;
     }
     if (message.package_managers !== undefined) {
-      obj.package_managers = message.package_managers
+      obj.package_managers = message.package_managers;
     }
     if (message.runtimes !== undefined) {
-      obj.runtimes = message.runtimes
+      obj.runtimes = message.runtimes;
     }
     if (message.is_running_with_bun !== undefined) {
-      obj.is_running_with_bun = message.is_running_with_bun
+      obj.is_running_with_bun = message.is_running_with_bun;
     }
     if (message.is_ci !== undefined) {
-      obj.is_ci = message.is_ci
+      obj.is_ci = message.is_ci;
     }
     if (message.is_claubbit !== undefined) {
-      obj.is_claubbit = message.is_claubbit
+      obj.is_claubbit = message.is_claubbit;
     }
     if (message.is_github_action !== undefined) {
-      obj.is_github_action = message.is_github_action
+      obj.is_github_action = message.is_github_action;
     }
     if (message.is_claude_code_action !== undefined) {
-      obj.is_claude_code_action = message.is_claude_code_action
+      obj.is_claude_code_action = message.is_claude_code_action;
     }
     if (message.is_claude_ai_auth !== undefined) {
-      obj.is_claude_ai_auth = message.is_claude_ai_auth
+      obj.is_claude_ai_auth = message.is_claude_ai_auth;
     }
     if (message.version !== undefined) {
-      obj.version = message.version
+      obj.version = message.version;
     }
     if (message.github_event_name !== undefined) {
-      obj.github_event_name = message.github_event_name
+      obj.github_event_name = message.github_event_name;
     }
     if (message.github_actions_runner_environment !== undefined) {
-      obj.github_actions_runner_environment =
-        message.github_actions_runner_environment
+      obj.github_actions_runner_environment = message.github_actions_runner_environment;
     }
     if (message.github_actions_runner_os !== undefined) {
-      obj.github_actions_runner_os = message.github_actions_runner_os
+      obj.github_actions_runner_os = message.github_actions_runner_os;
     }
     if (message.github_action_ref !== undefined) {
-      obj.github_action_ref = message.github_action_ref
+      obj.github_action_ref = message.github_action_ref;
     }
     if (message.wsl_version !== undefined) {
-      obj.wsl_version = message.wsl_version
+      obj.wsl_version = message.wsl_version;
     }
     if (message.github_actions_metadata !== undefined) {
-      obj.github_actions_metadata = GitHubActionsMetadata.toJSON(
-        message.github_actions_metadata,
-      )
+      obj.github_actions_metadata = GitHubActionsMetadata.toJSON(message.github_actions_metadata);
     }
     if (message.arch !== undefined) {
-      obj.arch = message.arch
+      obj.arch = message.arch;
     }
     if (message.is_claude_code_remote !== undefined) {
-      obj.is_claude_code_remote = message.is_claude_code_remote
+      obj.is_claude_code_remote = message.is_claude_code_remote;
     }
     if (message.remote_environment_type !== undefined) {
-      obj.remote_environment_type = message.remote_environment_type
+      obj.remote_environment_type = message.remote_environment_type;
     }
     if (message.claude_code_container_id !== undefined) {
-      obj.claude_code_container_id = message.claude_code_container_id
+      obj.claude_code_container_id = message.claude_code_container_id;
     }
     if (message.claude_code_remote_session_id !== undefined) {
-      obj.claude_code_remote_session_id = message.claude_code_remote_session_id
+      obj.claude_code_remote_session_id = message.claude_code_remote_session_id;
     }
     if (message.tags?.length) {
-      obj.tags = message.tags
+      obj.tags = message.tags;
     }
     if (message.deployment_environment !== undefined) {
-      obj.deployment_environment = message.deployment_environment
+      obj.deployment_environment = message.deployment_environment;
     }
     if (message.is_conductor !== undefined) {
-      obj.is_conductor = message.is_conductor
+      obj.is_conductor = message.is_conductor;
     }
     if (message.version_base !== undefined) {
-      obj.version_base = message.version_base
+      obj.version_base = message.version_base;
     }
     if (message.coworker_type !== undefined) {
-      obj.coworker_type = message.coworker_type
+      obj.coworker_type = message.coworker_type;
     }
     if (message.build_time !== undefined) {
-      obj.build_time = message.build_time
+      obj.build_time = message.build_time;
     }
     if (message.is_local_agent_mode !== undefined) {
-      obj.is_local_agent_mode = message.is_local_agent_mode
+      obj.is_local_agent_mode = message.is_local_agent_mode;
     }
     if (message.linux_distro_id !== undefined) {
-      obj.linux_distro_id = message.linux_distro_id
+      obj.linux_distro_id = message.linux_distro_id;
     }
     if (message.linux_distro_version !== undefined) {
-      obj.linux_distro_version = message.linux_distro_version
+      obj.linux_distro_version = message.linux_distro_version;
     }
     if (message.linux_kernel !== undefined) {
-      obj.linux_kernel = message.linux_kernel
+      obj.linux_kernel = message.linux_kernel;
     }
     if (message.vcs !== undefined) {
-      obj.vcs = message.vcs
+      obj.vcs = message.vcs;
     }
     if (message.platform_raw !== undefined) {
-      obj.platform_raw = message.platform_raw
+      obj.platform_raw = message.platform_raw;
     }
-    return obj
+    return obj;
   },
 
-  create<I extends Exact<DeepPartial<EnvironmentMetadata>, I>>(
-    base?: I,
-  ): EnvironmentMetadata {
-    return EnvironmentMetadata.fromPartial(base ?? ({} as any))
+  create<I extends Exact<DeepPartial<EnvironmentMetadata>, I>>(base?: I): EnvironmentMetadata {
+    return EnvironmentMetadata.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<EnvironmentMetadata>, I>>(
     object: I,
   ): EnvironmentMetadata {
-    const message = createBaseEnvironmentMetadata()
-    message.platform = object.platform ?? ''
-    message.node_version = object.node_version ?? ''
-    message.terminal = object.terminal ?? ''
-    message.package_managers = object.package_managers ?? ''
-    message.runtimes = object.runtimes ?? ''
-    message.is_running_with_bun = object.is_running_with_bun ?? false
-    message.is_ci = object.is_ci ?? false
-    message.is_claubbit = object.is_claubbit ?? false
-    message.is_github_action = object.is_github_action ?? false
-    message.is_claude_code_action = object.is_claude_code_action ?? false
-    message.is_claude_ai_auth = object.is_claude_ai_auth ?? false
-    message.version = object.version ?? ''
-    message.github_event_name = object.github_event_name ?? ''
-    message.github_actions_runner_environment =
-      object.github_actions_runner_environment ?? ''
-    message.github_actions_runner_os = object.github_actions_runner_os ?? ''
-    message.github_action_ref = object.github_action_ref ?? ''
-    message.wsl_version = object.wsl_version ?? ''
+    const message = createBaseEnvironmentMetadata();
+    message.platform = object.platform ?? '';
+    message.node_version = object.node_version ?? '';
+    message.terminal = object.terminal ?? '';
+    message.package_managers = object.package_managers ?? '';
+    message.runtimes = object.runtimes ?? '';
+    message.is_running_with_bun = object.is_running_with_bun ?? false;
+    message.is_ci = object.is_ci ?? false;
+    message.is_claubbit = object.is_claubbit ?? false;
+    message.is_github_action = object.is_github_action ?? false;
+    message.is_claude_code_action = object.is_claude_code_action ?? false;
+    message.is_claude_ai_auth = object.is_claude_ai_auth ?? false;
+    message.version = object.version ?? '';
+    message.github_event_name = object.github_event_name ?? '';
+    message.github_actions_runner_environment = object.github_actions_runner_environment ?? '';
+    message.github_actions_runner_os = object.github_actions_runner_os ?? '';
+    message.github_action_ref = object.github_action_ref ?? '';
+    message.wsl_version = object.wsl_version ?? '';
     message.github_actions_metadata =
-      object.github_actions_metadata !== undefined &&
-      object.github_actions_metadata !== null
+      object.github_actions_metadata !== undefined && object.github_actions_metadata !== null
         ? GitHubActionsMetadata.fromPartial(object.github_actions_metadata)
-        : undefined
-    message.arch = object.arch ?? ''
-    message.is_claude_code_remote = object.is_claude_code_remote ?? false
-    message.remote_environment_type = object.remote_environment_type ?? ''
-    message.claude_code_container_id = object.claude_code_container_id ?? ''
-    message.claude_code_remote_session_id =
-      object.claude_code_remote_session_id ?? ''
-    message.tags = object.tags?.map(e => e) || []
-    message.deployment_environment = object.deployment_environment ?? ''
-    message.is_conductor = object.is_conductor ?? false
-    message.version_base = object.version_base ?? ''
-    message.coworker_type = object.coworker_type ?? ''
-    message.build_time = object.build_time ?? ''
-    message.is_local_agent_mode = object.is_local_agent_mode ?? false
-    message.linux_distro_id = object.linux_distro_id ?? ''
-    message.linux_distro_version = object.linux_distro_version ?? ''
-    message.linux_kernel = object.linux_kernel ?? ''
-    message.vcs = object.vcs ?? ''
-    message.platform_raw = object.platform_raw ?? ''
-    return message
+        : undefined;
+    message.arch = object.arch ?? '';
+    message.is_claude_code_remote = object.is_claude_code_remote ?? false;
+    message.remote_environment_type = object.remote_environment_type ?? '';
+    message.claude_code_container_id = object.claude_code_container_id ?? '';
+    message.claude_code_remote_session_id = object.claude_code_remote_session_id ?? '';
+    message.tags = object.tags?.map((e) => e) || [];
+    message.deployment_environment = object.deployment_environment ?? '';
+    message.is_conductor = object.is_conductor ?? false;
+    message.version_base = object.version_base ?? '';
+    message.coworker_type = object.coworker_type ?? '';
+    message.build_time = object.build_time ?? '';
+    message.is_local_agent_mode = object.is_local_agent_mode ?? false;
+    message.linux_distro_id = object.linux_distro_id ?? '';
+    message.linux_distro_version = object.linux_distro_version ?? '';
+    message.linux_kernel = object.linux_kernel ?? '';
+    message.vcs = object.vcs ?? '';
+    message.platform_raw = object.platform_raw ?? '';
+    return message;
   },
-}
+};
 
 function createBaseSlackContext(): SlackContext {
   return {
@@ -496,15 +456,13 @@ function createBaseSlackContext(): SlackContext {
     is_enterprise_install: false,
     trigger: '',
     creation_method: '',
-  }
+  };
 }
 
 export const SlackContext: MessageFns<SlackContext> = {
   fromJSON(object: any): SlackContext {
     return {
-      slack_team_id: isSet(object.slack_team_id)
-        ? globalThis.String(object.slack_team_id)
-        : '',
+      slack_team_id: isSet(object.slack_team_id) ? globalThis.String(object.slack_team_id) : '',
       is_enterprise_install: isSet(object.is_enterprise_install)
         ? globalThis.Boolean(object.is_enterprise_install)
         : false,
@@ -512,42 +470,38 @@ export const SlackContext: MessageFns<SlackContext> = {
       creation_method: isSet(object.creation_method)
         ? globalThis.String(object.creation_method)
         : '',
-    }
+    };
   },
 
   toJSON(message: SlackContext): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.slack_team_id !== undefined) {
-      obj.slack_team_id = message.slack_team_id
+      obj.slack_team_id = message.slack_team_id;
     }
     if (message.is_enterprise_install !== undefined) {
-      obj.is_enterprise_install = message.is_enterprise_install
+      obj.is_enterprise_install = message.is_enterprise_install;
     }
     if (message.trigger !== undefined) {
-      obj.trigger = message.trigger
+      obj.trigger = message.trigger;
     }
     if (message.creation_method !== undefined) {
-      obj.creation_method = message.creation_method
+      obj.creation_method = message.creation_method;
     }
-    return obj
+    return obj;
   },
 
-  create<I extends Exact<DeepPartial<SlackContext>, I>>(
-    base?: I,
-  ): SlackContext {
-    return SlackContext.fromPartial(base ?? ({} as any))
+  create<I extends Exact<DeepPartial<SlackContext>, I>>(base?: I): SlackContext {
+    return SlackContext.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SlackContext>, I>>(
-    object: I,
-  ): SlackContext {
-    const message = createBaseSlackContext()
-    message.slack_team_id = object.slack_team_id ?? ''
-    message.is_enterprise_install = object.is_enterprise_install ?? false
-    message.trigger = object.trigger ?? ''
-    message.creation_method = object.creation_method ?? ''
-    return message
+  fromPartial<I extends Exact<DeepPartial<SlackContext>, I>>(object: I): SlackContext {
+    const message = createBaseSlackContext();
+    message.slack_team_id = object.slack_team_id ?? '';
+    message.is_enterprise_install = object.is_enterprise_install ?? false;
+    message.trigger = object.trigger ?? '';
+    message.creation_method = object.creation_method ?? '';
+    return message;
   },
-}
+};
 
 function createBaseClaudeCodeInternalEvent(): ClaudeCodeInternalEvent {
   return {
@@ -580,57 +534,39 @@ function createBaseClaudeCodeInternalEvent(): ClaudeCodeInternalEvent {
     skill_name: '',
     plugin_name: '',
     marketplace_name: '',
-  }
+  };
 }
 
 export const ClaudeCodeInternalEvent: MessageFns<ClaudeCodeInternalEvent> = {
   fromJSON(object: any): ClaudeCodeInternalEvent {
     return {
-      event_name: isSet(object.event_name)
-        ? globalThis.String(object.event_name)
-        : '',
+      event_name: isSet(object.event_name) ? globalThis.String(object.event_name) : '',
       client_timestamp: isSet(object.client_timestamp)
         ? fromJsonTimestamp(object.client_timestamp)
         : undefined,
       model: isSet(object.model) ? globalThis.String(object.model) : '',
-      session_id: isSet(object.session_id)
-        ? globalThis.String(object.session_id)
-        : '',
-      user_type: isSet(object.user_type)
-        ? globalThis.String(object.user_type)
-        : '',
+      session_id: isSet(object.session_id) ? globalThis.String(object.session_id) : '',
+      user_type: isSet(object.user_type) ? globalThis.String(object.user_type) : '',
       betas: isSet(object.betas) ? globalThis.String(object.betas) : '',
-      env: isSet(object.env)
-        ? EnvironmentMetadata.fromJSON(object.env)
-        : undefined,
-      entrypoint: isSet(object.entrypoint)
-        ? globalThis.String(object.entrypoint)
-        : '',
+      env: isSet(object.env) ? EnvironmentMetadata.fromJSON(object.env) : undefined,
+      entrypoint: isSet(object.entrypoint) ? globalThis.String(object.entrypoint) : '',
       agent_sdk_version: isSet(object.agent_sdk_version)
         ? globalThis.String(object.agent_sdk_version)
         : '',
       is_interactive: isSet(object.is_interactive)
         ? globalThis.Boolean(object.is_interactive)
         : false,
-      client_type: isSet(object.client_type)
-        ? globalThis.String(object.client_type)
-        : '',
+      client_type: isSet(object.client_type) ? globalThis.String(object.client_type) : '',
       process: isSet(object.process) ? globalThis.String(object.process) : '',
       additional_metadata: isSet(object.additional_metadata)
         ? globalThis.String(object.additional_metadata)
         : '',
-      auth: isSet(object.auth)
-        ? PublicApiAuth.fromJSON(object.auth)
-        : undefined,
+      auth: isSet(object.auth) ? PublicApiAuth.fromJSON(object.auth) : undefined,
       server_timestamp: isSet(object.server_timestamp)
         ? fromJsonTimestamp(object.server_timestamp)
         : undefined,
-      event_id: isSet(object.event_id)
-        ? globalThis.String(object.event_id)
-        : '',
-      device_id: isSet(object.device_id)
-        ? globalThis.String(object.device_id)
-        : '',
+      event_id: isSet(object.event_id) ? globalThis.String(object.event_id) : '',
+      device_id: isSet(object.device_id) ? globalThis.String(object.device_id) : '',
       swe_bench_run_id: isSet(object.swe_bench_run_id)
         ? globalThis.String(object.swe_bench_run_id)
         : '',
@@ -641,184 +577,165 @@ export const ClaudeCodeInternalEvent: MessageFns<ClaudeCodeInternalEvent> = {
         ? globalThis.String(object.swe_bench_task_id)
         : '',
       email: isSet(object.email) ? globalThis.String(object.email) : '',
-      agent_id: isSet(object.agent_id)
-        ? globalThis.String(object.agent_id)
-        : '',
+      agent_id: isSet(object.agent_id) ? globalThis.String(object.agent_id) : '',
       parent_session_id: isSet(object.parent_session_id)
         ? globalThis.String(object.parent_session_id)
         : '',
-      agent_type: isSet(object.agent_type)
-        ? globalThis.String(object.agent_type)
-        : '',
-      slack: isSet(object.slack)
-        ? SlackContext.fromJSON(object.slack)
-        : undefined,
-      team_name: isSet(object.team_name)
-        ? globalThis.String(object.team_name)
-        : '',
-      skill_name: isSet(object.skill_name)
-        ? globalThis.String(object.skill_name)
-        : '',
-      plugin_name: isSet(object.plugin_name)
-        ? globalThis.String(object.plugin_name)
-        : '',
+      agent_type: isSet(object.agent_type) ? globalThis.String(object.agent_type) : '',
+      slack: isSet(object.slack) ? SlackContext.fromJSON(object.slack) : undefined,
+      team_name: isSet(object.team_name) ? globalThis.String(object.team_name) : '',
+      skill_name: isSet(object.skill_name) ? globalThis.String(object.skill_name) : '',
+      plugin_name: isSet(object.plugin_name) ? globalThis.String(object.plugin_name) : '',
       marketplace_name: isSet(object.marketplace_name)
         ? globalThis.String(object.marketplace_name)
         : '',
-    }
+    };
   },
 
   toJSON(message: ClaudeCodeInternalEvent): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.event_name !== undefined) {
-      obj.event_name = message.event_name
+      obj.event_name = message.event_name;
     }
     if (message.client_timestamp !== undefined) {
-      obj.client_timestamp = message.client_timestamp.toISOString()
+      obj.client_timestamp = message.client_timestamp.toISOString();
     }
     if (message.model !== undefined) {
-      obj.model = message.model
+      obj.model = message.model;
     }
     if (message.session_id !== undefined) {
-      obj.session_id = message.session_id
+      obj.session_id = message.session_id;
     }
     if (message.user_type !== undefined) {
-      obj.user_type = message.user_type
+      obj.user_type = message.user_type;
     }
     if (message.betas !== undefined) {
-      obj.betas = message.betas
+      obj.betas = message.betas;
     }
     if (message.env !== undefined) {
-      obj.env = EnvironmentMetadata.toJSON(message.env)
+      obj.env = EnvironmentMetadata.toJSON(message.env);
     }
     if (message.entrypoint !== undefined) {
-      obj.entrypoint = message.entrypoint
+      obj.entrypoint = message.entrypoint;
     }
     if (message.agent_sdk_version !== undefined) {
-      obj.agent_sdk_version = message.agent_sdk_version
+      obj.agent_sdk_version = message.agent_sdk_version;
     }
     if (message.is_interactive !== undefined) {
-      obj.is_interactive = message.is_interactive
+      obj.is_interactive = message.is_interactive;
     }
     if (message.client_type !== undefined) {
-      obj.client_type = message.client_type
+      obj.client_type = message.client_type;
     }
     if (message.process !== undefined) {
-      obj.process = message.process
+      obj.process = message.process;
     }
     if (message.additional_metadata !== undefined) {
-      obj.additional_metadata = message.additional_metadata
+      obj.additional_metadata = message.additional_metadata;
     }
     if (message.auth !== undefined) {
-      obj.auth = PublicApiAuth.toJSON(message.auth)
+      obj.auth = PublicApiAuth.toJSON(message.auth);
     }
     if (message.server_timestamp !== undefined) {
-      obj.server_timestamp = message.server_timestamp.toISOString()
+      obj.server_timestamp = message.server_timestamp.toISOString();
     }
     if (message.event_id !== undefined) {
-      obj.event_id = message.event_id
+      obj.event_id = message.event_id;
     }
     if (message.device_id !== undefined) {
-      obj.device_id = message.device_id
+      obj.device_id = message.device_id;
     }
     if (message.swe_bench_run_id !== undefined) {
-      obj.swe_bench_run_id = message.swe_bench_run_id
+      obj.swe_bench_run_id = message.swe_bench_run_id;
     }
     if (message.swe_bench_instance_id !== undefined) {
-      obj.swe_bench_instance_id = message.swe_bench_instance_id
+      obj.swe_bench_instance_id = message.swe_bench_instance_id;
     }
     if (message.swe_bench_task_id !== undefined) {
-      obj.swe_bench_task_id = message.swe_bench_task_id
+      obj.swe_bench_task_id = message.swe_bench_task_id;
     }
     if (message.email !== undefined) {
-      obj.email = message.email
+      obj.email = message.email;
     }
     if (message.agent_id !== undefined) {
-      obj.agent_id = message.agent_id
+      obj.agent_id = message.agent_id;
     }
     if (message.parent_session_id !== undefined) {
-      obj.parent_session_id = message.parent_session_id
+      obj.parent_session_id = message.parent_session_id;
     }
     if (message.agent_type !== undefined) {
-      obj.agent_type = message.agent_type
+      obj.agent_type = message.agent_type;
     }
     if (message.slack !== undefined) {
-      obj.slack = SlackContext.toJSON(message.slack)
+      obj.slack = SlackContext.toJSON(message.slack);
     }
     if (message.team_name !== undefined) {
-      obj.team_name = message.team_name
+      obj.team_name = message.team_name;
     }
     if (message.skill_name !== undefined) {
-      obj.skill_name = message.skill_name
+      obj.skill_name = message.skill_name;
     }
     if (message.plugin_name !== undefined) {
-      obj.plugin_name = message.plugin_name
+      obj.plugin_name = message.plugin_name;
     }
     if (message.marketplace_name !== undefined) {
-      obj.marketplace_name = message.marketplace_name
+      obj.marketplace_name = message.marketplace_name;
     }
-    return obj
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<ClaudeCodeInternalEvent>, I>>(
     base?: I,
   ): ClaudeCodeInternalEvent {
-    return ClaudeCodeInternalEvent.fromPartial(base ?? ({} as any))
+    return ClaudeCodeInternalEvent.fromPartial(base ?? ({} as any));
   },
   fromPartial<I extends Exact<DeepPartial<ClaudeCodeInternalEvent>, I>>(
     object: I,
   ): ClaudeCodeInternalEvent {
-    const message = createBaseClaudeCodeInternalEvent()
-    message.event_name = object.event_name ?? ''
-    message.client_timestamp = object.client_timestamp ?? undefined
-    message.model = object.model ?? ''
-    message.session_id = object.session_id ?? ''
-    message.user_type = object.user_type ?? ''
-    message.betas = object.betas ?? ''
+    const message = createBaseClaudeCodeInternalEvent();
+    message.event_name = object.event_name ?? '';
+    message.client_timestamp = object.client_timestamp ?? undefined;
+    message.model = object.model ?? '';
+    message.session_id = object.session_id ?? '';
+    message.user_type = object.user_type ?? '';
+    message.betas = object.betas ?? '';
     message.env =
       object.env !== undefined && object.env !== null
         ? EnvironmentMetadata.fromPartial(object.env)
-        : undefined
-    message.entrypoint = object.entrypoint ?? ''
-    message.agent_sdk_version = object.agent_sdk_version ?? ''
-    message.is_interactive = object.is_interactive ?? false
-    message.client_type = object.client_type ?? ''
-    message.process = object.process ?? ''
-    message.additional_metadata = object.additional_metadata ?? ''
+        : undefined;
+    message.entrypoint = object.entrypoint ?? '';
+    message.agent_sdk_version = object.agent_sdk_version ?? '';
+    message.is_interactive = object.is_interactive ?? false;
+    message.client_type = object.client_type ?? '';
+    message.process = object.process ?? '';
+    message.additional_metadata = object.additional_metadata ?? '';
     message.auth =
       object.auth !== undefined && object.auth !== null
         ? PublicApiAuth.fromPartial(object.auth)
-        : undefined
-    message.server_timestamp = object.server_timestamp ?? undefined
-    message.event_id = object.event_id ?? ''
-    message.device_id = object.device_id ?? ''
-    message.swe_bench_run_id = object.swe_bench_run_id ?? ''
-    message.swe_bench_instance_id = object.swe_bench_instance_id ?? ''
-    message.swe_bench_task_id = object.swe_bench_task_id ?? ''
-    message.email = object.email ?? ''
-    message.agent_id = object.agent_id ?? ''
-    message.parent_session_id = object.parent_session_id ?? ''
-    message.agent_type = object.agent_type ?? ''
+        : undefined;
+    message.server_timestamp = object.server_timestamp ?? undefined;
+    message.event_id = object.event_id ?? '';
+    message.device_id = object.device_id ?? '';
+    message.swe_bench_run_id = object.swe_bench_run_id ?? '';
+    message.swe_bench_instance_id = object.swe_bench_instance_id ?? '';
+    message.swe_bench_task_id = object.swe_bench_task_id ?? '';
+    message.email = object.email ?? '';
+    message.agent_id = object.agent_id ?? '';
+    message.parent_session_id = object.parent_session_id ?? '';
+    message.agent_type = object.agent_type ?? '';
     message.slack =
       object.slack !== undefined && object.slack !== null
         ? SlackContext.fromPartial(object.slack)
-        : undefined
-    message.team_name = object.team_name ?? ''
-    message.skill_name = object.skill_name ?? ''
-    message.plugin_name = object.plugin_name ?? ''
-    message.marketplace_name = object.marketplace_name ?? ''
-    return message
+        : undefined;
+    message.team_name = object.team_name ?? '';
+    message.skill_name = object.skill_name ?? '';
+    message.plugin_name = object.plugin_name ?? '';
+    message.marketplace_name = object.marketplace_name ?? '';
+    return message;
   },
-}
+};
 
-type Builtin =
-  | Date
-  | Function
-  | Uint8Array
-  | string
-  | number
-  | boolean
-  | undefined
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 type DeepPartial<T> = T extends Builtin
   ? T
@@ -828,38 +745,38 @@ type DeepPartial<T> = T extends Builtin
       ? ReadonlyArray<DeepPartial<U>>
       : T extends {}
         ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>
+        : Partial<T>;
 
-type KeysOfUnion<T> = T extends T ? keyof T : never
+type KeysOfUnion<T> = T extends T ? keyof T : never;
 type Exact<P, I extends P> = P extends Builtin
   ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & {
-      [K in Exclude<keyof I, KeysOfUnion<P>>]: never
-    }
+      [K in Exclude<keyof I, KeysOfUnion<P>>]: never;
+    };
 
 function fromTimestamp(t: Timestamp): Date {
-  let millis = (t.seconds || 0) * 1_000
-  millis += (t.nanos || 0) / 1_000_000
-  return new globalThis.Date(millis)
+  let millis = (t.seconds || 0) * 1_000;
+  millis += (t.nanos || 0) / 1_000_000;
+  return new globalThis.Date(millis);
 }
 
 function fromJsonTimestamp(o: any): Date {
   if (o instanceof globalThis.Date) {
-    return o
-  } else if (typeof o === 'string') {
-    return new globalThis.Date(o)
-  } else {
-    return fromTimestamp(Timestamp.fromJSON(o))
+    return o;
   }
+  if (typeof o === 'string') {
+    return new globalThis.Date(o);
+  }
+  return fromTimestamp(Timestamp.fromJSON(o));
 }
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined
+  return value !== null && value !== undefined;
 }
 
 interface MessageFns<T> {
-  fromJSON(object: any): T
-  toJSON(message: T): unknown
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T
+  fromJSON(object: any): T;
+  toJSON(message: T): unknown;
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }

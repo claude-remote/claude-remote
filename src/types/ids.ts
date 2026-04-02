@@ -7,21 +7,21 @@
  * A session ID uniquely identifies a Claude Code session.
  * Returned by getSessionId().
  */
-export type SessionId = string & { readonly __brand: 'SessionId' }
+export type SessionId = string & { readonly __brand: 'SessionId' };
 
 /**
  * An agent ID uniquely identifies a subagent within a session.
  * Returned by createAgentId().
  * When present, indicates the context is a subagent (not the main session).
  */
-export type AgentId = string & { readonly __brand: 'AgentId' }
+export type AgentId = string & { readonly __brand: 'AgentId' };
 
 /**
  * Cast a raw string to SessionId.
  * Use sparingly - prefer getSessionId() when possible.
  */
 export function asSessionId(id: string): SessionId {
-  return id as SessionId
+  return id as SessionId;
 }
 
 /**
@@ -29,10 +29,10 @@ export function asSessionId(id: string): SessionId {
  * Use sparingly - prefer createAgentId() when possible.
  */
 export function asAgentId(id: string): AgentId {
-  return id as AgentId
+  return id as AgentId;
 }
 
-const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/
+const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/;
 
 /**
  * Validate and brand a string as AgentId.
@@ -40,5 +40,5 @@ const AGENT_ID_PATTERN = /^a(?:.+-)?[0-9a-f]{16}$/
  * Returns null if the string doesn't match (e.g. teammate names, team-addressing).
  */
 export function toAgentId(s: string): AgentId | null {
-  return AGENT_ID_PATTERN.test(s) ? (s as AgentId) : null
+  return AGENT_ID_PATTERN.test(s) ? (s as AgentId) : null;
 }

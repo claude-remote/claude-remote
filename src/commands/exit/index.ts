@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const exit = {
   type: 'local-jsx',
@@ -7,6 +7,6 @@ const exit = {
   description: 'Exit the REPL',
   immediate: true,
   load: () => import('./exit.js'),
-} satisfies Command
+} satisfies Command;
 
-export default exit
+export default exit;

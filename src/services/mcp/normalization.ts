@@ -4,7 +4,7 @@
  */
 
 // Claude.ai server names are prefixed with this string
-const CLAUDEAI_SERVER_PREFIX = 'claude.ai '
+const CLAUDEAI_SERVER_PREFIX = 'claude.ai ';
 
 /**
  * Normalize server names to be compatible with the API pattern ^[a-zA-Z0-9_-]{1,64}$
@@ -15,9 +15,9 @@ const CLAUDEAI_SERVER_PREFIX = 'claude.ai '
  * interference with the __ delimiter used in MCP tool names.
  */
 export function normalizeNameForMCP(name: string): string {
-  let normalized = name.replace(/[^a-zA-Z0-9_-]/g, '_')
+  let normalized = name.replace(/[^a-zA-Z0-9_-]/g, '_');
   if (name.startsWith(CLAUDEAI_SERVER_PREFIX)) {
-    normalized = normalized.replace(/_+/g, '_').replace(/^_|_$/g, '')
+    normalized = normalized.replace(/_+/g, '_').replace(/^_|_$/g, '');
   }
-  return normalized
+  return normalized;
 }

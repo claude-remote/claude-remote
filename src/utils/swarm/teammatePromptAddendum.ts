@@ -15,4 +15,4 @@ IMPORTANT: You are running as an agent in a team. To communicate with anyone on 
 Just writing a response in text is not visible to others on your team - you MUST use the SendMessage tool.
 
 The user interacts primarily with the team lead. Your work is coordinated through the task system and teammate messaging.
-`
+`;

@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { LIGHTNING_BOLT } from '../constants/figures.js';
 import { Text } from '../ink.js';
 import { getGlobalConfig } from '../utils/config.js';
@@ -11,13 +11,15 @@ type Props = {
 };
 export function FastIcon(t0) {
   const $ = _c(2);
-  const {
-    cooldown
-  } = t0;
+  const { cooldown } = t0;
   if (cooldown) {
     let t1;
-    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-      t1 = <Text color="promptBorder" dimColor={true}>{LIGHTNING_BOLT}</Text>;
+    if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
+      t1 = (
+        <Text color="promptBorder" dimColor={true}>
+          {LIGHTNING_BOLT}
+        </Text>
+      );
       $[0] = t1;
     } else {
       t1 = $[0];
@@ -25,7 +27,7 @@ export function FastIcon(t0) {
     return t1;
   }
   let t1;
-  if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[1] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = <Text color="fastMode">{LIGHTNING_BOLT}</Text>;
     $[1] = t1;
   } else {

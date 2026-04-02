@@ -1,4 +1,4 @@
-import { quote } from './shellQuote.js'
+import { quote } from './shellQuote.js';
 
 /**
  * Parses a shell prefix that may contain an executable path and arguments.
@@ -12,17 +12,13 @@ import { quote } from './shellQuote.js'
  * @param command The command to be executed
  * @returns The properly formatted command string with quoted components
  */
-export function formatShellPrefixCommand(
-  prefix: string,
-  command: string,
-): string {
+export function formatShellPrefixCommand(prefix: string, command: string): string {
   // Split on the last space before a dash to separate executable from arguments
-  const spaceBeforeDash = prefix.lastIndexOf(' -')
+  const spaceBeforeDash = prefix.lastIndexOf(' -');
   if (spaceBeforeDash > 0) {
-    const execPath = prefix.substring(0, spaceBeforeDash)
-    const args = prefix.substring(spaceBeforeDash + 1)
-    return `${quote([execPath])} ${args} ${quote([command])}`
-  } else {
-    return `${quote([prefix])} ${quote([command])}`
+    const execPath = prefix.substring(0, spaceBeforeDash);
+    const args = prefix.substring(spaceBeforeDash + 1);
+    return `${quote([execPath])} ${args} ${quote([command])}`;
   }
+  return `${quote([prefix])} ${quote([command])}`;
 }

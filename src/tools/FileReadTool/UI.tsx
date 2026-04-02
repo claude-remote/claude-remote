@@ -1,5 +1,5 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
-import * as React from 'react';
+import type * as React from 'react';
 import { extractTag } from 'src/utils/messages.js';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js';
 import { FilePathLink } from '../../components/FilePathLink.js';
@@ -27,16 +27,14 @@ function getAgentOutputTaskId(filePath: string): string | null {
   }
   return null;
 }
-export function renderToolUseMessage({
-  file_path,
-  offset,
-  limit,
-  pages
-}: Partial<Input>, {
-  verbose
-}: {
-  verbose: boolean;
-}): React.ReactNode {
+export function renderToolUseMessage(
+  { file_path, offset, limit, pages }: Partial<Input>,
+  {
+    verbose,
+  }: {
+    verbose: boolean;
+  },
+): React.ReactNode {
   if (!file_path) {
     return null;
   }
@@ -48,24 +46,28 @@ export function renderToolUseMessage({
   }
   const displayPath = verbose ? file_path : getDisplayPath(file_path);
   if (pages) {
-    return <>
+    return (
+      <>
         <FilePathLink filePath={file_path}>{displayPath}</FilePathLink>
         {` · pages ${pages}`}
-      </>;
+      </>
+    );
   }
   if (verbose && (offset || limit)) {
     const startLine = offset ?? 1;
-    const lineRange = limit ? `lines ${startLine}-${startLine + limit - 1}` : `from line ${startLine}`;
-    return <>
+    const lineRange = limit
+      ? `lines ${startLine}-${startLine + limit - 1}`
+      : `from line ${startLine}`;
+    return (
+      <>
         <FilePathLink filePath={file_path}>{displayPath}</FilePathLink>
         {` · ${lineRange}`}
-      </>;
+      </>
+    );
   }
   return <FilePathLink filePath={file_path}>{displayPath}</FilePathLink>;
 }
-export function renderToolUseTag({
-  file_path
-}: Partial<Input>): React.ReactNode {
+export function renderToolUseTag({ file_path }: Partial<Input>): React.ReactNode {
   const agentTaskId = file_path ? getAgentOutputTaskId(file_path) : null;
 
   // Show agent task ID for Read tool when reading agent output
@@ -77,87 +79,90 @@ export function renderToolUseTag({
 export function renderToolResultMessage(output: Output): React.ReactNode {
   // TODO: Render recursively
   switch (output.type) {
-    case 'image':
-      {
-        const {
-          originalSize
-        } = output.file;
-        const formattedSize = formatFileSize(originalSize);
-        return <MessageResponse height={1}>
+    case 'image': {
+      const { originalSize } = output.file;
+      const formattedSize = formatFileSize(originalSize);
+      return (
+        <MessageResponse height={1}>
           <Text>Read image ({formattedSize})</Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
+    }
+    case 'notebook': {
+      const { cells } = output.file;
+      if (!cells || cells.length < 1) {
+        return <Text color="error">No cells found in notebook</Text>;
       }
-    case 'notebook':
-      {
-        const {
-          cells
-        } = output.file;
-        if (!cells || cells.length < 1) {
-          return <Text color="error">No cells found in notebook</Text>;
-        }
-        return <MessageResponse height={1}>
+      return (
+        <MessageResponse height={1}>
           <Text>
             Read <Text bold>{cells.length}</Text> cells
           </Text>
-        </MessageResponse>;
-      }
-    case 'pdf':
-      {
-        const {
-          originalSize
-        } = output.file;
-        const formattedSize = formatFileSize(originalSize);
-        return <MessageResponse height={1}>
+        </MessageResponse>
+      );
+    }
+    case 'pdf': {
+      const { originalSize } = output.file;
+      const formattedSize = formatFileSize(originalSize);
+      return (
+        <MessageResponse height={1}>
           <Text>Read PDF ({formattedSize})</Text>
-        </MessageResponse>;
-      }
-    case 'parts':
-      {
-        return <MessageResponse height={1}>
+        </MessageResponse>
+      );
+    }
+    case 'parts': {
+      return (
+        <MessageResponse height={1}>
           <Text>
-            Read <Text bold>{output.file.count}</Text>{' '}
-            {output.file.count === 1 ? 'page' : 'pages'} (
-            {formatFileSize(output.file.originalSize)})
+            Read <Text bold>{output.file.count}</Text> {output.file.count === 1 ? 'page' : 'pages'}{' '}
+            ({formatFileSize(output.file.originalSize)})
           </Text>
-        </MessageResponse>;
-      }
-    case 'text':
-      {
-        const {
-          numLines
-        } = output.file;
-        return <MessageResponse height={1}>
+        </MessageResponse>
+      );
+    }
+    case 'text': {
+      const { numLines } = output.file;
+      return (
+        <MessageResponse height={1}>
           <Text>
-            Read <Text bold>{numLines}</Text>{' '}
-            {numLines === 1 ? 'line' : 'lines'}
+            Read <Text bold>{numLines}</Text> {numLines === 1 ? 'line' : 'lines'}
           </Text>
-        </MessageResponse>;
-      }
-    case 'file_unchanged':
-      {
-        return <MessageResponse height={1}>
+        </MessageResponse>
+      );
+    }
+    case 'file_unchanged': {
+      return (
+        <MessageResponse height={1}>
           <Text dimColor>Unchanged since last read</Text>
-        </MessageResponse>;
-      }
+        </MessageResponse>
+      );
+    }
   }
 }
-export function renderToolUseErrorMessage(result: ToolResultBlockParam['content'], {
-  verbose
-}: {
-  verbose: boolean;
-}): React.ReactNode {
+export function renderToolUseErrorMessage(
+  result: ToolResultBlockParam['content'],
+  {
+    verbose,
+  }: {
+    verbose: boolean;
+  },
+): React.ReactNode {
   if (!verbose && typeof result === 'string') {
     // FileReadTool throws from call() so errors lack <tool_use_error> wrapping —
     // check the raw string directly for the cwd note marker.
     if (result.includes(FILE_NOT_FOUND_CWD_NOTE)) {
-      return <MessageResponse>
+      return (
+        <MessageResponse>
           <Text color="error">File not found</Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
     }
     if (extractTag(result, 'tool_use_error')) {
-      return <MessageResponse>
+      return (
+        <MessageResponse>
           <Text color="error">Error reading file</Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
     }
   }
   return <FallbackToolUseErrorMessage result={result} verbose={verbose} />;

@@ -1,10 +1,10 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../ink.js';
 import type { ValidationError } from '../utils/settings/validation.js';
 import { Select } from './CustomSelect/index.js';
-import { Dialog } from './design-system/Dialog.js';
 import { ValidationErrorsList } from './ValidationErrorsList.js';
+import { Dialog } from './design-system/Dialog.js';
 type Props = {
   settingsErrors: ValidationError[];
   onContinue: () => void;
@@ -17,15 +17,11 @@ type Props = {
  */
 export function InvalidSettingsDialog(t0) {
   const $ = _c(13);
-  const {
-    settingsErrors,
-    onContinue,
-    onExit
-  } = t0;
+  const { settingsErrors, onContinue, onExit } = t0;
   let t1;
   if ($[0] !== onContinue || $[1] !== onExit) {
     t1 = function handleSelect(value) {
-      if (value === "exit") {
+      if (value === 'exit') {
         onExit();
       } else {
         onContinue();
@@ -47,21 +43,28 @@ export function InvalidSettingsDialog(t0) {
     t2 = $[4];
   }
   let t3;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-    t3 = <Text dimColor={true}>Files with errors are skipped entirely, not just the invalid settings.</Text>;
+  if ($[5] === Symbol.for('react.memo_cache_sentinel')) {
+    t3 = (
+      <Text dimColor={true}>
+        Files with errors are skipped entirely, not just the invalid settings.
+      </Text>
+    );
     $[5] = t3;
   } else {
     t3 = $[5];
   }
   let t4;
-  if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = [{
-      label: "Exit and fix manually",
-      value: "exit"
-    }, {
-      label: "Continue without these settings",
-      value: "continue"
-    }];
+  if ($[6] === Symbol.for('react.memo_cache_sentinel')) {
+    t4 = [
+      {
+        label: 'Exit and fix manually',
+        value: 'exit',
+      },
+      {
+        label: 'Continue without these settings',
+        value: 'continue',
+      },
+    ];
     $[6] = t4;
   } else {
     t4 = $[6];
@@ -76,7 +79,13 @@ export function InvalidSettingsDialog(t0) {
   }
   let t6;
   if ($[9] !== onExit || $[10] !== t2 || $[11] !== t5) {
-    t6 = <Dialog title="Settings Error" onCancel={onExit} color="warning">{t2}{t3}{t5}</Dialog>;
+    t6 = (
+      <Dialog title="Settings Error" onCancel={onExit} color="warning">
+        {t2}
+        {t3}
+        {t5}
+      </Dialog>
+    );
     $[9] = onExit;
     $[10] = t2;
     $[11] = t5;

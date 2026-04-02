@@ -11,31 +11,31 @@
 // binary audio frames.  The server responds with TranscriptText and
 // TranscriptEndpoint JSON messages.
 
-import type { ClientRequest, IncomingMessage } from 'http'
-import WebSocket from 'ws'
-import { getOauthConfig } from '../constants/oauth.js'
+import type { ClientRequest, IncomingMessage } from 'node:http';
+import WebSocket from 'ws';
+import { getOauthConfig } from '../constants/oauth.js';
 import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
   isAnthropicAuthEnabled,
-} from '../utils/auth.js'
-import { logForDebugging } from '../utils/debug.js'
-import { getUserAgent } from '../utils/http.js'
-import { logError } from '../utils/log.js'
-import { getWebSocketTLSOptions } from '../utils/mtls.js'
-import { getWebSocketProxyAgent, getWebSocketProxyUrl } from '../utils/proxy.js'
-import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
+} from '../utils/auth.js';
+import { logForDebugging } from '../utils/debug.js';
+import { getUserAgent } from '../utils/http.js';
+import { logError } from '../utils/log.js';
+import { getWebSocketTLSOptions } from '../utils/mtls.js';
+import { getWebSocketProxyAgent, getWebSocketProxyUrl } from '../utils/proxy.js';
+import { jsonParse, jsonStringify } from '../utils/slowOperations.js';
 
-const KEEPALIVE_MSG = '{"type":"KeepAlive"}'
-const CLOSE_STREAM_MSG = '{"type":"CloseStream"}'
+const KEEPALIVE_MSG = '{"type":"KeepAlive"}';
+const CLOSE_STREAM_MSG = '{"type":"CloseStream"}';
 
-import { getFeatureValue_CACHED_MAY_BE_STALE } from './analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './analytics/growthbook.js';
 
 // ─── Constants ───────────────────────────────────────────────────────
 
-const VOICE_STREAM_PATH = '/api/ws/speech_to_text/voice_stream'
+const VOICE_STREAM_PATH = '/api/ws/speech_to_text/voice_stream';
 
-const KEEPALIVE_INTERVAL_MS = 8_000
+const KEEPALIVE_INTERVAL_MS = 8_000;
 
 // finalize() resolution timers. `noData` fires when no TranscriptText
 // arrives post-CloseStream — the server has nothing; don't wait out the
@@ -44,16 +44,16 @@ const KEEPALIVE_INTERVAL_MS = 8_000
 export const FINALIZE_TIMEOUTS_MS = {
   safety: 5_000,
   noData: 1_500,
-}
+};
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 export type VoiceStreamCallbacks = {
-  onTranscript: (text: string, isFinal: boolean) => void
-  onError: (error: string, opts?: { fatal?: boolean }) => void
-  onClose: () => void
-  onReady: (connection: VoiceStreamConnection) => void
-}
+  onTranscript: (text: string, isFinal: boolean) => void;
+  onError: (error: string, opts?: { fatal?: boolean }) => void;
+  onClose: () => void;
+  onReady: (connection: VoiceStreamConnection) => void;
+};
 
 // How finalize() resolved. `no_data_timeout` means zero server messages
 // after CloseStream — the silent-drop signature (anthropics/anthropic#287008).
@@ -62,36 +62,36 @@ export type FinalizeSource =
   | 'no_data_timeout'
   | 'safety_timeout'
   | 'ws_close'
-  | 'ws_already_closed'
+  | 'ws_already_closed';
 
 export type VoiceStreamConnection = {
-  send: (audioChunk: Buffer) => void
-  finalize: () => Promise<FinalizeSource>
-  close: () => void
-  isConnected: () => boolean
-}
+  send: (audioChunk: Buffer) => void;
+  finalize: () => Promise<FinalizeSource>;
+  close: () => void;
+  isConnected: () => boolean;
+};
 
 // The voice_stream endpoint returns transcript chunks and endpoint markers.
 type VoiceStreamTranscriptText = {
-  type: 'TranscriptText'
-  data: string
-}
+  type: 'TranscriptText';
+  data: string;
+};
 
 type VoiceStreamTranscriptEndpoint = {
-  type: 'TranscriptEndpoint'
-}
+  type: 'TranscriptEndpoint';
+};
 
 type VoiceStreamTranscriptError = {
-  type: 'TranscriptError'
-  error_code?: string
-  description?: string
-}
+  type: 'TranscriptError';
+  error_code?: string;
+  description?: string;
+};
 
 type VoiceStreamMessage =
   | VoiceStreamTranscriptText
   | VoiceStreamTranscriptEndpoint
   | VoiceStreamTranscriptError
-  | { type: 'error'; message?: string }
+  | { type: 'error'; message?: string };
 
 // ─── Availability ──────────────────────────────────────────────────────
 
@@ -100,10 +100,10 @@ export function isVoiceStreamAvailable(): boolean {
   // user is authenticated with Anthropic (Claude.ai subscriber or has
   // valid OAuth tokens).
   if (!isAnthropicAuthEnabled()) {
-    return false
+    return false;
   }
-  const tokens = getClaudeAIOAuthTokens()
-  return tokens !== null && tokens.accessToken !== null
+  const tokens = getClaudeAIOAuthTokens();
+  return tokens !== null && tokens.accessToken !== null;
 }
 
 // ─── Connection ────────────────────────────────────────────────────────
@@ -113,12 +113,12 @@ export async function connectVoiceStream(
   options?: { language?: string; keyterms?: string[] },
 ): Promise<VoiceStreamConnection | null> {
   // Ensure OAuth token is fresh before connecting
-  await checkAndRefreshOAuthTokenIfNeeded()
+  await checkAndRefreshOAuthTokenIfNeeded();
 
-  const tokens = getClaudeAIOAuthTokens()
+  const tokens = getClaudeAIOAuthTokens();
   if (!tokens?.accessToken) {
-    logForDebugging('[voice_stream] No OAuth token available')
-    return null
+    logForDebugging('[voice_stream] No OAuth token available');
+    return null;
   }
 
   // voice_stream is a private_api route, but /api/ws/ is also exposed on
@@ -131,14 +131,12 @@ export async function connectVoiceStream(
   // browser-class JA3 fingerprint, so CF lets it through).
   const wsBaseUrl =
     process.env.VOICE_STREAM_BASE_URL ||
-    getOauthConfig()
-      .BASE_API_URL.replace('https://', 'wss://')
-      .replace('http://', 'ws://')
+    getOauthConfig().BASE_API_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
   if (process.env.VOICE_STREAM_BASE_URL) {
     logForDebugging(
       `[voice_stream] Using VOICE_STREAM_BASE_URL override: ${process.env.VOICE_STREAM_BASE_URL}`,
-    )
+    );
   }
 
   const params = new URLSearchParams({
@@ -148,41 +146,38 @@ export async function connectVoiceStream(
     endpointing_ms: '300',
     utterance_end_ms: '1000',
     language: options?.language ?? 'en',
-  })
+  });
 
   // Route through conversation-engine with Deepgram Nova 3 (bypassing
   // the server's project_bell_v2_config GrowthBook gate). The server
   // side is anthropics/anthropic#278327 + #281372; this lets us ramp
   // clients independently.
-  const isNova3 = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_cobalt_frost',
-    false,
-  )
+  const isNova3 = getFeatureValue_CACHED_MAY_BE_STALE('tengu_cobalt_frost', false);
   if (isNova3) {
-    params.set('use_conversation_engine', 'true')
-    params.set('stt_provider', 'deepgram-nova3')
-    logForDebugging('[voice_stream] Nova 3 gate enabled (tengu_cobalt_frost)')
+    params.set('use_conversation_engine', 'true');
+    params.set('stt_provider', 'deepgram-nova3');
+    logForDebugging('[voice_stream] Nova 3 gate enabled (tengu_cobalt_frost)');
   }
 
   // Append keyterms as query params — the voice_stream proxy forwards
   // these to the STT service which applies appropriate boosting.
   if (options?.keyterms?.length) {
     for (const term of options.keyterms) {
-      params.append('keyterms', term)
+      params.append('keyterms', term);
     }
   }
 
-  const url = `${wsBaseUrl}${VOICE_STREAM_PATH}?${params.toString()}`
+  const url = `${wsBaseUrl}${VOICE_STREAM_PATH}?${params.toString()}`;
 
-  logForDebugging(`[voice_stream] Connecting to ${url}`)
+  logForDebugging(`[voice_stream] Connecting to ${url}`);
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${tokens.accessToken}`,
     'User-Agent': getUserAgent(),
     'x-app': 'cli',
-  }
+  };
 
-  const tlsOptions = getWebSocketTLSOptions()
+  const tlsOptions = getWebSocketTLSOptions();
   const wsOptions =
     typeof Bun !== 'undefined'
       ? {
@@ -190,102 +185,95 @@ export async function connectVoiceStream(
           proxy: getWebSocketProxyUrl(url),
           tls: tlsOptions || undefined,
         }
-      : { headers, agent: getWebSocketProxyAgent(url), ...tlsOptions }
+      : { headers, agent: getWebSocketProxyAgent(url), ...tlsOptions };
 
-  const ws = new WebSocket(url, wsOptions)
+  const ws = new WebSocket(url, wsOptions);
 
-  let keepaliveTimer: ReturnType<typeof setInterval> | null = null
-  let connected = false
+  let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+  let connected = false;
   // Set to true once CloseStream has been sent (or the ws is closed).
   // After this, further audio sends are dropped.
-  let finalized = false
+  let finalized = false;
   // Set to true when finalize() is first called, to prevent double-fire.
-  let finalizing = false
+  let finalizing = false;
   // Set when the HTTP upgrade was rejected (unexpected-response). The
   // close event that follows (1006 from our req.destroy()) is just
   // mechanical teardown; the upgrade handler already reported the error.
-  let upgradeRejected = false
+  let upgradeRejected = false;
   // Resolves finalize(). Four triggers: TranscriptEndpoint post-CloseStream
   // (~300ms); no-data timer (1.5s); WS close (~3-5s); safety timer (5s).
-  let resolveFinalize: ((source: FinalizeSource) => void) | null = null
-  let cancelNoDataTimer: (() => void) | null = null
+  let resolveFinalize: ((source: FinalizeSource) => void) | null = null;
+  let cancelNoDataTimer: (() => void) | null = null;
 
   // Define the connection object before event handlers so it can be passed
   // to onReady when the WebSocket opens.
   const connection: VoiceStreamConnection = {
     send(audioChunk: Buffer): void {
       if (ws.readyState !== WebSocket.OPEN) {
-        return
+        return;
       }
       if (finalized) {
         // After CloseStream has been sent, the server rejects further audio.
         // Drop the chunk to avoid a protocol error.
         logForDebugging(
           `[voice_stream] Dropping audio chunk after CloseStream: ${String(audioChunk.length)} bytes`,
-        )
-        return
+        );
+        return;
       }
-      logForDebugging(
-        `[voice_stream] Sending audio chunk: ${String(audioChunk.length)} bytes`,
-      )
+      logForDebugging(`[voice_stream] Sending audio chunk: ${String(audioChunk.length)} bytes`);
       // Copy the buffer before sending: NAPI Buffer objects from native
       // modules may share a pooled ArrayBuffer.  Creating a view with
       // `new Uint8Array(buf.buffer, offset, len)` can reference stale or
       // overlapping memory by the time the ws library reads it.
       // `Buffer.from()` makes an owned copy that the ws library can safely
       // consume as a binary WebSocket frame.
-      ws.send(Buffer.from(audioChunk))
+      ws.send(Buffer.from(audioChunk));
     },
     finalize(): Promise<FinalizeSource> {
       if (finalizing || finalized) {
         // Already finalized or WebSocket already closed — resolve immediately.
-        return Promise.resolve('ws_already_closed')
+        return Promise.resolve('ws_already_closed');
       }
-      finalizing = true
+      finalizing = true;
 
-      return new Promise<FinalizeSource>(resolve => {
+      return new Promise<FinalizeSource>((resolve) => {
         const safetyTimer = setTimeout(
           () => resolveFinalize?.('safety_timeout'),
           FINALIZE_TIMEOUTS_MS.safety,
-        )
+        );
         const noDataTimer = setTimeout(
           () => resolveFinalize?.('no_data_timeout'),
           FINALIZE_TIMEOUTS_MS.noData,
-        )
+        );
         cancelNoDataTimer = () => {
-          clearTimeout(noDataTimer)
-          cancelNoDataTimer = null
-        }
+          clearTimeout(noDataTimer);
+          cancelNoDataTimer = null;
+        };
 
         resolveFinalize = (source: FinalizeSource) => {
-          clearTimeout(safetyTimer)
-          clearTimeout(noDataTimer)
-          resolveFinalize = null
-          cancelNoDataTimer = null
+          clearTimeout(safetyTimer);
+          clearTimeout(noDataTimer);
+          resolveFinalize = null;
+          cancelNoDataTimer = null;
           // Legacy Deepgram can leave an interim in lastTranscriptText
           // with no TranscriptEndpoint (websocket_manager.py sends
           // TranscriptChunk and TranscriptEndpoint as independent
           // channel items). All resolve triggers must promote it;
           // centralize here. No-op when the close handler already did.
           if (lastTranscriptText) {
-            logForDebugging(
-              `[voice_stream] Promoting unreported interim before ${source} resolve`,
-            )
-            const t = lastTranscriptText
-            lastTranscriptText = ''
-            callbacks.onTranscript(t, true)
+            logForDebugging(`[voice_stream] Promoting unreported interim before ${source} resolve`);
+            const t = lastTranscriptText;
+            lastTranscriptText = '';
+            callbacks.onTranscript(t, true);
           }
-          logForDebugging(`[voice_stream] Finalize resolved via ${source}`)
-          resolve(source)
-        }
+          logForDebugging(`[voice_stream] Finalize resolved via ${source}`);
+          resolve(source);
+        };
 
         // If the WebSocket is already closed, resolve immediately.
-        if (
-          ws.readyState === WebSocket.CLOSED ||
-          ws.readyState === WebSocket.CLOSING
-        ) {
-          resolveFinalize('ws_already_closed')
-          return
+        if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+          resolveFinalize('ws_already_closed');
+          return;
         }
 
         // Defer CloseStream to the next event-loop iteration so any audio
@@ -295,88 +283,88 @@ export async function connectVoiceStream(
         // native module still has a pending onData callback in the event queue,
         // causing audio to arrive after CloseStream.
         setTimeout(() => {
-          finalized = true
+          finalized = true;
           if (ws.readyState === WebSocket.OPEN) {
-            logForDebugging('[voice_stream] Sending CloseStream (finalize)')
-            ws.send(CLOSE_STREAM_MSG)
+            logForDebugging('[voice_stream] Sending CloseStream (finalize)');
+            ws.send(CLOSE_STREAM_MSG);
           }
-        }, 0)
-      })
+        }, 0);
+      });
     },
     close(): void {
-      finalized = true
+      finalized = true;
       if (keepaliveTimer) {
-        clearInterval(keepaliveTimer)
-        keepaliveTimer = null
+        clearInterval(keepaliveTimer);
+        keepaliveTimer = null;
       }
-      connected = false
+      connected = false;
       if (ws.readyState === WebSocket.OPEN) {
-        ws.close()
+        ws.close();
       }
     },
     isConnected(): boolean {
-      return connected && ws.readyState === WebSocket.OPEN
+      return connected && ws.readyState === WebSocket.OPEN;
     },
-  }
+  };
 
   ws.on('open', () => {
-    logForDebugging('[voice_stream] WebSocket connected')
-    connected = true
+    logForDebugging('[voice_stream] WebSocket connected');
+    connected = true;
 
     // Send an immediate KeepAlive so the server knows the client is active.
     // Audio hardware initialisation can take >1s, so this prevents the
     // server from closing the connection before audio capture starts.
-    logForDebugging('[voice_stream] Sending initial KeepAlive')
-    ws.send(KEEPALIVE_MSG)
+    logForDebugging('[voice_stream] Sending initial KeepAlive');
+    ws.send(KEEPALIVE_MSG);
 
     // Send periodic keepalive to prevent idle timeout
     keepaliveTimer = setInterval(
-      ws => {
+      (ws) => {
         if (ws.readyState === WebSocket.OPEN) {
-          logForDebugging('[voice_stream] Sending periodic KeepAlive')
-          ws.send(KEEPALIVE_MSG)
+          logForDebugging('[voice_stream] Sending periodic KeepAlive');
+          ws.send(KEEPALIVE_MSG);
         }
       },
       KEEPALIVE_INTERVAL_MS,
       ws,
-    )
+    );
 
     // Pass the connection to the caller so it can start sending audio.
     // This fires only after the WebSocket is truly open, guaranteeing
     // that send() calls will not be silently dropped.
-    callbacks.onReady(connection)
-  })
+    callbacks.onReady(connection);
+  });
 
   // Track the last TranscriptText so that when TranscriptEndpoint arrives
   // we can emit it as the final transcript.  The server sometimes sends
   // multiple non-cumulative TranscriptText messages without endpoints
   // between them; the TranscriptText handler auto-finalizes previous
   // segments when it detects the text has changed non-cumulatively.
-  let lastTranscriptText = ''
+  let lastTranscriptText = '';
 
   ws.on('message', (raw: Buffer | string) => {
-    const text = raw.toString()
+    const text = raw.toString();
     logForDebugging(
       `[voice_stream] Message received (${String(text.length)} chars): ${text.slice(0, 200)}`,
-    )
-    let msg: VoiceStreamMessage
+    );
+    let msg: VoiceStreamMessage;
     try {
-      msg = jsonParse(text) as VoiceStreamMessage
+      msg = jsonParse(text) as VoiceStreamMessage;
     } catch {
-      return
+      return;
     }
 
     switch (msg.type) {
       case 'TranscriptText': {
-        const transcript = msg.data
-        logForDebugging(`[voice_stream] TranscriptText: "${transcript ?? ''}"`)
+        const transcript = msg.data;
+        logForDebugging(`[voice_stream] TranscriptText: "${transcript ?? ''}"`);
         // Data arrived after CloseStream — disarm the no-data timer so
         // a slow-but-real flush isn't cut off. Only disarm once finalized
         // (CloseStream sent); pre-CloseStream data racing the deferred
         // send would cancel the timer prematurely, falling back to the
         // slower 5s safety timeout instead of the 1.5s no-data timer.
         if (finalized) {
-          cancelNoDataTimer?.()
+          cancelNoDataTimer?.();
         }
         if (transcript) {
           // Detect when the server has moved to a new speech segment.
@@ -394,36 +382,31 @@ export async function connectVoiceStream(
           // interim = duplication. Nova 3 only endpoints on the final
           // flush, so auto-finalize is never correct for it.
           if (!isNova3 && lastTranscriptText) {
-            const prev = lastTranscriptText.trimStart()
-            const next = transcript.trimStart()
-            if (
-              prev &&
-              next &&
-              !next.startsWith(prev) &&
-              !prev.startsWith(next)
-            ) {
+            const prev = lastTranscriptText.trimStart();
+            const next = transcript.trimStart();
+            if (prev && next && !next.startsWith(prev) && !prev.startsWith(next)) {
               logForDebugging(
                 `[voice_stream] Auto-finalizing previous segment (new segment detected): "${lastTranscriptText}"`,
-              )
-              callbacks.onTranscript(lastTranscriptText, true)
+              );
+              callbacks.onTranscript(lastTranscriptText, true);
             }
           }
-          lastTranscriptText = transcript
+          lastTranscriptText = transcript;
           // Emit as interim so the caller can show a live preview.
-          callbacks.onTranscript(transcript, false)
+          callbacks.onTranscript(transcript, false);
         }
-        break
+        break;
       }
       case 'TranscriptEndpoint': {
         logForDebugging(
           `[voice_stream] TranscriptEndpoint received, lastTranscriptText="${lastTranscriptText}"`,
-        )
+        );
         // The server signals the end of an utterance.  Emit the last
         // TranscriptText as a final transcript so the caller can commit it.
-        const finalText = lastTranscriptText
-        lastTranscriptText = ''
+        const finalText = lastTranscriptText;
+        lastTranscriptText = '';
         if (finalText) {
-          callbacks.onTranscript(finalText, true)
+          callbacks.onTranscript(finalText, true);
         }
         // When TranscriptEndpoint arrives after CloseStream was sent,
         // the server has flushed its final transcript — nothing more is
@@ -434,51 +417,46 @@ export async function connectVoiceStream(
         // inside the setTimeout(0) that actually sends CloseStream, so
         // a TranscriptEndpoint that races the deferred send still waits.
         if (finalized) {
-          resolveFinalize?.('post_closestream_endpoint')
+          resolveFinalize?.('post_closestream_endpoint');
         }
-        break
+        break;
       }
       case 'TranscriptError': {
-        const desc =
-          msg.description ?? msg.error_code ?? 'unknown transcription error'
-        logForDebugging(`[voice_stream] TranscriptError: ${desc}`)
+        const desc = msg.description ?? msg.error_code ?? 'unknown transcription error';
+        logForDebugging(`[voice_stream] TranscriptError: ${desc}`);
         if (!finalizing) {
-          callbacks.onError(desc)
+          callbacks.onError(desc);
         }
-        break
+        break;
       }
       case 'error': {
-        const errorDetail = msg.message ?? jsonStringify(msg)
-        logForDebugging(`[voice_stream] Server error: ${errorDetail}`)
+        const errorDetail = msg.message ?? jsonStringify(msg);
+        logForDebugging(`[voice_stream] Server error: ${errorDetail}`);
         if (!finalizing) {
-          callbacks.onError(errorDetail)
+          callbacks.onError(errorDetail);
         }
-        break
+        break;
       }
       default:
-        break
+        break;
     }
-  })
+  });
 
   ws.on('close', (code, reason) => {
-    const reasonStr = reason?.toString() ?? ''
-    logForDebugging(
-      `[voice_stream] WebSocket closed: code=${String(code)} reason="${reasonStr}"`,
-    )
-    connected = false
+    const reasonStr = reason?.toString() ?? '';
+    logForDebugging(`[voice_stream] WebSocket closed: code=${String(code)} reason="${reasonStr}"`);
+    connected = false;
     if (keepaliveTimer) {
-      clearInterval(keepaliveTimer)
-      keepaliveTimer = null
+      clearInterval(keepaliveTimer);
+      keepaliveTimer = null;
     }
     // If the server closed the connection before sending TranscriptEndpoint,
     // promote the last interim transcript to final so no text is lost.
     if (lastTranscriptText) {
-      logForDebugging(
-        '[voice_stream] Promoting unreported interim transcript to final on close',
-      )
-      const finalText = lastTranscriptText
-      lastTranscriptText = ''
-      callbacks.onTranscript(finalText, true)
+      logForDebugging('[voice_stream] Promoting unreported interim transcript to final on close');
+      const finalText = lastTranscriptText;
+      lastTranscriptText = '';
+      callbacks.onTranscript(finalText, true);
     }
     // During finalize, suppress onError — the session already delivered
     // whatever it had. useVoice's onError path wipes accumulatedRef,
@@ -486,14 +464,14 @@ export async function connectVoiceStream(
     // reads it. `finalizing` (not resolveFinalize) is the gate: set once
     // at finalize() entry, never cleared, so it stays accurate after the
     // fast path or a timer already resolved.
-    resolveFinalize?.('ws_close')
+    resolveFinalize?.('ws_close');
     if (!finalizing && !upgradeRejected && code !== 1000 && code !== 1005) {
       callbacks.onError(
         `Connection closed: code ${String(code)}${reasonStr ? ` — ${reasonStr}` : ''}`,
-      )
+      );
     }
-    callbacks.onClose()
-  })
+    callbacks.onClose();
+  });
 
   // The ws library fires 'unexpected-response' when the HTTP upgrade
   // returns a non-101 status. Listening lets us surface the actual status
@@ -509,36 +487,33 @@ export async function connectVoiceStream(
   // retry-attempt failure, the user just sees "Expected 101 status code"
   // instead of "HTTP 503". No harm — the gen fix is the load-bearing part.
   ws.on('unexpected-response', (req: ClientRequest, res: IncomingMessage) => {
-    const status = res.statusCode ?? 0
+    const status = res.statusCode ?? 0;
     // Bun's ws implementation on Windows can fire this event for a
     // successful 101 Switching Protocols response (anthropics/claude-code#40510).
     // 101 is never a rejection — bail before we destroy a working upgrade.
     if (status === 101) {
-      logForDebugging(
-        '[voice_stream] unexpected-response fired with 101; ignoring',
-      )
-      return
+      logForDebugging('[voice_stream] unexpected-response fired with 101; ignoring');
+      return;
     }
     logForDebugging(
       `[voice_stream] Upgrade rejected: status=${String(status)} cf-mitigated=${String(res.headers['cf-mitigated'])} cf-ray=${String(res.headers['cf-ray'])}`,
-    )
-    upgradeRejected = true
-    res.resume()
-    req.destroy()
-    if (finalizing) return
-    callbacks.onError(
-      `WebSocket upgrade rejected with HTTP ${String(status)}`,
-      { fatal: status >= 400 && status < 500 },
-    )
-  })
+    );
+    upgradeRejected = true;
+    res.resume();
+    req.destroy();
+    if (finalizing) return;
+    callbacks.onError(`WebSocket upgrade rejected with HTTP ${String(status)}`, {
+      fatal: status >= 400 && status < 500,
+    });
+  });
 
   ws.on('error', (err: Error) => {
-    logError(err)
-    logForDebugging(`[voice_stream] WebSocket error: ${err.message}`)
+    logError(err);
+    logForDebugging(`[voice_stream] WebSocket error: ${err.message}`);
     if (!finalizing) {
-      callbacks.onError(`Voice stream connection error: ${err.message}`)
+      callbacks.onError(`Voice stream connection error: ${err.message}`);
     }
-  })
+  });
 
-  return connection
+  return connection;
 }

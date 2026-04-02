@@ -1,5 +1,5 @@
-import type { Command } from '../../commands.js'
-import { isClaudeAISubscriber } from '../../utils/auth.js'
+import type { Command } from '../../commands.js';
+import { isClaudeAISubscriber } from '../../utils/auth.js';
 
 const rateLimitOptions = {
   type: 'local-jsx',
@@ -7,13 +7,13 @@ const rateLimitOptions = {
   description: 'Show options when rate limit is reached',
   isEnabled: () => {
     if (!isClaudeAISubscriber()) {
-      return false
+      return false;
     }
 
-    return true
+    return true;
   },
   isHidden: true, // Hidden from help - only used internally
   load: () => import('./rate-limit-options.js'),
-} satisfies Command
+} satisfies Command;
 
-export default rateLimitOptions
+export default rateLimitOptions;

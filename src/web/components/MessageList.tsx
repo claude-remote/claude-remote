@@ -165,9 +165,7 @@ const MessageRow = React.memo(function MessageRow({
         {/* Message bubble */}
         <div
           className={`min-w-0 rounded-lg border px-3 py-2 ${
-            isUser
-              ? 'border-indigo-900/50 bg-indigo-900/50'
-              : 'border-gray-800/50 bg-gray-800/50'
+            isUser ? 'border-indigo-900/50 bg-indigo-900/50' : 'border-gray-800/50 bg-gray-800/50'
           }`}
         >
           <div className="space-y-2">
@@ -182,9 +180,7 @@ const MessageRow = React.memo(function MessageRow({
               ),
             )}
           </div>
-          <div
-            className={`mt-1 text-[10px] ${isUser ? 'text-right' : 'text-left'} text-gray-500`}
-          >
+          <div className={`mt-1 text-[10px] ${isUser ? 'text-right' : 'text-left'} text-gray-500`}>
             {formatTime(message.createdAt)}
             {message.model && isAssistant && <span className="ml-2">{message.model}</span>}
           </div>

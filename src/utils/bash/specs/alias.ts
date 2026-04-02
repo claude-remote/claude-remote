@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const alias: CommandSpec = {
   name: 'alias',
@@ -9,6 +9,6 @@ const alias: CommandSpec = {
     isOptional: true,
     isVariadic: true,
   },
-}
+};
 
-export default alias
+export default alias;

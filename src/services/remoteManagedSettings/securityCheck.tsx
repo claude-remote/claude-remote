@@ -1,7 +1,11 @@
 import React from 'react';
 import { getIsInteractive } from '../../bootstrap/state.js';
 import { ManagedSettingsSecurityDialog } from '../../components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.js';
-import { extractDangerousSettings, hasDangerousSettings, hasDangerousSettingsChanged } from '../../components/ManagedSettingsSecurityDialog/utils.js';
+import {
+  extractDangerousSettings,
+  hasDangerousSettings,
+  hasDangerousSettingsChanged,
+} from '../../components/ManagedSettingsSecurityDialog/utils.js';
 import { render } from '../../ink.js';
 import { KeybindingSetup } from '../../keybindings/KeybindingProviderSetup.js';
 import { AppStateProvider } from '../../state/AppState.js';
@@ -19,7 +23,10 @@ export type SecurityCheckResult = 'approved' | 'rejected' | 'no_check_needed';
  * @param newSettings The new settings fetched from the API
  * @returns 'approved' if user accepts, 'rejected' if user declines, 'no_check_needed' if no dangerous changes
  */
-export async function checkManagedSettingsSecurity(cachedSettings: SettingsJson | null, newSettings: SettingsJson | null): Promise<SecurityCheckResult> {
+export async function checkManagedSettingsSecurity(
+  cachedSettings: SettingsJson | null,
+  newSettings: SettingsJson | null,
+): Promise<SecurityCheckResult> {
   // If new settings don't have dangerous settings, no check needed
   if (!newSettings || !hasDangerousSettings(extractDangerousSettings(newSettings))) {
     return 'no_check_needed';
@@ -39,23 +46,28 @@ export async function checkManagedSettingsSecurity(cachedSettings: SettingsJson 
   logEvent('tengu_managed_settings_security_dialog_shown', {});
 
   // Show blocking dialog
-  return new Promise<SecurityCheckResult>(resolve => {
+  return new Promise<SecurityCheckResult>((resolve) => {
     void (async () => {
-      const {
-        unmount
-      } = await render(<AppStateProvider>
+      const { unmount } = await render(
+        <AppStateProvider>
           <KeybindingSetup>
-            <ManagedSettingsSecurityDialog settings={newSettings} onAccept={() => {
-            logEvent('tengu_managed_settings_security_dialog_accepted', {});
-            unmount();
-            void resolve('approved');
-          }} onReject={() => {
-            logEvent('tengu_managed_settings_security_dialog_rejected', {});
-            unmount();
-            void resolve('rejected');
-          }} />
+            <ManagedSettingsSecurityDialog
+              settings={newSettings}
+              onAccept={() => {
+                logEvent('tengu_managed_settings_security_dialog_accepted', {});
+                unmount();
+                void resolve('approved');
+              }}
+              onReject={() => {
+                logEvent('tengu_managed_settings_security_dialog_rejected', {});
+                unmount();
+                void resolve('rejected');
+              }}
+            />
           </KeybindingSetup>
-        </AppStateProvider>, getBaseRenderOptions(false));
+        </AppStateProvider>,
+        getBaseRenderOptions(false),
+      );
     })();
   });
 }

@@ -5,7 +5,7 @@ import type {
   HistorySearchResult,
   SessionConfig,
   SessionMeta,
-} from './types.js'
+} from './types.js';
 
 const session: SessionMeta = {
   id: 'session-1',
@@ -16,26 +16,26 @@ const session: SessionMeta = {
   updatedAt: 2,
   clientCount: 1,
   hasActiveWriter: true,
-}
+};
 
 const config: SessionConfig = {
   model: 'claude-sonnet',
   effortLevel: 'medium',
   permissionMode: 'ask',
-}
+};
 
 const options: ConfigOptions = {
   availableModels: [{ id: 'claude-sonnet', name: 'Claude Sonnet', supportsImages: true }],
   effortLevels: ['low', 'medium', 'high'],
   permissionModes: ['ask', 'approve', 'bypass'],
-}
+};
 
 const usage: ContextUsage = {
   usedTokens: 10,
   maxTokens: 100,
   percentage: 10,
   breakdown: [{ label: 'messages', tokens: 10 }],
-}
+};
 
 const cost: CostSummary = {
   sessionCost: 0,
@@ -44,7 +44,7 @@ const cost: CostSummary = {
   outputTokens: 0,
   apiCalls: 0,
   sessionDuration: 0,
-}
+};
 
 const result: HistorySearchResult = {
   sessionId: 'session-1',
@@ -53,11 +53,11 @@ const result: HistorySearchResult = {
   role: 'user',
   snippet: 'hello',
   timestamp: 123,
-}
+};
 
-void session
-void config
-void options
-void usage
-void cost
-void result
+void session;
+void config;
+void options;
+void usage;
+void cost;
+void result;

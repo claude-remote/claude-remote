@@ -1,4 +1,4 @@
-import { c as _c } from "react/compiler-runtime";
+import { c as _c } from 'react/compiler-runtime';
 /**
  * Shared state machine + install helper for plugin-recommendation hooks
  * (LSP, claude-code-hint). Centralizes the gate chain, async-guard,
@@ -27,7 +27,7 @@ export function usePluginRecommendationBase() {
   const isCheckingRef = React.useRef(false);
   let t0;
   if ($[0] !== recommendation) {
-    t0 = resolve => {
+    t0 = (resolve) => {
       if (getIsRemoteMode()) {
         return;
       }
@@ -38,13 +38,16 @@ export function usePluginRecommendationBase() {
         return;
       }
       isCheckingRef.current = true;
-      resolve().then(rec => {
-        if (rec) {
-          setRecommendation(rec);
-        }
-      }).catch(logError).finally(() => {
-        isCheckingRef.current = false;
-      });
+      resolve()
+        .then((rec) => {
+          if (rec) {
+            setRecommendation(rec);
+          }
+        })
+        .catch(logError)
+        .finally(() => {
+          isCheckingRef.current = false;
+        });
     };
     $[0] = recommendation;
     $[1] = t0;
@@ -53,7 +56,7 @@ export function usePluginRecommendationBase() {
   }
   const tryResolve = t0;
   let t1;
-  if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[2] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = () => setRecommendation(null);
     $[2] = t1;
   } else {
@@ -65,7 +68,7 @@ export function usePluginRecommendationBase() {
     t2 = {
       recommendation,
       clearRecommendation,
-      tryResolve
+      tryResolve,
     };
     $[3] = recommendation;
     $[4] = tryResolve;
@@ -77,7 +80,13 @@ export function usePluginRecommendationBase() {
 }
 
 /** Look up plugin, run install(), emit standard success/failure notification. */
-export async function installPluginAndNotify(pluginId: string, pluginName: string, keyPrefix: string, addNotification: AddNotification, install: (pluginData: PluginData) => Promise<void>): Promise<void> {
+export async function installPluginAndNotify(
+  pluginId: string,
+  pluginName: string,
+  keyPrefix: string,
+  addNotification: AddNotification,
+  install: (pluginData: PluginData) => Promise<void>,
+): Promise<void> {
   try {
     const pluginData = await getPluginById(pluginId);
     if (!pluginData) {
@@ -86,11 +95,13 @@ export async function installPluginAndNotify(pluginId: string, pluginName: strin
     await install(pluginData);
     addNotification({
       key: `${keyPrefix}-installed`,
-      jsx: <Text color="success">
+      jsx: (
+        <Text color="success">
           {figures.tick} {pluginName} installed · restart to apply
-        </Text>,
+        </Text>
+      ),
       priority: 'immediate',
-      timeoutMs: 5000
+      timeoutMs: 5000,
     });
   } catch (error) {
     logError(error);
@@ -98,7 +109,7 @@ export async function installPluginAndNotify(pluginId: string, pluginName: strin
       key: `${keyPrefix}-install-failed`,
       jsx: <Text color="error">Failed to install {pluginName}</Text>,
       priority: 'immediate',
-      timeoutMs: 5000
+      timeoutMs: 5000,
     });
   }
 }

@@ -1,7 +1,14 @@
 import type { Hono } from 'hono';
 
-import type { SessionMeta, SessionSnapshot, SessionConfig, ConfigOptions, ContextUsage, CostSummary } from '@/shared/types';
 import type { Hub } from '@/hub/Hub';
+import type {
+  ConfigOptions,
+  ContextUsage,
+  CostSummary,
+  SessionConfig,
+  SessionMeta,
+  SessionSnapshot,
+} from '@/shared/types';
 
 export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   // GET /api/sessions — list sessions (optional query: ?status=active)
@@ -16,10 +23,8 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
       updatedAt: s.updatedAt,
       clientCount: s.clients?.length ?? 0,
       hasActiveWriter:
-        s.clients?.some(
-          (c) =>
-            (c as { writerStatus?: string | null }).writerStatus === 'active',
-        ) ?? false,
+        s.clients?.some((c) => (c as { writerStatus?: string | null }).writerStatus === 'active') ??
+        false,
     }));
 
     if (statusFilter) {
@@ -31,7 +36,7 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
 
   // POST /api/sessions — create session { name?, cwd? }
   app.post('/api/sessions', async (context) => {
-    const body = await context.req.json().catch(() => ({})) as { name?: string; cwd?: string };
+    const body = (await context.req.json().catch(() => ({}))) as { name?: string; cwd?: string };
     const cwd = body.cwd ?? process.cwd();
     const name = body.name;
 
@@ -74,7 +79,7 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   // PATCH /api/sessions/:id — update session (rename, tags, config)
   app.patch('/api/sessions/:id', async (context) => {
     const sessionId = context.req.param('id');
-    const body = await context.req.json().catch(() => ({})) as {
+    const body = (await context.req.json().catch(() => ({}))) as {
       name?: string;
       tags?: string[];
       config?: Partial<SessionConfig>;
@@ -87,8 +92,8 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   // GET /api/sessions/:id/messages — paginated message history
   app.get('/api/sessions/:id/messages', (context) => {
     const sessionId = context.req.param('id');
-    const offset = parseInt(context.req.query('offset') ?? '0', 10);
-    const limit = parseInt(context.req.query('limit') ?? '50', 10);
+    const offset = Number.parseInt(context.req.query('offset') ?? '0', 10);
+    const limit = Number.parseInt(context.req.query('limit') ?? '50', 10);
 
     // TODO(T03): wire to hub.getSessionMessages()
     return context.json({ sessionId, messages: [], offset, limit, total: 0 });
@@ -97,7 +102,7 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
   // POST /api/sessions/:id/chat — send message (SSE streaming)
   app.post('/api/sessions/:id/chat', async (context) => {
     const sessionId = context.req.param('id');
-    const body = await context.req.json().catch(() => ({})) as { message?: string };
+    const body = (await context.req.json().catch(() => ({}))) as { message?: string };
 
     if (!body.message || typeof body.message !== 'string') {
       return context.json({ error: 'Message required' }, 400);

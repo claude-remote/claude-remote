@@ -1,12 +1,12 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { type PropsWithChildren, type Ref } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import Box from '../../ink/components/Box.js';
 import type { DOMElement } from '../../ink/dom.js';
 import type { ClickEvent } from '../../ink/events/click-event.js';
 import type { FocusEvent } from '../../ink/events/focus-event.js';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
 import type { Color, Styles } from '../../ink/styles.js';
-import { getTheme, type Theme } from '../../utils/theme.js';
+import { type Theme, getTheme } from '../../utils/theme.js';
 import { useTheme } from './ThemeProvider.js';
 
 // Color props that accept theme keys
@@ -20,21 +20,31 @@ type ThemedColorProps = {
 };
 
 // Base Styles without color props (they'll be overridden)
-type BaseStylesWithoutColors = Omit<Styles, 'textWrap' | 'borderColor' | 'borderTopColor' | 'borderBottomColor' | 'borderLeftColor' | 'borderRightColor' | 'backgroundColor'>;
-export type Props = BaseStylesWithoutColors & ThemedColorProps & {
-  ref?: Ref<DOMElement>;
-  tabIndex?: number;
-  autoFocus?: boolean;
-  onClick?: (event: ClickEvent) => void;
-  onFocus?: (event: FocusEvent) => void;
-  onFocusCapture?: (event: FocusEvent) => void;
-  onBlur?: (event: FocusEvent) => void;
-  onBlurCapture?: (event: FocusEvent) => void;
-  onKeyDown?: (event: KeyboardEvent) => void;
-  onKeyDownCapture?: (event: KeyboardEvent) => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
-};
+type BaseStylesWithoutColors = Omit<
+  Styles,
+  | 'textWrap'
+  | 'borderColor'
+  | 'borderTopColor'
+  | 'borderBottomColor'
+  | 'borderLeftColor'
+  | 'borderRightColor'
+  | 'backgroundColor'
+>;
+export type Props = BaseStylesWithoutColors &
+  ThemedColorProps & {
+    ref?: Ref<DOMElement>;
+    tabIndex?: number;
+    autoFocus?: boolean;
+    onClick?: (event: ClickEvent) => void;
+    onFocus?: (event: FocusEvent) => void;
+    onFocusCapture?: (event: FocusEvent) => void;
+    onBlur?: (event: FocusEvent) => void;
+    onBlurCapture?: (event: FocusEvent) => void;
+    onKeyDown?: (event: KeyboardEvent) => void;
+    onKeyDownCapture?: (event: KeyboardEvent) => void;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
+  };
 
 /**
  * Resolves a color value that may be a theme key to a raw Color.
@@ -42,7 +52,12 @@ export type Props = BaseStylesWithoutColors & ThemedColorProps & {
 function resolveColor(color: keyof Theme | Color | undefined, theme: Theme): Color | undefined {
   if (!color) return undefined;
   // Check if it's a raw color (starts with rgb(, #, ansi256(, or ansi:)
-  if (color.startsWith('rgb(') || color.startsWith('#') || color.startsWith('ansi256(') || color.startsWith('ansi:')) {
+  if (
+    color.startsWith('rgb(') ||
+    color.startsWith('#') ||
+    color.startsWith('ansi256(') ||
+    color.startsWith('ansi:')
+  ) {
     return color as Color;
   }
   // It's a theme key - resolve it
@@ -104,7 +119,15 @@ function ThemedBox(t0) {
   let resolvedBorderRightColor;
   let resolvedBorderTopColor;
   let t1;
-  if ($[10] !== backgroundColor || $[11] !== borderBottomColor || $[12] !== borderColor || $[13] !== borderLeftColor || $[14] !== borderRightColor || $[15] !== borderTopColor || $[16] !== themeName) {
+  if (
+    $[10] !== backgroundColor ||
+    $[11] !== borderBottomColor ||
+    $[12] !== borderColor ||
+    $[13] !== borderLeftColor ||
+    $[14] !== borderRightColor ||
+    $[15] !== borderTopColor ||
+    $[16] !== themeName
+  ) {
     const theme = getTheme(themeName);
     resolvedBorderColor = resolveColor(borderColor, theme);
     resolvedBorderTopColor = resolveColor(borderTopColor, theme);
@@ -135,8 +158,31 @@ function ThemedBox(t0) {
   }
   const resolvedBackgroundColor = t1;
   let t2;
-  if ($[23] !== children || $[24] !== ref || $[25] !== resolvedBackgroundColor || $[26] !== resolvedBorderBottomColor || $[27] !== resolvedBorderColor || $[28] !== resolvedBorderLeftColor || $[29] !== resolvedBorderRightColor || $[30] !== resolvedBorderTopColor || $[31] !== rest) {
-    t2 = <Box ref={ref} borderColor={resolvedBorderColor} borderTopColor={resolvedBorderTopColor} borderBottomColor={resolvedBorderBottomColor} borderLeftColor={resolvedBorderLeftColor} borderRightColor={resolvedBorderRightColor} backgroundColor={resolvedBackgroundColor} {...rest}>{children}</Box>;
+  if (
+    $[23] !== children ||
+    $[24] !== ref ||
+    $[25] !== resolvedBackgroundColor ||
+    $[26] !== resolvedBorderBottomColor ||
+    $[27] !== resolvedBorderColor ||
+    $[28] !== resolvedBorderLeftColor ||
+    $[29] !== resolvedBorderRightColor ||
+    $[30] !== resolvedBorderTopColor ||
+    $[31] !== rest
+  ) {
+    t2 = (
+      <Box
+        ref={ref}
+        borderColor={resolvedBorderColor}
+        borderTopColor={resolvedBorderTopColor}
+        borderBottomColor={resolvedBorderBottomColor}
+        borderLeftColor={resolvedBorderLeftColor}
+        borderRightColor={resolvedBorderRightColor}
+        backgroundColor={resolvedBackgroundColor}
+        {...rest}
+      >
+        {children}
+      </Box>
+    );
     $[23] = children;
     $[24] = ref;
     $[25] = resolvedBackgroundColor;

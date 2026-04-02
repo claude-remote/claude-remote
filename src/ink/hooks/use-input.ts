@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect } from 'react'
-import { useEventCallback } from 'usehooks-ts'
-import type { InputEvent, Key } from '../events/input-event.js'
-import useStdin from './use-stdin.js'
+import { useEffect, useLayoutEffect } from 'react';
+import { useEventCallback } from 'usehooks-ts';
+import type { InputEvent, Key } from '../events/input-event.js';
+import useStdin from './use-stdin.js';
 
-type Handler = (input: string, key: Key, event: InputEvent) => void
+type Handler = (input: string, key: Key, event: InputEvent) => void;
 
 type Options = {
   /**
@@ -12,8 +12,8 @@ type Options = {
    *
    * @default true
    */
-  isActive?: boolean
-}
+  isActive?: boolean;
+};
 
 /**
  * This hook is used for handling user input.
@@ -40,7 +40,7 @@ type Options = {
  * ```
  */
 const useInput = (inputHandler: Handler, options: Options = {}) => {
-  const { setRawMode, internal_exitOnCtrlC, internal_eventEmitter } = useStdin()
+  const { setRawMode, internal_exitOnCtrlC, internal_eventEmitter } = useStdin();
 
   // useLayoutEffect (not useEffect) so that raw mode is enabled synchronously
   // during React's commit phase, before render() returns. With useEffect, raw
@@ -49,15 +49,15 @@ const useInput = (inputHandler: Handler, options: Options = {}) => {
   // visible until the effect fires.
   useLayoutEffect(() => {
     if (options.isActive === false) {
-      return
+      return;
     }
 
-    setRawMode(true)
+    setRawMode(true);
 
     return () => {
-      setRawMode(false)
-    }
-  }, [options.isActive, setRawMode])
+      setRawMode(false);
+    };
+  }, [options.isActive, setRawMode]);
 
   // Register the listener once on mount so its slot in the EventEmitter's
   // listener array is stable. If isActive were in the effect's deps, the
@@ -68,25 +68,25 @@ const useInput = (inputHandler: Handler, options: Options = {}) => {
   // closure (it syncs via useLayoutEffect, so it's compiler-safe).
   const handleData = useEventCallback((event: InputEvent) => {
     if (options.isActive === false) {
-      return
+      return;
     }
-    const { input, key } = event
+    const { input, key } = event;
 
     // If app is not supposed to exit on Ctrl+C, then let input listener handle it
     // Note: discreteUpdates is called at the App level when emitting events,
     // so all listeners are already within a high-priority update context.
     if (!(input === 'c' && key.ctrl) || !internal_exitOnCtrlC) {
-      inputHandler(input, key, event)
+      inputHandler(input, key, event);
     }
-  })
+  });
 
   useEffect(() => {
-    internal_eventEmitter?.on('input', handleData)
+    internal_eventEmitter?.on('input', handleData);
 
     return () => {
-      internal_eventEmitter?.removeListener('input', handleData)
-    }
-  }, [internal_eventEmitter, handleData])
-}
+      internal_eventEmitter?.removeListener('input', handleData);
+    };
+  }, [internal_eventEmitter, handleData]);
+};
 
-export default useInput
+export default useInput;

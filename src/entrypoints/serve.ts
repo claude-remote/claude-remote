@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve as pathResolve } from 'node:path';
+import { createTuiClient } from '@/cli/TuiClient';
 import {
   type ParsedArgs,
   parseArgs,
@@ -8,7 +9,6 @@ import {
   resolveLogsOptions,
   resolveServeOptions,
 } from '@/cli/commands';
-import { createTuiClient } from '@/cli/TuiClient';
 import { Hub } from '@/hub/Hub';
 import { createServerApp, startServer } from '@/server';
 import { DEFAULT_LOG_DIR, DEFAULT_PORT, DEFAULT_SOCKET_PATH } from '@/shared/constants';
@@ -113,8 +113,7 @@ async function handleAttach(parsed: ParsedArgs): Promise<void> {
   const sessionId = parsed.subcommand ?? parsed.positional[0] ?? undefined;
   const port =
     typeof parsed.flags.port === 'string' ? Number.parseInt(parsed.flags.port, 10) : DEFAULT_PORT;
-  const hubUrl =
-    typeof parsed.flags.url === 'string' ? parsed.flags.url : undefined;
+  const hubUrl = typeof parsed.flags.url === 'string' ? parsed.flags.url : undefined;
 
   const client = createTuiClient({ port, hubUrl, sessionId });
 
@@ -171,8 +170,7 @@ function handleLogs(parsed: ParsedArgs): void {
       console.log('-- following (Ctrl+C to stop) --');
 
       watchFile(logFile, { interval: 500 }, () => {
-        const { openSync, readSync, closeSync, statSync } =
-          require('node:fs') as typeof import('node:fs');
+        const { openSync, readSync, closeSync, statSync } = require('node:fs') as typeof import('node:fs');
         const newSize = statSync(logFile).size;
         if (newSize <= lastSize) {
           lastSize = newSize;

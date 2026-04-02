@@ -1,69 +1,69 @@
-import { getIsNonInteractiveSession } from '../../../bootstrap/state.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { getPlatform } from '../../../utils/platform.js'
+import { getIsNonInteractiveSession } from '../../../bootstrap/state.js';
+import { logForDebugging } from '../../../utils/debug.js';
+import { getPlatform } from '../../../utils/platform.js';
+import { createInProcessBackend } from './InProcessBackend.js';
+import { createPaneBackendExecutor } from './PaneBackendExecutor.js';
 import {
   isInITerm2,
   isInsideTmux,
   isInsideTmuxSync,
   isIt2CliAvailable,
   isTmuxAvailable,
-} from './detection.js'
-import { createInProcessBackend } from './InProcessBackend.js'
-import { getPreferTmuxOverIterm2 } from './it2Setup.js'
-import { createPaneBackendExecutor } from './PaneBackendExecutor.js'
-import { getTeammateModeFromSnapshot } from './teammateModeSnapshot.js'
+} from './detection.js';
+import { getPreferTmuxOverIterm2 } from './it2Setup.js';
+import { getTeammateModeFromSnapshot } from './teammateModeSnapshot.js';
 import type {
   BackendDetectionResult,
   PaneBackend,
   PaneBackendType,
   TeammateExecutor,
-} from './types.js'
+} from './types.js';
 
 /**
  * Cached backend detection result.
  * Once detected, the backend selection is fixed for the lifetime of the process.
  */
-let cachedBackend: PaneBackend | null = null
+let cachedBackend: PaneBackend | null = null;
 
 /**
  * Cached detection result with additional metadata.
  */
-let cachedDetectionResult: BackendDetectionResult | null = null
+let cachedDetectionResult: BackendDetectionResult | null = null;
 
 /**
  * Flag to track if backends have been registered.
  */
-let backendsRegistered = false
+let backendsRegistered = false;
 
 /**
  * Cached in-process backend instance.
  */
-let cachedInProcessBackend: TeammateExecutor | null = null
+let cachedInProcessBackend: TeammateExecutor | null = null;
 
 /**
  * Cached pane backend executor instance.
  * Wraps the detected PaneBackend to provide TeammateExecutor interface.
  */
-let cachedPaneBackendExecutor: TeammateExecutor | null = null
+let cachedPaneBackendExecutor: TeammateExecutor | null = null;
 
 /**
  * Tracks whether spawn fell back to in-process mode because no pane backend
  * was available (e.g., iTerm2 without it2 or tmux installed). Once set,
  * isInProcessEnabled() returns true so UI (banner, teams menu) reflects reality.
  */
-let inProcessFallbackActive = false
+let inProcessFallbackActive = false;
 
 /**
  * Placeholder for TmuxBackend - will be replaced with actual implementation.
  * This allows the registry to compile before the backend implementations exist.
  */
-let TmuxBackendClass: (new () => PaneBackend) | null = null
+let TmuxBackendClass: (new () => PaneBackend) | null = null;
 
 /**
  * Placeholder for ITermBackend - will be replaced with actual implementation.
  * This allows the registry to compile before the backend implementations exist.
  */
-let ITermBackendClass: (new () => PaneBackend) | null = null
+let ITermBackendClass: (new () => PaneBackend) | null = null;
 
 /**
  * Ensures backend classes are dynamically imported so getBackendByType() can
@@ -72,10 +72,10 @@ let ITermBackendClass: (new () => PaneBackend) | null = null
  * registration (e.g., killing a pane by its stored backendType).
  */
 export async function ensureBackendsRegistered(): Promise<void> {
-  if (backendsRegistered) return
-  await import('./TmuxBackend.js')
-  await import('./ITermBackend.js')
-  backendsRegistered = true
+  if (backendsRegistered) return;
+  await import('./TmuxBackend.js');
+  await import('./ITermBackend.js');
+  backendsRegistered = true;
 }
 
 /**
@@ -83,20 +83,18 @@ export async function ensureBackendsRegistered(): Promise<void> {
  * Called by TmuxBackend.ts to avoid circular dependencies.
  */
 export function registerTmuxBackend(backendClass: new () => PaneBackend): void {
-  TmuxBackendClass = backendClass
+  TmuxBackendClass = backendClass;
 }
 
 /**
  * Registers the ITermBackend class with the registry.
  * Called by ITermBackend.ts to avoid circular dependencies.
  */
-export function registerITermBackend(
-  backendClass: new () => PaneBackend,
-): void {
+export function registerITermBackend(backendClass: new () => PaneBackend): void {
   logForDebugging(
     `[registry] registerITermBackend called, class=${backendClass?.name || 'undefined'}`,
-  )
-  ITermBackendClass = backendClass
+  );
+  ITermBackendClass = backendClass;
 }
 
 /**
@@ -105,11 +103,9 @@ export function registerITermBackend(
  */
 function createTmuxBackend(): PaneBackend {
   if (!TmuxBackendClass) {
-    throw new Error(
-      'TmuxBackend not registered. Import TmuxBackend.ts before using the registry.',
-    )
+    throw new Error('TmuxBackend not registered. Import TmuxBackend.ts before using the registry.');
   }
-  return new TmuxBackendClass()
+  return new TmuxBackendClass();
 }
 
 /**
@@ -120,9 +116,9 @@ function createITermBackend(): PaneBackend {
   if (!ITermBackendClass) {
     throw new Error(
       'ITermBackend not registered. Import ITermBackend.ts before using the registry.',
-    )
+    );
   }
-  return new ITermBackendClass()
+  return new ITermBackendClass();
 }
 
 /**
@@ -135,152 +131,134 @@ function createITermBackend(): PaneBackend {
  */
 export async function detectAndGetBackend(): Promise<BackendDetectionResult> {
   // Ensure backends are registered before detection
-  await ensureBackendsRegistered()
+  await ensureBackendsRegistered();
 
   // Return cached result if available
   if (cachedDetectionResult) {
     logForDebugging(
       `[BackendRegistry] Using cached backend: ${cachedDetectionResult.backend.type}`,
-    )
-    return cachedDetectionResult
+    );
+    return cachedDetectionResult;
   }
 
-  logForDebugging('[BackendRegistry] Starting backend detection...')
+  logForDebugging('[BackendRegistry] Starting backend detection...');
 
   // Check all environment conditions upfront for logging
-  const insideTmux = await isInsideTmux()
-  const inITerm2 = isInITerm2()
+  const insideTmux = await isInsideTmux();
+  const inITerm2 = isInITerm2();
 
-  logForDebugging(
-    `[BackendRegistry] Environment: insideTmux=${insideTmux}, inITerm2=${inITerm2}`,
-  )
+  logForDebugging(`[BackendRegistry] Environment: insideTmux=${insideTmux}, inITerm2=${inITerm2}`);
 
   // Priority 1: If inside tmux, always use tmux
   if (insideTmux) {
-    logForDebugging(
-      '[BackendRegistry] Selected: tmux (running inside tmux session)',
-    )
-    const backend = createTmuxBackend()
-    cachedBackend = backend
+    logForDebugging('[BackendRegistry] Selected: tmux (running inside tmux session)');
+    const backend = createTmuxBackend();
+    cachedBackend = backend;
     cachedDetectionResult = {
       backend,
       isNative: true,
       needsIt2Setup: false,
-    }
-    return cachedDetectionResult
+    };
+    return cachedDetectionResult;
   }
 
   // Priority 2: If in iTerm2, try to use native panes
   if (inITerm2) {
     // Check if user previously chose to prefer tmux over iTerm2
-    const preferTmux = getPreferTmuxOverIterm2()
+    const preferTmux = getPreferTmuxOverIterm2();
     if (preferTmux) {
-      logForDebugging(
-        '[BackendRegistry] User prefers tmux over iTerm2, skipping iTerm2 detection',
-      )
+      logForDebugging('[BackendRegistry] User prefers tmux over iTerm2, skipping iTerm2 detection');
     } else {
-      const it2Available = await isIt2CliAvailable()
-      logForDebugging(
-        `[BackendRegistry] iTerm2 detected, it2 CLI available: ${it2Available}`,
-      )
+      const it2Available = await isIt2CliAvailable();
+      logForDebugging(`[BackendRegistry] iTerm2 detected, it2 CLI available: ${it2Available}`);
 
       if (it2Available) {
-        logForDebugging(
-          '[BackendRegistry] Selected: iterm2 (native iTerm2 with it2 CLI)',
-        )
-        const backend = createITermBackend()
-        cachedBackend = backend
+        logForDebugging('[BackendRegistry] Selected: iterm2 (native iTerm2 with it2 CLI)');
+        const backend = createITermBackend();
+        cachedBackend = backend;
         cachedDetectionResult = {
           backend,
           isNative: true,
           needsIt2Setup: false,
-        }
-        return cachedDetectionResult
+        };
+        return cachedDetectionResult;
       }
     }
 
     // In iTerm2 but it2 not available - check if tmux can be used as fallback
-    const tmuxAvailable = await isTmuxAvailable()
-    logForDebugging(
-      `[BackendRegistry] it2 not available, tmux available: ${tmuxAvailable}`,
-    )
+    const tmuxAvailable = await isTmuxAvailable();
+    logForDebugging(`[BackendRegistry] it2 not available, tmux available: ${tmuxAvailable}`);
 
     if (tmuxAvailable) {
       logForDebugging(
         '[BackendRegistry] Selected: tmux (fallback in iTerm2, it2 setup recommended)',
-      )
+      );
       // Return tmux as fallback. Only signal it2 setup if the user hasn't already
       // chosen to prefer tmux - otherwise they'd be re-prompted on every spawn.
-      const backend = createTmuxBackend()
-      cachedBackend = backend
+      const backend = createTmuxBackend();
+      cachedBackend = backend;
       cachedDetectionResult = {
         backend,
         isNative: false,
         needsIt2Setup: !preferTmux,
-      }
-      return cachedDetectionResult
+      };
+      return cachedDetectionResult;
     }
 
     // In iTerm2 with no it2 and no tmux - it2 setup is required
-    logForDebugging(
-      '[BackendRegistry] ERROR: iTerm2 detected but no it2 CLI and no tmux',
-    )
-    throw new Error(
-      'iTerm2 detected but it2 CLI not installed. Install it2 with: pip install it2',
-    )
+    logForDebugging('[BackendRegistry] ERROR: iTerm2 detected but no it2 CLI and no tmux');
+    throw new Error('iTerm2 detected but it2 CLI not installed. Install it2 with: pip install it2');
   }
 
   // Priority 3: Fall back to tmux external session
-  const tmuxAvailable = await isTmuxAvailable()
-  logForDebugging(
-    `[BackendRegistry] Not in tmux or iTerm2, tmux available: ${tmuxAvailable}`,
-  )
+  const tmuxAvailable = await isTmuxAvailable();
+  logForDebugging(`[BackendRegistry] Not in tmux or iTerm2, tmux available: ${tmuxAvailable}`);
 
   if (tmuxAvailable) {
-    logForDebugging('[BackendRegistry] Selected: tmux (external session mode)')
-    const backend = createTmuxBackend()
-    cachedBackend = backend
+    logForDebugging('[BackendRegistry] Selected: tmux (external session mode)');
+    const backend = createTmuxBackend();
+    cachedBackend = backend;
     cachedDetectionResult = {
       backend,
       isNative: false,
       needsIt2Setup: false,
-    }
-    return cachedDetectionResult
+    };
+    return cachedDetectionResult;
   }
 
   // No backend available - tmux is not installed
-  logForDebugging('[BackendRegistry] ERROR: No pane backend available')
-  throw new Error(getTmuxInstallInstructions())
+  logForDebugging('[BackendRegistry] ERROR: No pane backend available');
+  throw new Error(getTmuxInstallInstructions());
 }
 
 /**
  * Returns platform-specific tmux installation instructions.
  */
 function getTmuxInstallInstructions(): string {
-  const platform = getPlatform()
+  const platform = getPlatform();
 
   switch (platform) {
     case 'macos':
       return `To use agent swarms, install tmux:
   brew install tmux
-Then start a tmux session with: tmux new-session -s claude`
+Then start a tmux session with: tmux new-session -s claude`;
 
     case 'linux':
     case 'wsl':
       return `To use agent swarms, install tmux:
   sudo apt install tmux    # Ubuntu/Debian
   sudo dnf install tmux    # Fedora/RHEL
-Then start a tmux session with: tmux new-session -s claude`
+Then start a tmux session with: tmux new-session -s claude`;
 
     case 'windows':
       return `To use agent swarms, you need tmux which requires WSL (Windows Subsystem for Linux).
 Install WSL first, then inside WSL run:
   sudo apt install tmux
-Then start a tmux session with: tmux new-session -s claude`
+Then start a tmux session with: tmux new-session -s claude`;
 
     default:
       return `To use agent swarms, install tmux using your system's package manager.
-Then start a tmux session with: tmux new-session -s claude`
+Then start a tmux session with: tmux new-session -s claude`;
   }
 }
 
@@ -295,9 +273,9 @@ Then start a tmux session with: tmux new-session -s claude`
 export function getBackendByType(type: PaneBackendType): PaneBackend {
   switch (type) {
     case 'tmux':
-      return createTmuxBackend()
+      return createTmuxBackend();
     case 'iterm2':
-      return createITermBackend()
+      return createITermBackend();
   }
 }
 
@@ -306,7 +284,7 @@ export function getBackendByType(type: PaneBackendType): PaneBackend {
  * Returns null if no backend has been detected yet.
  */
 export function getCachedBackend(): PaneBackend | null {
-  return cachedBackend
+  return cachedBackend;
 }
 
 /**
@@ -315,7 +293,7 @@ export function getCachedBackend(): PaneBackend | null {
  * Use `isNative` to check if teammates are visible in native panes.
  */
 export function getCachedDetectionResult(): BackendDetectionResult | null {
-  return cachedDetectionResult
+  return cachedDetectionResult;
 }
 
 /**
@@ -324,8 +302,8 @@ export function getCachedDetectionResult(): BackendDetectionResult | null {
  * spawns short-circuit to in-process (the environment won't change mid-session).
  */
 export function markInProcessFallback(): void {
-  logForDebugging('[BackendRegistry] Marking in-process fallback as active')
-  inProcessFallbackActive = true
+  logForDebugging('[BackendRegistry] Marking in-process fallback as active');
+  inProcessFallbackActive = true;
 }
 
 /**
@@ -333,7 +311,7 @@ export function markInProcessFallback(): void {
  * Returns the session snapshot captured at startup, ignoring runtime config changes.
  */
 function getTeammateMode(): 'auto' | 'tmux' | 'in-process' {
-  return getTeammateModeFromSnapshot()
+  return getTeammateModeFromSnapshot();
 }
 
 /**
@@ -352,19 +330,17 @@ export function isInProcessEnabled(): boolean {
   // Force in-process mode for non-interactive sessions (-p mode)
   // since tmux-based teammates don't make sense without a terminal UI
   if (getIsNonInteractiveSession()) {
-    logForDebugging(
-      '[BackendRegistry] isInProcessEnabled: true (non-interactive session)',
-    )
-    return true
+    logForDebugging('[BackendRegistry] isInProcessEnabled: true (non-interactive session)');
+    return true;
   }
 
-  const mode = getTeammateMode()
+  const mode = getTeammateMode();
 
-  let enabled: boolean
+  let enabled: boolean;
   if (mode === 'in-process') {
-    enabled = true
+    enabled = true;
   } else if (mode === 'tmux') {
-    enabled = false
+    enabled = false;
   } else {
     // 'auto' mode - if a prior spawn fell back to in-process because no pane
     // backend was available, stay in-process (scoped to auto mode only so a
@@ -372,20 +348,20 @@ export function isInProcessEnabled(): boolean {
     if (inProcessFallbackActive) {
       logForDebugging(
         '[BackendRegistry] isInProcessEnabled: true (fallback after pane backend unavailable)',
-      )
-      return true
+      );
+      return true;
     }
     // Check if a pane backend environment is available
     // If inside tmux or iTerm2, use pane backend; otherwise use in-process
-    const insideTmux = isInsideTmuxSync()
-    const inITerm2 = isInITerm2()
-    enabled = !insideTmux && !inITerm2
+    const insideTmux = isInsideTmuxSync();
+    const inITerm2 = isInITerm2();
+    enabled = !insideTmux && !inITerm2;
   }
 
   logForDebugging(
     `[BackendRegistry] isInProcessEnabled: ${enabled} (mode=${mode}, insideTmux=${isInsideTmuxSync()}, inITerm2=${isInITerm2()})`,
-  )
-  return enabled
+  );
+  return enabled;
 }
 
 /**
@@ -394,7 +370,7 @@ export function isInProcessEnabled(): boolean {
  * what 'auto' actually resolves to given the current environment.
  */
 export function getResolvedTeammateMode(): 'in-process' | 'tmux' {
-  return isInProcessEnabled() ? 'in-process' : 'tmux'
+  return isInProcessEnabled() ? 'in-process' : 'tmux';
 }
 
 /**
@@ -403,9 +379,9 @@ export function getResolvedTeammateMode(): 'in-process' | 'tmux' {
  */
 export function getInProcessBackend(): TeammateExecutor {
   if (!cachedInProcessBackend) {
-    cachedInProcessBackend = createInProcessBackend()
+    cachedInProcessBackend = createInProcessBackend();
   }
-  return cachedInProcessBackend
+  return cachedInProcessBackend;
 }
 
 /**
@@ -422,17 +398,15 @@ export function getInProcessBackend(): TeammateExecutor {
  *                          Otherwise returns PaneBackendExecutor.
  * @returns TeammateExecutor instance
  */
-export async function getTeammateExecutor(
-  preferInProcess: boolean = false,
-): Promise<TeammateExecutor> {
+export async function getTeammateExecutor(preferInProcess = false): Promise<TeammateExecutor> {
   if (preferInProcess && isInProcessEnabled()) {
-    logForDebugging('[BackendRegistry] Using in-process executor')
-    return getInProcessBackend()
+    logForDebugging('[BackendRegistry] Using in-process executor');
+    return getInProcessBackend();
   }
 
   // Return pane backend executor
-  logForDebugging('[BackendRegistry] Using pane backend executor')
-  return getPaneBackendExecutor()
+  logForDebugging('[BackendRegistry] Using pane backend executor');
+  return getPaneBackendExecutor();
 }
 
 /**
@@ -441,13 +415,13 @@ export async function getTeammateExecutor(
  */
 async function getPaneBackendExecutor(): Promise<TeammateExecutor> {
   if (!cachedPaneBackendExecutor) {
-    const detection = await detectAndGetBackend()
-    cachedPaneBackendExecutor = createPaneBackendExecutor(detection.backend)
+    const detection = await detectAndGetBackend();
+    cachedPaneBackendExecutor = createPaneBackendExecutor(detection.backend);
     logForDebugging(
       `[BackendRegistry] Created PaneBackendExecutor wrapping ${detection.backend.type}`,
-    )
+    );
   }
-  return cachedPaneBackendExecutor
+  return cachedPaneBackendExecutor;
 }
 
 /**
@@ -455,10 +429,10 @@ async function getPaneBackendExecutor(): Promise<TeammateExecutor> {
  * Used for testing to allow re-detection.
  */
 export function resetBackendDetection(): void {
-  cachedBackend = null
-  cachedDetectionResult = null
-  cachedInProcessBackend = null
-  cachedPaneBackendExecutor = null
-  backendsRegistered = false
-  inProcessFallbackActive = false
+  cachedBackend = null;
+  cachedDetectionResult = null;
+  cachedInProcessBackend = null;
+  cachedPaneBackendExecutor = null;
+  backendsRegistered = false;
+  inProcessFallbackActive = false;
 }

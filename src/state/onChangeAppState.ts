@@ -1,30 +1,30 @@
-import { setMainLoopModelOverride } from '../bootstrap/state.js'
+import { setMainLoopModelOverride } from '../bootstrap/state.js';
 import {
   clearApiKeyHelperCache,
   clearAwsCredentialsCache,
   clearGcpCredentialsCache,
-} from '../utils/auth.js'
-import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
-import { toError } from '../utils/errors.js'
-import { logError } from '../utils/log.js'
-import { applyConfigEnvironmentVariables } from '../utils/managedEnv.js'
+} from '../utils/auth.js';
+import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js';
+import { toError } from '../utils/errors.js';
+import { logError } from '../utils/log.js';
+import { applyConfigEnvironmentVariables } from '../utils/managedEnv.js';
 import {
   permissionModeFromString,
   toExternalPermissionMode,
-} from '../utils/permissions/PermissionMode.js'
+} from '../utils/permissions/PermissionMode.js';
 import {
+  type SessionExternalMetadata,
   notifyPermissionModeChanged,
   notifySessionMetadataChanged,
-  type SessionExternalMetadata,
-} from '../utils/sessionState.js'
-import { updateSettingsForSource } from '../utils/settings/settings.js'
-import type { AppState } from './AppStateStore.js'
+} from '../utils/sessionState.js';
+import { updateSettingsForSource } from '../utils/settings/settings.js';
+import type { AppState } from './AppStateStore.js';
 
 // Inverse of the push below — restore on worker restart.
 export function externalMetadataToAppState(
   metadata: SessionExternalMetadata,
 ): (prev: AppState) => AppState {
-  return prev => ({
+  return (prev) => ({
     ...prev,
     ...(typeof metadata.permission_mode === 'string'
       ? {
@@ -37,15 +37,15 @@ export function externalMetadataToAppState(
     ...(typeof metadata.is_ultraplan_mode === 'boolean'
       ? { isUltraplanMode: metadata.is_ultraplan_mode }
       : {}),
-  })
+  });
 }
 
 export function onChangeAppState({
   newState,
   oldState,
 }: {
-  newState: AppState
-  oldState: AppState
+  newState: AppState;
+  oldState: AppState;
 }) {
   // toolPermissionContext.mode — single choke point for CCR/SDK mode sync.
   //
@@ -62,8 +62,8 @@ export function onChangeAppState({
   // notifies CCR (via notifySessionMetadataChanged → ccrClient.reportMetadata)
   // and the SDK status stream (via notifyPermissionModeChanged → registered
   // in print.ts). The scattered callsites above need zero changes.
-  const prevMode = oldState.toolPermissionContext.mode
-  const newMode = newState.toolPermissionContext.mode
+  const prevMode = oldState.toolPermissionContext.mode;
+  const newMode = newState.toolPermissionContext.mode;
   if (prevMode !== newMode) {
     // CCR external_metadata must not receive internal-only mode names
     // (bubble, ungated auto). Externalize first — and skip
@@ -71,72 +71,61 @@ export function onChangeAppState({
     // default→bubble→default is noise from CCR's POV since both
     // externalize to 'default'). The SDK channel (notifyPermissionModeChanged)
     // passes raw mode; its listener in print.ts applies its own filter.
-    const prevExternal = toExternalPermissionMode(prevMode)
-    const newExternal = toExternalPermissionMode(newMode)
+    const prevExternal = toExternalPermissionMode(prevMode);
+    const newExternal = toExternalPermissionMode(newMode);
     if (prevExternal !== newExternal) {
       // Ultraplan = first plan cycle only. The initial control_request
       // sets mode and isUltraplanMode atomically, so the flag's
       // transition gates it. null per RFC 7396 (removes the key).
       const isUltraplan =
-        newExternal === 'plan' &&
-        newState.isUltraplanMode &&
-        !oldState.isUltraplanMode
+        newExternal === 'plan' && newState.isUltraplanMode && !oldState.isUltraplanMode
           ? true
-          : null
+          : null;
       notifySessionMetadataChanged({
         permission_mode: newExternal,
         is_ultraplan_mode: isUltraplan,
-      })
+      });
     }
-    notifyPermissionModeChanged(newMode)
+    notifyPermissionModeChanged(newMode);
   }
 
   // mainLoopModel: remove it from settings?
-  if (
-    newState.mainLoopModel !== oldState.mainLoopModel &&
-    newState.mainLoopModel === null
-  ) {
+  if (newState.mainLoopModel !== oldState.mainLoopModel && newState.mainLoopModel === null) {
     // Remove from settings
-    updateSettingsForSource('userSettings', { model: undefined })
-    setMainLoopModelOverride(null)
+    updateSettingsForSource('userSettings', { model: undefined });
+    setMainLoopModelOverride(null);
   }
 
   // mainLoopModel: add it to settings?
-  if (
-    newState.mainLoopModel !== oldState.mainLoopModel &&
-    newState.mainLoopModel !== null
-  ) {
+  if (newState.mainLoopModel !== oldState.mainLoopModel && newState.mainLoopModel !== null) {
     // Save to settings
-    updateSettingsForSource('userSettings', { model: newState.mainLoopModel })
-    setMainLoopModelOverride(newState.mainLoopModel)
+    updateSettingsForSource('userSettings', { model: newState.mainLoopModel });
+    setMainLoopModelOverride(newState.mainLoopModel);
   }
 
   // expandedView → persist as showExpandedTodos + showSpinnerTree for backwards compat
   if (newState.expandedView !== oldState.expandedView) {
-    const showExpandedTodos = newState.expandedView === 'tasks'
-    const showSpinnerTree = newState.expandedView === 'teammates'
+    const showExpandedTodos = newState.expandedView === 'tasks';
+    const showSpinnerTree = newState.expandedView === 'teammates';
     if (
       getGlobalConfig().showExpandedTodos !== showExpandedTodos ||
       getGlobalConfig().showSpinnerTree !== showSpinnerTree
     ) {
-      saveGlobalConfig(current => ({
+      saveGlobalConfig((current) => ({
         ...current,
         showExpandedTodos,
         showSpinnerTree,
-      }))
+      }));
     }
   }
 
   // verbose
-  if (
-    newState.verbose !== oldState.verbose &&
-    getGlobalConfig().verbose !== newState.verbose
-  ) {
-    const verbose = newState.verbose
-    saveGlobalConfig(current => ({
+  if (newState.verbose !== oldState.verbose && getGlobalConfig().verbose !== newState.verbose) {
+    const verbose = newState.verbose;
+    saveGlobalConfig((current) => ({
       ...current,
       verbose,
-    }))
+    }));
   }
 
   // tungstenPanelVisible (ant-only tmux panel sticky toggle)
@@ -146,8 +135,8 @@ export function onChangeAppState({
       newState.tungstenPanelVisible !== undefined &&
       getGlobalConfig().tungstenPanelVisible !== newState.tungstenPanelVisible
     ) {
-      const tungstenPanelVisible = newState.tungstenPanelVisible
-      saveGlobalConfig(current => ({ ...current, tungstenPanelVisible }))
+      const tungstenPanelVisible = newState.tungstenPanelVisible;
+      saveGlobalConfig((current) => ({ ...current, tungstenPanelVisible }));
     }
   }
 
@@ -155,17 +144,17 @@ export function onChangeAppState({
   // This ensures apiKeyHelper and AWS/GCP credential changes take effect immediately
   if (newState.settings !== oldState.settings) {
     try {
-      clearApiKeyHelperCache()
-      clearAwsCredentialsCache()
-      clearGcpCredentialsCache()
+      clearApiKeyHelperCache();
+      clearAwsCredentialsCache();
+      clearGcpCredentialsCache();
 
       // Re-apply environment variables when settings.env changes
       // This is additive-only: new vars are added, existing may be overwritten, nothing is deleted
       if (newState.settings.env !== oldState.settings.env) {
-        applyConfigEnvironmentVariables()
+        applyConfigEnvironmentVariables();
       }
     } catch (error) {
-      logError(toError(error))
+      logError(toError(error));
     }
   }
 }

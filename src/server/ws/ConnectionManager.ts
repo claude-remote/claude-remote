@@ -1,4 +1,4 @@
-import type { WriterStatus, ClientType } from '@/shared/types';
+import type { ClientType, WriterStatus } from '@/shared/types';
 
 /**
  * Represents a single WebSocket connection to the Hub.

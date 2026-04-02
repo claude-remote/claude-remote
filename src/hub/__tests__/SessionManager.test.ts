@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock, jest } from 'bun:test';
+import { beforeEach, describe, expect, jest, mock, test } from 'bun:test';
 import { SessionManager } from '@/hub/SessionManager';
 import type { Session } from '@/shared/types';
 
@@ -66,10 +66,10 @@ describe('SessionManager CRUD', () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     const session = manager.getSession(meta.id);
     expect(session).not.toBeNull();
-    expect(session!.id).toBe(meta.id);
-    expect(session!.status).toBe('active');
-    expect(session!.messages).toEqual([]);
-    expect(session!.tasks).toEqual([]);
+    expect(session?.id).toBe(meta.id);
+    expect(session?.status).toBe('active');
+    expect(session?.messages).toEqual([]);
+    expect(session?.tasks).toEqual([]);
   });
 
   test('getSession returns null for unknown id', () => {
@@ -97,21 +97,21 @@ describe('SessionManager CRUD', () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.archiveSession(meta.id);
     const session = manager.getSession(meta.id);
-    expect(session!.status).toBe('archived');
+    expect(session?.status).toBe('archived');
   });
 
   test('renameSession updates session name', () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     manager.renameSession(meta.id, 'new-name');
     const session = manager.getSession(meta.id);
-    expect(session!.name).toBe('new-name');
+    expect(session?.name).toBe('new-name');
   });
 
   test('switchCwd updates cwd and emits event', () => {
     const meta = manager.createSession({ cwd: '/old' });
     manager.switchCwd(meta.id, '/new');
     const session = manager.getSession(meta.id);
-    expect(session!.cwd).toBe('/new');
+    expect(session?.cwd).toBe('/new');
     expect(mockEventBus.publish).toHaveBeenCalled();
   });
 
@@ -127,47 +127,47 @@ describe('SessionManager status transitions', () => {
   test('active → idle succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'idle');
-    expect(manager.getSession(meta.id)!.status).toBe('idle');
+    expect(manager.getSession(meta.id)?.status).toBe('idle');
   });
 
   test('active → interrupted succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'interrupted');
-    expect(manager.getSession(meta.id)!.status).toBe('interrupted');
+    expect(manager.getSession(meta.id)?.status).toBe('interrupted');
   });
 
   test('active → archived succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'archived');
-    expect(manager.getSession(meta.id)!.status).toBe('archived');
+    expect(manager.getSession(meta.id)?.status).toBe('archived');
   });
 
   test('idle → active succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'idle');
     await manager.updateStatus(meta.id, 'active');
-    expect(manager.getSession(meta.id)!.status).toBe('active');
+    expect(manager.getSession(meta.id)?.status).toBe('active');
   });
 
   test('idle → archived succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'idle');
     await manager.updateStatus(meta.id, 'archived');
-    expect(manager.getSession(meta.id)!.status).toBe('archived');
+    expect(manager.getSession(meta.id)?.status).toBe('archived');
   });
 
   test('interrupted → active succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'interrupted');
     await manager.updateStatus(meta.id, 'active');
-    expect(manager.getSession(meta.id)!.status).toBe('active');
+    expect(manager.getSession(meta.id)?.status).toBe('active');
   });
 
   test('interrupted → archived succeeds', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'interrupted');
     await manager.updateStatus(meta.id, 'archived');
-    expect(manager.getSession(meta.id)!.status).toBe('archived');
+    expect(manager.getSession(meta.id)?.status).toBe('archived');
   });
 
   test('archived → any throws', async () => {
@@ -185,7 +185,9 @@ describe('SessionManager status transitions', () => {
   test('idle → interrupted throws', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'idle');
-    await expect(manager.updateStatus(meta.id, 'interrupted')).rejects.toThrow('invalid transition');
+    await expect(manager.updateStatus(meta.id, 'interrupted')).rejects.toThrow(
+      'invalid transition',
+    );
   });
 
   test('status change emits event', async () => {
@@ -196,7 +198,7 @@ describe('SessionManager status transitions', () => {
       (c: any[]) => c[1]?.type === 'hub:session:statusChanged',
     ) as unknown as [string, { status: string }] | undefined;
     expect(statusEvent).toBeTruthy();
-    expect(statusEvent![1].status).toBe('idle');
+    expect(statusEvent?.[1].status).toBe('idle');
   });
 });
 
@@ -215,14 +217,14 @@ describe('SessionManager idle timeout', () => {
     await new Promise((r) => setTimeout(r, 100));
 
     const session = shortManager.getSession(meta.id);
-    expect(session!.status).toBe('idle');
+    expect(session?.status).toBe('idle');
   });
 
   test('touchSession resets idle timer and reactivates idle session', async () => {
     const meta = manager.createSession({ cwd: '/tmp' });
     await manager.updateStatus(meta.id, 'idle');
     await manager.touchSession(meta.id);
-    expect(manager.getSession(meta.id)!.status).toBe('active');
+    expect(manager.getSession(meta.id)?.status).toBe('active');
   });
 });
 
@@ -269,11 +271,11 @@ describe('SessionManager active writer', () => {
     expect(manager.getActiveWriter(meta.id)).toBe('client-2');
 
     const calls = mockEventBus.publish.mock.calls;
-    const writerEvent = calls.find(
-      (c: any[]) => c[1]?.type === 'hub:writer:changed',
-    ) as unknown as [string, { newWriterId: string }] | undefined;
+    const writerEvent = calls.find((c: any[]) => c[1]?.type === 'hub:writer:changed') as unknown as
+      | [string, { newWriterId: string }]
+      | undefined;
     expect(writerEvent).toBeTruthy();
-    expect(writerEvent![1].newWriterId).toBe('client-2');
+    expect(writerEvent?.[1].newWriterId).toBe('client-2');
   });
 
   test('getActiveWriter returns null when no writer assigned', () => {
@@ -293,9 +295,9 @@ describe('SessionManager crash recovery', () => {
 
     await manager.recoverFromCrash();
 
-    expect(manager.getSession(s1.id)!.status).toBe('interrupted');
+    expect(manager.getSession(s1.id)?.status).toBe('interrupted');
     // idle sessions remain idle (not active, so not affected)
-    expect(manager.getSession(s2.id)!.status).toBe('idle');
+    expect(manager.getSession(s2.id)?.status).toBe('idle');
   });
 
   test('recoverFromCrash persists to store', async () => {
@@ -327,7 +329,7 @@ describe('SessionManager resource limits', () => {
     // This should auto-archive s1
     const s4 = manager.createSession({ cwd: '/d' });
     expect(s4).toBeTruthy();
-    expect(manager.getSession(s1.id)!.status).toBe('archived');
+    expect(manager.getSession(s1.id)?.status).toBe('archived');
   });
 
   test('exceeding limit with no idle sessions throws', () => {
@@ -335,9 +337,7 @@ describe('SessionManager resource limits', () => {
     manager.createSession({ cwd: '/b' });
     manager.createSession({ cwd: '/c' });
 
-    expect(() => manager.createSession({ cwd: '/d' })).toThrow(
-      'max sessions limit reached',
-    );
+    expect(() => manager.createSession({ cwd: '/d' })).toThrow('max sessions limit reached');
   });
 });
 
@@ -351,8 +351,8 @@ describe('SessionManager shutdown', () => {
 
     await manager.shutdown();
 
-    expect(manager.getSession(s1.id)!.status).toBe('interrupted');
-    expect(manager.getSession(s2.id)!.status).toBe('archived');
+    expect(manager.getSession(s1.id)?.status).toBe('interrupted');
+    expect(manager.getSession(s2.id)?.status).toBe('archived');
   });
 
   test('shutdown persists all sessions to store', async () => {

@@ -1,17 +1,27 @@
-import { c as _c } from "react/compiler-runtime";
-import { basename, relative } from 'path';
+import { basename, relative } from 'node:path';
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js';
 import { getCwd } from 'src/utils/cwd.js';
 import type { z } from 'zod/v4';
 import { Text } from '../../../ink.js';
 import { FileEditTool } from '../../../tools/FileEditTool/FileEditTool.js';
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js';
-import { createSingleEditDiffConfig, type FileEdit, type IDEDiffSupport } from '../FilePermissionDialog/ideDiffConfig.js';
+import {
+  type FileEdit,
+  type IDEDiffSupport,
+  createSingleEditDiffConfig,
+} from '../FilePermissionDialog/ideDiffConfig.js';
 import type { PermissionRequestProps } from '../PermissionRequest.js';
 type FileEditInput = z.infer<typeof FileEditTool.inputSchema>;
 const ideDiffSupport: IDEDiffSupport<FileEditInput> = {
-  getConfig: (input: FileEditInput) => createSingleEditDiffConfig(input.file_path, input.old_string, input.new_string, input.replace_all),
+  getConfig: (input: FileEditInput) =>
+    createSingleEditDiffConfig(
+      input.file_path,
+      input.old_string,
+      input.new_string,
+      input.replace_all,
+    ),
   applyChanges: (input: FileEditInput, modifiedEdits: FileEdit[]) => {
     const firstEdit = modifiedEdits[0];
     if (firstEdit) {
@@ -19,11 +29,11 @@ const ideDiffSupport: IDEDiffSupport<FileEditInput> = {
         ...input,
         old_string: firstEdit.old_string,
         new_string: firstEdit.new_string,
-        replace_all: firstEdit.replace_all
+        replace_all: firstEdit.replace_all,
       };
     }
     return input;
-  }
+  },
 };
 export function FileEditPermissionRequest(props) {
   const $ = _c(51);
@@ -46,25 +56,26 @@ export function FileEditPermissionRequest(props) {
   let t7;
   let t8;
   let t9;
-  if ($[0] !== props.onDone || $[1] !== props.onReject || $[2] !== props.toolUseConfirm || $[3] !== props.toolUseContext || $[4] !== props.workerBadge) {
+  if (
+    $[0] !== props.onDone ||
+    $[1] !== props.onReject ||
+    $[2] !== props.toolUseConfirm ||
+    $[3] !== props.toolUseContext ||
+    $[4] !== props.workerBadge
+  ) {
     const parsed = parseInput(props.toolUseConfirm.input);
-    ({
-      file_path,
-      old_string,
-      new_string,
-      replace_all
-    } = parsed);
+    ({ file_path, old_string, new_string, replace_all } = parsed);
     T2 = FilePermissionDialog;
     t4 = props.toolUseConfirm;
     t5 = props.toolUseContext;
     t6 = props.onDone;
     t7 = props.onReject;
     t8 = props.workerBadge;
-    t9 = "Edit file";
+    t9 = 'Edit file';
     t10 = relative(getCwd(), file_path);
     T1 = Text;
-    t2 = "Do you want to make this edit to";
-    t3 = " ";
+    t2 = 'Do you want to make this edit to';
+    t3 = ' ';
     T0 = Text;
     t0 = true;
     t1 = basename(file_path);
@@ -123,7 +134,13 @@ export function FileEditPermissionRequest(props) {
   }
   let t12;
   if ($[27] !== T1 || $[28] !== t11 || $[29] !== t2 || $[30] !== t3) {
-    t12 = <T1>{t2}{t3}{t11}?</T1>;
+    t12 = (
+      <T1>
+        {t2}
+        {t3}
+        {t11}?
+      </T1>
+    );
     $[27] = T1;
     $[28] = t11;
     $[29] = t2;
@@ -135,11 +152,13 @@ export function FileEditPermissionRequest(props) {
   const t13 = replace_all || false;
   let t14;
   if ($[32] !== new_string || $[33] !== old_string || $[34] !== t13) {
-    t14 = [{
-      old_string,
-      new_string,
-      replace_all: t13
-    }];
+    t14 = [
+      {
+        old_string,
+        new_string,
+        replace_all: t13,
+      },
+    ];
     $[32] = new_string;
     $[33] = old_string;
     $[34] = t13;
@@ -157,8 +176,36 @@ export function FileEditPermissionRequest(props) {
     t15 = $[38];
   }
   let t16;
-  if ($[39] !== T2 || $[40] !== file_path || $[41] !== t10 || $[42] !== t12 || $[43] !== t15 || $[44] !== t4 || $[45] !== t5 || $[46] !== t6 || $[47] !== t7 || $[48] !== t8 || $[49] !== t9) {
-    t16 = <T2 toolUseConfirm={t4} toolUseContext={t5} onDone={t6} onReject={t7} workerBadge={t8} title={t9} subtitle={t10} question={t12} content={t15} path={file_path} completionType="str_replace_single" parseInput={parseInput} ideDiffSupport={ideDiffSupport} />;
+  if (
+    $[39] !== T2 ||
+    $[40] !== file_path ||
+    $[41] !== t10 ||
+    $[42] !== t12 ||
+    $[43] !== t15 ||
+    $[44] !== t4 ||
+    $[45] !== t5 ||
+    $[46] !== t6 ||
+    $[47] !== t7 ||
+    $[48] !== t8 ||
+    $[49] !== t9
+  ) {
+    t16 = (
+      <T2
+        toolUseConfirm={t4}
+        toolUseContext={t5}
+        onDone={t6}
+        onReject={t7}
+        workerBadge={t8}
+        title={t9}
+        subtitle={t10}
+        question={t12}
+        content={t15}
+        path={file_path}
+        completionType="str_replace_single"
+        parseInput={parseInput}
+        ideDiffSupport={ideDiffSupport}
+      />
+    );
     $[39] = T2;
     $[40] = file_path;
     $[41] = t10;

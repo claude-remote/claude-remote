@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 /**
  * Component that registers global keybinding handlers.
  *
@@ -5,12 +6,14 @@
  * This component renders nothing - it just registers the keybinding handlers.
  */
 import { feature } from 'src/utils/feature.js';
-import { useCallback } from 'react';
 import instances from '../ink/instances.js';
 import { useKeybinding } from '../keybindings/useKeybinding.js';
 import type { Screen } from '../screens/REPL.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../services/analytics/index.js';
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from '../services/analytics/index.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import { count } from '../utils/array.js';
 import { getTerminalPanel } from '../utils/terminalPanel.js';
@@ -42,56 +45,54 @@ export function GlobalKeybindingHandlers({
   onEnterTranscript,
   onExitTranscript,
   virtualScrollActive,
-  searchBarOpen = false
+  searchBarOpen = false,
 }: Props): null {
-  const expandedView = useAppState(s => s.expandedView);
+  const expandedView = useAppState((s) => s.expandedView);
   const setAppState = useSetAppState();
 
   // Toggle todo list (ctrl+t) - cycles through views
   const handleToggleTodos = useCallback(() => {
     logEvent('tengu_toggle_todos', {
-      is_expanded: expandedView === 'tasks'
+      is_expanded: expandedView === 'tasks',
     });
-    setAppState(prev => {
-      const {
-        getAllInProcessTeammateTasks
-      } =
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../tasks/InProcessTeammateTask/InProcessTeammateTask.js') as typeof import('../tasks/InProcessTeammateTask/InProcessTeammateTask.js');
-      const hasTeammates = count(getAllInProcessTeammateTasks(prev.tasks), t => t.status === 'running') > 0;
+    setAppState((prev) => {
+      const { getAllInProcessTeammateTasks } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../tasks/InProcessTeammateTask/InProcessTeammateTask.js') as typeof import('../tasks/InProcessTeammateTask/InProcessTeammateTask.js');
+      const hasTeammates =
+        count(getAllInProcessTeammateTasks(prev.tasks), (t) => t.status === 'running') > 0;
       if (hasTeammates) {
         // Both exist: none → tasks → teammates → none
         switch (prev.expandedView) {
           case 'none':
             return {
               ...prev,
-              expandedView: 'tasks' as const
+              expandedView: 'tasks' as const,
             };
           case 'tasks':
             return {
               ...prev,
-              expandedView: 'teammates' as const
+              expandedView: 'teammates' as const,
             };
           case 'teammates':
             return {
               ...prev,
-              expandedView: 'none' as const
+              expandedView: 'none' as const,
             };
         }
       }
       // Only tasks: none ↔ tasks
       return {
         ...prev,
-        expandedView: prev.expandedView === 'tasks' ? 'none' as const : 'tasks' as const
+        expandedView: prev.expandedView === 'tasks' ? ('none' as const) : ('tasks' as const),
       };
     });
   }, [expandedView, setAppState]);
 
   // Toggle transcript mode (ctrl+o). Two-way prompt ↔ transcript.
   // Brief view has its own dedicated toggle on ctrl+shift+b.
-  const isBriefOnly = feature('KAIROS') || feature('KAIROS_BRIEF') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_0 => s_0.isBriefOnly) : false;
+  const isBriefOnly =
+    feature('KAIROS') || feature('KAIROS_BRIEF') ? useAppState((s_0) => s_0.isBriefOnly) : false;
   const handleToggleTranscript = useCallback(() => {
     if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
       // Escape hatch: GB kill-switch while defaultView=chat was persisted
@@ -100,16 +101,14 @@ export function GlobalKeybindingHandlers({
       // Only needed in the prompt screen — transcript mode already ignores
       // isBriefOnly (Messages.tsx filter is gated on !isTranscriptMode).
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const {
-        isBriefEnabled
-      } = require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
+      const { isBriefEnabled } = require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (!isBriefEnabled() && isBriefOnly && screen !== 'transcript') {
-        setAppState(prev_0 => {
+        setAppState((prev_0) => {
           if (!prev_0.isBriefOnly) return prev_0;
           return {
             ...prev_0,
-            isBriefOnly: false
+            isBriefOnly: false,
           };
         });
         return;
@@ -119,9 +118,9 @@ export function GlobalKeybindingHandlers({
     logEvent('tengu_toggle_transcript', {
       is_entering: isEnteringTranscript,
       show_all: showAllInTranscript,
-      message_count: messageCount
+      message_count: messageCount,
     });
-    setScreen(s_1 => s_1 === 'transcript' ? 'prompt' : 'transcript');
+    setScreen((s_1) => (s_1 === 'transcript' ? 'prompt' : 'transcript'));
     setShowAllInTranscript(false);
     if (isEnteringTranscript && onEnterTranscript) {
       onEnterTranscript();
@@ -129,22 +128,32 @@ export function GlobalKeybindingHandlers({
     if (!isEnteringTranscript && onExitTranscript) {
       onExitTranscript();
     }
-  }, [screen, setScreen, isBriefOnly, showAllInTranscript, setShowAllInTranscript, messageCount, setAppState, onEnterTranscript, onExitTranscript]);
+  }, [
+    screen,
+    setScreen,
+    isBriefOnly,
+    showAllInTranscript,
+    setShowAllInTranscript,
+    messageCount,
+    setAppState,
+    onEnterTranscript,
+    onExitTranscript,
+  ]);
 
   // Toggle showing all messages in transcript mode (ctrl+e)
   const handleToggleShowAll = useCallback(() => {
     logEvent('tengu_transcript_toggle_show_all', {
       is_expanding: !showAllInTranscript,
-      message_count: messageCount
+      message_count: messageCount,
     });
-    setShowAllInTranscript(prev_1 => !prev_1);
+    setShowAllInTranscript((prev_1) => !prev_1);
   }, [showAllInTranscript, setShowAllInTranscript, messageCount]);
 
   // Exit transcript mode (ctrl+c or escape)
   const handleExitTranscript = useCallback(() => {
     logEvent('tengu_transcript_exit', {
       show_all: showAllInTranscript,
-      message_count: messageCount
+      message_count: messageCount,
     });
     setScreen('prompt');
     setShowAllInTranscript(false);
@@ -160,22 +169,21 @@ export function GlobalKeybindingHandlers({
   const handleToggleBrief = useCallback(() => {
     if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const {
-        isBriefEnabled: isBriefEnabled_0
-      } = require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
+      const { isBriefEnabled: isBriefEnabled_0 } =
+        require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (!isBriefEnabled_0() && !isBriefOnly) return;
       const next = !isBriefOnly;
       logEvent('tengu_brief_mode_toggled', {
         enabled: next,
         gated: false,
-        source: 'keybinding' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        source: 'keybinding' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       });
-      setAppState(prev_2 => {
+      setAppState((prev_2) => {
         if (prev_2.isBriefOnly === next) return prev_2;
         return {
           ...prev_2,
-          isBriefOnly: next
+          isBriefOnly: next,
         };
       });
     }
@@ -183,27 +191,30 @@ export function GlobalKeybindingHandlers({
 
   // Register keybinding handlers
   useKeybinding('app:toggleTodos', handleToggleTodos, {
-    context: 'Global'
+    context: 'Global',
   });
   useKeybinding('app:toggleTranscript', handleToggleTranscript, {
-    context: 'Global'
+    context: 'Global',
   });
   if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
-    // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
     useKeybinding('app:toggleBrief', handleToggleBrief, {
-      context: 'Global'
+      context: 'Global',
     });
   }
 
   // Register teammate keybinding
-  useKeybinding('app:toggleTeammatePreview', () => {
-    setAppState(prev_3 => ({
-      ...prev_3,
-      showTeammateMessagePreview: !prev_3.showTeammateMessagePreview
-    }));
-  }, {
-    context: 'Global'
-  });
+  useKeybinding(
+    'app:toggleTeammatePreview',
+    () => {
+      setAppState((prev_3) => ({
+        ...prev_3,
+        showTeammateMessagePreview: !prev_3.showTeammateMessagePreview,
+      }));
+    },
+    {
+      context: 'Global',
+    },
+  );
 
   // Toggle built-in terminal panel (meta+j).
   // toggle() blocks in spawnSync until the user detaches from tmux.
@@ -216,7 +227,7 @@ export function GlobalKeybindingHandlers({
     }
   }, []);
   useKeybinding('app:toggleTerminal', handleToggleTerminal, {
-    context: 'Global'
+    context: 'Global',
   });
 
   // Clear screen and force full redraw (ctrl+l). Recovery path when the
@@ -226,14 +237,14 @@ export function GlobalKeybindingHandlers({
     instances.get(process.stdout)?.forceRedraw();
   }, []);
   useKeybinding('app:redraw', handleRedraw, {
-    context: 'Global'
+    context: 'Global',
   });
 
   // Transcript-specific bindings (only active when in transcript mode)
   const isInTranscript = screen === 'transcript';
   useKeybinding('transcript:toggleShowAll', handleToggleShowAll, {
     context: 'Transcript',
-    isActive: isInTranscript && !virtualScrollActive
+    isActive: isInTranscript && !virtualScrollActive,
   });
   useKeybinding('transcript:exit', handleExitTranscript, {
     context: 'Transcript',
@@ -242,7 +253,7 @@ export function GlobalKeybindingHandlers({
     // directly, same as less q. useSearchInput doesn't stopPropagation,
     // so without this gate its onCancel AND this handler would both
     // fire on one Esc (child registers first, fires first, bubbles).
-    isActive: isInTranscript && !searchBarOpen
+    isActive: isInTranscript && !searchBarOpen,
   });
   return null;
 }

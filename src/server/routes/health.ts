@@ -1,8 +1,8 @@
 import type { Hono } from 'hono';
 
+import type { Hub } from '@/hub/Hub';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 import type { SessionStatus } from '@/shared/types';
-import type { Hub } from '@/hub/Hub';
 
 interface HealthPayload {
   status: 'ok' | 'degraded';

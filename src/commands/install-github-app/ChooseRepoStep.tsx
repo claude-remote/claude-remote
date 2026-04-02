@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import TextInput from '../../components/TextInput.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { Box, Text } from '../../ink.js';
@@ -20,7 +20,7 @@ export function ChooseRepoStep(t0) {
     repoUrl,
     onRepoUrlChange,
     onSubmit,
-    onToggleUseCurrentRepo
+    onToggleUseCurrentRepo,
   } = t0;
   const [cursorOffset, setCursorOffset] = useState(0);
   const [showEmptyError, setShowEmptyError] = useState(false);
@@ -73,9 +73,9 @@ export function ChooseRepoStep(t0) {
   let t4;
   if ($[9] !== handleNext || $[10] !== handlePrevious || $[11] !== handleSubmit) {
     t4 = {
-      "confirm:previous": handlePrevious,
-      "confirm:next": handleNext,
-      "confirm:yes": handleSubmit
+      'confirm:previous': handlePrevious,
+      'confirm:next': handleNext,
+      'confirm:yes': handleSubmit,
     };
     $[9] = handleNext;
     $[10] = handlePrevious;
@@ -88,8 +88,8 @@ export function ChooseRepoStep(t0) {
   let t6;
   if ($[13] !== t5) {
     t6 = {
-      context: "Confirmation",
-      isActive: t5
+      context: 'Confirmation',
+      isActive: t5,
     };
     $[13] = t5;
     $[14] = t6;
@@ -100,8 +100,8 @@ export function ChooseRepoStep(t0) {
   let t7;
   if ($[15] !== handleNext || $[16] !== handlePrevious) {
     t7 = {
-      "confirm:previous": handlePrevious,
-      "confirm:next": handleNext
+      'confirm:previous': handlePrevious,
+      'confirm:next': handleNext,
     };
     $[15] = handleNext;
     $[16] = handlePrevious;
@@ -112,8 +112,8 @@ export function ChooseRepoStep(t0) {
   let t8;
   if ($[18] !== isTextInputVisible) {
     t8 = {
-      context: "Confirmation",
-      isActive: isTextInputVisible
+      context: 'Confirmation',
+      isActive: isTextInputVisible,
     };
     $[18] = isTextInputVisible;
     $[19] = t8;
@@ -122,15 +122,26 @@ export function ChooseRepoStep(t0) {
   }
   useKeybindings(t7, t8);
   let t9;
-  if ($[20] === Symbol.for("react.memo_cache_sentinel")) {
-    t9 = <Box flexDirection="column" marginBottom={1}><Text bold={true}>Install GitHub App</Text><Text dimColor={true}>Select GitHub repository</Text></Box>;
+  if ($[20] === Symbol.for('react.memo_cache_sentinel')) {
+    t9 = (
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold={true}>Install GitHub App</Text>
+        <Text dimColor={true}>Select GitHub repository</Text>
+      </Box>
+    );
     $[20] = t9;
   } else {
     t9 = $[20];
   }
   let t10;
   if ($[21] !== currentRepo || $[22] !== useCurrentRepo) {
-    t10 = currentRepo && <Box marginBottom={1}><Text bold={useCurrentRepo} color={useCurrentRepo ? "permission" : undefined}>{useCurrentRepo ? "> " : "  "}Use current repository: {currentRepo}</Text></Box>;
+    t10 = currentRepo && (
+      <Box marginBottom={1}>
+        <Text bold={useCurrentRepo} color={useCurrentRepo ? 'permission' : undefined}>
+          {useCurrentRepo ? '> ' : '  '}Use current repository: {currentRepo}
+        </Text>
+      </Box>
+    );
     $[21] = currentRepo;
     $[22] = useCurrentRepo;
     $[23] = t10;
@@ -138,12 +149,19 @@ export function ChooseRepoStep(t0) {
     t10 = $[23];
   }
   const t11 = !useCurrentRepo || !currentRepo;
-  const t12 = !useCurrentRepo || !currentRepo ? "permission" : undefined;
-  const t13 = !useCurrentRepo || !currentRepo ? "> " : "  ";
-  const t14 = currentRepo ? "Enter a different repository" : "Enter repository";
+  const t12 = !useCurrentRepo || !currentRepo ? 'permission' : undefined;
+  const t13 = !useCurrentRepo || !currentRepo ? '> ' : '  ';
+  const t14 = currentRepo ? 'Enter a different repository' : 'Enter repository';
   let t15;
   if ($[24] !== t11 || $[25] !== t12 || $[26] !== t13 || $[27] !== t14) {
-    t15 = <Box marginBottom={1}><Text bold={t11} color={t12}>{t13}{t14}</Text></Box>;
+    t15 = (
+      <Box marginBottom={1}>
+        <Text bold={t11} color={t12}>
+          {t13}
+          {t14}
+        </Text>
+      </Box>
+    );
     $[24] = t11;
     $[25] = t12;
     $[26] = t13;
@@ -153,11 +171,33 @@ export function ChooseRepoStep(t0) {
     t15 = $[28];
   }
   let t16;
-  if ($[29] !== currentRepo || $[30] !== cursorOffset || $[31] !== handleSubmit || $[32] !== onRepoUrlChange || $[33] !== repoUrl || $[34] !== textInputColumns || $[35] !== useCurrentRepo) {
-    t16 = (!useCurrentRepo || !currentRepo) && <Box marginLeft={2} marginBottom={1}><TextInput value={repoUrl} onChange={value => {
-        onRepoUrlChange(value);
-        setShowEmptyError(false);
-      }} onSubmit={handleSubmit} focus={true} placeholder={"Enter a repo as owner/repo or https://github.com/owner/repo\u2026"} columns={textInputColumns} cursorOffset={cursorOffset} onChangeCursorOffset={setCursorOffset} showCursor={true} /></Box>;
+  if (
+    $[29] !== currentRepo ||
+    $[30] !== cursorOffset ||
+    $[31] !== handleSubmit ||
+    $[32] !== onRepoUrlChange ||
+    $[33] !== repoUrl ||
+    $[34] !== textInputColumns ||
+    $[35] !== useCurrentRepo
+  ) {
+    t16 = (!useCurrentRepo || !currentRepo) && (
+      <Box marginLeft={2} marginBottom={1}>
+        <TextInput
+          value={repoUrl}
+          onChange={(value) => {
+            onRepoUrlChange(value);
+            setShowEmptyError(false);
+          }}
+          onSubmit={handleSubmit}
+          focus={true}
+          placeholder={'Enter a repo as owner/repo or https://github.com/owner/repo\u2026'}
+          columns={textInputColumns}
+          cursorOffset={cursorOffset}
+          onChangeCursorOffset={setCursorOffset}
+          showCursor={true}
+        />
+      </Box>
+    );
     $[29] = currentRepo;
     $[30] = cursorOffset;
     $[31] = handleSubmit;
@@ -171,7 +211,14 @@ export function ChooseRepoStep(t0) {
   }
   let t17;
   if ($[37] !== t10 || $[38] !== t15 || $[39] !== t16) {
-    t17 = <Box flexDirection="column" borderStyle="round" paddingX={1}>{t9}{t10}{t15}{t16}</Box>;
+    t17 = (
+      <Box flexDirection="column" borderStyle="round" paddingX={1}>
+        {t9}
+        {t10}
+        {t15}
+        {t16}
+      </Box>
+    );
     $[37] = t10;
     $[38] = t15;
     $[39] = t16;
@@ -181,16 +228,24 @@ export function ChooseRepoStep(t0) {
   }
   let t18;
   if ($[41] !== showEmptyError) {
-    t18 = showEmptyError && <Box marginLeft={3} marginBottom={1}><Text color="error">Please enter a repository name to continue</Text></Box>;
+    t18 = showEmptyError && (
+      <Box marginLeft={3} marginBottom={1}>
+        <Text color="error">Please enter a repository name to continue</Text>
+      </Box>
+    );
     $[41] = showEmptyError;
     $[42] = t18;
   } else {
     t18 = $[42];
   }
-  const t19 = currentRepo ? "\u2191/\u2193 to select \xB7 " : "";
+  const t19 = currentRepo ? '\u2191/\u2193 to select \xB7 ' : '';
   let t20;
   if ($[43] !== t19) {
-    t20 = <Box marginLeft={3}><Text dimColor={true}>{t19}Enter to continue</Text></Box>;
+    t20 = (
+      <Box marginLeft={3}>
+        <Text dimColor={true}>{t19}Enter to continue</Text>
+      </Box>
+    );
     $[43] = t19;
     $[44] = t20;
   } else {
@@ -198,7 +253,13 @@ export function ChooseRepoStep(t0) {
   }
   let t21;
   if ($[45] !== t17 || $[46] !== t18 || $[47] !== t20) {
-    t21 = <>{t17}{t18}{t20}</>;
+    t21 = (
+      <>
+        {t17}
+        {t18}
+        {t20}
+      </>
+    );
     $[45] = t17;
     $[46] = t18;
     $[47] = t20;

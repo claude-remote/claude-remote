@@ -10,7 +10,7 @@
  * Governs user-visible "connecting…" latency on initial work pickup and
  * recovery speed after the server re-dispatches a work item.
  */
-const POLL_INTERVAL_MS_NOT_AT_CAPACITY = 2000
+const POLL_INTERVAL_MS_NOT_AT_CAPACITY = 2000;
 
 /**
  * Poll interval when the transport is connected. Runs independently of
@@ -27,7 +27,7 @@ const POLL_INTERVAL_MS_NOT_AT_CAPACITY = 2000
  * failures, so poll is not the recovery path — it's strictly a liveness
  * signal plus a backstop for permanent close.
  */
-const POLL_INTERVAL_MS_AT_CAPACITY = 600_000
+const POLL_INTERVAL_MS_AT_CAPACITY = 600_000;
 
 /**
  * Multisession bridge (bridgeMain.ts) poll intervals. Defaults match the
@@ -35,22 +35,20 @@ const POLL_INTERVAL_MS_AT_CAPACITY = 600_000
  * preserve current behavior. Ops can tune these independently via the
  * tengu_bridge_poll_interval_config GB flag.
  */
-const MULTISESSION_POLL_INTERVAL_MS_NOT_AT_CAPACITY =
-  POLL_INTERVAL_MS_NOT_AT_CAPACITY
-const MULTISESSION_POLL_INTERVAL_MS_PARTIAL_CAPACITY =
-  POLL_INTERVAL_MS_NOT_AT_CAPACITY
-const MULTISESSION_POLL_INTERVAL_MS_AT_CAPACITY = POLL_INTERVAL_MS_AT_CAPACITY
+const MULTISESSION_POLL_INTERVAL_MS_NOT_AT_CAPACITY = POLL_INTERVAL_MS_NOT_AT_CAPACITY;
+const MULTISESSION_POLL_INTERVAL_MS_PARTIAL_CAPACITY = POLL_INTERVAL_MS_NOT_AT_CAPACITY;
+const MULTISESSION_POLL_INTERVAL_MS_AT_CAPACITY = POLL_INTERVAL_MS_AT_CAPACITY;
 
 export type PollIntervalConfig = {
-  poll_interval_ms_not_at_capacity: number
-  poll_interval_ms_at_capacity: number
-  non_exclusive_heartbeat_interval_ms: number
-  multisession_poll_interval_ms_not_at_capacity: number
-  multisession_poll_interval_ms_partial_capacity: number
-  multisession_poll_interval_ms_at_capacity: number
-  reclaim_older_than_ms: number
-  session_keepalive_interval_v2_ms: number
-}
+  poll_interval_ms_not_at_capacity: number;
+  poll_interval_ms_at_capacity: number;
+  non_exclusive_heartbeat_interval_ms: number;
+  multisession_poll_interval_ms_not_at_capacity: number;
+  multisession_poll_interval_ms_partial_capacity: number;
+  multisession_poll_interval_ms_at_capacity: number;
+  reclaim_older_than_ms: number;
+  session_keepalive_interval_v2_ms: number;
+};
 
 export const DEFAULT_POLL_CONFIG: PollIntervalConfig = {
   poll_interval_ms_not_at_capacity: POLL_INTERVAL_MS_NOT_AT_CAPACITY,
@@ -63,12 +61,9 @@ export const DEFAULT_POLL_CONFIG: PollIntervalConfig = {
   // clients — heartbeat suppressed poll). Old clients ignore this key; ops
   // can set both fields during rollout.
   non_exclusive_heartbeat_interval_ms: 0,
-  multisession_poll_interval_ms_not_at_capacity:
-    MULTISESSION_POLL_INTERVAL_MS_NOT_AT_CAPACITY,
-  multisession_poll_interval_ms_partial_capacity:
-    MULTISESSION_POLL_INTERVAL_MS_PARTIAL_CAPACITY,
-  multisession_poll_interval_ms_at_capacity:
-    MULTISESSION_POLL_INTERVAL_MS_AT_CAPACITY,
+  multisession_poll_interval_ms_not_at_capacity: MULTISESSION_POLL_INTERVAL_MS_NOT_AT_CAPACITY,
+  multisession_poll_interval_ms_partial_capacity: MULTISESSION_POLL_INTERVAL_MS_PARTIAL_CAPACITY,
+  multisession_poll_interval_ms_at_capacity: MULTISESSION_POLL_INTERVAL_MS_AT_CAPACITY,
   // Poll query param: reclaim unacknowledged work items older than this.
   // Matches the server's DEFAULT_RECLAIM_OLDER_THAN_MS (work_service.py:24).
   // Enables picking up stale-pending work after JWT expiry, when the prior
@@ -79,4 +74,4 @@ export const DEFAULT_POLL_CONFIG: PollIntervalConfig = {
   // remote-control session. 2 min is the default. _v2: bridge-only gate
   // (pre-v2 clients read the old key, new clients ignore it).
   session_keepalive_interval_v2_ms: 120_000,
-}
+};

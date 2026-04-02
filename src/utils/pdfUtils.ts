@@ -1,7 +1,7 @@
-import { getMainLoopModel } from './model/model.js'
+import { getMainLoopModel } from './model/model.js';
 
 // Document extensions that are handled specially
-export const DOCUMENT_EXTENSIONS = new Set(['pdf'])
+export const DOCUMENT_EXTENSIONS = new Set(['pdf']);
 
 /**
  * Parse a page range string into firstPage/lastPage numbers.
@@ -13,40 +13,38 @@ export const DOCUMENT_EXTENSIONS = new Set(['pdf'])
  * Returns null on invalid input (non-numeric, zero, inverted range).
  * Pages are 1-indexed.
  */
-export function parsePDFPageRange(
-  pages: string,
-): { firstPage: number; lastPage: number } | null {
-  const trimmed = pages.trim()
+export function parsePDFPageRange(pages: string): { firstPage: number; lastPage: number } | null {
+  const trimmed = pages.trim();
   if (!trimmed) {
-    return null
+    return null;
   }
 
   // "N-" open-ended range
   if (trimmed.endsWith('-')) {
-    const first = parseInt(trimmed.slice(0, -1), 10)
-    if (isNaN(first) || first < 1) {
-      return null
+    const first = Number.parseInt(trimmed.slice(0, -1), 10);
+    if (Number.isNaN(first) || first < 1) {
+      return null;
     }
-    return { firstPage: first, lastPage: Infinity }
+    return { firstPage: first, lastPage: Number.POSITIVE_INFINITY };
   }
 
-  const dashIndex = trimmed.indexOf('-')
+  const dashIndex = trimmed.indexOf('-');
   if (dashIndex === -1) {
     // Single page: "5"
-    const page = parseInt(trimmed, 10)
-    if (isNaN(page) || page < 1) {
-      return null
+    const page = Number.parseInt(trimmed, 10);
+    if (Number.isNaN(page) || page < 1) {
+      return null;
     }
-    return { firstPage: page, lastPage: page }
+    return { firstPage: page, lastPage: page };
   }
 
   // Range: "1-10"
-  const first = parseInt(trimmed.slice(0, dashIndex), 10)
-  const last = parseInt(trimmed.slice(dashIndex + 1), 10)
-  if (isNaN(first) || isNaN(last) || first < 1 || last < 1 || last < first) {
-    return null
+  const first = Number.parseInt(trimmed.slice(0, dashIndex), 10);
+  const last = Number.parseInt(trimmed.slice(dashIndex + 1), 10);
+  if (Number.isNaN(first) || Number.isNaN(last) || first < 1 || last < 1 || last < first) {
+    return null;
   }
-  return { firstPage: first, lastPage: last }
+  return { firstPage: first, lastPage: last };
 }
 
 /**
@@ -57,7 +55,7 @@ export function parsePDFPageRange(
  * covers all provider ID formats (Bedrock prefixes, Vertex @-dates).
  */
 export function isPDFSupported(): boolean {
-  return !getMainLoopModel().toLowerCase().includes('claude-3-haiku')
+  return !getMainLoopModel().toLowerCase().includes('claude-3-haiku');
 }
 
 /**
@@ -65,6 +63,6 @@ export function isPDFSupported(): boolean {
  * @param ext File extension (with or without leading dot)
  */
 export function isPDFExtension(ext: string): boolean {
-  const normalized = ext.startsWith('.') ? ext.slice(1) : ext
-  return DOCUMENT_EXTENSIONS.has(normalized.toLowerCase())
+  const normalized = ext.startsWith('.') ? ext.slice(1) : ext;
+  return DOCUMENT_EXTENSIONS.has(normalized.toLowerCase());
 }

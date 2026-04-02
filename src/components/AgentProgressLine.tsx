@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../ink.js';
 import { formatNumber } from '../utils/format.js';
 import type { Theme } from '../utils/theme.js';
@@ -35,22 +35,27 @@ export function AgentProgressLine(t0) {
     isResolved,
     isAsync: t1,
     lastToolInfo,
-    hideType: t2
+    hideType: t2,
   } = t0;
   const isAsync = t1 === undefined ? false : t1;
   const hideType = t2 === undefined ? false : t2;
-  const treeChar = isLast ? "\u2514\u2500" : "\u251C\u2500";
+  const treeChar = isLast ? '\u2514\u2500' : '\u251C\u2500';
   const isBackgrounded = isAsync && isResolved;
   let t3;
-  if ($[0] !== isBackgrounded || $[1] !== isResolved || $[2] !== lastToolInfo || $[3] !== taskDescription) {
+  if (
+    $[0] !== isBackgrounded ||
+    $[1] !== isResolved ||
+    $[2] !== lastToolInfo ||
+    $[3] !== taskDescription
+  ) {
     t3 = () => {
       if (!isResolved) {
-        return lastToolInfo || "Initializing\u2026";
+        return lastToolInfo || 'Initializing\u2026';
       }
       if (isBackgrounded) {
-        return taskDescription ?? "Running in the background";
+        return taskDescription ?? 'Running in the background';
       }
-      return "Done";
+      return 'Done';
     };
     $[0] = isBackgrounded;
     $[1] = isResolved;
@@ -71,8 +76,38 @@ export function AgentProgressLine(t0) {
   }
   const t5 = !isResolved;
   let t6;
-  if ($[7] !== agentType || $[8] !== color || $[9] !== description || $[10] !== descriptionColor || $[11] !== hideType || $[12] !== name) {
-    t6 = hideType ? <><Text bold={true}>{name ?? description ?? agentType}</Text>{name && description && <Text dimColor={true}>: {description}</Text>}</> : <><Text bold={true} backgroundColor={color} color={color ? "inverseText" : undefined}>{agentType}</Text>{description && <>{" ("}<Text backgroundColor={descriptionColor} color={descriptionColor ? "inverseText" : undefined}>{description}</Text>{")"}</>}</>;
+  if (
+    $[7] !== agentType ||
+    $[8] !== color ||
+    $[9] !== description ||
+    $[10] !== descriptionColor ||
+    $[11] !== hideType ||
+    $[12] !== name
+  ) {
+    t6 = hideType ? (
+      <>
+        <Text bold={true}>{name ?? description ?? agentType}</Text>
+        {name && description && <Text dimColor={true}>: {description}</Text>}
+      </>
+    ) : (
+      <>
+        <Text bold={true} backgroundColor={color} color={color ? 'inverseText' : undefined}>
+          {agentType}
+        </Text>
+        {description && (
+          <>
+            {' ('}
+            <Text
+              backgroundColor={descriptionColor}
+              color={descriptionColor ? 'inverseText' : undefined}
+            >
+              {description}
+            </Text>
+            {')'}
+          </>
+        )}
+      </>
+    );
     $[7] = agentType;
     $[8] = color;
     $[9] = description;
@@ -85,7 +120,13 @@ export function AgentProgressLine(t0) {
   }
   let t7;
   if ($[14] !== isBackgrounded || $[15] !== tokens || $[16] !== toolUseCount) {
-    t7 = !isBackgrounded && <>{" \xB7 "}{toolUseCount} tool {toolUseCount === 1 ? "use" : "uses"}{tokens !== null && <> · {formatNumber(tokens)} tokens</>}</>;
+    t7 = !isBackgrounded && (
+      <>
+        {' \xB7 '}
+        {toolUseCount} tool {toolUseCount === 1 ? 'use' : 'uses'}
+        {tokens !== null && <> · {formatNumber(tokens)} tokens</>}
+      </>
+    );
     $[14] = isBackgrounded;
     $[15] = tokens;
     $[16] = toolUseCount;
@@ -95,7 +136,12 @@ export function AgentProgressLine(t0) {
   }
   let t8;
   if ($[18] !== t5 || $[19] !== t6 || $[20] !== t7) {
-    t8 = <Text dimColor={t5}>{t6}{t7}</Text>;
+    t8 = (
+      <Text dimColor={t5}>
+        {t6}
+        {t7}
+      </Text>
+    );
     $[18] = t5;
     $[19] = t6;
     $[20] = t7;
@@ -105,7 +151,12 @@ export function AgentProgressLine(t0) {
   }
   let t9;
   if ($[22] !== t4 || $[23] !== t8) {
-    t9 = <Box paddingLeft={3}>{t4}{t8}</Box>;
+    t9 = (
+      <Box paddingLeft={3}>
+        {t4}
+        {t8}
+      </Box>
+    );
     $[22] = t4;
     $[23] = t8;
     $[24] = t9;
@@ -114,7 +165,12 @@ export function AgentProgressLine(t0) {
   }
   let t10;
   if ($[25] !== getStatusText || $[26] !== isBackgrounded || $[27] !== isLast) {
-    t10 = !isBackgrounded && <Box paddingLeft={3} flexDirection="row"><Text dimColor={true}>{isLast ? "   \u23BF  " : "\u2502  \u23BF  "}</Text><Text dimColor={true}>{getStatusText()}</Text></Box>;
+    t10 = !isBackgrounded && (
+      <Box paddingLeft={3} flexDirection="row">
+        <Text dimColor={true}>{isLast ? '   \u23BF  ' : '\u2502  \u23BF  '}</Text>
+        <Text dimColor={true}>{getStatusText()}</Text>
+      </Box>
+    );
     $[25] = getStatusText;
     $[26] = isBackgrounded;
     $[27] = isLast;
@@ -124,7 +180,12 @@ export function AgentProgressLine(t0) {
   }
   let t11;
   if ($[29] !== t10 || $[30] !== t9) {
-    t11 = <Box flexDirection="column">{t9}{t10}</Box>;
+    t11 = (
+      <Box flexDirection="column">
+        {t9}
+        {t10}
+      </Box>
+    );
     $[29] = t10;
     $[30] = t9;
     $[31] = t11;

@@ -9,19 +9,19 @@
  * overlap the system prompt's harmlessly.
  */
 
-import { feature } from 'src/utils/feature.js'
+import { feature } from 'src/utils/feature.js';
 import {
   MEMORY_FRONTMATTER_EXAMPLE,
   TYPES_SECTION_COMBINED,
   TYPES_SECTION_INDIVIDUAL,
   WHAT_NOT_TO_SAVE_SECTION,
-} from '../../memdir/memoryTypes.js'
-import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../../tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
+} from '../../memdir/memoryTypes.js';
+import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js';
+import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js';
+import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js';
+import { FILE_WRITE_TOOL_NAME } from '../../tools/FileWriteTool/prompt.js';
+import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js';
+import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js';
 
 /**
  * Shared opener for both extract-prompt variants.
@@ -30,7 +30,7 @@ function opener(newMessageCount: number, existingMemories: string): string {
   const manifest =
     existingMemories.length > 0
       ? `\n\n## Existing memory files\n\n${existingMemories}\n\nCheck this list before writing — update an existing file rather than creating a duplicate.`
-      : ''
+      : '';
   return [
     `You are now acting as the memory extraction subagent. Analyze the most recent ~${newMessageCount} messages above and use them to update your persistent memory systems.`,
     '',
@@ -38,9 +38,8 @@ function opener(newMessageCount: number, existingMemories: string): string {
     '',
     `You have a limited turn budget. ${FILE_EDIT_TOOL_NAME} requires a prior ${FILE_READ_TOOL_NAME} of the same file, so the efficient strategy is: turn 1 — issue all ${FILE_READ_TOOL_NAME} calls in parallel for every file you might update; turn 2 — issue all ${FILE_WRITE_TOOL_NAME}/${FILE_EDIT_TOOL_NAME} calls in parallel. Do not interleave reads and writes across multiple turns.`,
     '',
-    `You MUST only use content from the last ~${newMessageCount} messages to update your persistent memories. Do not waste any turns attempting to investigate or verify that content further — no grepping source files, no reading code to confirm a pattern exists, no git commands.` +
-      manifest,
-  ].join('\n')
+    `You MUST only use content from the last ~${newMessageCount} messages to update your persistent memories. Do not waste any turns attempting to investigate or verify that content further — no grepping source files, no reading code to confirm a pattern exists, no git commands.${manifest}`,
+  ].join('\n');
 }
 
 /**
@@ -79,7 +78,7 @@ export function buildExtractAutoOnlyPrompt(
         '- Organize memory semantically by topic, not chronologically',
         '- Update or remove memories that turn out to be wrong or outdated',
         '- Do not write duplicate memories. First check if there is an existing memory you can update before writing a new one.',
-      ]
+      ];
 
   return [
     opener(newMessageCount, existingMemories),
@@ -90,7 +89,7 @@ export function buildExtractAutoOnlyPrompt(
     ...WHAT_NOT_TO_SAVE_SECTION,
     '',
     ...howToSave,
-  ].join('\n')
+  ].join('\n');
 }
 
 /**
@@ -104,11 +103,7 @@ export function buildExtractCombinedPrompt(
   skipIndex = false,
 ): string {
   if (!feature('TEAMMEM')) {
-    return buildExtractAutoOnlyPrompt(
-      newMessageCount,
-      existingMemories,
-      skipIndex,
-    )
+    return buildExtractAutoOnlyPrompt(newMessageCount, existingMemories, skipIndex);
   }
 
   const howToSave = skipIndex
@@ -138,7 +133,7 @@ export function buildExtractCombinedPrompt(
         '- Organize memory semantically by topic, not chronologically',
         '- Update or remove memories that turn out to be wrong or outdated',
         '- Do not write duplicate memories. First check if there is an existing memory you can update before writing a new one.',
-      ]
+      ];
 
   return [
     opener(newMessageCount, existingMemories),
@@ -150,5 +145,5 @@ export function buildExtractCombinedPrompt(
     '- You MUST avoid saving sensitive data within shared team memories. For example, never save API keys or user credentials.',
     '',
     ...howToSave,
-  ].join('\n')
+  ].join('\n');
 }

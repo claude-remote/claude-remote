@@ -1,9 +1,9 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { Suspense, use, useMemo } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useSettings } from '../../../hooks/useSettings.js';
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js';
-import { stringWidth } from '../../../ink/stringWidth.js';
 import { Ansi, Box, Text, useTheme } from '../../../ink.js';
+import { stringWidth } from '../../../ink/stringWidth.js';
 import { type CliHighlight, getCliHighlightPromise } from '../../../utils/cliHighlight.js';
 import { applyMarkdown } from '../../../utils/markdown.js';
 import sliceAnsi from '../../../utils/sliceAnsi.js';
@@ -28,7 +28,7 @@ const BOX_CHARS = {
   horizontal: '─',
   vertical: '│',
   teeLeft: '├',
-  teeRight: '┤'
+  teeRight: '┤',
 };
 
 /**
@@ -52,7 +52,11 @@ export function PreviewBox(props) {
   }
   let t0;
   if ($[2] !== props) {
-    t0 = <Suspense fallback={<PreviewBoxBody {...props} highlight={null} />}><PreviewBoxWithHighlight {...props} /></Suspense>;
+    t0 = (
+      <Suspense fallback={<PreviewBoxBody {...props} highlight={null} />}>
+        <PreviewBoxWithHighlight {...props} />
+      </Suspense>
+    );
     $[2] = props;
     $[3] = t0;
   } else {
@@ -63,7 +67,7 @@ export function PreviewBox(props) {
 function PreviewBoxWithHighlight(props) {
   const $ = _c(4);
   let t0;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t0 = getCliHighlightPromise();
     $[0] = t0;
   } else {
@@ -83,18 +87,9 @@ function PreviewBoxWithHighlight(props) {
 }
 function PreviewBoxBody(t0) {
   const $ = _c(34);
-  const {
-    content,
-    maxLines,
-    minHeight,
-    minWidth: t1,
-    maxWidth,
-    highlight
-  } = t0;
+  const { content, maxLines, minHeight, minWidth: t1, maxWidth, highlight } = t0;
   const minWidth = t1 === undefined ? 40 : t1;
-  const {
-    columns: terminalWidth
-  } = useTerminalSize();
+  const { columns: terminalWidth } = useTerminalSize();
   const [theme] = useTheme();
   const effectiveMaxWidth = maxWidth ?? terminalWidth - 4;
   const effectiveMaxLines = maxLines ?? 20;
@@ -115,13 +110,23 @@ function PreviewBoxBody(t0) {
   let t4;
   let t5;
   let truncationBar;
-  if ($[4] !== effectiveMaxLines || $[5] !== effectiveMaxWidth || $[6] !== minHeight || $[7] !== minWidth || $[8] !== rendered) {
-    const contentLines = rendered.split("\n");
+  if (
+    $[4] !== effectiveMaxLines ||
+    $[5] !== effectiveMaxWidth ||
+    $[6] !== minHeight ||
+    $[7] !== minWidth ||
+    $[8] !== rendered
+  ) {
+    const contentLines = rendered.split('\n');
     const isTruncated = contentLines.length > effectiveMaxLines;
     const truncatedLines = isTruncated ? contentLines.slice(0, effectiveMaxLines) : contentLines;
     const effectiveMinHeight = Math.min(minHeight ?? 0, effectiveMaxLines);
-    const paddingNeeded = Math.max(0, effectiveMinHeight - truncatedLines.length - (isTruncated ? 1 : 0));
-    const lines = paddingNeeded > 0 ? [...truncatedLines, ...Array(paddingNeeded).fill("")] : truncatedLines;
+    const paddingNeeded = Math.max(
+      0,
+      effectiveMinHeight - truncatedLines.length - (isTruncated ? 1 : 0),
+    );
+    const lines =
+      paddingNeeded > 0 ? [...truncatedLines, ...Array(paddingNeeded).fill('')] : truncatedLines;
     const contentWidth = Math.max(minWidth, ...lines.map(_temp));
     const boxWidth = Math.min(contentWidth + 4, effectiveMaxWidth);
     const innerWidth = boxWidth - 4;
@@ -143,15 +148,17 @@ function PreviewBoxBody(t0) {
       t7 = $[18];
     }
     bottomBorder = `${BOX_CHARS.bottomLeft}${t7}${BOX_CHARS.bottomRight}`;
-    truncationBar = isTruncated ? (() => {
-      const hiddenCount = contentLines.length - effectiveMaxLines;
-      const label = `${BOX_CHARS.horizontal.repeat(3)} \u2702 ${BOX_CHARS.horizontal.repeat(3)} ${hiddenCount} lines hidden `;
-      const labelWidth = stringWidth(label);
-      const fillWidth = Math.max(0, boxWidth - 2 - labelWidth);
-      return `${BOX_CHARS.teeLeft}${label}${BOX_CHARS.horizontal.repeat(fillWidth)}${BOX_CHARS.teeRight}`;
-    })() : null;
+    truncationBar = isTruncated
+      ? (() => {
+          const hiddenCount = contentLines.length - effectiveMaxLines;
+          const label = `${BOX_CHARS.horizontal.repeat(3)} \u2702 ${BOX_CHARS.horizontal.repeat(3)} ${hiddenCount} lines hidden `;
+          const labelWidth = stringWidth(label);
+          const fillWidth = Math.max(0, boxWidth - 2 - labelWidth);
+          return `${BOX_CHARS.teeLeft}${label}${BOX_CHARS.horizontal.repeat(fillWidth)}${BOX_CHARS.teeRight}`;
+        })()
+      : null;
     T0 = Box;
-    t3 = "column";
+    t3 = 'column';
     if ($[19] !== topBorder) {
       t4 = <Text dimColor={true}>{topBorder}</Text>;
       $[19] = topBorder;
@@ -164,8 +171,16 @@ function PreviewBoxBody(t0) {
       t8 = (line_0, index) => {
         const lineWidth = stringWidth(line_0);
         const displayLine = lineWidth > innerWidth ? sliceAnsi(line_0, 0, innerWidth) : line_0;
-        const padding = " ".repeat(Math.max(0, innerWidth - stringWidth(displayLine)));
-        return <Box key={index} flexDirection="row"><Text dimColor={true}>{BOX_CHARS.vertical} </Text><Ansi>{displayLine}</Ansi><Text dimColor={true}>{padding} {BOX_CHARS.vertical}</Text></Box>;
+        const padding = ' '.repeat(Math.max(0, innerWidth - stringWidth(displayLine)));
+        return (
+          <Box key={index} flexDirection="row">
+            <Text dimColor={true}>{BOX_CHARS.vertical} </Text>
+            <Ansi>{displayLine}</Ansi>
+            <Text dimColor={true}>
+              {padding} {BOX_CHARS.vertical}
+            </Text>
+          </Box>
+        );
       };
       $[21] = innerWidth;
       $[22] = t8;
@@ -209,8 +224,22 @@ function PreviewBoxBody(t0) {
     t7 = $[26];
   }
   let t8;
-  if ($[27] !== T0 || $[28] !== t3 || $[29] !== t4 || $[30] !== t5 || $[31] !== t6 || $[32] !== t7) {
-    t8 = <T0 flexDirection={t3}>{t4}{t5}{t6}{t7}</T0>;
+  if (
+    $[27] !== T0 ||
+    $[28] !== t3 ||
+    $[29] !== t4 ||
+    $[30] !== t5 ||
+    $[31] !== t6 ||
+    $[32] !== t7
+  ) {
+    t8 = (
+      <T0 flexDirection={t3}>
+        {t4}
+        {t5}
+        {t6}
+        {t7}
+      </T0>
+    );
     $[27] = T0;
     $[28] = t3;
     $[29] = t4;

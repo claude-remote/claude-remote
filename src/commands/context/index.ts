@@ -1,5 +1,5 @@
-import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
-import type { Command } from '../../commands.js'
+import { getIsNonInteractiveSession } from '../../bootstrap/state.js';
+import type { Command } from '../../commands.js';
 
 export const context: Command = {
   name: 'context',
@@ -7,7 +7,7 @@ export const context: Command = {
   isEnabled: () => !getIsNonInteractiveSession(),
   type: 'local-jsx',
   load: () => import('./context.js'),
-}
+};
 
 export const contextNonInteractive: Command = {
   type: 'local',
@@ -15,10 +15,10 @@ export const contextNonInteractive: Command = {
   supportsNonInteractive: true,
   description: 'Show current context usage',
   get isHidden() {
-    return !getIsNonInteractiveSession()
+    return !getIsNonInteractiveSession();
   },
   isEnabled() {
-    return getIsNonInteractiveSession()
+    return getIsNonInteractiveSession();
   },
   load: () => import('./context-noninteractive.js'),
-}
+};

@@ -6,33 +6,23 @@
  * identifies boundaries for use by keyboard input parsing.
  */
 
-import { C0, ESC_TYPE, isEscFinal } from './ansi.js'
-import { isCSIFinal, isCSIIntermediate, isCSIParam } from './csi.js'
+import { C0, ESC_TYPE, isEscFinal } from './ansi.js';
+import { isCSIFinal, isCSIIntermediate, isCSIParam } from './csi.js';
 
-export type Token =
-  | { type: 'text'; value: string }
-  | { type: 'sequence'; value: string }
+export type Token = { type: 'text'; value: string } | { type: 'sequence'; value: string };
 
-type State =
-  | 'ground'
-  | 'escape'
-  | 'escapeIntermediate'
-  | 'csi'
-  | 'ss3'
-  | 'osc'
-  | 'dcs'
-  | 'apc'
+type State = 'ground' | 'escape' | 'escapeIntermediate' | 'csi' | 'ss3' | 'osc' | 'dcs' | 'apc';
 
 export type Tokenizer = {
   /** Feed input and get resulting tokens */
-  feed(input: string): Token[]
+  feed(input: string): Token[];
   /** Flush any buffered incomplete sequences */
-  flush(): Token[]
+  flush(): Token[];
   /** Reset tokenizer state */
-  reset(): void
+  reset(): void;
   /** Get any buffered incomplete sequence */
-  buffer(): string
-}
+  buffer(): string;
+};
 
 type TokenizerOptions = {
   /**
@@ -40,8 +30,8 @@ type TokenizerOptions = {
    * Only enable for stdin input — `\x1b[M` is also CSI DL (Delete Lines) in
    * output streams, and enabling this there swallows display text. Default false.
    */
-  x10Mouse?: boolean
-}
+  x10Mouse?: boolean;
+};
 
 /**
  * Create a streaming tokenizer for terminal input.
@@ -55,46 +45,40 @@ type TokenizerOptions = {
  * ```
  */
 export function createTokenizer(options?: TokenizerOptions): Tokenizer {
-  let currentState: State = 'ground'
-  let currentBuffer = ''
-  const x10Mouse = options?.x10Mouse ?? false
+  let currentState: State = 'ground';
+  let currentBuffer = '';
+  const x10Mouse = options?.x10Mouse ?? false;
 
   return {
     feed(input: string): Token[] {
-      const result = tokenize(
-        input,
-        currentState,
-        currentBuffer,
-        false,
-        x10Mouse,
-      )
-      currentState = result.state.state
-      currentBuffer = result.state.buffer
-      return result.tokens
+      const result = tokenize(input, currentState, currentBuffer, false, x10Mouse);
+      currentState = result.state.state;
+      currentBuffer = result.state.buffer;
+      return result.tokens;
     },
 
     flush(): Token[] {
-      const result = tokenize('', currentState, currentBuffer, true, x10Mouse)
-      currentState = result.state.state
-      currentBuffer = result.state.buffer
-      return result.tokens
+      const result = tokenize('', currentState, currentBuffer, true, x10Mouse);
+      currentState = result.state.state;
+      currentBuffer = result.state.buffer;
+      return result.tokens;
     },
 
     reset(): void {
-      currentState = 'ground'
-      currentBuffer = ''
+      currentState = 'ground';
+      currentBuffer = '';
     },
 
     buffer(): string {
-      return currentBuffer
+      return currentBuffer;
     },
-  }
+  };
 }
 
 type InternalState = {
-  state: State
-  buffer: string
-}
+  state: State;
+  buffer: string;
+};
 
 function tokenize(
   input: string,
@@ -103,103 +87,103 @@ function tokenize(
   flush: boolean,
   x10Mouse: boolean,
 ): { tokens: Token[]; state: InternalState } {
-  const tokens: Token[] = []
+  const tokens: Token[] = [];
   const result: InternalState = {
     state: initialState,
     buffer: '',
-  }
+  };
 
-  const data = initialBuffer + input
-  let i = 0
-  let textStart = 0
-  let seqStart = 0
+  const data = initialBuffer + input;
+  let i = 0;
+  let textStart = 0;
+  let seqStart = 0;
 
   const flushText = (): void => {
     if (i > textStart) {
-      const text = data.slice(textStart, i)
+      const text = data.slice(textStart, i);
       if (text) {
-        tokens.push({ type: 'text', value: text })
+        tokens.push({ type: 'text', value: text });
       }
     }
-    textStart = i
-  }
+    textStart = i;
+  };
 
   const emitSequence = (seq: string): void => {
     if (seq) {
-      tokens.push({ type: 'sequence', value: seq })
+      tokens.push({ type: 'sequence', value: seq });
     }
-    result.state = 'ground'
-    textStart = i
-  }
+    result.state = 'ground';
+    textStart = i;
+  };
 
   while (i < data.length) {
-    const code = data.charCodeAt(i)
+    const code = data.charCodeAt(i);
 
     switch (result.state) {
       case 'ground':
         if (code === C0.ESC) {
-          flushText()
-          seqStart = i
-          result.state = 'escape'
-          i++
+          flushText();
+          seqStart = i;
+          result.state = 'escape';
+          i++;
         } else {
-          i++
+          i++;
         }
-        break
+        break;
 
       case 'escape':
         if (code === ESC_TYPE.CSI) {
-          result.state = 'csi'
-          i++
+          result.state = 'csi';
+          i++;
         } else if (code === ESC_TYPE.OSC) {
-          result.state = 'osc'
-          i++
+          result.state = 'osc';
+          i++;
         } else if (code === ESC_TYPE.DCS) {
-          result.state = 'dcs'
-          i++
+          result.state = 'dcs';
+          i++;
         } else if (code === ESC_TYPE.APC) {
-          result.state = 'apc'
-          i++
+          result.state = 'apc';
+          i++;
         } else if (code === 0x4f) {
           // 'O' - SS3
-          result.state = 'ss3'
-          i++
+          result.state = 'ss3';
+          i++;
         } else if (isCSIIntermediate(code)) {
           // Intermediate byte (e.g., ESC ( for charset) - continue buffering
-          result.state = 'escapeIntermediate'
-          i++
+          result.state = 'escapeIntermediate';
+          i++;
         } else if (isEscFinal(code)) {
           // Two-character escape sequence
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else if (code === C0.ESC) {
           // Double escape - emit first, start new
-          emitSequence(data.slice(seqStart, i))
-          seqStart = i
-          result.state = 'escape'
-          i++
+          emitSequence(data.slice(seqStart, i));
+          seqStart = i;
+          result.state = 'escape';
+          i++;
         } else {
           // Invalid - treat ESC as text
-          result.state = 'ground'
-          textStart = seqStart
+          result.state = 'ground';
+          textStart = seqStart;
         }
-        break
+        break;
 
       case 'escapeIntermediate':
         // After intermediate byte(s), wait for final byte
         if (isCSIIntermediate(code)) {
           // More intermediate bytes
-          i++
+          i++;
         } else if (isEscFinal(code)) {
           // Final byte - complete the sequence
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else {
           // Invalid - treat as text
-          result.state = 'ground'
-          textStart = seqStart
+          result.state = 'ground';
+          textStart = seqStart;
         }
-        break
+        break;
 
       case 'csi':
         // X10 mouse: CSI M + 3 raw payload bytes (Cb+32, Cx+32, Cy+32).
@@ -234,86 +218,86 @@ function tokenize(
           (i + 3 >= data.length || data.charCodeAt(i + 3) >= 0x20)
         ) {
           if (i + 4 <= data.length) {
-            i += 4
-            emitSequence(data.slice(seqStart, i))
+            i += 4;
+            emitSequence(data.slice(seqStart, i));
           } else {
             // Incomplete — exit loop; end-of-input buffers from seqStart.
             // Re-entry re-tokenizes from ground via the invalid-CSI fallthrough.
-            i = data.length
+            i = data.length;
           }
-          break
+          break;
         }
         if (isCSIFinal(code)) {
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else if (isCSIParam(code) || isCSIIntermediate(code)) {
-          i++
+          i++;
         } else {
           // Invalid CSI - abort, treat as text
-          result.state = 'ground'
-          textStart = seqStart
+          result.state = 'ground';
+          textStart = seqStart;
         }
-        break
+        break;
 
       case 'ss3':
         // SS3 sequences: ESC O followed by a single final byte
         if (code >= 0x40 && code <= 0x7e) {
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else {
           // Invalid - treat as text
-          result.state = 'ground'
-          textStart = seqStart
+          result.state = 'ground';
+          textStart = seqStart;
         }
-        break
+        break;
 
       case 'osc':
         if (code === C0.BEL) {
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else if (
           code === C0.ESC &&
           i + 1 < data.length &&
           data.charCodeAt(i + 1) === ESC_TYPE.ST
         ) {
-          i += 2
-          emitSequence(data.slice(seqStart, i))
+          i += 2;
+          emitSequence(data.slice(seqStart, i));
         } else {
-          i++
+          i++;
         }
-        break
+        break;
 
       case 'dcs':
       case 'apc':
         if (code === C0.BEL) {
-          i++
-          emitSequence(data.slice(seqStart, i))
+          i++;
+          emitSequence(data.slice(seqStart, i));
         } else if (
           code === C0.ESC &&
           i + 1 < data.length &&
           data.charCodeAt(i + 1) === ESC_TYPE.ST
         ) {
-          i += 2
-          emitSequence(data.slice(seqStart, i))
+          i += 2;
+          emitSequence(data.slice(seqStart, i));
         } else {
-          i++
+          i++;
         }
-        break
+        break;
     }
   }
 
   // Handle end of input
   if (result.state === 'ground') {
-    flushText()
+    flushText();
   } else if (flush) {
     // Force output incomplete sequence
-    const remaining = data.slice(seqStart)
-    if (remaining) tokens.push({ type: 'sequence', value: remaining })
-    result.state = 'ground'
+    const remaining = data.slice(seqStart);
+    if (remaining) tokens.push({ type: 'sequence', value: remaining });
+    result.state = 'ground';
   } else {
     // Buffer incomplete sequence for next call
-    result.buffer = data.slice(seqStart)
+    result.buffer = data.slice(seqStart);
   }
 
-  return { tokens, state: result }
+  return { tokens, state: result };
 }

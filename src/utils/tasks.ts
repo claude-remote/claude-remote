@@ -1,39 +1,39 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
-import { z } from 'zod/v4'
-import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
-import { uniq } from './array.js'
-import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir, getTeamsDir, isEnvTruthy } from './envUtils.js'
-import { errorMessage, getErrnoCode } from './errors.js'
-import { lazySchema } from './lazySchema.js'
-import * as lockfile from './lockfile.js'
-import { logError } from './log.js'
-import { createSignal } from './signal.js'
-import { jsonParse, jsonStringify } from './slowOperations.js'
-import { getTeamName } from './teammate.js'
-import { getTeammateContext } from './teammateContext.js'
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { z } from 'zod/v4';
+import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js';
+import { uniq } from './array.js';
+import { logForDebugging } from './debug.js';
+import { getClaudeConfigHomeDir, getTeamsDir, isEnvTruthy } from './envUtils.js';
+import { errorMessage, getErrnoCode } from './errors.js';
+import { lazySchema } from './lazySchema.js';
+import * as lockfile from './lockfile.js';
+import { logError } from './log.js';
+import { createSignal } from './signal.js';
+import { jsonParse, jsonStringify } from './slowOperations.js';
+import { getTeamName } from './teammate.js';
+import { getTeammateContext } from './teammateContext.js';
 
 // Listeners for task list updates (used for immediate UI refresh in same process)
-const tasksUpdated = createSignal()
+const tasksUpdated = createSignal();
 
 /**
  * Team name set by the leader when creating a team.
  * Used by getTaskListId() so the leader's tasks are stored under the team name
  * (matching where tmux/iTerm2 teammates look), not under the session ID.
  */
-let leaderTeamName: string | undefined
+let leaderTeamName: string | undefined;
 
 /**
  * Sets the leader's team name for task list resolution.
  * Called by TeamCreateTool when a team is created.
  */
 export function setLeaderTeamName(teamName: string): void {
-  if (leaderTeamName === teamName) return
-  leaderTeamName = teamName
+  if (leaderTeamName === teamName) return;
+  leaderTeamName = teamName;
   // Changing the task list ID is a "tasks updated" event for subscribers —
   // they're now looking at a different directory.
-  notifyTasksUpdated()
+  notifyTasksUpdated();
 }
 
 /**
@@ -41,16 +41,16 @@ export function setLeaderTeamName(teamName: string): void {
  * Called when a team is deleted.
  */
 export function clearLeaderTeamName(): void {
-  if (leaderTeamName === undefined) return
-  leaderTeamName = undefined
-  notifyTasksUpdated()
+  if (leaderTeamName === undefined) return;
+  leaderTeamName = undefined;
+  notifyTasksUpdated();
 }
 
 /**
  * Register a listener to be called when tasks are updated in this process.
  * Returns an unsubscribe function.
  */
-export const onTasksUpdated = tasksUpdated.subscribe
+export const onTasksUpdated = tasksUpdated.subscribe;
 
 /**
  * Notify listeners that tasks have been updated.
@@ -60,18 +60,16 @@ export const onTasksUpdated = tasksUpdated.subscribe
  */
 export function notifyTasksUpdated(): void {
   try {
-    tasksUpdated.emit()
+    tasksUpdated.emit();
   } catch {
     // Ignore listener errors — task mutations must not fail due to notification issues
   }
 }
 
-export const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const
+export const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const;
 
-export const TaskStatusSchema = lazySchema(() =>
-  z.enum(['pending', 'in_progress', 'completed']),
-)
-export type TaskStatus = z.infer<ReturnType<typeof TaskStatusSchema>>
+export const TaskStatusSchema = lazySchema(() => z.enum(['pending', 'in_progress', 'completed']));
+export type TaskStatus = z.infer<ReturnType<typeof TaskStatusSchema>>;
 
 export const TaskSchema = lazySchema(() =>
   z.object({
@@ -85,11 +83,11 @@ export const TaskSchema = lazySchema(() =>
     blockedBy: z.array(z.string()), // task IDs that block this task
     metadata: z.record(z.string(), z.unknown()).optional(), // arbitrary metadata
   }),
-)
-export type Task = z.infer<ReturnType<typeof TaskSchema>>
+);
+export type Task = z.infer<ReturnType<typeof TaskSchema>>;
 
 // High water mark file name - stores the maximum task ID ever assigned
-const HIGH_WATER_MARK_FILE = '.highwatermark'
+const HIGH_WATER_MARK_FILE = '.highwatermark';
 
 // Lock options: retry with backoff so concurrent callers (multiple Claudes
 // in a swarm) wait for the lock instead of failing immediately. The sync
@@ -105,37 +103,34 @@ const LOCK_OPTIONS = {
     minTimeout: 5,
     maxTimeout: 100,
   },
-}
+};
 
 function getHighWaterMarkPath(taskListId: string): string {
-  return join(getTasksDir(taskListId), HIGH_WATER_MARK_FILE)
+  return join(getTasksDir(taskListId), HIGH_WATER_MARK_FILE);
 }
 
 async function readHighWaterMark(taskListId: string): Promise<number> {
-  const path = getHighWaterMarkPath(taskListId)
+  const path = getHighWaterMarkPath(taskListId);
   try {
-    const content = (await readFile(path, 'utf-8')).trim()
-    const value = parseInt(content, 10)
-    return isNaN(value) ? 0 : value
+    const content = (await readFile(path, 'utf-8')).trim();
+    const value = Number.parseInt(content, 10);
+    return Number.isNaN(value) ? 0 : value;
   } catch {
-    return 0
+    return 0;
   }
 }
 
-async function writeHighWaterMark(
-  taskListId: string,
-  value: number,
-): Promise<void> {
-  const path = getHighWaterMarkPath(taskListId)
-  await writeFile(path, String(value))
+async function writeHighWaterMark(taskListId: string, value: number): Promise<void> {
+  const path = getHighWaterMarkPath(taskListId);
+  await writeFile(path, String(value));
 }
 
 export function isTodoV2Enabled(): boolean {
   // Force-enable tasks in non-interactive mode (e.g. SDK users who want Task tools over TodoWrite)
   if (isEnvTruthy(process.env.CLAUDE_CODE_ENABLE_TASKS)) {
-    return true
+    return true;
   }
-  return !getIsNonInteractiveSession()
+  return !getIsNonInteractiveSession();
 }
 
 /**
@@ -145,44 +140,44 @@ export function isTodoV2Enabled(): boolean {
  * Uses file locking to prevent race conditions when multiple Claudes run in parallel.
  */
 export async function resetTaskList(taskListId: string): Promise<void> {
-  const dir = getTasksDir(taskListId)
-  const lockPath = await ensureTaskListLockFile(taskListId)
+  const dir = getTasksDir(taskListId);
+  const lockPath = await ensureTaskListLockFile(taskListId);
 
-  let release: (() => Promise<void>) | undefined
+  let release: (() => Promise<void>) | undefined;
   try {
     // Acquire exclusive lock on the task list
-    release = await lockfile.lock(lockPath, LOCK_OPTIONS)
+    release = await lockfile.lock(lockPath, LOCK_OPTIONS);
 
     // Find the current highest ID and save it to the high water mark file
-    const currentHighest = await findHighestTaskIdFromFiles(taskListId)
+    const currentHighest = await findHighestTaskIdFromFiles(taskListId);
     if (currentHighest > 0) {
-      const existingMark = await readHighWaterMark(taskListId)
+      const existingMark = await readHighWaterMark(taskListId);
       if (currentHighest > existingMark) {
-        await writeHighWaterMark(taskListId, currentHighest)
+        await writeHighWaterMark(taskListId, currentHighest);
       }
     }
 
     // Delete all task files
-    let files: string[]
+    let files: string[];
     try {
-      files = await readdir(dir)
+      files = await readdir(dir);
     } catch {
-      files = []
+      files = [];
     }
     for (const file of files) {
       if (file.endsWith('.json') && !file.startsWith('.')) {
-        const filePath = join(dir, file)
+        const filePath = join(dir, file);
         try {
-          await unlink(filePath)
+          await unlink(filePath);
         } catch {
           // Ignore errors, file may already be deleted
         }
       }
     }
-    notifyTasksUpdated()
+    notifyTasksUpdated();
   } finally {
     if (release) {
-      await release()
+      await release();
     }
   }
 }
@@ -198,15 +193,15 @@ export async function resetTaskList(taskListId: string): Promise<void> {
  */
 export function getTaskListId(): string {
   if (process.env.CLAUDE_CODE_TASK_LIST_ID) {
-    return process.env.CLAUDE_CODE_TASK_LIST_ID
+    return process.env.CLAUDE_CODE_TASK_LIST_ID;
   }
   // In-process teammates use the leader's team name so they share the same
   // task list that tmux/iTerm2 teammates also resolve to.
-  const teammateCtx = getTeammateContext()
+  const teammateCtx = getTeammateContext();
   if (teammateCtx) {
-    return teammateCtx.teamName
+    return teammateCtx.teamName;
   }
-  return getTeamName() || leaderTeamName || getSessionId()
+  return getTeamName() || leaderTeamName || getSessionId();
 }
 
 /**
@@ -215,25 +210,21 @@ export function getTaskListId(): string {
  * Only allows alphanumeric characters, hyphens, and underscores.
  */
 export function sanitizePathComponent(input: string): string {
-  return input.replace(/[^a-zA-Z0-9_-]/g, '-')
+  return input.replace(/[^a-zA-Z0-9_-]/g, '-');
 }
 
 export function getTasksDir(taskListId: string): string {
-  return join(
-    getClaudeConfigHomeDir(),
-    'tasks',
-    sanitizePathComponent(taskListId),
-  )
+  return join(getClaudeConfigHomeDir(), 'tasks', sanitizePathComponent(taskListId));
 }
 
 export function getTaskPath(taskListId: string, taskId: string): string {
-  return join(getTasksDir(taskListId), `${sanitizePathComponent(taskId)}.json`)
+  return join(getTasksDir(taskListId), `${sanitizePathComponent(taskId)}.json`);
 }
 
 export async function ensureTasksDir(taskListId: string): Promise<void> {
-  const dir = getTasksDir(taskListId)
+  const dir = getTasksDir(taskListId);
   try {
-    await mkdir(dir, { recursive: true })
+    await mkdir(dir, { recursive: true });
   } catch {
     // Directory already exists or creation failed; callers will surface
     // errors from subsequent operations.
@@ -244,24 +235,24 @@ export async function ensureTasksDir(taskListId: string): Promise<void> {
  * Finds the highest task ID from existing task files (not including high water mark).
  */
 async function findHighestTaskIdFromFiles(taskListId: string): Promise<number> {
-  const dir = getTasksDir(taskListId)
-  let files: string[]
+  const dir = getTasksDir(taskListId);
+  let files: string[];
   try {
-    files = await readdir(dir)
+    files = await readdir(dir);
   } catch {
-    return 0
+    return 0;
   }
-  let highest = 0
+  let highest = 0;
   for (const file of files) {
     if (!file.endsWith('.json')) {
-      continue
+      continue;
     }
-    const taskId = parseInt(file.replace('.json', ''), 10)
-    if (!isNaN(taskId) && taskId > highest) {
-      highest = taskId
+    const taskId = Number.parseInt(file.replace('.json', ''), 10);
+    if (!Number.isNaN(taskId) && taskId > highest) {
+      highest = taskId;
     }
   }
-  return highest
+  return highest;
 }
 
 /**
@@ -272,8 +263,8 @@ async function findHighestTaskId(taskListId: string): Promise<number> {
   const [fromFiles, fromMark] = await Promise.all([
     findHighestTaskIdFromFiles(taskListId),
     readHighWaterMark(taskListId),
-  ])
-  return Math.max(fromFiles, fromMark)
+  ]);
+  return Math.max(fromFiles, fromMark);
 }
 
 /**
@@ -281,71 +272,61 @@ async function findHighestTaskId(taskListId: string): Promise<number> {
  * Uses file locking to prevent race conditions when multiple processes
  * create tasks concurrently.
  */
-export async function createTask(
-  taskListId: string,
-  taskData: Omit<Task, 'id'>,
-): Promise<string> {
-  const lockPath = await ensureTaskListLockFile(taskListId)
+export async function createTask(taskListId: string, taskData: Omit<Task, 'id'>): Promise<string> {
+  const lockPath = await ensureTaskListLockFile(taskListId);
 
-  let release: (() => Promise<void>) | undefined
+  let release: (() => Promise<void>) | undefined;
   try {
     // Acquire exclusive lock on the task list
-    release = await lockfile.lock(lockPath, LOCK_OPTIONS)
+    release = await lockfile.lock(lockPath, LOCK_OPTIONS);
 
     // Read highest ID from disk while holding the lock
-    const highestId = await findHighestTaskId(taskListId)
-    const id = String(highestId + 1)
-    const task: Task = { id, ...taskData }
-    const path = getTaskPath(taskListId, id)
-    await writeFile(path, jsonStringify(task, null, 2))
-    notifyTasksUpdated()
-    return id
+    const highestId = await findHighestTaskId(taskListId);
+    const id = String(highestId + 1);
+    const task: Task = { id, ...taskData };
+    const path = getTaskPath(taskListId, id);
+    await writeFile(path, jsonStringify(task, null, 2));
+    notifyTasksUpdated();
+    return id;
   } finally {
     if (release) {
-      await release()
+      await release();
     }
   }
 }
 
-export async function getTask(
-  taskListId: string,
-  taskId: string,
-): Promise<Task | null> {
-  const path = getTaskPath(taskListId, taskId)
+export async function getTask(taskListId: string, taskId: string): Promise<Task | null> {
+  const path = getTaskPath(taskListId, taskId);
   try {
-    const content = await readFile(path, 'utf-8')
-    const data = jsonParse(content) as { status?: string }
+    const content = await readFile(path, 'utf-8');
+    const data = jsonParse(content) as { status?: string };
 
     // TEMPORARY: Migrate old status names for existing sessions (ant-only)
     if (process.env.USER_TYPE === 'ant') {
-      if (data.status === 'open') data.status = 'pending'
-      else if (data.status === 'resolved') data.status = 'completed'
+      if (data.status === 'open') data.status = 'pending';
+      else if (data.status === 'resolved') data.status = 'completed';
       // Migrate development task statuses to in_progress
       else if (
         data.status &&
-        ['planning', 'implementing', 'reviewing', 'verifying'].includes(
-          data.status,
-        )
+        ['planning', 'implementing', 'reviewing', 'verifying'].includes(data.status)
       ) {
-        data.status = 'in_progress'
+        data.status = 'in_progress';
       }
     }
-    const parsed = TaskSchema().safeParse(data)
+    const parsed = TaskSchema().safeParse(data);
     if (!parsed.success) {
-      logForDebugging(
-        `[Tasks] Task ${taskId} failed schema validation: ${parsed.error.message}`,
-      )
-      return null
+      logForDebugging(`[Tasks] Task ${taskId} failed schema validation: ${parsed.error.message}`);
+      return null;
     }
-    return parsed.data
+    return parsed.data;
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return null
+      return null;
     }
-    logForDebugging(`[Tasks] Failed to read task ${taskId}: ${errorMessage(e)}`)
-    logError(e)
-    return null
+    logForDebugging(`[Tasks] Failed to read task ${taskId}: ${errorMessage(e)}`);
+    logError(e);
+    return null;
   }
 }
 
@@ -356,15 +337,15 @@ async function updateTaskUnsafe(
   taskId: string,
   updates: Partial<Omit<Task, 'id'>>,
 ): Promise<Task | null> {
-  const existing = await getTask(taskListId, taskId)
+  const existing = await getTask(taskListId, taskId);
   if (!existing) {
-    return null
+    return null;
   }
-  const updated: Task = { ...existing, ...updates, id: taskId }
-  const path = getTaskPath(taskListId, taskId)
-  await writeFile(path, jsonStringify(updated, null, 2))
-  notifyTasksUpdated()
-  return updated
+  const updated: Task = { ...existing, ...updates, id: taskId };
+  const path = getTaskPath(taskListId, taskId);
+  await writeFile(path, jsonStringify(updated, null, 2));
+  notifyTasksUpdated();
+  return updated;
 }
 
 export async function updateTask(
@@ -372,56 +353,53 @@ export async function updateTask(
   taskId: string,
   updates: Partial<Omit<Task, 'id'>>,
 ): Promise<Task | null> {
-  const path = getTaskPath(taskListId, taskId)
+  const path = getTaskPath(taskListId, taskId);
 
   // Check existence before locking — proper-lockfile throws if the
   // target file doesn't exist, and we want a clean null result.
-  const taskBeforeLock = await getTask(taskListId, taskId)
+  const taskBeforeLock = await getTask(taskListId, taskId);
   if (!taskBeforeLock) {
-    return null
+    return null;
   }
 
-  let release: (() => Promise<void>) | undefined
+  let release: (() => Promise<void>) | undefined;
   try {
-    release = await lockfile.lock(path, LOCK_OPTIONS)
-    return await updateTaskUnsafe(taskListId, taskId, updates)
+    release = await lockfile.lock(path, LOCK_OPTIONS);
+    return await updateTaskUnsafe(taskListId, taskId, updates);
   } finally {
-    await release?.()
+    await release?.();
   }
 }
 
-export async function deleteTask(
-  taskListId: string,
-  taskId: string,
-): Promise<boolean> {
-  const path = getTaskPath(taskListId, taskId)
+export async function deleteTask(taskListId: string, taskId: string): Promise<boolean> {
+  const path = getTaskPath(taskListId, taskId);
 
   try {
     // Update high water mark before deleting to prevent ID reuse
-    const numericId = parseInt(taskId, 10)
-    if (!isNaN(numericId)) {
-      const currentMark = await readHighWaterMark(taskListId)
+    const numericId = Number.parseInt(taskId, 10);
+    if (!Number.isNaN(numericId)) {
+      const currentMark = await readHighWaterMark(taskListId);
       if (numericId > currentMark) {
-        await writeHighWaterMark(taskListId, numericId)
+        await writeHighWaterMark(taskListId, numericId);
       }
     }
 
     // Delete the task file
     try {
-      await unlink(path)
+      await unlink(path);
     } catch (e) {
-      const code = getErrnoCode(e)
+      const code = getErrnoCode(e);
       if (code === 'ENOENT') {
-        return false
+        return false;
       }
-      throw e
+      throw e;
     }
 
     // Remove references to this task from other tasks
-    const allTasks = await listTasks(taskListId)
+    const allTasks = await listTasks(taskListId);
     for (const task of allTasks) {
-      const newBlocks = task.blocks.filter(id => id !== taskId)
-      const newBlockedBy = task.blockedBy.filter(id => id !== taskId)
+      const newBlocks = task.blocks.filter((id) => id !== taskId);
+      const newBlockedBy = task.blockedBy.filter((id) => id !== taskId);
       if (
         newBlocks.length !== task.blocks.length ||
         newBlockedBy.length !== task.blockedBy.length
@@ -429,30 +407,28 @@ export async function deleteTask(
         await updateTask(taskListId, task.id, {
           blocks: newBlocks,
           blockedBy: newBlockedBy,
-        })
+        });
       }
     }
 
-    notifyTasksUpdated()
-    return true
+    notifyTasksUpdated();
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
 export async function listTasks(taskListId: string): Promise<Task[]> {
-  const dir = getTasksDir(taskListId)
-  let files: string[]
+  const dir = getTasksDir(taskListId);
+  let files: string[];
   try {
-    files = await readdir(dir)
+    files = await readdir(dir);
   } catch {
-    return []
+    return [];
   }
-  const taskIds = files
-    .filter(f => f.endsWith('.json'))
-    .map(f => f.replace('.json', ''))
-  const results = await Promise.all(taskIds.map(id => getTask(taskListId, id)))
-  return results.filter((t): t is Task => t !== null)
+  const taskIds = files.filter((f) => f.endsWith('.json')).map((f) => f.replace('.json', ''));
+  const results = await Promise.all(taskIds.map((id) => getTask(taskListId, id)));
+  return results.filter((t): t is Task => t !== null);
 }
 
 export async function blockTask(
@@ -463,63 +439,58 @@ export async function blockTask(
   const [fromTask, toTask] = await Promise.all([
     getTask(taskListId, fromTaskId),
     getTask(taskListId, toTaskId),
-  ])
+  ]);
   if (!fromTask || !toTask) {
-    return false
+    return false;
   }
 
   // Update source task: A blocks B
   if (!fromTask.blocks.includes(toTaskId)) {
     await updateTask(taskListId, fromTaskId, {
       blocks: [...fromTask.blocks, toTaskId],
-    })
+    });
   }
 
   // Update target task: B is blockedBy A
   if (!toTask.blockedBy.includes(fromTaskId)) {
     await updateTask(taskListId, toTaskId, {
       blockedBy: [...toTask.blockedBy, fromTaskId],
-    })
+    });
   }
 
-  return true
+  return true;
 }
 
 export type ClaimTaskResult = {
-  success: boolean
-  reason?:
-    | 'task_not_found'
-    | 'already_claimed'
-    | 'already_resolved'
-    | 'blocked'
-    | 'agent_busy'
-  task?: Task
-  busyWithTasks?: string[] // task IDs the agent is busy with (when reason is 'agent_busy')
-  blockedByTasks?: string[] // task IDs blocking this task (when reason is 'blocked')
-}
+  success: boolean;
+  reason?: 'task_not_found' | 'already_claimed' | 'already_resolved' | 'blocked' | 'agent_busy';
+  task?: Task;
+  busyWithTasks?: string[]; // task IDs the agent is busy with (when reason is 'agent_busy')
+  blockedByTasks?: string[]; // task IDs blocking this task (when reason is 'blocked')
+};
 
 /**
  * Gets the lock file path for a task list (used for list-level locking)
  */
 function getTaskListLockPath(taskListId: string): string {
-  return join(getTasksDir(taskListId), '.lock')
+  return join(getTasksDir(taskListId), '.lock');
 }
 
 /**
  * Ensures the lock file exists for a task list
  */
 async function ensureTaskListLockFile(taskListId: string): Promise<string> {
-  await ensureTasksDir(taskListId)
-  const lockPath = getTaskListLockPath(taskListId)
+  await ensureTasksDir(taskListId);
+  const lockPath = getTaskListLockPath(taskListId);
   // proper-lockfile requires the target file to exist. Create it with the
   // 'wx' flag (write-exclusive) so concurrent callers don't both create it,
   // and the first one to create wins silently.
   try {
-    await writeFile(lockPath, '', { flag: 'wx' })
+    await writeFile(lockPath, '', { flag: 'wx' });
   } catch {
     // EEXIST or other — file already exists, which is fine.
   }
-  return lockPath
+  return lockPath;
 }
 
 export type ClaimTaskOptions = {
@@ -528,8 +499,8 @@ export type ClaimTaskOptions = {
    * before allowing the claim. This check is performed atomically with the claim
    * using a task-list-level lock to prevent TOCTOU race conditions.
    */
-  checkAgentBusy?: boolean
-}
+  checkAgentBusy?: boolean;
+};
 
 /**
  * Attempts to claim a task for an agent with file locking to prevent race conditions.
@@ -544,69 +515,65 @@ export async function claimTask(
   claimantAgentId: string,
   options: ClaimTaskOptions = {},
 ): Promise<ClaimTaskResult> {
-  const taskPath = getTaskPath(taskListId, taskId)
+  const taskPath = getTaskPath(taskListId, taskId);
 
   // Check existence before locking — proper-lockfile.lock throws if the
   // target file doesn't exist, and we want a clean task_not_found result.
-  const taskBeforeLock = await getTask(taskListId, taskId)
+  const taskBeforeLock = await getTask(taskListId, taskId);
   if (!taskBeforeLock) {
-    return { success: false, reason: 'task_not_found' }
+    return { success: false, reason: 'task_not_found' };
   }
 
   // If we need to check agent busy status, use task-list-level lock
   // to prevent TOCTOU race conditions
   if (options.checkAgentBusy) {
-    return claimTaskWithBusyCheck(taskListId, taskId, claimantAgentId)
+    return claimTaskWithBusyCheck(taskListId, taskId, claimantAgentId);
   }
 
   // Otherwise, use task-level lock (original behavior)
-  let release: (() => Promise<void>) | undefined
+  let release: (() => Promise<void>) | undefined;
   try {
     // Acquire exclusive lock on the task file
-    release = await lockfile.lock(taskPath, LOCK_OPTIONS)
+    release = await lockfile.lock(taskPath, LOCK_OPTIONS);
 
     // Read current task state
-    const task = await getTask(taskListId, taskId)
+    const task = await getTask(taskListId, taskId);
     if (!task) {
-      return { success: false, reason: 'task_not_found' }
+      return { success: false, reason: 'task_not_found' };
     }
 
     // Check if already claimed by another agent
     if (task.owner && task.owner !== claimantAgentId) {
-      return { success: false, reason: 'already_claimed', task }
+      return { success: false, reason: 'already_claimed', task };
     }
 
     // Check if already resolved
     if (task.status === 'completed') {
-      return { success: false, reason: 'already_resolved', task }
+      return { success: false, reason: 'already_resolved', task };
     }
 
     // Check for unresolved blockers (open or in_progress tasks block)
-    const allTasks = await listTasks(taskListId)
+    const allTasks = await listTasks(taskListId);
     const unresolvedTaskIds = new Set(
-      allTasks.filter(t => t.status !== 'completed').map(t => t.id),
-    )
-    const blockedByTasks = task.blockedBy.filter(id =>
-      unresolvedTaskIds.has(id),
-    )
+      allTasks.filter((t) => t.status !== 'completed').map((t) => t.id),
+    );
+    const blockedByTasks = task.blockedBy.filter((id) => unresolvedTaskIds.has(id));
     if (blockedByTasks.length > 0) {
-      return { success: false, reason: 'blocked', task, blockedByTasks }
+      return { success: false, reason: 'blocked', task, blockedByTasks };
     }
 
     // Claim the task (already holding taskPath lock — use unsafe variant)
     const updated = await updateTaskUnsafe(taskListId, taskId, {
       owner: claimantAgentId,
-    })
-    return { success: true, task: updated! }
+    });
+    return { success: true, task: updated! };
   } catch (error) {
-    logForDebugging(
-      `[Tasks] Failed to claim task ${taskId}: ${errorMessage(error)}`,
-    )
-    logError(error)
-    return { success: false, reason: 'task_not_found' }
+    logForDebugging(`[Tasks] Failed to claim task ${taskId}: ${errorMessage(error)}`);
+    logError(error);
+    return { success: false, reason: 'task_not_found' };
   } finally {
     if (release) {
-      await release()
+      await release();
     }
   }
 }
@@ -620,73 +587,68 @@ async function claimTaskWithBusyCheck(
   taskId: string,
   claimantAgentId: string,
 ): Promise<ClaimTaskResult> {
-  const lockPath = await ensureTaskListLockFile(taskListId)
+  const lockPath = await ensureTaskListLockFile(taskListId);
 
-  let release: (() => Promise<void>) | undefined
+  let release: (() => Promise<void>) | undefined;
   try {
     // Acquire exclusive lock on the task list
-    release = await lockfile.lock(lockPath, LOCK_OPTIONS)
+    release = await lockfile.lock(lockPath, LOCK_OPTIONS);
 
     // Read all tasks to check agent status and task state atomically
-    const allTasks = await listTasks(taskListId)
+    const allTasks = await listTasks(taskListId);
 
     // Find the task we want to claim
-    const task = allTasks.find(t => t.id === taskId)
+    const task = allTasks.find((t) => t.id === taskId);
     if (!task) {
-      return { success: false, reason: 'task_not_found' }
+      return { success: false, reason: 'task_not_found' };
     }
 
     // Check if already claimed by another agent
     if (task.owner && task.owner !== claimantAgentId) {
-      return { success: false, reason: 'already_claimed', task }
+      return { success: false, reason: 'already_claimed', task };
     }
 
     // Check if already resolved
     if (task.status === 'completed') {
-      return { success: false, reason: 'already_resolved', task }
+      return { success: false, reason: 'already_resolved', task };
     }
 
     // Check for unresolved blockers (open or in_progress tasks block)
     const unresolvedTaskIds = new Set(
-      allTasks.filter(t => t.status !== 'completed').map(t => t.id),
-    )
-    const blockedByTasks = task.blockedBy.filter(id =>
-      unresolvedTaskIds.has(id),
-    )
+      allTasks.filter((t) => t.status !== 'completed').map((t) => t.id),
+    );
+    const blockedByTasks = task.blockedBy.filter((id) => unresolvedTaskIds.has(id));
     if (blockedByTasks.length > 0) {
-      return { success: false, reason: 'blocked', task, blockedByTasks }
+      return { success: false, reason: 'blocked', task, blockedByTasks };
     }
 
     // Check if agent is busy with other unresolved tasks
     const agentOpenTasks = allTasks.filter(
-      t =>
-        t.status !== 'completed' &&
-        t.owner === claimantAgentId &&
-        t.id !== taskId,
-    )
+      (t) => t.status !== 'completed' && t.owner === claimantAgentId && t.id !== taskId,
+    );
     if (agentOpenTasks.length > 0) {
       return {
         success: false,
         reason: 'agent_busy',
         task,
-        busyWithTasks: agentOpenTasks.map(t => t.id),
-      }
+        busyWithTasks: agentOpenTasks.map((t) => t.id),
+      };
     }
 
     // Claim the task
     const updated = await updateTask(taskListId, taskId, {
       owner: claimantAgentId,
-    })
-    return { success: true, task: updated! }
+    });
+    return { success: true, task: updated! };
   } catch (error) {
     logForDebugging(
       `[Tasks] Failed to claim task ${taskId} with busy check: ${errorMessage(error)}`,
-    )
-    logError(error)
-    return { success: false, reason: 'task_not_found' }
+    );
+    logError(error);
+    return { success: false, reason: 'task_not_found' };
   } finally {
     if (release) {
-      await release()
+      await release();
     }
   }
 }
@@ -695,27 +657,27 @@ async function claimTaskWithBusyCheck(
  * Team member info (subset of TeamFile member structure)
  */
 export type TeamMember = {
-  agentId: string
-  name: string
-  agentType?: string
-}
+  agentId: string;
+  name: string;
+  agentType?: string;
+};
 
 /**
  * Agent status based on task ownership
  */
 export type AgentStatus = {
-  agentId: string
-  name: string
-  agentType?: string
-  status: 'idle' | 'busy'
-  currentTasks: string[] // task IDs the agent owns
-}
+  agentId: string;
+  name: string;
+  agentType?: string;
+  status: 'idle' | 'busy';
+  currentTasks: string[]; // task IDs the agent owns
+};
 
 /**
  * Sanitizes a name for use in file paths
  */
 function sanitizeName(name: string): string {
-  return name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()
+  return name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 }
 
 /**
@@ -724,31 +686,29 @@ function sanitizeName(name: string): string {
 async function readTeamMembers(
   teamName: string,
 ): Promise<{ leadAgentId: string; members: TeamMember[] } | null> {
-  const teamsDir = getTeamsDir()
-  const teamFilePath = join(teamsDir, sanitizeName(teamName), 'config.json')
+  const teamsDir = getTeamsDir();
+  const teamFilePath = join(teamsDir, sanitizeName(teamName), 'config.json');
   try {
-    const content = await readFile(teamFilePath, 'utf-8')
+    const content = await readFile(teamFilePath, 'utf-8');
     const teamFile = jsonParse(content) as {
-      leadAgentId: string
-      members: TeamMember[]
-    }
+      leadAgentId: string;
+      members: TeamMember[];
+    };
     return {
       leadAgentId: teamFile.leadAgentId,
-      members: teamFile.members.map(m => ({
+      members: teamFile.members.map((m) => ({
         agentId: m.agentId,
         name: m.name,
         agentType: m.agentType,
       })),
-    }
+    };
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return null
+      return null;
     }
-    logForDebugging(
-      `[Tasks] Failed to read team file for ${teamName}: ${errorMessage(e)}`,
-    )
-    return null
+    logForDebugging(`[Tasks] Failed to read team file for ${teamName}: ${errorMessage(e)}`);
+    return null;
   }
 }
 
@@ -760,50 +720,48 @@ async function readTeamMembers(
  * @param teamName - The name of the team (also used as taskListId)
  * @returns Array of agent statuses, or null if team not found
  */
-export async function getAgentStatuses(
-  teamName: string,
-): Promise<AgentStatus[] | null> {
-  const teamData = await readTeamMembers(teamName)
+export async function getAgentStatuses(teamName: string): Promise<AgentStatus[] | null> {
+  const teamData = await readTeamMembers(teamName);
   if (!teamData) {
-    return null
+    return null;
   }
 
-  const taskListId = sanitizeName(teamName)
-  const allTasks = await listTasks(taskListId)
+  const taskListId = sanitizeName(teamName);
+  const allTasks = await listTasks(taskListId);
 
   // Get unresolved tasks grouped by owner (open or in_progress)
-  const unresolvedTasksByOwner = new Map<string, string[]>()
+  const unresolvedTasksByOwner = new Map<string, string[]>();
   for (const task of allTasks) {
     if (task.status !== 'completed' && task.owner) {
-      const existing = unresolvedTasksByOwner.get(task.owner) || []
-      existing.push(task.id)
-      unresolvedTasksByOwner.set(task.owner, existing)
+      const existing = unresolvedTasksByOwner.get(task.owner) || [];
+      existing.push(task.id);
+      unresolvedTasksByOwner.set(task.owner, existing);
     }
   }
 
   // Build status for each agent (leader is already in members)
-  return teamData.members.map(member => {
+  return teamData.members.map((member) => {
     // Check both name (new) and agentId (legacy) for backwards compatibility
-    const tasksByName = unresolvedTasksByOwner.get(member.name) || []
-    const tasksById = unresolvedTasksByOwner.get(member.agentId) || []
-    const currentTasks = uniq([...tasksByName, ...tasksById])
+    const tasksByName = unresolvedTasksByOwner.get(member.name) || [];
+    const tasksById = unresolvedTasksByOwner.get(member.agentId) || [];
+    const currentTasks = uniq([...tasksByName, ...tasksById]);
     return {
       agentId: member.agentId,
       name: member.name,
       agentType: member.agentType,
       status: currentTasks.length === 0 ? 'idle' : 'busy',
       currentTasks,
-    }
-  })
+    };
+  });
 }
 
 /**
  * Result of unassigning tasks from a teammate
  */
 export type UnassignTasksResult = {
-  unassignedTasks: Array<{ id: string; subject: string }>
-  notificationMessage: string
-}
+  unassignedTasks: Array<{ id: string; subject: string }>;
+  notificationMessage: string;
+};
 
 /**
  * Unassigns all open tasks from a teammate and builds a notification message.
@@ -821,42 +779,37 @@ export async function unassignTeammateTasks(
   teammateName: string,
   reason: 'terminated' | 'shutdown',
 ): Promise<UnassignTasksResult> {
-  const tasks = await listTasks(teamName)
+  const tasks = await listTasks(teamName);
   const unresolvedAssignedTasks = tasks.filter(
-    t =>
-      t.status !== 'completed' &&
-      (t.owner === teammateId || t.owner === teammateName),
-  )
+    (t) => t.status !== 'completed' && (t.owner === teammateId || t.owner === teammateName),
+  );
 
   // Unassign each task and reset status to open
   for (const task of unresolvedAssignedTasks) {
-    await updateTask(teamName, task.id, { owner: undefined, status: 'pending' })
+    await updateTask(teamName, task.id, { owner: undefined, status: 'pending' });
   }
 
   if (unresolvedAssignedTasks.length > 0) {
     logForDebugging(
       `[Tasks] Unassigned ${unresolvedAssignedTasks.length} task(s) from ${teammateName}`,
-    )
+    );
   }
 
   // Build notification message
-  const actionVerb =
-    reason === 'terminated' ? 'was terminated' : 'has shut down'
-  let notificationMessage = `${teammateName} ${actionVerb}.`
+  const actionVerb = reason === 'terminated' ? 'was terminated' : 'has shut down';
+  let notificationMessage = `${teammateName} ${actionVerb}.`;
   if (unresolvedAssignedTasks.length > 0) {
-    const taskList = unresolvedAssignedTasks
-      .map(t => `#${t.id} "${t.subject}"`)
-      .join(', ')
-    notificationMessage += ` ${unresolvedAssignedTasks.length} task(s) were unassigned: ${taskList}. Use TaskList to check availability and TaskUpdate with owner to reassign them to idle teammates.`
+    const taskList = unresolvedAssignedTasks.map((t) => `#${t.id} "${t.subject}"`).join(', ');
+    notificationMessage += ` ${unresolvedAssignedTasks.length} task(s) were unassigned: ${taskList}. Use TaskList to check availability and TaskUpdate with owner to reassign them to idle teammates.`;
   }
 
   return {
-    unassignedTasks: unresolvedAssignedTasks.map(t => ({
+    unassignedTasks: unresolvedAssignedTasks.map((t) => ({
       id: t.id,
       subject: t.subject,
     })),
     notificationMessage,
-  }
+  };
 }
 
-export const DEFAULT_TASKS_MODE_TASK_LIST_ID = 'tasklist'
+export const DEFAULT_TASKS_MODE_TASK_LIST_ID = 'tasklist';

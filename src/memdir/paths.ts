@@ -1,22 +1,12 @@
-import memoize from 'lodash-es/memoize.js'
-import { homedir } from 'os'
-import { isAbsolute, join, normalize, sep } from 'path'
-import {
-  getIsNonInteractiveSession,
-  getProjectRoot,
-} from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
-import {
-  getClaudeConfigHomeDir,
-  isEnvDefinedFalsy,
-  isEnvTruthy,
-} from '../utils/envUtils.js'
-import { findCanonicalGitRoot } from '../utils/git.js'
-import { sanitizePath } from '../utils/path.js'
-import {
-  getInitialSettings,
-  getSettingsForSource,
-} from '../utils/settings/settings.js'
+import { homedir } from 'node:os';
+import { isAbsolute, join, normalize, sep } from 'node:path';
+import memoize from 'lodash-es/memoize.js';
+import { getIsNonInteractiveSession, getProjectRoot } from '../bootstrap/state.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
+import { getClaudeConfigHomeDir, isEnvDefinedFalsy, isEnvTruthy } from '../utils/envUtils.js';
+import { findCanonicalGitRoot } from '../utils/git.js';
+import { sanitizePath } from '../utils/path.js';
+import { getInitialSettings, getSettingsForSource } from '../utils/settings/settings.js';
 
 /**
  * Whether auto-memory features are enabled (memdir, agent memory, past session search).
@@ -28,30 +18,27 @@ import {
  *   5. Default: enabled
  */
 export function isAutoMemoryEnabled(): boolean {
-  const envVal = process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY
+  const envVal = process.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY;
   if (isEnvTruthy(envVal)) {
-    return false
+    return false;
   }
   if (isEnvDefinedFalsy(envVal)) {
-    return true
+    return true;
   }
   // --bare / SIMPLE: prompts.ts already drops the memory section from the
   // system prompt via its SIMPLE early-return; this gate stops the other half
   // (extractMemories turn-end fork, autoDream, /remember, /dream, team sync).
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
-    return false
+    return false;
   }
-  if (
-    isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) &&
-    !process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR
-  ) {
-    return false
+  if (isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) && !process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR) {
+    return false;
   }
-  const settings = getInitialSettings()
+  const settings = getInitialSettings();
   if (settings.autoMemoryEnabled !== undefined) {
-    return settings.autoMemoryEnabled
+    return settings.autoMemoryEnabled;
   }
-  return true
+  return true;
 }
 
 /**
@@ -68,12 +55,12 @@ export function isAutoMemoryEnabled(): boolean {
  */
 export function isExtractModeActive(): boolean {
   if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_passport_quail', false)) {
-    return false
+    return false;
   }
   return (
     !getIsNonInteractiveSession() ||
     getFeatureValue_CACHED_MAY_BE_STALE('tengu_slate_thimble', false)
-  )
+  );
 }
 
 /**
@@ -84,13 +71,13 @@ export function isExtractModeActive(): boolean {
  */
 export function getMemoryBaseDir(): string {
   if (process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR) {
-    return process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR
+    return process.env.CLAUDE_CODE_REMOTE_MEMORY_DIR;
   }
-  return getClaudeConfigHomeDir()
+  return getClaudeConfigHomeDir();
 }
 
-const AUTO_MEM_DIRNAME = 'memory'
-const AUTO_MEM_ENTRYPOINT_NAME = 'MEMORY.md'
+const AUTO_MEM_DIRNAME = 'memory';
+const AUTO_MEM_ENTRYPOINT_NAME = 'MEMORY.md';
 
 /**
  * Normalize and validate a candidate auto-memory directory path.
@@ -106,36 +93,30 @@ const AUTO_MEM_ENTRYPOINT_NAME = 'MEMORY.md'
  * Returns the normalized path with exactly one trailing separator,
  * or undefined if the path is unset/empty/rejected.
  */
-function validateMemoryPath(
-  raw: string | undefined,
-  expandTilde: boolean,
-): string | undefined {
+function validateMemoryPath(raw: string | undefined, expandTilde: boolean): string | undefined {
   if (!raw) {
-    return undefined
+    return undefined;
   }
-  let candidate = raw
+  let candidate = raw;
   // Settings.json paths support ~/ expansion (user-friendly). The env var
   // override does not (it's set programmatically by Cowork/SDK, which should
   // always pass absolute paths). Bare "~", "~/", "~/.", "~/..", etc. are NOT
   // expanded — they would make isAutoMemPath() match all of $HOME or its
   // parent (same class of danger as "/" or "C:\").
-  if (
-    expandTilde &&
-    (candidate.startsWith('~/') || candidate.startsWith('~\\'))
-  ) {
-    const rest = candidate.slice(2)
+  if (expandTilde && (candidate.startsWith('~/') || candidate.startsWith('~\\'))) {
+    const rest = candidate.slice(2);
     // Reject trivial remainders that would expand to $HOME or an ancestor.
     // normalize('') = '.', normalize('.') = '.', normalize('foo/..') = '.',
     // normalize('..') = '..', normalize('foo/../..') = '..'
-    const restNorm = normalize(rest || '.')
+    const restNorm = normalize(rest || '.');
     if (restNorm === '.' || restNorm === '..') {
-      return undefined
+      return undefined;
     }
-    candidate = join(homedir(), rest)
+    candidate = join(homedir(), rest);
   }
   // normalize() may preserve a trailing separator; strip before adding
   // exactly one to match the trailing-sep contract of getAutoMemPath()
-  const normalized = normalize(candidate).replace(/[/\\]+$/, '')
+  const normalized = normalize(candidate).replace(/[/\\]+$/, '');
   if (
     !isAbsolute(normalized) ||
     normalized.length < 3 ||
@@ -144,9 +125,9 @@ function validateMemoryPath(
     normalized.startsWith('//') ||
     normalized.includes('\0')
   ) {
-    return undefined
+    return undefined;
   }
-  return (normalized + sep).normalize('NFC')
+  return (normalized + sep).normalize('NFC');
 }
 
 /**
@@ -159,10 +140,7 @@ function validateMemoryPath(
  * produce a different project-key for every session.
  */
 function getAutoMemPathOverride(): string | undefined {
-  return validateMemoryPath(
-    process.env.CLAUDE_COWORK_MEMORY_PATH_OVERRIDE,
-    false,
-  )
+  return validateMemoryPath(process.env.CLAUDE_COWORK_MEMORY_PATH_OVERRIDE, false);
 }
 
 /**
@@ -181,8 +159,8 @@ function getAutoMemPathSetting(): string | undefined {
     getSettingsForSource('policySettings')?.autoMemoryDirectory ??
     getSettingsForSource('flagSettings')?.autoMemoryDirectory ??
     getSettingsForSource('localSettings')?.autoMemoryDirectory ??
-    getSettingsForSource('userSettings')?.autoMemoryDirectory
-  return validateMemoryPath(dir, true)
+    getSettingsForSource('userSettings')?.autoMemoryDirectory;
+  return validateMemoryPath(dir, true);
 }
 
 /**
@@ -192,7 +170,7 @@ function getAutoMemPathSetting(): string | undefined {
  * memory prompt when a custom system prompt replaces the default.
  */
 export function hasAutoMemPathOverride(): boolean {
-  return getAutoMemPathOverride() !== undefined
+  return getAutoMemPathOverride() !== undefined;
 }
 
 /**
@@ -201,7 +179,7 @@ export function hasAutoMemPathOverride(): boolean {
  * same repo share one auto-memory directory (anthropics/claude-code#24382).
  */
 function getAutoMemBase(): string {
-  return findCanonicalGitRoot(getProjectRoot()) ?? getProjectRoot()
+  return findCanonicalGitRoot(getProjectRoot()) ?? getProjectRoot();
 }
 
 /**
@@ -222,17 +200,17 @@ function getAutoMemBase(): string {
  */
 export const getAutoMemPath = memoize(
   (): string => {
-    const override = getAutoMemPathOverride() ?? getAutoMemPathSetting()
+    const override = getAutoMemPathOverride() ?? getAutoMemPathSetting();
     if (override) {
-      return override
+      return override;
     }
-    const projectsDir = join(getMemoryBaseDir(), 'projects')
-    return (
-      join(projectsDir, sanitizePath(getAutoMemBase()), AUTO_MEM_DIRNAME) + sep
-    ).normalize('NFC')
+    const projectsDir = join(getMemoryBaseDir(), 'projects');
+    return (join(projectsDir, sanitizePath(getAutoMemBase()), AUTO_MEM_DIRNAME) + sep).normalize(
+      'NFC',
+    );
   },
   () => getProjectRoot(),
-)
+);
 
 /**
  * Returns the daily log file path for the given date (defaults to today).
@@ -244,10 +222,10 @@ export const getAutoMemPath = memoize(
  * topic files + MEMORY.md.
  */
 export function getAutoMemDailyLogPath(date: Date = new Date()): string {
-  const yyyy = date.getFullYear().toString()
-  const mm = (date.getMonth() + 1).toString().padStart(2, '0')
-  const dd = date.getDate().toString().padStart(2, '0')
-  return join(getAutoMemPath(), 'logs', yyyy, mm, `${yyyy}-${mm}-${dd}.md`)
+  const yyyy = date.getFullYear().toString();
+  const mm = (date.getMonth() + 1).toString().padStart(2, '0');
+  const dd = date.getDate().toString().padStart(2, '0');
+  return join(getAutoMemPath(), 'logs', yyyy, mm, `${yyyy}-${mm}-${dd}.md`);
 }
 
 /**
@@ -255,7 +233,7 @@ export function getAutoMemDailyLogPath(date: Date = new Date()): string {
  * Follows the same resolution order as getAutoMemPath().
  */
 export function getAutoMemEntrypoint(): string {
-  return join(getAutoMemPath(), AUTO_MEM_ENTRYPOINT_NAME)
+  return join(getAutoMemPath(), AUTO_MEM_ENTRYPOINT_NAME);
 }
 
 /**
@@ -273,6 +251,6 @@ export function getAutoMemEntrypoint(): string {
  */
 export function isAutoMemPath(absolutePath: string): boolean {
   // SECURITY: Normalize to prevent path traversal bypasses via .. segments
-  const normalizedPath = normalize(absolutePath)
-  return normalizedPath.startsWith(getAutoMemPath())
+  const normalizedPath = normalize(absolutePath);
+  return normalizedPath.startsWith(getAutoMemPath());
 }

@@ -13,7 +13,7 @@
  * dynamicTeamContext, then env vars.
  */
 
-import { AsyncLocalStorage } from 'async_hooks'
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 /**
  * Runtime context for in-process teammates.
@@ -21,31 +21,31 @@ import { AsyncLocalStorage } from 'async_hooks'
  */
 export type TeammateContext = {
   /** Full agent ID, e.g., "researcher@my-team" */
-  agentId: string
+  agentId: string;
   /** Display name, e.g., "researcher" */
-  agentName: string
+  agentName: string;
   /** Team name this teammate belongs to */
-  teamName: string
+  teamName: string;
   /** UI color assigned to this teammate */
-  color?: string
+  color?: string;
   /** Whether teammate must enter plan mode before implementing */
-  planModeRequired: boolean
+  planModeRequired: boolean;
   /** Leader's session ID (for transcript correlation) */
-  parentSessionId: string
+  parentSessionId: string;
   /** Discriminator - always true for in-process teammates */
-  isInProcess: true
+  isInProcess: true;
   /** Abort controller for lifecycle management (linked to parent) */
-  abortController: AbortController
-}
+  abortController: AbortController;
+};
 
-const teammateContextStorage = new AsyncLocalStorage<TeammateContext>()
+const teammateContextStorage = new AsyncLocalStorage<TeammateContext>();
 
 /**
  * Get the current in-process teammate context, if running as one.
  * Returns undefined if not running within an in-process teammate context.
  */
 export function getTeammateContext(): TeammateContext | undefined {
-  return teammateContextStorage.getStore()
+  return teammateContextStorage.getStore();
 }
 
 /**
@@ -56,11 +56,8 @@ export function getTeammateContext(): TeammateContext | undefined {
  * @param fn - The function to run with the context
  * @returns The return value of fn
  */
-export function runWithTeammateContext<T>(
-  context: TeammateContext,
-  fn: () => T,
-): T {
-  return teammateContextStorage.run(context, fn)
+export function runWithTeammateContext<T>(context: TeammateContext, fn: () => T): T {
+  return teammateContextStorage.run(context, fn);
 }
 
 /**
@@ -68,7 +65,7 @@ export function runWithTeammateContext<T>(
  * This is faster than getTeammateContext() !== undefined for simple checks.
  */
 export function isInProcessTeammate(): boolean {
-  return teammateContextStorage.getStore() !== undefined
+  return teammateContextStorage.getStore() !== undefined;
 }
 
 /**
@@ -81,16 +78,16 @@ export function isInProcessTeammate(): boolean {
  * @returns A complete TeammateContext with isInProcess: true
  */
 export function createTeammateContext(config: {
-  agentId: string
-  agentName: string
-  teamName: string
-  color?: string
-  planModeRequired: boolean
-  parentSessionId: string
-  abortController: AbortController
+  agentId: string;
+  agentName: string;
+  teamName: string;
+  color?: string;
+  planModeRequired: boolean;
+  parentSessionId: string;
+  abortController: AbortController;
 }): TeammateContext {
   return {
     ...config,
     isInProcess: true,
-  }
+  };
 }

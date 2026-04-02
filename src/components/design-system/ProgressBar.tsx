@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../../ink.js';
 import type { Theme } from '../../utils/theme.js';
 type Props = {
@@ -26,12 +26,7 @@ type Props = {
 const BLOCKS = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
 export function ProgressBar(t0) {
   const $ = _c(13);
-  const {
-    ratio: inputRatio,
-    width,
-    fillColor,
-    emptyColor
-  } = t0;
+  const { ratio: inputRatio, width, fillColor, emptyColor } = t0;
   const ratio = Math.min(1, Math.max(0, inputRatio));
   const whole = Math.floor(ratio * width);
   let t1;
@@ -70,10 +65,14 @@ export function ProgressBar(t0) {
   } else {
     segments = $[6];
   }
-  const t2 = segments.join("");
+  const t2 = segments.join('');
   let t3;
   if ($[9] !== emptyColor || $[10] !== fillColor || $[11] !== t2) {
-    t3 = <Text color={fillColor} backgroundColor={emptyColor}>{t2}</Text>;
+    t3 = (
+      <Text color={fillColor} backgroundColor={emptyColor}>
+        {t2}
+      </Text>
+    );
     $[9] = emptyColor;
     $[10] = fillColor;
     $[11] = t2;

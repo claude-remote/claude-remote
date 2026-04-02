@@ -1,13 +1,13 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js'
-import type { Command } from '../commands.js'
-import type { ToolUseContext } from '../Tool.js'
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.js';
+import type { ToolUseContext } from '../Tool.js';
+import type { Command } from '../commands.js';
 
 type Options = {
-  name: string
-  description: string
-  progressMessage: string
-  pluginName: string
-  pluginCommand: string
+  name: string;
+  description: string;
+  progressMessage: string;
+  pluginName: string;
+  pluginCommand: string;
   /**
    * The prompt to use while the marketplace is private.
    * External users will get this prompt. Once the marketplace is public,
@@ -16,8 +16,8 @@ type Options = {
   getPromptWhileMarketplaceIsPrivate: (
     args: string,
     context: ToolUseContext,
-  ) => Promise<ContentBlockParam[]>
-}
+  ) => Promise<ContentBlockParam[]>;
+};
 
 export function createMovedToPluginCommand({
   name,
@@ -34,13 +34,10 @@ export function createMovedToPluginCommand({
     progressMessage,
     contentLength: 0, // Dynamic content
     userFacingName() {
-      return name
+      return name;
     },
     source: 'builtin',
-    async getPromptForCommand(
-      args: string,
-      context: ToolUseContext,
-    ): Promise<ContentBlockParam[]> {
+    async getPromptForCommand(args: string, context: ToolUseContext): Promise<ContentBlockParam[]> {
       if (process.env.USER_TYPE === 'ant') {
         return [
           {
@@ -56,10 +53,10 @@ export function createMovedToPluginCommand({
 
 Do not attempt to run the command. Simply inform the user about the plugin installation.`,
           },
-        ]
+        ];
       }
 
-      return getPromptWhileMarketplaceIsPrivate(args, context)
+      return getPromptWhileMarketplaceIsPrivate(args, context);
     },
-  }
+  };
 }

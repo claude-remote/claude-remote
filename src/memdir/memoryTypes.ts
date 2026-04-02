@@ -11,14 +11,9 @@
  * trivial without reasoning through a helper's conditional rendering.
  */
 
-export const MEMORY_TYPES = [
-  'user',
-  'feedback',
-  'project',
-  'reference',
-] as const
+export const MEMORY_TYPES = ['user', 'feedback', 'project', 'reference'] as const;
 
-export type MemoryType = (typeof MEMORY_TYPES)[number]
+export type MemoryType = (typeof MEMORY_TYPES)[number];
 
 /**
  * Parse a raw frontmatter value into a MemoryType.
@@ -26,8 +21,8 @@ export type MemoryType = (typeof MEMORY_TYPES)[number]
  * `type:` field keep working, files with unknown types degrade gracefully.
  */
 export function parseMemoryType(raw: unknown): MemoryType | undefined {
-  if (typeof raw !== 'string') return undefined
-  return MEMORY_TYPES.find(t => t === raw)
+  if (typeof raw !== 'string') return undefined;
+  return MEMORY_TYPES.find((t) => t === raw);
 }
 
 /**
@@ -103,7 +98,7 @@ export const TYPES_SECTION_COMBINED: readonly string[] = [
   '</type>',
   '</types>',
   '',
-]
+];
 
 /**
  * `## Types of memory` section for INDIVIDUAL-ONLY mode (single directory).
@@ -175,7 +170,7 @@ export const TYPES_SECTION_INDIVIDUAL: readonly string[] = [
   '</type>',
   '</types>',
   '',
-]
+];
 
 /**
  * `## What NOT to save in memory` section. Identical across both modes.
@@ -192,14 +187,14 @@ export const WHAT_NOT_TO_SAVE_SECTION: readonly string[] = [
   // H2: explicit-save gate. Eval-validated (memory-prompt-iteration case 3,
   // 0/2 → 3/3): prevents "save this week's PR list" → activity-log noise.
   'These exclusions apply even when the user explicitly asks you to save. If they ask you to save a PR list or activity summary, ask what was *surprising* or *non-obvious* about it — that is the part worth keeping.',
-]
+];
 
 /**
  * Recall-side drift caveat. Single bullet under `## When to access memories`.
  * Proactive: verify memory against current state before answering.
  */
 export const MEMORY_DRIFT_CAVEAT =
-  '- Memory records can become stale over time. Use memory as context for what was true at a given point in time. Before answering the user or building assumptions based solely on information in memory records, verify that the memory is still correct and up-to-date by reading the current state of the files or resources. If a recalled memory conflicts with current information, trust what you observe now — and update or remove the stale memory rather than acting on it.'
+  '- Memory records can become stale over time. Use memory as context for what was true at a given point in time. Before answering the user or building assumptions based solely on information in memory records, verify that the memory is still correct and up-to-date by reading the current state of the files or resources. If a recalled memory conflicts with current information, trust what you observe now — and update or remove the stale memory rather than acting on it.';
 
 /**
  * `## When to access memories` section. Includes MEMORY_DRIFT_CAVEAT.
@@ -219,7 +214,7 @@ export const WHEN_TO_ACCESS_SECTION: readonly string[] = [
   '- You MUST access memory when the user explicitly asks you to check, recall, or remember.',
   '- If the user says to *ignore* or *not use* memory: proceed as if MEMORY.md were empty. Do not apply remembered facts, cite, compare against, or mention memory content.',
   MEMORY_DRIFT_CAVEAT,
-]
+];
 
 /**
  * `## Trusting what you recall` section. Heavier-weight guidance on HOW to
@@ -253,7 +248,7 @@ export const TRUSTING_RECALL_SECTION: readonly string[] = [
   '"The memory says X exists" is not the same as "X exists now."',
   '',
   'A memory that summarizes repo state (activity logs, architecture snapshots) is frozen in time. If the user asks about *recent* or *current* state, prefer `git log` or reading the code over recalling the snapshot.',
-]
+];
 
 /**
  * Frontmatter format example with the `type` field.
@@ -268,4 +263,4 @@ export const MEMORY_FRONTMATTER_EXAMPLE: readonly string[] = [
   '',
   '{{memory content — for feedback/project types, structure as: rule/fact, then **Why:** and **How to apply:** lines}}',
   '```',
-]
+];

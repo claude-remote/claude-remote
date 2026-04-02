@@ -8,14 +8,14 @@
 // local timezone — "0 9 * * *" means 9am wherever the CLI is running.
 
 export type CronFields = {
-  minute: number[]
-  hour: number[]
-  dayOfMonth: number[]
-  month: number[]
-  dayOfWeek: number[]
-}
+  minute: number[];
+  hour: number[];
+  dayOfMonth: number[];
+  month: number[];
+  dayOfWeek: number[];
+};
 
-type FieldRange = { min: number; max: number }
+type FieldRange = { min: number; max: number };
 
 const FIELD_RANGES: FieldRange[] = [
   { min: 0, max: 59 }, // minute
@@ -23,57 +23,57 @@ const FIELD_RANGES: FieldRange[] = [
   { min: 1, max: 31 }, // dayOfMonth
   { min: 1, max: 12 }, // month
   { min: 0, max: 6 }, // dayOfWeek (0=Sunday; 7 accepted as Sunday alias)
-]
+];
 
 // Parse a single cron field into a sorted array of matching values.
 // Supports: wildcard, N, star-slash-N (step), N-M (range), and comma-lists.
 // Returns null if invalid.
 function expandField(field: string, range: FieldRange): number[] | null {
-  const { min, max } = range
-  const out = new Set<number>()
+  const { min, max } = range;
+  const out = new Set<number>();
 
   for (const part of field.split(',')) {
     // wildcard or star-slash-N
-    const stepMatch = part.match(/^\*(?:\/(\d+))?$/)
+    const stepMatch = part.match(/^\*(?:\/(\d+))?$/);
     if (stepMatch) {
-      const step = stepMatch[1] ? parseInt(stepMatch[1], 10) : 1
-      if (step < 1) return null
-      for (let i = min; i <= max; i += step) out.add(i)
-      continue
+      const step = stepMatch[1] ? Number.parseInt(stepMatch[1], 10) : 1;
+      if (step < 1) return null;
+      for (let i = min; i <= max; i += step) out.add(i);
+      continue;
     }
 
     // N-M or N-M/S
-    const rangeMatch = part.match(/^(\d+)-(\d+)(?:\/(\d+))?$/)
+    const rangeMatch = part.match(/^(\d+)-(\d+)(?:\/(\d+))?$/);
     if (rangeMatch) {
-      const lo = parseInt(rangeMatch[1]!, 10)
-      const hi = parseInt(rangeMatch[2]!, 10)
-      const step = rangeMatch[3] ? parseInt(rangeMatch[3], 10) : 1
+      const lo = Number.parseInt(rangeMatch[1]!, 10);
+      const hi = Number.parseInt(rangeMatch[2]!, 10);
+      const step = rangeMatch[3] ? Number.parseInt(rangeMatch[3], 10) : 1;
       // dayOfWeek: accept 7 as Sunday alias in ranges (e.g. 5-7 = Fri,Sat,Sun → [5,6,0])
-      const isDow = min === 0 && max === 6
-      const effMax = isDow ? 7 : max
-      if (lo > hi || step < 1 || lo < min || hi > effMax) return null
+      const isDow = min === 0 && max === 6;
+      const effMax = isDow ? 7 : max;
+      if (lo > hi || step < 1 || lo < min || hi > effMax) return null;
       for (let i = lo; i <= hi; i += step) {
-        out.add(isDow && i === 7 ? 0 : i)
+        out.add(isDow && i === 7 ? 0 : i);
       }
-      continue
+      continue;
     }
 
     // plain N
-    const singleMatch = part.match(/^\d+$/)
+    const singleMatch = part.match(/^\d+$/);
     if (singleMatch) {
-      let n = parseInt(part, 10)
+      let n = Number.parseInt(part, 10);
       // dayOfWeek: accept 7 as Sunday alias → 0
-      if (min === 0 && max === 6 && n === 7) n = 0
-      if (n < min || n > max) return null
-      out.add(n)
-      continue
+      if (min === 0 && max === 6 && n === 7) n = 0;
+      if (n < min || n > max) return null;
+      out.add(n);
+      continue;
     }
 
-    return null
+    return null;
   }
 
-  if (out.size === 0) return null
-  return Array.from(out).sort((a, b) => a - b)
+  if (out.size === 0) return null;
+  return Array.from(out).sort((a, b) => a - b);
 }
 
 /**
@@ -81,14 +81,14 @@ function expandField(field: string, range: FieldRange): number[] | null {
  * Returns null if invalid or unsupported syntax.
  */
 export function parseCronExpression(expr: string): CronFields | null {
-  const parts = expr.trim().split(/\s+/)
-  if (parts.length !== 5) return null
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
 
-  const expanded: number[][] = []
+  const expanded: number[][] = [];
   for (let i = 0; i < 5; i++) {
-    const result = expandField(parts[i]!, FIELD_RANGES[i]!)
-    if (!result) return null
-    expanded.push(result)
+    const result = expandField(parts[i]!, FIELD_RANGES[i]!);
+    if (!result) return null;
+    expanded.push(result);
   }
 
   return {
@@ -97,7 +97,7 @@ export function parseCronExpression(expr: string): CronFields | null {
     dayOfMonth: expanded[2]!,
     month: expanded[3]!,
     dayOfWeek: expanded[4]!,
-  }
+  };
 }
 
 /**
@@ -116,37 +116,34 @@ export function parseCronExpression(expr: string): CronFields | null {
  * the gap. Fall-back repeats fire once (the step-forward logic jumps past
  * the second occurrence). This matches vixie-cron behavior.
  */
-export function computeNextCronRun(
-  fields: CronFields,
-  from: Date,
-): Date | null {
-  const minuteSet = new Set(fields.minute)
-  const hourSet = new Set(fields.hour)
-  const domSet = new Set(fields.dayOfMonth)
-  const monthSet = new Set(fields.month)
-  const dowSet = new Set(fields.dayOfWeek)
+export function computeNextCronRun(fields: CronFields, from: Date): Date | null {
+  const minuteSet = new Set(fields.minute);
+  const hourSet = new Set(fields.hour);
+  const domSet = new Set(fields.dayOfMonth);
+  const monthSet = new Set(fields.month);
+  const dowSet = new Set(fields.dayOfWeek);
 
   // Is the field wildcarded (full range)?
-  const domWild = fields.dayOfMonth.length === 31
-  const dowWild = fields.dayOfWeek.length === 7
+  const domWild = fields.dayOfMonth.length === 31;
+  const dowWild = fields.dayOfWeek.length === 7;
 
   // Round up to the next whole minute (strictly after `from`)
-  const t = new Date(from.getTime())
-  t.setSeconds(0, 0)
-  t.setMinutes(t.getMinutes() + 1)
+  const t = new Date(from.getTime());
+  t.setSeconds(0, 0);
+  t.setMinutes(t.getMinutes() + 1);
 
-  const maxIter = 366 * 24 * 60
+  const maxIter = 366 * 24 * 60;
   for (let i = 0; i < maxIter; i++) {
-    const month = t.getMonth() + 1
+    const month = t.getMonth() + 1;
     if (!monthSet.has(month)) {
       // Jump to start of next month
-      t.setMonth(t.getMonth() + 1, 1)
-      t.setHours(0, 0, 0, 0)
-      continue
+      t.setMonth(t.getMonth() + 1, 1);
+      t.setHours(0, 0, 0, 0);
+      continue;
     }
 
-    const dom = t.getDate()
-    const dow = t.getDay()
+    const dom = t.getDate();
+    const dow = t.getDay();
     // When both dom/dow are constrained, either match is sufficient (OR semantics)
     const dayMatches =
       domWild && dowWild
@@ -155,29 +152,29 @@ export function computeNextCronRun(
           ? dowSet.has(dow)
           : dowWild
             ? domSet.has(dom)
-            : domSet.has(dom) || dowSet.has(dow)
+            : domSet.has(dom) || dowSet.has(dow);
 
     if (!dayMatches) {
       // Jump to start of next day
-      t.setDate(t.getDate() + 1)
-      t.setHours(0, 0, 0, 0)
-      continue
+      t.setDate(t.getDate() + 1);
+      t.setHours(0, 0, 0, 0);
+      continue;
     }
 
     if (!hourSet.has(t.getHours())) {
-      t.setHours(t.getHours() + 1, 0, 0, 0)
-      continue
+      t.setHours(t.getHours() + 1, 0, 0, 0);
+      continue;
     }
 
     if (!minuteSet.has(t.getMinutes())) {
-      t.setMinutes(t.getMinutes() + 1)
-      continue
+      t.setMinutes(t.getMinutes() + 1);
+      continue;
     }
 
-    return t
+    return t;
   }
 
-  return null
+  return null;
 }
 
 // --- cronToHuman ------------------------------------------------------------
@@ -187,38 +184,30 @@ export function computeNextCronRun(
 // — that path translates UTC→local for display and needs midnight-crossing
 // logic for the weekday case. Local scheduled tasks (the default) need neither.
 
-const DAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function formatLocalTime(minute: number, hour: number): string {
   // January 1 — no DST gap anywhere. Using `new Date()` (today) would roll
   // 2am→3am on the one spring-forward day per year.
-  const d = new Date(2000, 0, 1, hour, minute)
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const d = new Date(2000, 0, 1, hour, minute);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function formatUtcTimeAsLocal(minute: number, hour: number): string {
   // Create a date in UTC and format in user's local timezone
-  const d = new Date()
-  d.setUTCHours(hour, minute, 0, 0)
+  const d = new Date();
+  d.setUTCHours(hour, minute, 0, 0);
   return d.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     timeZoneName: 'short',
-  })
+  });
 }
 
 export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
-  const utc = opts?.utc ?? false
-  const parts = cron.trim().split(/\s+/)
-  if (parts.length !== 5) return cron
+  const utc = opts?.utc ?? false;
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length !== 5) return cron;
 
   const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [
     string,
@@ -226,19 +215,13 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     string,
     string,
     string,
-  ]
+  ];
 
   // Every N minutes: step/N * * * *
-  const everyMinMatch = minute.match(/^\*\/(\d+)$/)
-  if (
-    everyMinMatch &&
-    hour === '*' &&
-    dayOfMonth === '*' &&
-    month === '*' &&
-    dayOfWeek === '*'
-  ) {
-    const n = parseInt(everyMinMatch[1]!, 10)
-    return n === 1 ? 'Every minute' : `Every ${n} minutes`
+  const everyMinMatch = minute.match(/^\*\/(\d+)$/);
+  if (everyMinMatch && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+    const n = Number.parseInt(everyMinMatch[1]!, 10);
+    return n === 1 ? 'Every minute' : `Every ${n} minutes`;
   }
 
   // Every hour: 0 * * * *
@@ -249,13 +232,13 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     month === '*' &&
     dayOfWeek === '*'
   ) {
-    const m = parseInt(minute, 10)
-    if (m === 0) return 'Every hour'
-    return `Every hour at :${m.toString().padStart(2, '0')}`
+    const m = Number.parseInt(minute, 10);
+    if (m === 0) return 'Every hour';
+    return `Every hour at :${m.toString().padStart(2, '0')}`;
   }
 
   // Every N hours: 0 step/N * * *
-  const everyHourMatch = hour.match(/^\*\/(\d+)$/)
+  const everyHourMatch = hour.match(/^\*\/(\d+)$/);
   if (
     minute.match(/^\d+$/) &&
     everyHourMatch &&
@@ -263,46 +246,46 @@ export function cronToHuman(cron: string, opts?: { utc?: boolean }): string {
     month === '*' &&
     dayOfWeek === '*'
   ) {
-    const n = parseInt(everyHourMatch[1]!, 10)
-    const m = parseInt(minute, 10)
-    const suffix = m === 0 ? '' : ` at :${m.toString().padStart(2, '0')}`
-    return n === 1 ? `Every hour${suffix}` : `Every ${n} hours${suffix}`
+    const n = Number.parseInt(everyHourMatch[1]!, 10);
+    const m = Number.parseInt(minute, 10);
+    const suffix = m === 0 ? '' : ` at :${m.toString().padStart(2, '0')}`;
+    return n === 1 ? `Every hour${suffix}` : `Every ${n} hours${suffix}`;
   }
 
   // --- Remaining cases reference hour+minute: branch on utc ----------------
 
-  if (!minute.match(/^\d+$/) || !hour.match(/^\d+$/)) return cron
-  const m = parseInt(minute, 10)
-  const h = parseInt(hour, 10)
-  const fmtTime = utc ? formatUtcTimeAsLocal : formatLocalTime
+  if (!minute.match(/^\d+$/) || !hour.match(/^\d+$/)) return cron;
+  const m = Number.parseInt(minute, 10);
+  const h = Number.parseInt(hour, 10);
+  const fmtTime = utc ? formatUtcTimeAsLocal : formatLocalTime;
 
   // Daily at specific time: M H * * *
   if (dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
-    return `Every day at ${fmtTime(m, h)}`
+    return `Every day at ${fmtTime(m, h)}`;
   }
 
   // Specific day of week: M H * * D
   if (dayOfMonth === '*' && month === '*' && dayOfWeek.match(/^\d$/)) {
-    const dayIndex = parseInt(dayOfWeek, 10) % 7 // normalize 7 (Sunday alias) -> 0
-    let dayName: string | undefined
+    const dayIndex = Number.parseInt(dayOfWeek, 10) % 7; // normalize 7 (Sunday alias) -> 0
+    let dayName: string | undefined;
     if (utc) {
       // UTC day+time may land on a different local day (midnight crossing).
       // Compute the actual local weekday by constructing the UTC instant.
-      const ref = new Date()
-      const daysToAdd = (dayIndex - ref.getUTCDay() + 7) % 7
-      ref.setUTCDate(ref.getUTCDate() + daysToAdd)
-      ref.setUTCHours(h, m, 0, 0)
-      dayName = DAY_NAMES[ref.getDay()]
+      const ref = new Date();
+      const daysToAdd = (dayIndex - ref.getUTCDay() + 7) % 7;
+      ref.setUTCDate(ref.getUTCDate() + daysToAdd);
+      ref.setUTCHours(h, m, 0, 0);
+      dayName = DAY_NAMES[ref.getDay()];
     } else {
-      dayName = DAY_NAMES[dayIndex]
+      dayName = DAY_NAMES[dayIndex];
     }
-    if (dayName) return `Every ${dayName} at ${fmtTime(m, h)}`
+    if (dayName) return `Every ${dayName} at ${fmtTime(m, h)}`;
   }
 
   // Weekdays: M H * * 1-5
   if (dayOfMonth === '*' && month === '*' && dayOfWeek === '1-5') {
-    return `Weekdays at ${fmtTime(m, h)}`
+    return `Weekdays at ${fmtTime(m, h)}`;
   }
 
-  return cron
+  return cron;
 }

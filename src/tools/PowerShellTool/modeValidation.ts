@@ -6,21 +6,21 @@
  * Follows the same patterns as BashTool/modeValidation.ts.
  */
 
-import type { ToolPermissionContext } from '../../Tool.js'
-import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
-import type { ParsedPowerShellCommand } from '../../utils/powershell/parser.js'
+import type { ToolPermissionContext } from '../../Tool.js';
+import type { PermissionResult } from '../../utils/permissions/PermissionResult.js';
+import type { ParsedPowerShellCommand } from '../../utils/powershell/parser.js';
 import {
+  PS_TOKENIZER_DASH_CHARS,
   deriveSecurityFlags,
   getPipelineSegments,
-  PS_TOKENIZER_DASH_CHARS,
-} from '../../utils/powershell/parser.js'
+} from '../../utils/powershell/parser.js';
 import {
   argLeaksValue,
   isAllowlistedPipelineTail,
   isCwdChangingCmdlet,
   isSafeOutputCommand,
   resolveToCanonical,
-} from './readOnlyValidation.js'
+} from './readOnlyValidation.js';
 
 /**
  * Filesystem-modifying cmdlets that are auto-allowed in acceptEdits mode.
@@ -35,15 +35,15 @@ const ACCEPT_EDITS_ALLOWED_CMDLETS = new Set([
   'add-content',
   'remove-item',
   'clear-content',
-])
+]);
 
 function isAcceptEditsAllowedCmdlet(name: string): boolean {
   // resolveToCanonical handles aliases via COMMON_ALIASES, so e.g. 'rm' → 'remove-item',
   // 'ac' → 'add-content'. Any alias that resolves to an allowed cmdlet is automatically
   // allowed. Tier 3 cmdlets (new-item, copy-item, move-item, etc.) and their aliases
   // (mkdir, ni, cp, mv, etc.) resolve to cmdlets NOT in the set and fall through to 'ask'.
-  const canonical = resolveToCanonical(name)
-  return ACCEPT_EDITS_ALLOWED_CMDLETS.has(canonical)
+  const canonical = resolveToCanonical(name);
+  return ACCEPT_EDITS_ALLOWED_CMDLETS.has(canonical);
 }
 
 /**
@@ -53,7 +53,7 @@ function isAcceptEditsAllowedCmdlet(name: string): boolean {
  * inode. Any of these let a later relative-path write land outside the
  * validator's view.
  */
-const LINK_ITEM_TYPES = new Set(['symboliclink', 'junction', 'hardlink'])
+const LINK_ITEM_TYPES = new Set(['symboliclink', 'junction', 'hardlink']);
 
 /**
  * Check if a lowered, dash-normalized arg (colon-value stripped) is an
@@ -62,10 +62,7 @@ const LINK_ITEM_TYPES = new Set(['symboliclink', 'junction', 'hardlink'])
  * (avoids `-t` colliding with `-Target`).
  */
 function isItemTypeParamAbbrev(p: string): boolean {
-  return (
-    (p.length >= 3 && '-itemtype'.startsWith(p)) ||
-    (p.length >= 3 && '-type'.startsWith(p))
-  )
+  return (p.length >= 3 && '-itemtype'.startsWith(p)) || (p.length >= 3 && '-type'.startsWith(p));
 }
 
 /**
@@ -80,40 +77,36 @@ function isItemTypeParamAbbrev(p: string): boolean {
  * and colon-bound values (`-it:Junction`).
  */
 export function isSymlinkCreatingCommand(cmd: {
-  name: string
-  args: string[]
+  name: string;
+  args: string[];
 }): boolean {
-  const canonical = resolveToCanonical(cmd.name)
-  if (canonical !== 'new-item') return false
+  const canonical = resolveToCanonical(cmd.name);
+  if (canonical !== 'new-item') return false;
   for (let i = 0; i < cmd.args.length; i++) {
-    const raw = cmd.args[i] ?? ''
-    if (raw.length === 0) continue
+    const raw = cmd.args[i] ?? '';
+    if (raw.length === 0) continue;
     // Normalize unicode dash prefixes (–, —, ―) and forward-slash (PS 5.1
     // parameter prefix) → ASCII `-` so prefix comparison works. PS tokenizer
     // treats all four dash chars plus `/` as parameter markers. (bug #26)
     const normalized =
-      PS_TOKENIZER_DASH_CHARS.has(raw[0]!) || raw[0] === '/'
-        ? '-' + raw.slice(1)
-        : raw
-    const lower = normalized.toLowerCase()
+      PS_TOKENIZER_DASH_CHARS.has(raw[0]!) || raw[0] === '/' ? `-${raw.slice(1)}` : raw;
+    const lower = normalized.toLowerCase();
     // Split colon-bound value: -it:SymbolicLink → param='-it', val='symboliclink'
-    const colonIdx = lower.indexOf(':', 1)
-    const paramRaw = colonIdx > 0 ? lower.slice(0, colonIdx) : lower
+    const colonIdx = lower.indexOf(':', 1);
+    const paramRaw = colonIdx > 0 ? lower.slice(0, colonIdx) : lower;
     // Strip backtick escapes: -Item`Type → -ItemType (bug #22)
-    const param = paramRaw.replace(/`/g, '')
-    if (!isItemTypeParamAbbrev(param)) continue
+    const param = paramRaw.replace(/`/g, '');
+    if (!isItemTypeParamAbbrev(param)) continue;
     const rawVal =
-      colonIdx > 0
-        ? lower.slice(colonIdx + 1)
-        : (cmd.args[i + 1]?.toLowerCase() ?? '')
+      colonIdx > 0 ? lower.slice(colonIdx + 1) : (cmd.args[i + 1]?.toLowerCase() ?? '');
     // Strip backtick escapes from colon-bound value: -it:Sym`bolicLink → symboliclink
     // Mirrors the param-name strip at L103. Space-separated args use .value
     // (backtick-resolved by .NET parser), but colon-bound uses .text (raw source).
     // Strip surrounding quotes: -it:'SymbolicLink' or -it:"Junction" (bug #6)
-    const val = rawVal.replace(/`/g, '').replace(/^['"]|['"]$/g, '')
-    if (LINK_ITEM_TYPES.has(val)) return true
+    const val = rawVal.replace(/`/g, '').replace(/^['"]|['"]$/g, '');
+    if (LINK_ITEM_TYPES.has(val)) return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -142,14 +135,14 @@ export function checkPermissionMode(
     return {
       behavior: 'passthrough',
       message: 'Mode is handled in main permission flow',
-    }
+    };
   }
 
   if (toolPermissionContext.mode !== 'acceptEdits') {
     return {
       behavior: 'passthrough',
       message: 'No mode-specific validation required',
-    }
+    };
   }
 
   // acceptEdits mode: check if all commands are filesystem-modifying cmdlets
@@ -157,12 +150,12 @@ export function checkPermissionMode(
     return {
       behavior: 'passthrough',
       message: 'Cannot validate mode for unparsed command',
-    }
+    };
   }
 
   // SECURITY: Check for subexpressions, script blocks, or member invocations
   // that could be used to smuggle arbitrary code through acceptEdits mode.
-  const securityFlags = deriveSecurityFlags(parsed)
+  const securityFlags = deriveSecurityFlags(parsed);
   if (
     securityFlags.hasSubExpressions ||
     securityFlags.hasScriptBlocks ||
@@ -176,17 +169,17 @@ export function checkPermissionMode(
       behavior: 'passthrough',
       message:
         'Command contains subexpressions, script blocks, or member invocations that require approval',
-    }
+    };
   }
 
-  const segments = getPipelineSegments(parsed)
+  const segments = getPipelineSegments(parsed);
 
   // SECURITY: Empty segments with valid parse = no commands to check, don't auto-allow
   if (segments.length === 0) {
     return {
       behavior: 'passthrough',
       message: 'No commands found to validate for acceptEdits mode',
-    }
+    };
   }
 
   // SECURITY: Compound cwd desync guard — BashTool parity.
@@ -199,20 +192,17 @@ export function checkPermissionMode(
   // /project/.claude/settings.json. Refuse to auto-allow any write operation in a
   // compound that contains a cwd-changing command. This matches BashTool's
   // compoundCommandHasCd guard (BashTool/pathValidation.ts:630-655).
-  const totalCommands = segments.reduce(
-    (sum, seg) => sum + seg.commands.length,
-    0,
-  )
+  const totalCommands = segments.reduce((sum, seg) => sum + seg.commands.length, 0);
   if (totalCommands > 1) {
-    let hasCdCommand = false
-    let hasSymlinkCreate = false
-    let hasWriteCommand = false
+    let hasCdCommand = false;
+    let hasSymlinkCreate = false;
+    let hasWriteCommand = false;
     for (const seg of segments) {
       for (const cmd of seg.commands) {
-        if (cmd.elementType !== 'CommandAst') continue
-        if (isCwdChangingCmdlet(cmd.name)) hasCdCommand = true
-        if (isSymlinkCreatingCommand(cmd)) hasSymlinkCreate = true
-        if (isAcceptEditsAllowedCmdlet(cmd.name)) hasWriteCommand = true
+        if (cmd.elementType !== 'CommandAst') continue;
+        if (isCwdChangingCmdlet(cmd.name)) hasCdCommand = true;
+        if (isSymlinkCreatingCommand(cmd)) hasSymlinkCreate = true;
+        if (isAcceptEditsAllowedCmdlet(cmd.name)) hasWriteCommand = true;
       }
     }
     if (hasCdCommand && hasWriteCommand) {
@@ -220,7 +210,7 @@ export function checkPermissionMode(
         behavior: 'passthrough',
         message:
           'Compound command contains a directory-changing command (Set-Location/Push-Location/Pop-Location) with a write operation — cannot auto-allow because path validation uses stale cwd',
-      }
+      };
     }
     // SECURITY: Link-create compound guard (finding #18). Mirrors the cd
     // guard above. `New-Item -ItemType SymbolicLink -Path ./link -Value /etc;
@@ -237,7 +227,7 @@ export function checkPermissionMode(
         behavior: 'passthrough',
         message:
           'Compound command creates a filesystem link (New-Item -ItemType SymbolicLink/Junction/HardLink) — cannot auto-allow because path validation cannot follow just-created links',
-      }
+      };
     }
   }
 
@@ -264,7 +254,7 @@ export function checkPermissionMode(
         return {
           behavior: 'passthrough',
           message: `Pipeline contains expression source (${cmd.elementType}) that cannot be statically validated`,
-        }
+        };
       }
       // SECURITY: nameType is computed from the raw name before stripModulePrefix.
       // 'application' = raw name had path chars (. \\ /). scripts\\Remove-Item
@@ -274,7 +264,7 @@ export function checkPermissionMode(
         return {
           behavior: 'passthrough',
           message: `Command '${cmd.name}' resolved from a path-like name and requires approval`,
-        }
+        };
       }
       // SECURITY: elementTypes whitelist — same as isAllowlistedCommand.
       // deriveSecurityFlags above checks hasSubExpressions/etc. but does NOT
@@ -296,23 +286,23 @@ export function checkPermissionMode(
       //   RUNTIME: paren evaluates, redirection writes /tmp/x → arbitrary write
       if (cmd.elementTypes) {
         for (let i = 1; i < cmd.elementTypes.length; i++) {
-          const t = cmd.elementTypes[i]
+          const t = cmd.elementTypes[i];
           if (t !== 'StringConstant' && t !== 'Parameter') {
             return {
               behavior: 'passthrough',
               message: `Command argument has unvalidatable type (${t}) — variable paths cannot be statically resolved`,
-            }
+            };
           }
           if (t === 'Parameter') {
             // elementTypes[i] ↔ args[i-1] (elementTypes[0] is the command name).
-            const arg = cmd.args[i - 1] ?? ''
-            const colonIdx = arg.indexOf(':')
+            const arg = cmd.args[i - 1] ?? '';
+            const colonIdx = arg.indexOf(':');
             if (colonIdx > 0 && /[$(@{[]/.test(arg.slice(colonIdx + 1))) {
               return {
                 behavior: 'passthrough',
                 message:
                   'Colon-bound parameter contains an expression that cannot be statically validated',
-              }
+              };
             }
           }
         }
@@ -324,17 +314,14 @@ export function checkPermissionMode(
       // auto-allows the same as the bare write cmdlet. isAllowlistedPipelineTail
       // is the narrow fallback for cmdlets moved from SAFE_OUTPUT_CMDLETS to
       // CMDLET_ALLOWLIST (argLeaksValue validates their args).
-      if (
-        isSafeOutputCommand(cmd.name) ||
-        isAllowlistedPipelineTail(cmd, input.command)
-      ) {
-        continue
+      if (isSafeOutputCommand(cmd.name) || isAllowlistedPipelineTail(cmd, input.command)) {
+        continue;
       }
       if (!isAcceptEditsAllowedCmdlet(cmd.name)) {
         return {
           behavior: 'passthrough',
           message: `No mode-specific handling for '${cmd.name}' in acceptEdits mode`,
-        }
+        };
       }
       // SECURITY: Reject commands with unclassifiable argument types. 'Other'
       // covers HashtableAst, ConvertExpressionAst, BinaryExpressionAst — all
@@ -348,7 +335,7 @@ export function checkPermissionMode(
         return {
           behavior: 'passthrough',
           message: `Arguments in '${cmd.name}' cannot be statically validated in acceptEdits mode`,
-        }
+        };
       }
     }
 
@@ -361,32 +348,29 @@ export function checkPermissionMode(
           return {
             behavior: 'passthrough',
             message: `Nested expression element (${cmd.elementType}) cannot be statically validated`,
-          }
+          };
         }
         if (cmd.nameType === 'application') {
           return {
             behavior: 'passthrough',
             message: `Nested command '${cmd.name}' resolved from a path-like name and requires approval`,
-          }
+          };
         }
-        if (
-          isSafeOutputCommand(cmd.name) ||
-          isAllowlistedPipelineTail(cmd, input.command)
-        ) {
-          continue
+        if (isSafeOutputCommand(cmd.name) || isAllowlistedPipelineTail(cmd, input.command)) {
+          continue;
         }
         if (!isAcceptEditsAllowedCmdlet(cmd.name)) {
           return {
             behavior: 'passthrough',
             message: `No mode-specific handling for '${cmd.name}' in acceptEdits mode`,
-          }
+          };
         }
         // SECURITY: Same argLeaksValue check as the main command loop above.
         if (argLeaksValue(cmd.name, cmd)) {
           return {
             behavior: 'passthrough',
             message: `Arguments in nested '${cmd.name}' cannot be statically validated in acceptEdits mode`,
-          }
+          };
         }
       }
     }
@@ -400,5 +384,5 @@ export function checkPermissionMode(
       type: 'mode',
       mode: 'acceptEdits',
     },
-  }
+  };
 }

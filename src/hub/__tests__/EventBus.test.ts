@@ -1,12 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
 import { EventBus } from '@/hub/EventBus';
 import type { HubEvent } from '@/shared/protocol';
+import { describe, expect, it, vi } from 'vitest';
 
 type SeqHubEvent = HubEvent & { seq: number };
 
-function makeEvent(
-  overrides: Partial<HubEvent> = {},
-): Omit<HubEvent, 'seq'> {
+function makeEvent(overrides: Partial<HubEvent> = {}): Omit<HubEvent, 'seq'> {
   return {
     type: 'hub:session:statusChanged',
     sessionId: 'sess-1',
@@ -19,18 +17,22 @@ describe('EventBus', () => {
   it('subscribe and receive events', async () => {
     const bus = new EventBus();
     const received: HubEvent[] = [];
-    bus.subscribe('sess-1', (e) => { received.push(e); });
+    bus.subscribe('sess-1', (e) => {
+      received.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
 
     expect(received).toHaveLength(1);
-    expect(received[0]!.type).toBe('hub:session:statusChanged');
+    expect(received[0]?.type).toBe('hub:session:statusChanged');
   });
 
   it('unsubscribe stops delivery', async () => {
     const bus = new EventBus();
     const received: HubEvent[] = [];
-    const unsub = bus.subscribe('sess-1', (e) => { received.push(e); });
+    const unsub = bus.subscribe('sess-1', (e) => {
+      received.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
     expect(received).toHaveLength(1);
@@ -43,7 +45,9 @@ describe('EventBus', () => {
   it('seq is monotonically incrementing per session', async () => {
     const bus = new EventBus();
     const seqs: number[] = [];
-    bus.subscribe('sess-1', (e) => { seqs.push((e as SeqHubEvent).seq); });
+    bus.subscribe('sess-1', (e) => {
+      seqs.push((e as SeqHubEvent).seq);
+    });
 
     for (let i = 0; i < 10; i++) {
       await bus.publish('sess-1', makeEvent());
@@ -58,9 +62,15 @@ describe('EventBus', () => {
     const r2: HubEvent[] = [];
     const r3: HubEvent[] = [];
 
-    bus.subscribe('sess-1', (e) => { r1.push(e); });
-    bus.subscribe('sess-1', (e) => { r2.push(e); });
-    bus.subscribe('sess-1', (e) => { r3.push(e); });
+    bus.subscribe('sess-1', (e) => {
+      r1.push(e);
+    });
+    bus.subscribe('sess-1', (e) => {
+      r2.push(e);
+    });
+    bus.subscribe('sess-1', (e) => {
+      r3.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
 
@@ -78,8 +88,12 @@ describe('EventBus', () => {
     const receivedA: HubEvent[] = [];
     const receivedB: HubEvent[] = [];
 
-    bus.subscribe('sess-a', (e) => { receivedA.push(e); });
-    bus.subscribe('sess-b', (e) => { receivedB.push(e); });
+    bus.subscribe('sess-a', (e) => {
+      receivedA.push(e);
+    });
+    bus.subscribe('sess-b', (e) => {
+      receivedB.push(e);
+    });
 
     await bus.publish('sess-a', makeEvent({ sessionId: 'sess-a' } as Partial<HubEvent>));
 
@@ -90,12 +104,14 @@ describe('EventBus', () => {
   it('global events reach all global listeners', async () => {
     const bus = new EventBus();
     const received: HubEvent[] = [];
-    bus.subscribeGlobal((e) => { received.push(e); });
+    bus.subscribeGlobal((e) => {
+      received.push(e);
+    });
 
     await bus.publishGlobal({ type: 'hub:shutdown' } as Omit<HubEvent, 'seq'>);
 
     expect(received).toHaveLength(1);
-    expect(received[0]!.type).toBe('hub:shutdown');
+    expect(received[0]?.type).toBe('hub:shutdown');
   });
 
   it('global listeners also receive session-scoped publish events', async () => {
@@ -103,8 +119,12 @@ describe('EventBus', () => {
     const globalReceived: HubEvent[] = [];
     const sessionReceived: HubEvent[] = [];
 
-    bus.subscribeGlobal((e) => { globalReceived.push(e); });
-    bus.subscribe('sess-1', (e) => { sessionReceived.push(e); });
+    bus.subscribeGlobal((e) => {
+      globalReceived.push(e);
+    });
+    bus.subscribe('sess-1', (e) => {
+      sessionReceived.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
 
@@ -115,12 +135,14 @@ describe('EventBus', () => {
   it('publishGlobal reaches session listeners too', async () => {
     const bus = new EventBus();
     const sessionReceived: HubEvent[] = [];
-    bus.subscribe('sess-1', (e) => { sessionReceived.push(e); });
+    bus.subscribe('sess-1', (e) => {
+      sessionReceived.push(e);
+    });
 
     await bus.publishGlobal({ type: 'hub:shutdown' } as Omit<HubEvent, 'seq'>);
 
     expect(sessionReceived).toHaveLength(1);
-    expect(sessionReceived[0]!.type).toBe('hub:shutdown');
+    expect(sessionReceived[0]?.type).toBe('hub:shutdown');
   });
 
   it('backpressure: onBackpressure called when queue exceeds 1000', async () => {
@@ -129,7 +151,7 @@ describe('EventBus', () => {
     type EventListener = (event: HubEvent) => void | Promise<void>;
 
     // Create a slow listener that blocks, causing queue depth to grow
-    let resolvers: Array<() => void> = [];
+    const resolvers: Array<() => void> = [];
     const slowListener = (_e: HubEvent) => {
       return new Promise<void>((resolve) => {
         resolvers.push(resolve);
@@ -208,8 +230,12 @@ describe('EventBus', () => {
     const bus = new EventBus();
     const received: HubEvent[] = [];
 
-    bus.subscribe('sess-1', (e) => { received.push(e); });
-    bus.subscribe('sess-1', (e) => { received.push(e); });
+    bus.subscribe('sess-1', (e) => {
+      received.push(e);
+    });
+    bus.subscribe('sess-1', (e) => {
+      received.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
     expect(received).toHaveLength(2);
@@ -226,8 +252,12 @@ describe('EventBus', () => {
     const sessionReceived: HubEvent[] = [];
     const globalReceived: HubEvent[] = [];
 
-    bus.subscribe('sess-1', (e) => { sessionReceived.push(e); });
-    bus.subscribeGlobal((e) => { globalReceived.push(e); });
+    bus.subscribe('sess-1', (e) => {
+      sessionReceived.push(e);
+    });
+    bus.subscribeGlobal((e) => {
+      globalReceived.push(e);
+    });
 
     await bus.publish('sess-1', makeEvent());
     expect(sessionReceived).toHaveLength(1);
@@ -239,8 +269,8 @@ describe('EventBus', () => {
     await bus.publishGlobal({ type: 'hub:shutdown' } as Omit<HubEvent, 'seq'>);
 
     expect(sessionReceived).toHaveLength(1); // unchanged
-    expect(globalReceived).toHaveLength(1);  // unchanged
-    expect(bus.getSeq('sess-1')).toBe(0);    // counters cleared
+    expect(globalReceived).toHaveLength(1); // unchanged
+    expect(bus.getSeq('sess-1')).toBe(0); // counters cleared
   });
 
   it('seq counters are independent per session', async () => {
@@ -248,8 +278,12 @@ describe('EventBus', () => {
     const seqsA: number[] = [];
     const seqsB: number[] = [];
 
-    bus.subscribe('sess-a', (e) => { seqsA.push((e as SeqHubEvent).seq); });
-    bus.subscribe('sess-b', (e) => { seqsB.push((e as SeqHubEvent).seq); });
+    bus.subscribe('sess-a', (e) => {
+      seqsA.push((e as SeqHubEvent).seq);
+    });
+    bus.subscribe('sess-b', (e) => {
+      seqsB.push((e as SeqHubEvent).seq);
+    });
 
     await bus.publish('sess-a', makeEvent({ sessionId: 'sess-a' } as Partial<HubEvent>));
     await bus.publish('sess-a', makeEvent({ sessionId: 'sess-a' } as Partial<HubEvent>));

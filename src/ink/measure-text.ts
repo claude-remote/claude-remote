@@ -1,9 +1,9 @@
-import { lineWidth } from './line-width-cache.js'
+import { lineWidth } from './line-width-cache.js';
 
 type Output = {
-  width: number
-  height: number
-}
+  width: number;
+  height: number;
+};
 
 // Single-pass measurement: computes both width and height in one
 // iteration instead of two (widestLine + countVisualLines).
@@ -13,35 +13,35 @@ function measureText(text: string, maxWidth: number): Output {
     return {
       width: 0,
       height: 0,
-    }
+    };
   }
 
   // Infinite or non-positive width means no wrapping — each line is one visual line.
   // Must check before the loop since Math.ceil(w / Infinity) = 0.
-  const noWrap = maxWidth <= 0 || !Number.isFinite(maxWidth)
+  const noWrap = maxWidth <= 0 || !Number.isFinite(maxWidth);
 
-  let height = 0
-  let width = 0
-  let start = 0
+  let height = 0;
+  let width = 0;
+  let start = 0;
 
   while (start <= text.length) {
-    const end = text.indexOf('\n', start)
-    const line = end === -1 ? text.substring(start) : text.substring(start, end)
+    const end = text.indexOf('\n', start);
+    const line = end === -1 ? text.substring(start) : text.substring(start, end);
 
-    const w = lineWidth(line)
-    width = Math.max(width, w)
+    const w = lineWidth(line);
+    width = Math.max(width, w);
 
     if (noWrap) {
-      height++
+      height++;
     } else {
-      height += w === 0 ? 1 : Math.ceil(w / maxWidth)
+      height += w === 0 ? 1 : Math.ceil(w / maxWidth);
     }
 
-    if (end === -1) break
-    start = end + 1
+    if (end === -1) break;
+    start = end + 1;
   }
 
-  return { width, height }
+  return { width, height };
 }
 
-export default measureText
+export default measureText;

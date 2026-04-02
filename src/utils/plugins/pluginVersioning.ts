@@ -10,10 +10,10 @@
  * 3. Fallback timestamp for local sources
  */
 
-import { createHash } from 'crypto'
-import { logForDebugging } from '../debug.js'
-import { getHeadForDir } from '../git/gitFilesystem.js'
-import type { PluginManifest, PluginSource } from './schemas.js'
+import { createHash } from 'node:crypto';
+import { logForDebugging } from '../debug.js';
+import { getHeadForDir } from '../git/gitFilesystem.js';
+import type { PluginManifest, PluginSource } from './schemas.js';
 
 /**
  * Calculate the version for a plugin based on its source.
@@ -43,23 +43,19 @@ export async function calculatePluginVersion(
 ): Promise<string> {
   // 1. Use explicit version from plugin.json if available
   if (manifest?.version) {
-    logForDebugging(
-      `Using manifest version for ${pluginId}: ${manifest.version}`,
-    )
-    return manifest.version
+    logForDebugging(`Using manifest version for ${pluginId}: ${manifest.version}`);
+    return manifest.version;
   }
 
   // 2. Use provided version (typically from marketplace entry)
   if (providedVersion) {
-    logForDebugging(
-      `Using provided version for ${pluginId}: ${providedVersion}`,
-    )
-    return providedVersion
+    logForDebugging(`Using provided version for ${pluginId}: ${providedVersion}`);
+    return providedVersion;
   }
 
   // 3. Use pre-resolved git SHA if caller captured it before discarding the clone
   if (gitCommitSha) {
-    const shortSha = gitCommitSha.substring(0, 12)
+    const shortSha = gitCommitSha.substring(0, 12);
     if (typeof source === 'object' && source.source === 'git-subdir') {
       // Encode the subdir path in the version so cache keys differ when
       // marketplace.json's `path` changes but the monorepo SHA doesn't.
@@ -72,37 +68,29 @@ export async function calculatePluginVersion(
       //   3. strip all trailing `/`
       //   4. UTF-8 sha256, first 8 hex chars
       // See api/…/plugins_official_squashfs/job.py _validate_subdir().
-      const normPath = source.path
-        .replace(/\\/g, '/')
-        .replace(/^\.\//, '')
-        .replace(/\/+$/, '')
-      const pathHash = createHash('sha256')
-        .update(normPath)
-        .digest('hex')
-        .substring(0, 8)
-      const v = `${shortSha}-${pathHash}`
-      logForDebugging(
-        `Using git-subdir SHA+path version for ${pluginId}: ${v} (path=${normPath})`,
-      )
-      return v
+      const normPath = source.path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/\/+$/, '');
+      const pathHash = createHash('sha256').update(normPath).digest('hex').substring(0, 8);
+      const v = `${shortSha}-${pathHash}`;
+      logForDebugging(`Using git-subdir SHA+path version for ${pluginId}: ${v} (path=${normPath})`);
+      return v;
     }
-    logForDebugging(`Using pre-resolved git SHA for ${pluginId}: ${shortSha}`)
-    return shortSha
+    logForDebugging(`Using pre-resolved git SHA for ${pluginId}: ${shortSha}`);
+    return shortSha;
   }
 
   // 4. Try to get git SHA from install path
   if (installPath) {
-    const sha = await getGitCommitSha(installPath)
+    const sha = await getGitCommitSha(installPath);
     if (sha) {
-      const shortSha = sha.substring(0, 12)
-      logForDebugging(`Using git SHA for ${pluginId}: ${shortSha}`)
-      return shortSha
+      const shortSha = sha.substring(0, 12);
+      logForDebugging(`Using git SHA for ${pluginId}: ${shortSha}`);
+      return shortSha;
     }
   }
 
   // 5. Return 'unknown' as last resort
-  logForDebugging(`No version found for ${pluginId}, using 'unknown'`)
-  return 'unknown'
+  logForDebugging(`No version found for ${pluginId}, using 'unknown'`);
+  return 'unknown';
 }
 
 /**
@@ -112,7 +100,7 @@ export async function calculatePluginVersion(
  * @returns Full commit SHA or null if not a git repo
  */
 export function getGitCommitSha(dirPath: string): Promise<string | null> {
-  return getHeadForDir(dirPath)
+  return getHeadForDir(dirPath);
 }
 
 /**
@@ -126,24 +114,22 @@ export function getGitCommitSha(dirPath: string): Promise<string | null> {
  */
 export function getVersionFromPath(installPath: string): string | null {
   // Versioned paths have format: .../plugins/cache/marketplace/plugin/version/
-  const parts = installPath.split('/').filter(Boolean)
+  const parts = installPath.split('/').filter(Boolean);
 
   // Find 'cache' index to determine depth
-  const cacheIndex = parts.findIndex(
-    (part, i) => part === 'cache' && parts[i - 1] === 'plugins',
-  )
+  const cacheIndex = parts.findIndex((part, i) => part === 'cache' && parts[i - 1] === 'plugins');
 
   if (cacheIndex === -1) {
-    return null
+    return null;
   }
 
   // Versioned path has 3 components after 'cache': marketplace/plugin/version
-  const componentsAfterCache = parts.slice(cacheIndex + 1)
+  const componentsAfterCache = parts.slice(cacheIndex + 1);
   if (componentsAfterCache.length >= 3) {
-    return componentsAfterCache[2] || null
+    return componentsAfterCache[2] || null;
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -153,5 +139,5 @@ export function getVersionFromPath(installPath: string): string | null {
  * @returns True if path follows versioned structure
  */
 export function isVersionedPath(path: string): boolean {
-  return getVersionFromPath(path) !== null
+  return getVersionFromPath(path) !== null;
 }

@@ -11,9 +11,7 @@ export type ConnectorTextDelta = {
   connector_text: string;
 };
 
-export function isConnectorTextBlock(
-  value: unknown,
-): value is ConnectorTextBlock {
+export function isConnectorTextBlock(value: unknown): value is ConnectorTextBlock {
   return (
     typeof value === 'object' &&
     value !== null &&

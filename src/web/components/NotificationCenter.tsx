@@ -275,7 +275,13 @@ export function NotificationCenter({ onEvent }: NotificationCenterProps) {
                     className="shrink-0 p-0.5 text-gray-600 hover:text-gray-300"
                     aria-label="Dismiss notification"
                   >
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <svg
+                      className="h-3.5 w-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
                       <path d="M18 6 6 18M6 6l12 12" />
                     </svg>
                   </button>

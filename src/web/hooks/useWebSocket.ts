@@ -23,9 +23,11 @@ export interface UseWebSocketReturn {
 const MIN_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 
-export function useWebSocket(
-  { ticket = null, onEvent, onSnapshot }: Partial<UseWebSocketOptions> = {},
-): UseWebSocketReturn {
+export function useWebSocket({
+  ticket = null,
+  onEvent,
+  onSnapshot,
+}: Partial<UseWebSocketOptions> = {}): UseWebSocketReturn {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
@@ -65,7 +67,9 @@ export function useWebSocket(
     setConnecting(true);
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${location.host}/ws?ticket=${encodeURIComponent(ticket)}`);
+    const ws = new WebSocket(
+      `${protocol}//${location.host}/ws?ticket=${encodeURIComponent(ticket)}`,
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {

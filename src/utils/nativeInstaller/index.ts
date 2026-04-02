@@ -15,4 +15,4 @@ export {
   lockCurrentVersion,
   removeInstalledSymlink,
   type SetupMessage,
-} from './installer.js'
+} from './installer.js';

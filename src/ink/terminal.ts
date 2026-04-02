@@ -1,17 +1,17 @@
-import { coerce } from 'semver'
-import type { Writable } from 'stream'
-import { env } from '../utils/env.js'
-import { gte } from '../utils/semver.js'
-import { getClearTerminalSequence } from './clearTerminal.js'
-import type { Diff } from './frame.js'
-import { cursorMove, cursorTo, eraseLines } from './termio/csi.js'
-import { BSU, ESU, HIDE_CURSOR, SHOW_CURSOR } from './termio/dec.js'
-import { link } from './termio/osc.js'
+import type { Writable } from 'node:stream';
+import { coerce } from 'semver';
+import { env } from '../utils/env.js';
+import { gte } from '../utils/semver.js';
+import { getClearTerminalSequence } from './clearTerminal.js';
+import type { Diff } from './frame.js';
+import { cursorMove, cursorTo, eraseLines } from './termio/csi.js';
+import { BSU, ESU, HIDE_CURSOR, SHOW_CURSOR } from './termio/dec.js';
+import { link } from './termio/osc.js';
 
 export type Progress = {
-  state: 'running' | 'completed' | 'error' | 'indeterminate'
-  percentage?: number
-}
+  state: 'running' | 'completed' | 'error' | 'indeterminate';
+  percentage?: number;
+};
 
 /**
  * Checks if the terminal supports OSC 9;4 progress reporting.
@@ -25,42 +25,38 @@ export type Progress = {
 export function isProgressReportingAvailable(): boolean {
   // Only available if we have a TTY (not piped)
   if (!process.stdout.isTTY) {
-    return false
+    return false;
   }
 
   // Explicitly exclude Windows Terminal, which interprets OSC 9;4 as
   // notifications rather than progress indicators
   if (process.env.WT_SESSION) {
-    return false
+    return false;
   }
 
   // ConEmu supports OSC 9;4 for progress (all versions)
-  if (
-    process.env.ConEmuANSI ||
-    process.env.ConEmuPID ||
-    process.env.ConEmuTask
-  ) {
-    return true
+  if (process.env.ConEmuANSI || process.env.ConEmuPID || process.env.ConEmuTask) {
+    return true;
   }
 
-  const version = coerce(process.env.TERM_PROGRAM_VERSION)
+  const version = coerce(process.env.TERM_PROGRAM_VERSION);
   if (!version) {
-    return false
+    return false;
   }
 
   // Ghostty 1.2.0+ supports OSC 9;4 for progress
   // https://ghostty.org/docs/install/release-notes/1-2-0
   if (process.env.TERM_PROGRAM === 'ghostty') {
-    return gte(version.version, '1.2.0')
+    return gte(version.version, '1.2.0');
   }
 
   // iTerm2 3.6.6+ supports OSC 9;4 for progress
   // https://iterm2.com/downloads.html
   if (process.env.TERM_PROGRAM === 'iTerm.app') {
-    return gte(version.version, '3.6.6')
+    return gte(version.version, '3.6.6');
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -71,10 +67,10 @@ export function isSynchronizedOutputSupported(): boolean {
   // tmux parses and proxies every byte but doesn't implement DEC 2026.
   // BSU/ESU pass through to the outer terminal but tmux has already
   // broken atomicity by chunking. Skip to save 16 bytes/frame + parser work.
-  if (process.env.TMUX) return false
+  if (process.env.TMUX) return false;
 
-  const termProgram = process.env.TERM_PROGRAM
-  const term = process.env.TERM
+  const termProgram = process.env.TERM_PROGRAM;
+  const term = process.env.TERM;
 
   // Modern terminals with known DEC 2026 support
   if (
@@ -86,35 +82,35 @@ export function isSynchronizedOutputSupported(): boolean {
     termProgram === 'vscode' ||
     termProgram === 'alacritty'
   ) {
-    return true
+    return true;
   }
 
   // kitty sets TERM=xterm-kitty or KITTY_WINDOW_ID
-  if (term?.includes('kitty') || process.env.KITTY_WINDOW_ID) return true
+  if (term?.includes('kitty') || process.env.KITTY_WINDOW_ID) return true;
 
   // Ghostty may set TERM=xterm-ghostty without TERM_PROGRAM
-  if (term === 'xterm-ghostty') return true
+  if (term === 'xterm-ghostty') return true;
 
   // foot sets TERM=foot or TERM=foot-extra
-  if (term?.startsWith('foot')) return true
+  if (term?.startsWith('foot')) return true;
 
   // Alacritty may set TERM containing 'alacritty'
-  if (term?.includes('alacritty')) return true
+  if (term?.includes('alacritty')) return true;
 
   // Zed uses the alacritty_terminal crate which supports DEC 2026
-  if (process.env.ZED_TERM) return true
+  if (process.env.ZED_TERM) return true;
 
   // Windows Terminal
-  if (process.env.WT_SESSION) return true
+  if (process.env.WT_SESSION) return true;
 
   // VTE-based terminals (GNOME Terminal, Tilix, etc.) since VTE 0.68
-  const vteVersion = process.env.VTE_VERSION
+  const vteVersion = process.env.VTE_VERSION;
   if (vteVersion) {
-    const version = parseInt(vteVersion, 10)
-    if (version >= 6800) return true
+    const version = Number.parseInt(vteVersion, 10);
+    if (version >= 6800) return true;
   }
 
-  return false
+  return false;
 }
 
 // -- XTVERSION-detected terminal name (populated async at startup) --
@@ -127,12 +123,12 @@ export function isSynchronizedOutputSupported(): boolean {
 // from the response handler. Readers should treat undefined as "not yet known"
 // and fall back to env-var detection.
 
-let xtversionName: string | undefined
+let xtversionName: string | undefined;
 
 /** Record the XTVERSION response. Called once from App.tsx when the reply
  *  arrives on stdin. No-op if already set (defend against re-probe). */
 export function setXtversionName(name: string): void {
-  if (xtversionName === undefined) xtversionName = name
+  if (xtversionName === undefined) xtversionName = name;
 }
 
 /** True if running in an xterm.js-based terminal (VS Code, Cursor, Windsurf
@@ -141,8 +137,8 @@ export function setXtversionName(name: string): void {
  *  SSH — query/reply goes through the pty). Early calls may miss the probe
  *  reply — call lazily (e.g. in an event handler) if SSH detection matters. */
 export function isXtermJs(): boolean {
-  if (process.env.TERM_PROGRAM === 'vscode') return true
-  return xtversionName?.startsWith('xterm.js') ?? false
+  if (process.env.TERM_PROGRAM === 'vscode') return true;
+  return xtversionName?.startsWith('xterm.js') ?? false;
 }
 
 // Terminals known to correctly implement the Kitty keyboard protocol
@@ -160,12 +156,12 @@ const EXTENDED_KEYS_TERMINALS = [
   'ghostty',
   'tmux',
   'windows-terminal',
-]
+];
 
 /** True if this terminal correctly handles extended key reporting
  *  (Kitty keyboard protocol + xterm modifyOtherKeys). */
 export function supportsExtendedKeys(): boolean {
-  return EXTENDED_KEYS_TERMINALS.includes(env.terminal ?? '')
+  return EXTENDED_KEYS_TERMINALS.includes(env.terminal ?? '');
 }
 
 /** True if the terminal scrolls the viewport when it receives cursor-up
@@ -175,74 +171,70 @@ export function supportsExtendedKeys(): boolean {
  *  mid-stream. WT_SESSION catches WSL-in-Windows-Terminal where platform
  *  is linux but output still routes through conhost. */
 export function hasCursorUpViewportYankBug(): boolean {
-  return process.platform === 'win32' || !!process.env.WT_SESSION
+  return process.platform === 'win32' || !!process.env.WT_SESSION;
 }
 
 // Computed once at module load — terminal capabilities don't change mid-session.
 // Exported so callers can pass a sync-skip hint gated to specific modes.
-export const SYNC_OUTPUT_SUPPORTED = isSynchronizedOutputSupported()
+export const SYNC_OUTPUT_SUPPORTED = isSynchronizedOutputSupported();
 
 export type Terminal = {
-  stdout: Writable
-  stderr: Writable
-}
+  stdout: Writable;
+  stderr: Writable;
+};
 
-export function writeDiffToTerminal(
-  terminal: Terminal,
-  diff: Diff,
-  skipSyncMarkers = false,
-): void {
+export function writeDiffToTerminal(terminal: Terminal, diff: Diff, skipSyncMarkers = false): void {
   // No output if there are no patches
   if (diff.length === 0) {
-    return
+    return;
   }
 
   // BSU/ESU wrapping is opt-out to keep main-screen behavior unchanged.
   // Callers pass skipSyncMarkers=true when the terminal doesn't support
   // DEC 2026 (e.g. tmux) AND the cost matters (high-frequency alt-screen).
-  const useSync = !skipSyncMarkers
+  const useSync = !skipSyncMarkers;
 
   // Buffer all writes into a single string to avoid multiple write calls
-  let buffer = useSync ? BSU : ''
+  let buffer = useSync ? BSU : '';
 
   for (const patch of diff) {
     switch (patch.type) {
       case 'stdout':
-        buffer += patch.content
-        break
+        buffer += patch.content;
+        break;
       case 'clear':
         if (patch.count > 0) {
-          buffer += eraseLines(patch.count)
+          buffer += eraseLines(patch.count);
         }
-        break
+        break;
       case 'clearTerminal':
-        buffer += getClearTerminalSequence()
-        break
+        buffer += getClearTerminalSequence();
+        break;
       case 'cursorHide':
-        buffer += HIDE_CURSOR
-        break
+        buffer += HIDE_CURSOR;
+        break;
       case 'cursorShow':
-        buffer += SHOW_CURSOR
-        break
+        buffer += SHOW_CURSOR;
+        break;
       case 'cursorMove':
-        buffer += cursorMove(patch.x, patch.y)
-        break
+        buffer += cursorMove(patch.x, patch.y);
+        break;
       case 'cursorTo':
-        buffer += cursorTo(patch.col)
-        break
+        buffer += cursorTo(patch.col);
+        break;
       case 'carriageReturn':
-        buffer += '\r'
-        break
+        buffer += '\r';
+        break;
       case 'hyperlink':
-        buffer += link(patch.uri)
-        break
+        buffer += link(patch.uri);
+        break;
       case 'styleStr':
-        buffer += patch.str
-        break
+        buffer += patch.str;
+        break;
     }
   }
 
   // Add synchronized update end and flush buffer
-  if (useSync) buffer += ESU
-  terminal.stdout.write(buffer)
+  if (useSync) buffer += ESU;
+  terminal.stdout.write(buffer);
 }

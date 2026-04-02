@@ -1,4 +1,4 @@
-import type { Message } from '../../types/message.js'
+import type { Message } from '../../types/message.js';
 
 /**
  * Groups messages at API-round boundaries: one group per API round-trip.
@@ -20,8 +20,8 @@ import type { Message } from '../../types/message.js'
  * a latent ws CJS/ESM resolution race in CI shard-2.
  */
 export function groupMessagesByApiRound(messages: Message[]): Message[][] {
-  const groups: Message[][] = []
-  let current: Message[] = []
+  const groups: Message[][] = [];
+  let current: Message[] = [];
   // message.id of the most recently seen assistant. This is the sole
   // boundary gate: streaming chunks from the same API response share an
   // id, so boundaries only fire at the start of a genuinely new round.
@@ -29,7 +29,7 @@ export function groupMessagesByApiRound(messages: Message[]): Message[][] {
   // StreamingToolExecutor interleaves tool_results between chunks live
   // (yield order, not concat order — see query.ts:613). The id check
   // correctly keeps `[tu_A(id=X), result_A, tu_B(id=X)]` in one group.
-  let lastAssistantId: string | undefined
+  let lastAssistantId: string | undefined;
 
   // In a well-formed conversation the API contract guarantees every
   // tool_use is resolved before the next assistant turn, so lastAssistantId
@@ -41,23 +41,19 @@ export function groupMessagesByApiRound(messages: Message[]): Message[][] {
   // ensureToolResultPairing at claude.ts:1136 repairs the dangling tu at
   // API time.
   for (const msg of messages) {
-    if (
-      msg.type === 'assistant' &&
-      msg.message.id !== lastAssistantId &&
-      current.length > 0
-    ) {
-      groups.push(current)
-      current = [msg]
+    if (msg.type === 'assistant' && msg.message.id !== lastAssistantId && current.length > 0) {
+      groups.push(current);
+      current = [msg];
     } else {
-      current.push(msg)
+      current.push(msg);
     }
     if (msg.type === 'assistant') {
-      lastAssistantId = msg.message.id
+      lastAssistantId = msg.message.id;
     }
   }
 
   if (current.length > 0) {
-    groups.push(current)
+    groups.push(current);
   }
-  return groups
+  return groups;
 }

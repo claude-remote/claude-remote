@@ -1,11 +1,11 @@
-import isEqual from 'lodash-es/isEqual.js'
-import { toError } from '../errors.js'
-import { logError } from '../log.js'
-import { getSettingsForSource } from '../settings/settings.js'
-import { plural } from '../stringUtils.js'
-import { checkGitAvailable } from './gitAvailability.js'
-import { getMarketplace } from './marketplaceManager.js'
-import type { KnownMarketplace, MarketplaceSource } from './schemas.js'
+import isEqual from 'lodash-es/isEqual.js';
+import { toError } from '../errors.js';
+import { logError } from '../log.js';
+import { getSettingsForSource } from '../settings/settings.js';
+import { plural } from '../stringUtils.js';
+import { checkGitAvailable } from './gitAvailability.js';
+import { getMarketplace } from './marketplaceManager.js';
+import type { KnownMarketplace, MarketplaceSource } from './schemas.js';
 
 /**
  * Format plugin failure details for user display
@@ -17,19 +17,19 @@ export function formatFailureDetails(
   failures: Array<{ name: string; reason?: string; error?: string }>,
   includeReasons: boolean,
 ): string {
-  const maxShow = 2
+  const maxShow = 2;
   const details = failures
     .slice(0, maxShow)
-    .map(f => {
-      const reason = f.reason || f.error || 'unknown error'
-      return includeReasons ? `${f.name} (${reason})` : f.name
+    .map((f) => {
+      const reason = f.reason || f.error || 'unknown error';
+      return includeReasons ? `${f.name} (${reason})` : f.name;
     })
-    .join(includeReasons ? '; ' : ', ')
+    .join(includeReasons ? '; ' : ', ');
 
-  const remaining = failures.length - maxShow
-  const moreText = remaining > 0 ? ` and ${remaining} more` : ''
+  const remaining = failures.length - maxShow;
+  const moreText = remaining > 0 ? ` and ${remaining} more` : '';
 
-  return `${details}${moreText}`
+  return `${details}${moreText}`;
 }
 
 /**
@@ -38,30 +38,27 @@ export function formatFailureDetails(
 export function getMarketplaceSourceDisplay(source: MarketplaceSource): string {
   switch (source.source) {
     case 'github':
-      return source.repo
+      return source.repo;
     case 'url':
-      return source.url
+      return source.url;
     case 'git':
-      return source.url
+      return source.url;
     case 'directory':
-      return source.path
+      return source.path;
     case 'file':
-      return source.path
+      return source.path;
     case 'settings':
-      return `settings:${source.name}`
+      return `settings:${source.name}`;
     default:
-      return 'Unknown source'
+      return 'Unknown source';
   }
 }
 
 /**
  * Create a plugin ID from plugin name and marketplace name
  */
-export function createPluginId(
-  pluginName: string,
-  marketplaceName: string,
-): string {
-  return `${pluginName}@${marketplaceName}`
+export function createPluginId(pluginName: string, marketplaceName: string): string {
+  return `${pluginName}@${marketplaceName}`;
 }
 
 /**
@@ -72,45 +69,45 @@ export async function loadMarketplacesWithGracefulDegradation(
   config: Record<string, KnownMarketplace>,
 ): Promise<{
   marketplaces: Array<{
-    name: string
-    config: KnownMarketplace
-    data: Awaited<ReturnType<typeof getMarketplace>> | null
-  }>
-  failures: Array<{ name: string; error: string }>
+    name: string;
+    config: KnownMarketplace;
+    data: Awaited<ReturnType<typeof getMarketplace>> | null;
+  }>;
+  failures: Array<{ name: string; error: string }>;
 }> {
   const marketplaces: Array<{
-    name: string
-    config: KnownMarketplace
-    data: Awaited<ReturnType<typeof getMarketplace>> | null
-  }> = []
-  const failures: Array<{ name: string; error: string }> = []
+    name: string;
+    config: KnownMarketplace;
+    data: Awaited<ReturnType<typeof getMarketplace>> | null;
+  }> = [];
+  const failures: Array<{ name: string; error: string }> = [];
 
   for (const [name, marketplaceConfig] of Object.entries(config)) {
     // Skip marketplaces blocked by enterprise policy
     if (!isSourceAllowedByPolicy(marketplaceConfig.source)) {
-      continue
+      continue;
     }
 
-    let data = null
+    let data = null;
     try {
-      data = await getMarketplace(name)
+      data = await getMarketplace(name);
     } catch (err) {
       // Track individual marketplace failures but continue loading others
-      const errorMessage = err instanceof Error ? err.message : String(err)
-      failures.push({ name, error: errorMessage })
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      failures.push({ name, error: errorMessage });
 
       // Log for monitoring
-      logError(toError(err))
+      logError(toError(err));
     }
 
     marketplaces.push({
       name,
       config: marketplaceConfig,
       data,
-    })
+    });
   }
 
-  return { marketplaces, failures }
+  return { marketplaces, failures };
 }
 
 /**
@@ -121,35 +118,31 @@ export function formatMarketplaceLoadingErrors(
   successCount: number,
 ): { type: 'warning' | 'error'; message: string } | null {
   if (failures.length === 0) {
-    return null
+    return null;
   }
 
   // If some marketplaces succeeded, show warning
   if (successCount > 0) {
     const message =
       failures.length === 1
-        ? `Warning: Failed to load marketplace '${failures[0]!.name}': ${failures[0]!.error}`
-        : `Warning: Failed to load ${failures.length} marketplaces: ${formatFailureNames(failures)}`
-    return { type: 'warning', message }
+        ? `Warning: Failed to load marketplace '${failures[0]?.name}': ${failures[0]?.error}`
+        : `Warning: Failed to load ${failures.length} marketplaces: ${formatFailureNames(failures)}`;
+    return { type: 'warning', message };
   }
 
   // All marketplaces failed - this is a critical error
   return {
     type: 'error',
     message: `Failed to load all marketplaces. Errors: ${formatFailureErrors(failures)}`,
-  }
+  };
 }
 
-function formatFailureNames(
-  failures: Array<{ name: string; error: string }>,
-): string {
-  return failures.map(f => f.name).join(', ')
+function formatFailureNames(failures: Array<{ name: string; error: string }>): string {
+  return failures.map((f) => f.name).join(', ');
 }
 
-function formatFailureErrors(
-  failures: Array<{ name: string; error: string }>,
-): string {
-  return failures.map(f => `${f.name}: ${f.error}`).join('; ')
+function formatFailureErrors(failures: Array<{ name: string; error: string }>): string {
+  return failures.map((f) => `${f.name}: ${f.error}`).join('; ');
 }
 
 /**
@@ -157,11 +150,11 @@ function formatFailureErrors(
  * Returns null if no restriction is in place, or an array of allowed sources.
  */
 export function getStrictKnownMarketplaces(): MarketplaceSource[] | null {
-  const policySettings = getSettingsForSource('policySettings')
+  const policySettings = getSettingsForSource('policySettings');
   if (!policySettings?.strictKnownMarketplaces) {
-    return null // No restrictions
+    return null; // No restrictions
   }
-  return policySettings.strictKnownMarketplaces
+  return policySettings.strictKnownMarketplaces;
 }
 
 /**
@@ -169,11 +162,11 @@ export function getStrictKnownMarketplaces(): MarketplaceSource[] | null {
  * Returns null if no blocklist is in place, or an array of blocked sources.
  */
 export function getBlockedMarketplaces(): MarketplaceSource[] | null {
-  const policySettings = getSettingsForSource('policySettings')
+  const policySettings = getSettingsForSource('policySettings');
   if (!policySettings?.blockedMarketplaces) {
-    return null // No blocklist
+    return null; // No blocklist
   }
-  return policySettings.blockedMarketplaces
+  return policySettings.blockedMarketplaces;
 }
 
 /**
@@ -181,7 +174,7 @@ export function getBlockedMarketplaces(): MarketplaceSource[] | null {
  * Returns undefined if not configured.
  */
 export function getPluginTrustMessage(): string | undefined {
-  return getSettingsForSource('policySettings')?.pluginTrustMessage
+  return getSettingsForSource('policySettings')?.pluginTrustMessage;
 }
 
 /**
@@ -189,36 +182,33 @@ export function getPluginTrustMessage(): string | undefined {
  * Sources are equal if they have the same type and all relevant fields match.
  */
 function areSourcesEqual(a: MarketplaceSource, b: MarketplaceSource): boolean {
-  if (a.source !== b.source) return false
+  if (a.source !== b.source) return false;
 
   switch (a.source) {
     case 'url':
-      return a.url === (b as typeof a).url
+      return a.url === (b as typeof a).url;
     case 'github':
       return (
         a.repo === (b as typeof a).repo &&
         (a.ref || undefined) === ((b as typeof a).ref || undefined) &&
         (a.path || undefined) === ((b as typeof a).path || undefined)
-      )
+      );
     case 'git':
       return (
         a.url === (b as typeof a).url &&
         (a.ref || undefined) === ((b as typeof a).ref || undefined) &&
         (a.path || undefined) === ((b as typeof a).path || undefined)
-      )
+      );
     case 'npm':
-      return a.package === (b as typeof a).package
+      return a.package === (b as typeof a).package;
     case 'file':
-      return a.path === (b as typeof a).path
+      return a.path === (b as typeof a).path;
     case 'directory':
-      return a.path === (b as typeof a).path
+      return a.path === (b as typeof a).path;
     case 'settings':
-      return (
-        a.name === (b as typeof a).name &&
-        isEqual(a.plugins, (b as typeof a).plugins)
-      )
+      return a.name === (b as typeof a).name && isEqual(a.plugins, (b as typeof a).plugins);
     default:
-      return false
+      return false;
   }
 }
 
@@ -232,38 +222,36 @@ function areSourcesEqual(a: MarketplaceSource, b: MarketplaceSource): boolean {
  * @param source - The marketplace source to extract host from
  * @returns The hostname string, or null if extraction fails or source type not supported
  */
-export function extractHostFromSource(
-  source: MarketplaceSource,
-): string | null {
+export function extractHostFromSource(source: MarketplaceSource): string | null {
   switch (source.source) {
     case 'github':
       // GitHub shorthand always means github.com
-      return 'github.com'
+      return 'github.com';
 
     case 'git': {
       // SSH format: user@HOST:path (e.g., git@github.com:owner/repo.git)
-      const sshMatch = source.url.match(/^[^@]+@([^:]+):/)
+      const sshMatch = source.url.match(/^[^@]+@([^:]+):/);
       if (sshMatch?.[1]) {
-        return sshMatch[1]
+        return sshMatch[1];
       }
       // HTTPS format: extract hostname from URL
       try {
-        return new URL(source.url).hostname
+        return new URL(source.url).hostname;
       } catch {
-        return null
+        return null;
       }
     }
 
     case 'url':
       try {
-        return new URL(source.url).hostname
+        return new URL(source.url).hostname;
       } catch {
-        return null
+        return null;
       }
 
     // npm, file, directory, hostPattern, pathPattern sources are not supported for hostPattern matching
     default:
-      return null
+      return null;
   }
 }
 
@@ -279,18 +267,18 @@ function doesSourceMatchHostPattern(
   source: MarketplaceSource,
   pattern: MarketplaceSource & { source: 'hostPattern' },
 ): boolean {
-  const host = extractHostFromSource(source)
+  const host = extractHostFromSource(source);
   if (!host) {
-    return false
+    return false;
   }
 
   try {
-    const regex = new RegExp(pattern.hostPattern)
-    return regex.test(host)
+    const regex = new RegExp(pattern.hostPattern);
+    return regex.test(host);
   } catch {
     // Invalid regex - log and return false
-    logError(new Error(`Invalid hostPattern regex: ${pattern.hostPattern}`))
-    return false
+    logError(new Error(`Invalid hostPattern regex: ${pattern.hostPattern}`));
+    return false;
   }
 }
 
@@ -308,15 +296,15 @@ function doesSourceMatchPathPattern(
 ): boolean {
   // Only file and directory sources have a .path to match against
   if (source.source !== 'file' && source.source !== 'directory') {
-    return false
+    return false;
   }
 
   try {
-    const regex = new RegExp(pattern.pathPattern)
-    return regex.test(source.path)
+    const regex = new RegExp(pattern.pathPattern);
+    return regex.test(source.path);
   } catch {
-    logError(new Error(`Invalid pathPattern regex: ${pattern.pathPattern}`))
-    return false
+    logError(new Error(`Invalid pathPattern regex: ${pattern.pathPattern}`));
+    return false;
   }
 }
 
@@ -325,15 +313,15 @@ function doesSourceMatchPathPattern(
  * Used to provide helpful error messages.
  */
 export function getHostPatternsFromAllowlist(): string[] {
-  const allowlist = getStrictKnownMarketplaces()
-  if (!allowlist) return []
+  const allowlist = getStrictKnownMarketplaces();
+  if (!allowlist) return [];
 
   return allowlist
     .filter(
       (entry): entry is MarketplaceSource & { source: 'hostPattern' } =>
         entry.source === 'hostPattern',
     )
-    .map(entry => entry.hostPattern)
+    .map((entry) => entry.hostPattern);
 }
 
 /**
@@ -347,20 +335,18 @@ export function getHostPatternsFromAllowlist(): string[] {
  */
 function extractGitHubRepoFromGitUrl(url: string): string | null {
   // SSH format: git@github.com:owner/repo.git
-  const sshMatch = url.match(/^git@github\.com:([^/]+\/[^/]+?)(?:\.git)?$/)
-  if (sshMatch && sshMatch[1]) {
-    return sshMatch[1]
+  const sshMatch = url.match(/^git@github\.com:([^/]+\/[^/]+?)(?:\.git)?$/);
+  if (sshMatch?.[1]) {
+    return sshMatch[1];
   }
 
   // HTTPS format: https://github.com/owner/repo.git or https://github.com/owner/repo
-  const httpsMatch = url.match(
-    /^https?:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/,
-  )
-  if (httpsMatch && httpsMatch[1]) {
-    return httpsMatch[1]
+  const httpsMatch = url.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/);
+  if (httpsMatch?.[1]) {
+    return httpsMatch[1];
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -374,10 +360,10 @@ function blockedConstraintMatches(
 ): boolean {
   // If blocklist doesn't specify a constraint, it's a wildcard - matches anything
   if (!blockedValue) {
-    return true
+    return true;
   }
   // If blocklist specifies a constraint, source must match exactly
-  return (blockedValue || undefined) === (sourceValue || undefined)
+  return (blockedValue || undefined) === (sourceValue || undefined);
 }
 
 /**
@@ -396,59 +382,59 @@ function areSourcesEquivalentForBlocklist(
   if (source.source === blocked.source) {
     switch (source.source) {
       case 'github': {
-        const b = blocked as typeof source
-        if (source.repo !== b.repo) return false
+        const b = blocked as typeof source;
+        if (source.repo !== b.repo) return false;
         return (
           blockedConstraintMatches(b.ref, source.ref) &&
           blockedConstraintMatches(b.path, source.path)
-        )
+        );
       }
       case 'git': {
-        const b = blocked as typeof source
-        if (source.url !== b.url) return false
+        const b = blocked as typeof source;
+        if (source.url !== b.url) return false;
         return (
           blockedConstraintMatches(b.ref, source.ref) &&
           blockedConstraintMatches(b.path, source.path)
-        )
+        );
       }
       case 'url':
-        return source.url === (blocked as typeof source).url
+        return source.url === (blocked as typeof source).url;
       case 'npm':
-        return source.package === (blocked as typeof source).package
+        return source.package === (blocked as typeof source).package;
       case 'file':
-        return source.path === (blocked as typeof source).path
+        return source.path === (blocked as typeof source).path;
       case 'directory':
-        return source.path === (blocked as typeof source).path
+        return source.path === (blocked as typeof source).path;
       case 'settings':
-        return source.name === (blocked as typeof source).name
+        return source.name === (blocked as typeof source).name;
       default:
-        return false
+        return false;
     }
   }
 
   // Check if a git source matches a github blocklist entry
   if (source.source === 'git' && blocked.source === 'github') {
-    const extractedRepo = extractGitHubRepoFromGitUrl(source.url)
+    const extractedRepo = extractGitHubRepoFromGitUrl(source.url);
     if (extractedRepo === blocked.repo) {
       return (
         blockedConstraintMatches(blocked.ref, source.ref) &&
         blockedConstraintMatches(blocked.path, source.path)
-      )
+      );
     }
   }
 
   // Check if a github source matches a git blocklist entry (GitHub URL)
   if (source.source === 'github' && blocked.source === 'git') {
-    const extractedRepo = extractGitHubRepoFromGitUrl(blocked.url)
+    const extractedRepo = extractGitHubRepoFromGitUrl(blocked.url);
     if (extractedRepo === source.repo) {
       return (
         blockedConstraintMatches(blocked.ref, source.ref) &&
         blockedConstraintMatches(blocked.path, source.path)
-      )
+      );
     }
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -459,13 +445,11 @@ function areSourcesEquivalentForBlocklist(
  * git URLs (e.g., git@github.com:owner/repo.git or https://github.com/owner/repo.git).
  */
 export function isSourceInBlocklist(source: MarketplaceSource): boolean {
-  const blocklist = getBlockedMarketplaces()
+  const blocklist = getBlockedMarketplaces();
   if (blocklist === null) {
-    return false
+    return false;
   }
-  return blocklist.some(blocked =>
-    areSourcesEquivalentForBlocklist(source, blocked),
-  )
+  return blocklist.some((blocked) => areSourcesEquivalentForBlocklist(source, blocked));
 }
 
 /**
@@ -480,28 +464,28 @@ export function isSourceInBlocklist(source: MarketplaceSource): boolean {
 export function isSourceAllowedByPolicy(source: MarketplaceSource): boolean {
   // Check blocklist first (takes precedence)
   if (isSourceInBlocklist(source)) {
-    return false
+    return false;
   }
 
   // Then check allowlist
-  const allowlist = getStrictKnownMarketplaces()
+  const allowlist = getStrictKnownMarketplaces();
   if (allowlist === null) {
-    return true // No restrictions
+    return true; // No restrictions
   }
 
   // Check each entry in the allowlist
-  return allowlist.some(allowed => {
+  return allowlist.some((allowed) => {
     // Handle hostPattern entries - match by extracted host
     if (allowed.source === 'hostPattern') {
-      return doesSourceMatchHostPattern(source, allowed)
+      return doesSourceMatchHostPattern(source, allowed);
     }
     // Handle pathPattern entries - match file/directory .path by regex
     if (allowed.source === 'pathPattern') {
-      return doesSourceMatchPathPattern(source, allowed)
+      return doesSourceMatchPathPattern(source, allowed);
     }
     // Handle regular source entries - exact match
-    return areSourcesEqual(source, allowed)
-  })
+    return areSourcesEqual(source, allowed);
+  });
 }
 
 /**
@@ -510,25 +494,25 @@ export function isSourceAllowedByPolicy(source: MarketplaceSource): boolean {
 export function formatSourceForDisplay(source: MarketplaceSource): string {
   switch (source.source) {
     case 'github':
-      return `github:${source.repo}${source.ref ? `@${source.ref}` : ''}`
+      return `github:${source.repo}${source.ref ? `@${source.ref}` : ''}`;
     case 'url':
-      return source.url
+      return source.url;
     case 'git':
-      return `git:${source.url}${source.ref ? `@${source.ref}` : ''}`
+      return `git:${source.url}${source.ref ? `@${source.ref}` : ''}`;
     case 'npm':
-      return `npm:${source.package}`
+      return `npm:${source.package}`;
     case 'file':
-      return `file:${source.path}`
+      return `file:${source.path}`;
     case 'directory':
-      return `dir:${source.path}`
+      return `dir:${source.path}`;
     case 'hostPattern':
-      return `hostPattern:${source.hostPattern}`
+      return `hostPattern:${source.hostPattern}`;
     case 'pathPattern':
-      return `pathPattern:${source.pathPattern}`
+      return `pathPattern:${source.pathPattern}`;
     case 'settings':
-      return `settings:${source.name} (${source.plugins.length} ${plural(source.plugins.length, 'plugin')})`
+      return `settings:${source.name} (${source.plugins.length} ${plural(source.plugins.length, 'plugin')})`;
     default:
-      return 'unknown source'
+      return 'unknown source';
   }
 }
 
@@ -541,7 +525,7 @@ export type EmptyMarketplaceReason =
   | 'policy-restricts-sources'
   | 'all-marketplaces-failed'
   | 'no-marketplaces-configured'
-  | 'all-plugins-installed'
+  | 'all-plugins-installed';
 
 /**
  * Detect why no marketplaces are available.
@@ -551,42 +535,39 @@ export async function detectEmptyMarketplaceReason({
   configuredMarketplaceCount,
   failedMarketplaceCount,
 }: {
-  configuredMarketplaceCount: number
-  failedMarketplaceCount: number
+  configuredMarketplaceCount: number;
+  failedMarketplaceCount: number;
 }): Promise<EmptyMarketplaceReason> {
   // Check if git is installed (required for most marketplace sources)
-  const gitAvailable = await checkGitAvailable()
+  const gitAvailable = await checkGitAvailable();
   if (!gitAvailable) {
-    return 'git-not-installed'
+    return 'git-not-installed';
   }
 
   // Check policy restrictions
-  const allowlist = getStrictKnownMarketplaces()
+  const allowlist = getStrictKnownMarketplaces();
   if (allowlist !== null) {
     if (allowlist.length === 0) {
       // Policy explicitly blocks all marketplaces
-      return 'all-blocked-by-policy'
+      return 'all-blocked-by-policy';
     }
     // Policy restricts which sources can be used
     if (configuredMarketplaceCount === 0) {
-      return 'policy-restricts-sources'
+      return 'policy-restricts-sources';
     }
   }
 
   // Check if any marketplaces are configured
   if (configuredMarketplaceCount === 0) {
-    return 'no-marketplaces-configured'
+    return 'no-marketplaces-configured';
   }
 
   // Check if all configured marketplaces failed to load
-  if (
-    failedMarketplaceCount > 0 &&
-    failedMarketplaceCount === configuredMarketplaceCount
-  ) {
-    return 'all-marketplaces-failed'
+  if (failedMarketplaceCount > 0 && failedMarketplaceCount === configuredMarketplaceCount) {
+    return 'all-marketplaces-failed';
   }
 
   // Marketplaces are configured and loaded, but no plugins available
   // This typically means all plugins are already installed
-  return 'all-plugins-installed'
+  return 'all-plugins-installed';
 }

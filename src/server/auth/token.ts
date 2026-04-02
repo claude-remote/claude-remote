@@ -1,20 +1,20 @@
 import type { SessionMeta } from '@/shared/types';
 
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { constants as FsConstants } from 'node:fs';
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {
-  DEFAULT_BOOTSTRAP_TOKEN_TTL_MS,
   DEFAULT_AUTH_BLOCK_WINDOW_MS,
   DEFAULT_AUTH_RATE_LIMIT_MAX_FAILURES,
   DEFAULT_AUTH_TOKEN_BYTES,
+  DEFAULT_BOOTSTRAP_TOKEN_TTL_MS,
   DEFAULT_SESSION_TOKEN_RENEW_THRESHOLD_MS,
   DEFAULT_SESSION_TOKEN_TTL_MS,
   DEFAULT_TOKEN_PATH,
   DEFAULT_WS_TICKET_TTL_MS,
 } from '@/shared/constants';
-import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { constants as FsConstants } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 
 export interface TokenBundle {
   masterToken: string;
@@ -67,11 +67,7 @@ function createMasterToken(): string {
 
 function toBase64Url(value: Uint8Array | string): string {
   const buffer = typeof value === 'string' ? Buffer.from(value) : Buffer.from(value);
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function fromBase64Url(value: string): string {
@@ -101,13 +97,11 @@ function buildJwt(payload: JwtPayload, secret: string): string {
   return `${headerPayload}.${signature}`;
 }
 
-function parseJwt(token: string):
-  | {
-      headerPayload: string;
-      payloadSegment: string;
-      signature: string;
-    }
-  | null {
+function parseJwt(token: string): {
+  headerPayload: string;
+  payloadSegment: string;
+  signature: string;
+} | null {
   const parts = token.split('.');
   if (parts.length !== 3) {
     return null;
@@ -228,7 +222,11 @@ export async function verifySessionToken(
   const jwtPayload = payload as JwtPayload;
   const nowMs = normalizeNow(options?.now);
   const now = Math.floor(nowMs / 1000);
-  if (!Number.isFinite(jwtPayload.iat) || !Number.isFinite(jwtPayload.exp) || jwtPayload.exp <= now) {
+  if (
+    !Number.isFinite(jwtPayload.iat) ||
+    !Number.isFinite(jwtPayload.exp) ||
+    jwtPayload.exp <= now
+  ) {
     return null;
   }
 

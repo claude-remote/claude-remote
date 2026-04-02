@@ -2,97 +2,92 @@
  * EXPERIMENT: Session memory compaction
  */
 
-import type { AgentId } from '../../types/ids.js'
-import type { HookResultMessage, Message } from '../../types/message.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
-import { errorMessage } from '../../utils/errors.js'
+import type { AgentId } from '../../types/ids.js';
+import type { HookResultMessage, Message } from '../../types/message.js';
+import { logForDebugging } from '../../utils/debug.js';
+import { isEnvTruthy } from '../../utils/envUtils.js';
+import { errorMessage } from '../../utils/errors.js';
 import {
   createCompactBoundaryMessage,
   createUserMessage,
   isCompactBoundaryMessage,
-} from '../../utils/messages.js'
-import { getMainLoopModel } from '../../utils/model/model.js'
-import { getSessionMemoryPath } from '../../utils/permissions/filesystem.js'
-import { processSessionStartHooks } from '../../utils/sessionStart.js'
-import { getTranscriptPath } from '../../utils/sessionStorage.js'
-import { tokenCountFromLastAPIResponse } from '../../utils/tokens.js'
-import { extractDiscoveredToolNames } from '../../utils/toolSearch.js'
-import {
-  getDynamicConfig_BLOCKS_ON_INIT,
-  getFeatureValue_CACHED_MAY_BE_STALE,
-} from '../analytics/growthbook.js'
-import { logEvent } from '../analytics/index.js'
-import {
-  isSessionMemoryEmpty,
-  truncateSessionMemoryForCompact,
-} from '../SessionMemory/prompts.js'
+} from '../../utils/messages.js';
+import { getMainLoopModel } from '../../utils/model/model.js';
+import { getSessionMemoryPath } from '../../utils/permissions/filesystem.js';
+import { processSessionStartHooks } from '../../utils/sessionStart.js';
+import { getTranscriptPath } from '../../utils/sessionStorage.js';
+import { tokenCountFromLastAPIResponse } from '../../utils/tokens.js';
+import { extractDiscoveredToolNames } from '../../utils/toolSearch.js';
+import { isSessionMemoryEmpty, truncateSessionMemoryForCompact } from '../SessionMemory/prompts.js';
 import {
   getLastSummarizedMessageId,
   getSessionMemoryContent,
   waitForSessionMemoryExtraction,
-} from '../SessionMemory/sessionMemoryUtils.js'
+} from '../SessionMemory/sessionMemoryUtils.js';
 import {
+  getDynamicConfig_BLOCKS_ON_INIT,
+  getFeatureValue_CACHED_MAY_BE_STALE,
+} from '../analytics/growthbook.js';
+import { logEvent } from '../analytics/index.js';
+import {
+  type CompactionResult,
   annotateBoundaryWithPreservedSegment,
   buildPostCompactMessages,
-  type CompactionResult,
   createPlanAttachmentIfNeeded,
-} from './compact.js'
-import { estimateMessageTokens } from './microCompact.js'
-import { getCompactUserSummaryMessage } from './prompt.js'
+} from './compact.js';
+import { estimateMessageTokens } from './microCompact.js';
+import { getCompactUserSummaryMessage } from './prompt.js';
 
 /**
  * Configuration for session memory compaction thresholds
  */
 export type SessionMemoryCompactConfig = {
   /** Minimum tokens to preserve after compaction */
-  minTokens: number
+  minTokens: number;
   /** Minimum number of messages with text blocks to keep */
-  minTextBlockMessages: number
+  minTextBlockMessages: number;
   /** Maximum tokens to preserve after compaction (hard cap) */
-  maxTokens: number
-}
+  maxTokens: number;
+};
 
 // Default configuration values (exported for use in tests)
 export const DEFAULT_SM_COMPACT_CONFIG: SessionMemoryCompactConfig = {
   minTokens: 10_000,
   minTextBlockMessages: 5,
   maxTokens: 40_000,
-}
+};
 
 // Current configuration (starts with defaults)
 let smCompactConfig: SessionMemoryCompactConfig = {
   ...DEFAULT_SM_COMPACT_CONFIG,
-}
+};
 
 // Track whether config has been initialized from remote
-let configInitialized = false
+let configInitialized = false;
 
 /**
  * Set the session memory compact configuration
  */
-export function setSessionMemoryCompactConfig(
-  config: Partial<SessionMemoryCompactConfig>,
-): void {
+export function setSessionMemoryCompactConfig(config: Partial<SessionMemoryCompactConfig>): void {
   smCompactConfig = {
     ...smCompactConfig,
     ...config,
-  }
+  };
 }
 
 /**
  * Get the current session memory compact configuration
  */
 export function getSessionMemoryCompactConfig(): SessionMemoryCompactConfig {
-  return { ...smCompactConfig }
+  return { ...smCompactConfig };
 }
 
 /**
  * Reset config state (useful for testing)
  */
 export function resetSessionMemoryCompactConfig(): void {
-  smCompactConfig = { ...DEFAULT_SM_COMPACT_CONFIG }
-  configInitialized = false
+  smCompactConfig = { ...DEFAULT_SM_COMPACT_CONFIG };
+  configInitialized = false;
 }
 
 /**
@@ -101,14 +96,15 @@ export function resetSessionMemoryCompactConfig(): void {
  */
 async function initSessionMemoryCompactConfig(): Promise<void> {
   if (configInitialized) {
-    return
+    return;
   }
-  configInitialized = true
+  configInitialized = true;
 
   // Load config from GrowthBook, merging with defaults
-  const remoteConfig = await getDynamicConfig_BLOCKS_ON_INIT<
-    Partial<SessionMemoryCompactConfig>
-  >('tengu_sm_compact_config', {})
+  const remoteConfig = await getDynamicConfig_BLOCKS_ON_INIT<Partial<SessionMemoryCompactConfig>>(
+    'tengu_sm_compact_config',
+    {},
+  );
 
   // Only use remote values if they are explicitly set (positive numbers)
   // This ensures sensible defaults aren't overridden by zero values
@@ -125,8 +121,8 @@ async function initSessionMemoryCompactConfig(): Promise<void> {
       remoteConfig.maxTokens && remoteConfig.maxTokens > 0
         ? remoteConfig.maxTokens
         : DEFAULT_SM_COMPACT_CONFIG.maxTokens,
-  }
-  setSessionMemoryCompactConfig(config)
+  };
+  setSessionMemoryCompactConfig(config);
 }
 
 /**
@@ -134,19 +130,19 @@ async function initSessionMemoryCompactConfig(): Promise<void> {
  */
 export function hasTextBlocks(message: Message): boolean {
   if (message.type === 'assistant') {
-    const content = message.message.content
-    return content.some(block => block.type === 'text')
+    const content = message.message.content;
+    return content.some((block) => block.type === 'text');
   }
   if (message.type === 'user') {
-    const content = message.message.content
+    const content = message.message.content;
     if (typeof content === 'string') {
-      return content.length > 0
+      return content.length > 0;
     }
     if (Array.isArray(content)) {
-      return content.some(block => block.type === 'text')
+      return content.some((block) => block.type === 'text');
     }
   }
-  return false
+  return false;
 }
 
 /**
@@ -154,19 +150,19 @@ export function hasTextBlocks(message: Message): boolean {
  */
 function getToolResultIds(message: Message): string[] {
   if (message.type !== 'user') {
-    return []
+    return [];
   }
-  const content = message.message.content
+  const content = message.message.content;
   if (!Array.isArray(content)) {
-    return []
+    return [];
   }
-  const ids: string[] = []
+  const ids: string[] = [];
   for (const block of content) {
     if (block.type === 'tool_result') {
-      ids.push(block.tool_use_id)
+      ids.push(block.tool_use_id);
     }
   }
-  return ids
+  return ids;
 }
 
 /**
@@ -174,15 +170,13 @@ function getToolResultIds(message: Message): string[] {
  */
 function hasToolUseWithIds(message: Message, toolUseIds: Set<string>): boolean {
   if (message.type !== 'assistant') {
-    return false
+    return false;
   }
-  const content = message.message.content
+  const content = message.message.content;
   if (!Array.isArray(content)) {
-    return false
+    return false;
   }
-  return content.some(
-    block => block.type === 'tool_use' && toolUseIds.has(block.id),
-  )
+  return content.some((block) => block.type === 'tool_use' && toolUseIds.has(block.id));
 }
 
 /**
@@ -234,27 +228,27 @@ export function adjustIndexToPreserveAPIInvariants(
   startIndex: number,
 ): number {
   if (startIndex <= 0 || startIndex >= messages.length) {
-    return startIndex
+    return startIndex;
   }
 
-  let adjustedIndex = startIndex
+  let adjustedIndex = startIndex;
 
   // Step 1: Handle tool_use/tool_result pairs
   // Collect tool_result IDs from ALL messages in the kept range
-  const allToolResultIds: string[] = []
+  const allToolResultIds: string[] = [];
   for (let i = startIndex; i < messages.length; i++) {
-    allToolResultIds.push(...getToolResultIds(messages[i]!))
+    allToolResultIds.push(...getToolResultIds(messages[i]!));
   }
 
   if (allToolResultIds.length > 0) {
     // Collect tool_use IDs already in the kept range
-    const toolUseIdsInKeptRange = new Set<string>()
+    const toolUseIdsInKeptRange = new Set<string>();
     for (let i = adjustedIndex; i < messages.length; i++) {
-      const msg = messages[i]!
+      const msg = messages[i]!;
       if (msg.type === 'assistant' && Array.isArray(msg.message.content)) {
         for (const block of msg.message.content) {
           if (block.type === 'tool_use') {
-            toolUseIdsInKeptRange.add(block.id)
+            toolUseIdsInKeptRange.add(block.id);
           }
         }
       }
@@ -262,22 +256,19 @@ export function adjustIndexToPreserveAPIInvariants(
 
     // Only look for tool_uses that are NOT already in the kept range
     const neededToolUseIds = new Set(
-      allToolResultIds.filter(id => !toolUseIdsInKeptRange.has(id)),
-    )
+      allToolResultIds.filter((id) => !toolUseIdsInKeptRange.has(id)),
+    );
 
     // Find the assistant message(s) with matching tool_use blocks
     for (let i = adjustedIndex - 1; i >= 0 && neededToolUseIds.size > 0; i--) {
-      const message = messages[i]!
+      const message = messages[i]!;
       if (hasToolUseWithIds(message, neededToolUseIds)) {
-        adjustedIndex = i
+        adjustedIndex = i;
         // Remove found tool_use_ids from the set
-        if (
-          message.type === 'assistant' &&
-          Array.isArray(message.message.content)
-        ) {
+        if (message.type === 'assistant' && Array.isArray(message.message.content)) {
           for (const block of message.message.content) {
             if (block.type === 'tool_use' && neededToolUseIds.has(block.id)) {
-              neededToolUseIds.delete(block.id)
+              neededToolUseIds.delete(block.id);
             }
           }
         }
@@ -287,18 +278,18 @@ export function adjustIndexToPreserveAPIInvariants(
 
   // Step 2: Handle thinking blocks that share message.id with kept assistant messages
   // Collect all message.ids from assistant messages in the kept range
-  const messageIdsInKeptRange = new Set<string>()
+  const messageIdsInKeptRange = new Set<string>();
   for (let i = adjustedIndex; i < messages.length; i++) {
-    const msg = messages[i]!
+    const msg = messages[i]!;
     if (msg.type === 'assistant' && msg.message.id) {
-      messageIdsInKeptRange.add(msg.message.id)
+      messageIdsInKeptRange.add(msg.message.id);
     }
   }
 
   // Look backwards for assistant messages with the same message.id that are not in the kept range
   // These may contain thinking blocks that need to be merged by normalizeMessagesForAPI
   for (let i = adjustedIndex - 1; i >= 0; i--) {
-    const message = messages[i]!
+    const message = messages[i]!;
     if (
       message.type === 'assistant' &&
       message.message.id &&
@@ -306,11 +297,11 @@ export function adjustIndexToPreserveAPIInvariants(
     ) {
       // This message has the same message.id as one in the kept range
       // Include it so thinking blocks can be properly merged
-      adjustedIndex = i
+      adjustedIndex = i;
     }
   }
 
-  return adjustedIndex
+  return adjustedIndex;
 }
 
 /**
@@ -326,39 +317,35 @@ export function calculateMessagesToKeepIndex(
   lastSummarizedIndex: number,
 ): number {
   if (messages.length === 0) {
-    return 0
+    return 0;
   }
 
-  const config = getSessionMemoryCompactConfig()
+  const config = getSessionMemoryCompactConfig();
 
   // Start from the message after lastSummarizedIndex
   // If lastSummarizedIndex is -1 (not found) or messages.length (no summarized id),
   // we start with no messages kept
-  let startIndex =
-    lastSummarizedIndex >= 0 ? lastSummarizedIndex + 1 : messages.length
+  let startIndex = lastSummarizedIndex >= 0 ? lastSummarizedIndex + 1 : messages.length;
 
   // Calculate current tokens and text-block message count from startIndex to end
-  let totalTokens = 0
-  let textBlockMessageCount = 0
+  let totalTokens = 0;
+  let textBlockMessageCount = 0;
   for (let i = startIndex; i < messages.length; i++) {
-    const msg = messages[i]!
-    totalTokens += estimateMessageTokens([msg])
+    const msg = messages[i]!;
+    totalTokens += estimateMessageTokens([msg]);
     if (hasTextBlocks(msg)) {
-      textBlockMessageCount++
+      textBlockMessageCount++;
     }
   }
 
   // Check if we already hit the max cap
   if (totalTokens >= config.maxTokens) {
-    return adjustIndexToPreserveAPIInvariants(messages, startIndex)
+    return adjustIndexToPreserveAPIInvariants(messages, startIndex);
   }
 
   // Check if we already meet both minimums
-  if (
-    totalTokens >= config.minTokens &&
-    textBlockMessageCount >= config.minTextBlockMessages
-  ) {
-    return adjustIndexToPreserveAPIInvariants(messages, startIndex)
+  if (totalTokens >= config.minTokens && textBlockMessageCount >= config.minTextBlockMessages) {
+    return adjustIndexToPreserveAPIInvariants(messages, startIndex);
   }
 
   // Expand backwards until we meet both minimums or hit max cap.
@@ -367,33 +354,30 @@ export function calculateMessagesToKeepIndex(
   // would let the loader's tail→head walk bypass inner preserved messages
   // and then prune them. Reactive compact already slices at the boundary
   // via getMessagesAfterCompactBoundary; this is the same invariant.
-  const idx = messages.findLastIndex(m => isCompactBoundaryMessage(m))
-  const floor = idx === -1 ? 0 : idx + 1
+  const idx = messages.findLastIndex((m) => isCompactBoundaryMessage(m));
+  const floor = idx === -1 ? 0 : idx + 1;
   for (let i = startIndex - 1; i >= floor; i--) {
-    const msg = messages[i]!
-    const msgTokens = estimateMessageTokens([msg])
-    totalTokens += msgTokens
+    const msg = messages[i]!;
+    const msgTokens = estimateMessageTokens([msg]);
+    totalTokens += msgTokens;
     if (hasTextBlocks(msg)) {
-      textBlockMessageCount++
+      textBlockMessageCount++;
     }
-    startIndex = i
+    startIndex = i;
 
     // Stop if we hit the max cap
     if (totalTokens >= config.maxTokens) {
-      break
+      break;
     }
 
     // Stop if we meet both minimums
-    if (
-      totalTokens >= config.minTokens &&
-      textBlockMessageCount >= config.minTextBlockMessages
-    ) {
-      break
+    if (totalTokens >= config.minTokens && textBlockMessageCount >= config.minTextBlockMessages) {
+      break;
     }
   }
 
   // Adjust for tool pairs
-  return adjustIndexToPreserveAPIInvariants(messages, startIndex)
+  return adjustIndexToPreserveAPIInvariants(messages, startIndex);
 }
 
 /**
@@ -403,21 +387,15 @@ export function calculateMessagesToKeepIndex(
 export function shouldUseSessionMemoryCompaction(): boolean {
   // Allow env var override for eval runs and testing
   if (isEnvTruthy(process.env.ENABLE_CLAUDE_CODE_SM_COMPACT)) {
-    return true
+    return true;
   }
   if (isEnvTruthy(process.env.DISABLE_CLAUDE_CODE_SM_COMPACT)) {
-    return false
+    return false;
   }
 
-  const sessionMemoryFlag = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_session_memory',
-    false,
-  )
-  const smCompactFlag = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_sm_compact',
-    false,
-  )
-  const shouldUse = sessionMemoryFlag && smCompactFlag
+  const sessionMemoryFlag = getFeatureValue_CACHED_MAY_BE_STALE('tengu_session_memory', false);
+  const smCompactFlag = getFeatureValue_CACHED_MAY_BE_STALE('tengu_sm_compact', false);
+  const shouldUse = sessionMemoryFlag && smCompactFlag;
 
   // Log flag states for debugging (ant-only to avoid noise in external logs)
   if (process.env.USER_TYPE === 'ant') {
@@ -425,10 +403,10 @@ export function shouldUseSessionMemoryCompaction(): boolean {
       tengu_session_memory: sessionMemoryFlag,
       tengu_sm_compact: smCompactFlag,
       should_use: shouldUse,
-    })
+    });
   }
 
-  return shouldUse
+  return shouldUse;
 }
 
 /**
@@ -442,35 +420,27 @@ function createCompactionResultFromSessionMemory(
   transcriptPath: string,
   agentId?: AgentId,
 ): CompactionResult {
-  const preCompactTokenCount = tokenCountFromLastAPIResponse(messages)
+  const preCompactTokenCount = tokenCountFromLastAPIResponse(messages);
 
   const boundaryMarker = createCompactBoundaryMessage(
     'auto',
     preCompactTokenCount ?? 0,
     messages[messages.length - 1]?.uuid,
-  )
-  const preCompactDiscovered = extractDiscoveredToolNames(messages)
+  );
+  const preCompactDiscovered = extractDiscoveredToolNames(messages);
   if (preCompactDiscovered.size > 0) {
-    boundaryMarker.compactMetadata.preCompactDiscoveredTools = [
-      ...preCompactDiscovered,
-    ].sort()
+    boundaryMarker.compactMetadata.preCompactDiscoveredTools = [...preCompactDiscovered].sort();
   }
 
   // Truncate oversized sections to prevent session memory from consuming
   // the entire post-compact token budget
-  const { truncatedContent, wasTruncated } =
-    truncateSessionMemoryForCompact(sessionMemory)
+  const { truncatedContent, wasTruncated } = truncateSessionMemoryForCompact(sessionMemory);
 
-  let summaryContent = getCompactUserSummaryMessage(
-    truncatedContent,
-    true,
-    transcriptPath,
-    true,
-  )
+  let summaryContent = getCompactUserSummaryMessage(truncatedContent, true, transcriptPath, true);
 
   if (wasTruncated) {
-    const memoryPath = getSessionMemoryPath()
-    summaryContent += `\n\nSome session memory sections were truncated for length. The full session memory can be viewed at: ${memoryPath}`
+    const memoryPath = getSessionMemoryPath();
+    summaryContent += `\n\nSome session memory sections were truncated for length. The full session memory can be viewed at: ${memoryPath}`;
   }
 
   const summaryMessages = [
@@ -479,15 +449,15 @@ function createCompactionResultFromSessionMemory(
       isCompactSummary: true,
       isVisibleInTranscriptOnly: true,
     }),
-  ]
+  ];
 
-  const planAttachment = createPlanAttachmentIfNeeded(agentId)
-  const attachments = planAttachment ? [planAttachment] : []
+  const planAttachment = createPlanAttachmentIfNeeded(agentId);
+  const attachments = planAttachment ? [planAttachment] : [];
 
   return {
     boundaryMarker: annotateBoundaryWithPreservedSegment(
       boundaryMarker,
-      summaryMessages[summaryMessages.length - 1]!.uuid,
+      summaryMessages[summaryMessages.length - 1]?.uuid,
       messagesToKeep,
     ),
     summaryMessages,
@@ -499,7 +469,7 @@ function createCompactionResultFromSessionMemory(
     // event continuity) and truePostCompactTokenCount converge to the same value.
     postCompactTokenCount: estimateMessageTokens(summaryMessages),
     truePostCompactTokenCount: estimateMessageTokens(summaryMessages),
-  }
+  };
 }
 
 /**
@@ -517,76 +487,69 @@ export async function trySessionMemoryCompaction(
   autoCompactThreshold?: number,
 ): Promise<CompactionResult | null> {
   if (!shouldUseSessionMemoryCompaction()) {
-    return null
+    return null;
   }
 
   // Initialize config from remote (only fetches once)
-  await initSessionMemoryCompactConfig()
+  await initSessionMemoryCompactConfig();
 
   // Wait for any in-progress session memory extraction to complete (with timeout)
-  await waitForSessionMemoryExtraction()
+  await waitForSessionMemoryExtraction();
 
-  const lastSummarizedMessageId = getLastSummarizedMessageId()
-  const sessionMemory = await getSessionMemoryContent()
+  const lastSummarizedMessageId = getLastSummarizedMessageId();
+  const sessionMemory = await getSessionMemoryContent();
 
   // No session memory file exists at all
   if (!sessionMemory) {
-    logEvent('tengu_sm_compact_no_session_memory', {})
-    return null
+    logEvent('tengu_sm_compact_no_session_memory', {});
+    return null;
   }
 
   // Session memory exists but matches the template (no actual content extracted)
   // Fall back to legacy compact behavior
   if (await isSessionMemoryEmpty(sessionMemory)) {
-    logEvent('tengu_sm_compact_empty_template', {})
-    return null
+    logEvent('tengu_sm_compact_empty_template', {});
+    return null;
   }
 
   try {
-    let lastSummarizedIndex: number
+    let lastSummarizedIndex: number;
 
     if (lastSummarizedMessageId) {
       // Normal case: we know exactly which messages have been summarized
-      lastSummarizedIndex = messages.findIndex(
-        msg => msg.uuid === lastSummarizedMessageId,
-      )
+      lastSummarizedIndex = messages.findIndex((msg) => msg.uuid === lastSummarizedMessageId);
 
       if (lastSummarizedIndex === -1) {
         // The summarized message ID doesn't exist in current messages
         // This can happen if messages were modified - fall back to legacy compact
         // since we can't determine the boundary between summarized and unsummarized messages
-        logEvent('tengu_sm_compact_summarized_id_not_found', {})
-        return null
+        logEvent('tengu_sm_compact_summarized_id_not_found', {});
+        return null;
       }
     } else {
       // Resumed session case: session memory has content but we don't know the boundary
       // Set lastSummarizedIndex to last message so startIndex becomes messages.length (no messages kept initially)
-      lastSummarizedIndex = messages.length - 1
-      logEvent('tengu_sm_compact_resumed_session', {})
+      lastSummarizedIndex = messages.length - 1;
+      logEvent('tengu_sm_compact_resumed_session', {});
     }
 
     // Calculate the starting index for messages to keep
     // This starts from lastSummarizedIndex, expands to meet minimums,
     // and adjusts to not split tool_use/tool_result pairs
-    const startIndex = calculateMessagesToKeepIndex(
-      messages,
-      lastSummarizedIndex,
-    )
+    const startIndex = calculateMessagesToKeepIndex(messages, lastSummarizedIndex);
     // Filter out old compact boundary messages from messagesToKeep.
     // After REPL pruning, old boundaries re-yielded from messagesToKeep would
     // trigger an unwanted second prune (isCompactBoundaryMessage returns true),
     // discarding the new boundary and summary.
-    const messagesToKeep = messages
-      .slice(startIndex)
-      .filter(m => !isCompactBoundaryMessage(m))
+    const messagesToKeep = messages.slice(startIndex).filter((m) => !isCompactBoundaryMessage(m));
 
     // Run session start hooks to restore CLAUDE.md and other context
     const hookResults = await processSessionStartHooks('compact', {
       model: getMainLoopModel(),
-    })
+    });
 
     // Get transcript path for the summary message
-    const transcriptPath = getTranscriptPath()
+    const transcriptPath = getTranscriptPath();
 
     const compactionResult = createCompactionResultFromSessionMemory(
       messages,
@@ -595,36 +558,33 @@ export async function trySessionMemoryCompaction(
       hookResults,
       transcriptPath,
       agentId,
-    )
+    );
 
-    const postCompactMessages = buildPostCompactMessages(compactionResult)
+    const postCompactMessages = buildPostCompactMessages(compactionResult);
 
-    const postCompactTokenCount = estimateMessageTokens(postCompactMessages)
+    const postCompactTokenCount = estimateMessageTokens(postCompactMessages);
 
     // Only check threshold if one was provided (for autocompact)
-    if (
-      autoCompactThreshold !== undefined &&
-      postCompactTokenCount >= autoCompactThreshold
-    ) {
+    if (autoCompactThreshold !== undefined && postCompactTokenCount >= autoCompactThreshold) {
       logEvent('tengu_sm_compact_threshold_exceeded', {
         postCompactTokenCount,
         autoCompactThreshold,
-      })
-      return null
+      });
+      return null;
     }
 
     return {
       ...compactionResult,
       postCompactTokenCount,
       truePostCompactTokenCount: postCompactTokenCount,
-    }
+    };
   } catch (error) {
     // Use logEvent instead of logError since errors here are expected
     // (e.g., file not found, path issues) and shouldn't go to error logs
-    logEvent('tengu_sm_compact_error', {})
+    logEvent('tengu_sm_compact_error', {});
     if (process.env.USER_TYPE === 'ant') {
-      logForDebugging(`Session memory compaction error: ${errorMessage(error)}`)
+      logForDebugging(`Session memory compaction error: ${errorMessage(error)}`);
     }
-    return null
+    return null;
   }
 }

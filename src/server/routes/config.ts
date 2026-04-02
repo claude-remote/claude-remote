@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 
-import type { ConfigOptions, ContextUsage, CostSummary, SessionConfig } from '@/shared/types';
 import type { Hub } from '@/hub/Hub';
+import type { ConfigOptions, ContextUsage, CostSummary, SessionConfig } from '@/shared/types';
 
 export function registerConfigRoutes(app: Hono, _hub: Hub): Hono {
   // GET /api/sessions/:id/config — get session config + available options
@@ -30,7 +30,7 @@ export function registerConfigRoutes(app: Hono, _hub: Hub): Hono {
   // PATCH /api/sessions/:id/config — update session config
   app.patch('/api/sessions/:id/config', async (context) => {
     const sessionId = context.req.param('id');
-    const body = await context.req.json().catch(() => ({})) as Partial<SessionConfig>;
+    const body = (await context.req.json().catch(() => ({}))) as Partial<SessionConfig>;
 
     // TODO(T05,T19): wire to hub session config mutation
     return context.json({ ok: true, sessionId, updated: body });
@@ -81,7 +81,7 @@ export function registerConfigRoutes(app: Hono, _hub: Hub): Hono {
 
   // PATCH /api/config — update global hub config
   app.patch('/api/config', async (context) => {
-    const body = await context.req.json().catch(() => ({})) as Record<string, unknown>;
+    const body = (await context.req.json().catch(() => ({}))) as Record<string, unknown>;
 
     // TODO(T05): wire to hub global config mutation
     return context.json({ ok: true, updated: body });

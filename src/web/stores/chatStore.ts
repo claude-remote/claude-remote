@@ -36,10 +36,7 @@ export const useChatStore = create<ChatStoreState>((set) => ({
 
   setMessages(messages: Message[] | ((prev: Message[]) => Message[])) {
     set((state) => ({
-      messages:
-        typeof messages === 'function'
-          ? messages(state.messages)
-          : messages,
+      messages: typeof messages === 'function' ? messages(state.messages) : messages,
     }));
   },
 

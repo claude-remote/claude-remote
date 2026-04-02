@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect, useRef } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { KeyboardShortcutHint } from '../components/design-system/KeyboardShortcutHint.js';
 import { Box, Text } from '../ink.js';
 import { useKeybinding } from '../keybindings/useKeybinding.js';
@@ -16,22 +16,18 @@ type Props = {
  */
 export function AutoRunIssueNotification(t0) {
   const $ = _c(8);
-  const {
-    onRun,
-    onCancel,
-    reason
-  } = t0;
+  const { onRun, onCancel, reason } = t0;
   const hasRunRef = useRef(false);
   let t1;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = {
-      context: "Confirmation"
+      context: 'Confirmation',
     };
     $[0] = t1;
   } else {
     t1 = $[0];
   }
-  useKeybinding("confirm:no", onCancel, t1);
+  useKeybinding('confirm:no', onCancel, t1);
   let t2;
   let t3;
   if ($[1] !== onRun) {
@@ -51,22 +47,40 @@ export function AutoRunIssueNotification(t0) {
   }
   useEffect(t2, t3);
   let t4;
-  if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = <Box><Text bold={true}>Running feedback capture...</Text></Box>;
+  if ($[4] === Symbol.for('react.memo_cache_sentinel')) {
+    t4 = (
+      <Box>
+        <Text bold={true}>Running feedback capture...</Text>
+      </Box>
+    );
     $[4] = t4;
   } else {
     t4 = $[4];
   }
   let t5;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Box><Text dimColor={true}>Press <KeyboardShortcutHint shortcut="Esc" action="cancel" /> anytime</Text></Box>;
+  if ($[5] === Symbol.for('react.memo_cache_sentinel')) {
+    t5 = (
+      <Box>
+        <Text dimColor={true}>
+          Press <KeyboardShortcutHint shortcut="Esc" action="cancel" /> anytime
+        </Text>
+      </Box>
+    );
     $[5] = t5;
   } else {
     t5 = $[5];
   }
   let t6;
   if ($[6] !== reason) {
-    t6 = <Box flexDirection="column" marginTop={1}>{t4}{t5}<Box><Text dimColor={true}>Reason: {reason}</Text></Box></Box>;
+    t6 = (
+      <Box flexDirection="column" marginTop={1}>
+        {t4}
+        {t5}
+        <Box>
+          <Text dimColor={true}>Reason: {reason}</Text>
+        </Box>
+      </Box>
+    );
     $[6] = reason;
     $[7] = t6;
   } else {
@@ -100,7 +114,7 @@ export function shouldAutoRunIssue(reason: AutoRunIssueReason): boolean {
  */
 export function getAutoRunCommand(reason: AutoRunIssueReason): string {
   // Only ant builds have the /good-claude command
-  if (("external" as string) === 'ant' && reason === 'feedback_survey_good') {
+  if (('external' as string) === 'ant' && reason === 'feedback_survey_good') {
     return '/good-claude';
   }
   return '/issue';

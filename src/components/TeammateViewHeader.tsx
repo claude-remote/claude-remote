@@ -1,11 +1,11 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../ink.js';
 import { useAppState } from '../state/AppState.js';
 import { getViewedTeammateTask } from '../state/selectors.js';
 import { toInkColor } from '../utils/ink.js';
-import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js';
 import { OffscreenFreeze } from './OffscreenFreeze.js';
+import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js';
 
 /**
  * Header shown when viewing a teammate's transcript.
@@ -27,7 +27,7 @@ export function TeammateViewHeader() {
   }
   const nameColor = t0;
   let t1;
-  if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[2] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = <Text>Viewing </Text>;
     $[2] = t1;
   } else {
@@ -35,7 +35,11 @@ export function TeammateViewHeader() {
   }
   let t2;
   if ($[3] !== nameColor || $[4] !== viewedTeammate.identity.agentName) {
-    t2 = <Text color={nameColor} bold={true}>@{viewedTeammate.identity.agentName}</Text>;
+    t2 = (
+      <Text color={nameColor} bold={true}>
+        @{viewedTeammate.identity.agentName}
+      </Text>
+    );
     $[3] = nameColor;
     $[4] = viewedTeammate.identity.agentName;
     $[5] = t2;
@@ -43,15 +47,26 @@ export function TeammateViewHeader() {
     t2 = $[5];
   }
   let t3;
-  if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t3 = <Text dimColor={true}>{" \xB7 "}<KeyboardShortcutHint shortcut="esc" action="return" /></Text>;
+  if ($[6] === Symbol.for('react.memo_cache_sentinel')) {
+    t3 = (
+      <Text dimColor={true}>
+        {' \xB7 '}
+        <KeyboardShortcutHint shortcut="esc" action="return" />
+      </Text>
+    );
     $[6] = t3;
   } else {
     t3 = $[6];
   }
   let t4;
   if ($[7] !== t2) {
-    t4 = <Box>{t1}{t2}{t3}</Box>;
+    t4 = (
+      <Box>
+        {t1}
+        {t2}
+        {t3}
+      </Box>
+    );
     $[7] = t2;
     $[8] = t4;
   } else {
@@ -67,7 +82,14 @@ export function TeammateViewHeader() {
   }
   let t6;
   if ($[11] !== t4 || $[12] !== t5) {
-    t6 = <OffscreenFreeze><Box flexDirection="column" marginBottom={1}>{t4}{t5}</Box></OffscreenFreeze>;
+    t6 = (
+      <OffscreenFreeze>
+        <Box flexDirection="column" marginBottom={1}>
+          {t4}
+          {t5}
+        </Box>
+      </OffscreenFreeze>
+    );
     $[11] = t4;
     $[12] = t5;
     $[13] = t6;

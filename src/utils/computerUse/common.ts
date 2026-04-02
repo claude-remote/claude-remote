@@ -1,7 +1,7 @@
-import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
-import { env } from '../env.js'
+import { normalizeNameForMCP } from '../../services/mcp/normalization.js';
+import { env } from '../env.js';
 
-export const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use'
+export const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use';
 
 /**
  * Sentinel bundle ID for the frontmost gate. Claude Code is a terminal — it has
@@ -10,7 +10,7 @@ export const COMPUTER_USE_MCP_SERVER_NAME = 'computer-use'
  * keyboard safety-net) is dead code for us. `prepareForAction`'s "exempt our
  * own window" is likewise a no-op — there is no window to exempt.
  */
-export const CLI_HOST_BUNDLE_ID = 'com.anthropic.claude-code.cli-no-window'
+export const CLI_HOST_BUNDLE_ID = 'com.anthropic.claude-code.cli-no-window';
 
 /**
  * Fallback `env.terminal` → bundleId map for when `__CFBundleIdentifier` is
@@ -25,7 +25,7 @@ const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
   kitty: 'net.kovidgoyal.kitty',
   WarpTerminal: 'dev.warp.Warp-Stable',
   vscode: 'com.microsoft.VSCode',
-}
+};
 
 /**
  * Bundle ID of the terminal emulator we're running inside, so `prepareDisplay`
@@ -41,9 +41,9 @@ const TERMINAL_BUNDLE_ID_FALLBACK: Readonly<Record<string, string>> = {
  * terminal window, and the screenshots exclude it regardless.
  */
 export function getTerminalBundleId(): string | null {
-  const cfBundleId = process.env.__CFBundleIdentifier
-  if (cfBundleId) return cfBundleId
-  return TERMINAL_BUNDLE_ID_FALLBACK[env.terminal ?? ''] ?? null
+  const cfBundleId = process.env.__CFBundleIdentifier;
+  if (cfBundleId) return cfBundleId;
+  return TERMINAL_BUNDLE_ID_FALLBACK[env.terminal ?? ''] ?? null;
 }
 
 /**
@@ -54,8 +54,8 @@ export function getTerminalBundleId(): string | null {
 export const CLI_CU_CAPABILITIES = {
   screenshotFiltering: 'native' as const,
   platform: 'darwin' as const,
-}
+};
 
 export function isComputerUseMCPServer(name: string): boolean {
-  return normalizeNameForMCP(name) === COMPUTER_USE_MCP_SERVER_NAME
+  return normalizeNameForMCP(name) === COMPUTER_USE_MCP_SERVER_NAME;
 }

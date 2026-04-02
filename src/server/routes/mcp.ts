@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 
-import type { McpServerInfo } from '@/shared/types';
 import type { Hub } from '@/hub/Hub';
+import type { McpServerInfo } from '@/shared/types';
 
 export function registerMcpRoutes(app: Hono, _hub: Hub): Hono {
   // GET /api/mcp/servers — list all MCP servers (Hub-global, not session-level)
@@ -30,7 +30,7 @@ export function registerMcpRoutes(app: Hono, _hub: Hub): Hono {
   // POST /api/mcp/servers/:name/toggle — enable/disable a MCP server
   app.post('/api/mcp/servers/:name/toggle', async (context) => {
     const name = context.req.param('name');
-    const body = await context.req.json().catch(() => ({})) as { enabled?: boolean };
+    const body = (await context.req.json().catch(() => ({}))) as { enabled?: boolean };
 
     // TODO(T21): wire to hub MCP server toggle
     return context.json({ ok: true, server: name, enabled: body.enabled ?? true });

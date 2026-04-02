@@ -5,8 +5,8 @@
  * Both the SDK and the settings validation import from here.
  */
 
-import { z } from 'zod/v4'
-import { lazySchema } from '../utils/lazySchema.js'
+import { z } from 'zod/v4';
+import { lazySchema } from '../utils/lazySchema.js';
 
 /**
  * Network configuration schema for sandbox.
@@ -31,15 +31,13 @@ export const SandboxNetworkConfigSchema = lazySchema(() =>
       allowAllUnixSockets: z
         .boolean()
         .optional()
-        .describe(
-          'If true, allow all Unix sockets (disables blocking on both platforms).',
-        ),
+        .describe('If true, allow all Unix sockets (disables blocking on both platforms).'),
       allowLocalBinding: z.boolean().optional(),
       httpProxyPort: z.number().optional(),
       socksProxyPort: z.number().optional(),
     })
     .optional(),
-)
+);
 
 /**
  * Filesystem configuration schema for sandbox.
@@ -83,7 +81,7 @@ export const SandboxFilesystemConfigSchema = lazySchema(() =>
         ),
     })
     .optional(),
-)
+);
 
 /**
  * Sandbox settings schema.
@@ -141,16 +139,14 @@ export const SandboxSettingsSchema = lazySchema(() =>
         .describe('Custom ripgrep configuration for bundled ripgrep support'),
     })
     .passthrough(),
-)
+);
 
 // Inferred types from schemas
-export type SandboxSettings = z.infer<ReturnType<typeof SandboxSettingsSchema>>
+export type SandboxSettings = z.infer<ReturnType<typeof SandboxSettingsSchema>>;
 export type SandboxNetworkConfig = NonNullable<
   z.infer<ReturnType<typeof SandboxNetworkConfigSchema>>
->
+>;
 export type SandboxFilesystemConfig = NonNullable<
   z.infer<ReturnType<typeof SandboxFilesystemConfigSchema>>
->
-export type SandboxIgnoreViolations = NonNullable<
-  SandboxSettings['ignoreViolations']
->
+>;
+export type SandboxIgnoreViolations = NonNullable<SandboxSettings['ignoreViolations']>;

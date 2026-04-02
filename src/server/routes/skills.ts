@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 
-import type { SkillInfo } from '@/shared/types';
 import type { Hub } from '@/hub/Hub';
+import type { SkillInfo } from '@/shared/types';
 
 export function registerSkillRoutes(app: Hono, _hub: Hub): Hono {
   // GET /api/sessions/:id/skills — list available skills for a session
@@ -22,7 +22,7 @@ export function registerSkillRoutes(app: Hono, _hub: Hub): Hono {
 
   // POST /api/skills/invoke — invoke a skill { name, args? }
   app.post('/api/skills/invoke', async (context) => {
-    const body = await context.req.json().catch(() => ({})) as {
+    const body = (await context.req.json().catch(() => ({}))) as {
       name?: string;
       args?: string;
       sessionId?: string;

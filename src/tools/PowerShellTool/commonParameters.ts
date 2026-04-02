@@ -9,7 +9,7 @@
  * Stored lowercase with leading dash — callers `.toLowerCase()` their input.
  */
 
-export const COMMON_SWITCHES = ['-verbose', '-debug']
+export const COMMON_SWITCHES = ['-verbose', '-debug'];
 
 export const COMMON_VALUE_PARAMS = [
   '-erroraction',
@@ -22,9 +22,9 @@ export const COMMON_VALUE_PARAMS = [
   '-outvariable',
   '-outbuffer',
   '-pipelinevariable',
-]
+];
 
 export const COMMON_PARAMETERS: ReadonlySet<string> = new Set([
   ...COMMON_SWITCHES,
   ...COMMON_VALUE_PARAMS,
-])
+]);

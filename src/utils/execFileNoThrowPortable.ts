@@ -1,22 +1,22 @@
-import { type Options as ExecaOptions, execaSync } from 'execa'
-import { getCwd } from '../utils/cwd.js'
-import { slowLogging } from './slowOperations.js'
+import { type Options as ExecaOptions, execaSync } from 'execa';
+import { getCwd } from '../utils/cwd.js';
+import { slowLogging } from './slowOperations.js';
 
-const MS_IN_SECOND = 1000
-const SECONDS_IN_MINUTE = 60
+const MS_IN_SECOND = 1000;
+const SECONDS_IN_MINUTE = 60;
 
 type ExecSyncOptions = {
-  abortSignal?: AbortSignal
-  timeout?: number
-  input?: string
-  stdio?: ExecaOptions['stdio']
-}
+  abortSignal?: AbortSignal;
+  timeout?: number;
+  input?: string;
+  stdio?: ExecaOptions['stdio'];
+};
 
 /**
  * @deprecated Use `execa` directly with `{ shell: true, reject: false }` for non-blocking execution.
  * Sync exec calls block the event loop and cause performance issues.
  */
-export function execSyncWithDefaults_DEPRECATED(command: string): string | null
+export function execSyncWithDefaults_DEPRECATED(command: string): string | null;
 /**
  * @deprecated Use `execa` directly with `{ shell: true, reject: false }` for non-blocking execution.
  * Sync exec calls block the event loop and cause performance issues.
@@ -24,7 +24,7 @@ export function execSyncWithDefaults_DEPRECATED(command: string): string | null
 export function execSyncWithDefaults_DEPRECATED(
   command: string,
   options: ExecSyncOptions,
-): string | null
+): string | null;
 /**
  * @deprecated Use `execa` directly with `{ shell: true, reject: false }` for non-blocking execution.
  * Sync exec calls block the event loop and cause performance issues.
@@ -33,7 +33,7 @@ export function execSyncWithDefaults_DEPRECATED(
   command: string,
   abortSignal: AbortSignal,
   timeout?: number,
-): string | null
+): string | null;
 /**
  * @deprecated Use `execa` directly with `{ shell: true, reject: false }` for non-blocking execution.
  * Sync exec calls block the event loop and cause performance issues.
@@ -43,20 +43,20 @@ export function execSyncWithDefaults_DEPRECATED(
   optionsOrAbortSignal?: ExecSyncOptions | AbortSignal,
   timeout = 10 * SECONDS_IN_MINUTE * MS_IN_SECOND,
 ): string | null {
-  let options: ExecSyncOptions
+  let options: ExecSyncOptions;
 
   if (optionsOrAbortSignal === undefined) {
     // No second argument - use defaults
-    options = {}
+    options = {};
   } else if (optionsOrAbortSignal instanceof AbortSignal) {
     // Old signature - second argument is AbortSignal
     options = {
       abortSignal: optionsOrAbortSignal,
       timeout,
-    }
+    };
   } else {
     // New signature - second argument is options object
-    options = optionsOrAbortSignal
+    options = optionsOrAbortSignal;
   }
 
   const {
@@ -64,10 +64,10 @@ export function execSyncWithDefaults_DEPRECATED(
     timeout: finalTimeout = 10 * SECONDS_IN_MINUTE * MS_IN_SECOND,
     input,
     stdio = ['ignore', 'pipe', 'pipe'],
-  } = options
+  } = options;
 
-  abortSignal?.throwIfAborted()
-  using _ = slowLogging`exec: ${command.slice(0, 200)}`
+  abortSignal?.throwIfAborted();
+  using _ = slowLogging`exec: ${command.slice(0, 200)}`;
   try {
     const result = (execaSync as any)(command, {
       env: process.env,
@@ -78,12 +78,12 @@ export function execSyncWithDefaults_DEPRECATED(
       shell: true, // execSync typically runs shell commands
       reject: false, // Don't throw on non-zero exit codes
       input,
-    })
+    });
     if (!result.stdout) {
-      return null
+      return null;
     }
-    return result.stdout.trim() || null
+    return result.stdout.trim() || null;
   } catch {
-    return null
+    return null;
   }
 }

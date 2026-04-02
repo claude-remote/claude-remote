@@ -1,5 +1,5 @@
 export async function listAllLiveSessions(): Promise<any[]> {
-  return []
+  return [];
 }
 
 export async function sendToUdsSocket(..._args: any[]): Promise<void> {}

@@ -1,7 +1,7 @@
-import { getSettings_DEPRECATED } from '../settings/settings.js'
-import { isModelAlias, isModelFamilyAlias } from './aliases.js'
-import { parseUserSpecifiedModel } from './model.js'
-import { resolveOverriddenModel } from './modelStrings.js'
+import { getSettings_DEPRECATED } from '../settings/settings.js';
+import { isModelAlias, isModelFamilyAlias } from './aliases.js';
+import { parseUserSpecifiedModel } from './model.js';
+import { resolveOverriddenModel } from './modelStrings.js';
 
 /**
  * Check if a model belongs to a given family by checking if its name
@@ -9,14 +9,14 @@ import { resolveOverriddenModel } from './modelStrings.js'
  */
 function modelBelongsToFamily(model: string, family: string): boolean {
   if (model.includes(family)) {
-    return true
+    return true;
   }
   // Resolve aliases like "best" → "claude-opus-4-6" to check family membership
   if (isModelAlias(model)) {
-    const resolved = parseUserSpecifiedModel(model).toLowerCase()
-    return resolved.includes(family)
+    const resolved = parseUserSpecifiedModel(model).toLowerCase();
+    return resolved.includes(family);
   }
-  return false
+  return false;
 }
 
 /**
@@ -26,9 +26,9 @@ function modelBelongsToFamily(model: string, family: string): boolean {
  */
 function prefixMatchesModel(modelName: string, prefix: string): boolean {
   if (!modelName.startsWith(prefix)) {
-    return false
+    return false;
   }
-  return modelName.length === prefix.length || modelName[prefix.length] === '-'
+  return modelName.length === prefix.length || modelName[prefix.length] === '-';
 }
 
 /**
@@ -38,22 +38,17 @@ function prefixMatchesModel(modelName: string, prefix: string): boolean {
  */
 function modelMatchesVersionPrefix(model: string, entry: string): boolean {
   // Resolve the input model to a full name if it's an alias
-  const resolvedModel = isModelAlias(model)
-    ? parseUserSpecifiedModel(model).toLowerCase()
-    : model
+  const resolvedModel = isModelAlias(model) ? parseUserSpecifiedModel(model).toLowerCase() : model;
 
   // Try the entry as-is (e.g. "claude-opus-4-5")
   if (prefixMatchesModel(resolvedModel, entry)) {
-    return true
+    return true;
   }
   // Try with "claude-" prefix (e.g. "opus-4-5" → "claude-opus-4-5")
-  if (
-    !entry.startsWith('claude-') &&
-    prefixMatchesModel(resolvedModel, `claude-${entry}`)
-  ) {
-    return true
+  if (!entry.startsWith('claude-') && prefixMatchesModel(resolvedModel, `claude-${entry}`)) {
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -62,28 +57,25 @@ function modelMatchesVersionPrefix(model: string, entry: string): boolean {
  * takes precedence — "opus" alone would be a wildcard, but "opus-4-5" narrows
  * it to only that version.
  */
-function familyHasSpecificEntries(
-  family: string,
-  allowlist: string[],
-): boolean {
+function familyHasSpecificEntries(family: string, allowlist: string[]): boolean {
   for (const entry of allowlist) {
     if (isModelFamilyAlias(entry)) {
-      continue
+      continue;
     }
     // Check if entry is a version-qualified variant of this family
     // e.g., "opus-4-5" or "claude-opus-4-5-20251101" for the "opus" family
     // Must match at a segment boundary (followed by '-' or end) to avoid
     // false positives like "opusplan" matching "opus"
-    const idx = entry.indexOf(family)
+    const idx = entry.indexOf(family);
     if (idx === -1) {
-      continue
+      continue;
     }
-    const afterFamily = idx + family.length
+    const afterFamily = idx + family.length;
     if (afterFamily === entry.length || entry[afterFamily] === '-') {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 /**
@@ -98,18 +90,18 @@ function familyHasSpecificEntries(
  * 3. Full model IDs ("claude-opus-4-5-20251101") — exact match only
  */
 export function isModelAllowed(model: string): boolean {
-  const settings = getSettings_DEPRECATED() || {}
-  const { availableModels } = settings
+  const settings = getSettings_DEPRECATED() || {};
+  const { availableModels } = settings;
   if (!availableModels) {
-    return true // No restrictions
+    return true; // No restrictions
   }
   if (availableModels.length === 0) {
-    return false // Empty allowlist blocks all user-specified models
+    return false; // Empty allowlist blocks all user-specified models
   }
 
-  const resolvedModel = resolveOverriddenModel(model)
-  const normalizedModel = resolvedModel.trim().toLowerCase()
-  const normalizedAllowlist = availableModels.map(m => m.trim().toLowerCase())
+  const resolvedModel = resolveOverriddenModel(model);
+  const normalizedModel = resolvedModel.trim().toLowerCase();
+  const normalizedAllowlist = availableModels.map((m) => m.trim().toLowerCase());
 
   // Direct match (alias-to-alias or full-name-to-full-name)
   // Skip family aliases that have been narrowed by specific entries —
@@ -120,7 +112,7 @@ export function isModelAllowed(model: string): boolean {
       !isModelFamilyAlias(normalizedModel) ||
       !familyHasSpecificEntries(normalizedModel, normalizedAllowlist)
     ) {
-      return true
+      return true;
     }
   }
 
@@ -133,25 +125,25 @@ export function isModelAllowed(model: string): boolean {
       !familyHasSpecificEntries(entry, normalizedAllowlist) &&
       modelBelongsToFamily(normalizedModel, entry)
     ) {
-      return true
+      return true;
     }
   }
 
   // For non-family entries, do bidirectional alias resolution
   // If model is an alias, resolve it and check if the resolved name is in the list
   if (isModelAlias(normalizedModel)) {
-    const resolved = parseUserSpecifiedModel(normalizedModel).toLowerCase()
+    const resolved = parseUserSpecifiedModel(normalizedModel).toLowerCase();
     if (normalizedAllowlist.includes(resolved)) {
-      return true
+      return true;
     }
   }
 
   // If any non-family alias in the allowlist resolves to the input model
   for (const entry of normalizedAllowlist) {
     if (!isModelFamilyAlias(entry) && isModelAlias(entry)) {
-      const resolved = parseUserSpecifiedModel(entry).toLowerCase()
+      const resolved = parseUserSpecifiedModel(entry).toLowerCase();
       if (resolved === normalizedModel) {
-        return true
+        return true;
       }
     }
   }
@@ -161,10 +153,10 @@ export function isModelAllowed(model: string): boolean {
   for (const entry of normalizedAllowlist) {
     if (!isModelFamilyAlias(entry) && !isModelAlias(entry)) {
       if (modelMatchesVersionPrefix(normalizedModel, entry)) {
-        return true
+        return true;
       }
     }
   }
 
-  return false
+  return false;
 }

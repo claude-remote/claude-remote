@@ -1,4 +1,4 @@
-import type { SecureStorage, SecureStorageData } from './types.js'
+import type { SecureStorage, SecureStorageData } from './types.js';
 
 /**
  * Creates a fallback storage that tries to use the primary storage first,
@@ -11,36 +11,36 @@ export function createFallbackStorage(
   return {
     name: `${primary.name}-with-${secondary.name}-fallback`,
     read(): SecureStorageData {
-      const result = primary.read()
+      const result = primary.read();
       if (result !== null && result !== undefined) {
-        return result
+        return result;
       }
-      return secondary.read() || {}
+      return secondary.read() || {};
     },
     async readAsync(): Promise<SecureStorageData | null> {
-      const result = await primary.readAsync()
+      const result = await primary.readAsync();
       if (result !== null && result !== undefined) {
-        return result
+        return result;
       }
-      return (await secondary.readAsync()) || {}
+      return (await secondary.readAsync()) || {};
     },
     update(data: SecureStorageData): { success: boolean; warning?: string } {
       // Capture state before update
-      const primaryDataBefore = primary.read()
+      const primaryDataBefore = primary.read();
 
-      const result = primary.update(data)
+      const result = primary.update(data);
 
       if (result.success) {
         // Delete secondary when migrating to primary for the first time
         // This preserves credentials when sharing .claude between host and containers
         // See: https://github.com/anthropics/claude-code/issues/1414
         if (primaryDataBefore === null) {
-          secondary.delete()
+          secondary.delete();
         }
-        return result
+        return result;
       }
 
-      const fallbackResult = secondary.update(data)
+      const fallbackResult = secondary.update(data);
 
       if (fallbackResult.success) {
         // Primary write failed but primary may still hold an *older* valid
@@ -50,21 +50,21 @@ export function createFallbackStorage(
         // /login loop (#30337). Best-effort delete; if this also fails the
         // user's keychain is in a bad state we can't fix from here.
         if (primaryDataBefore !== null) {
-          primary.delete()
+          primary.delete();
         }
         return {
           success: true,
           warning: fallbackResult.warning,
-        }
+        };
       }
 
-      return { success: false }
+      return { success: false };
     },
     delete(): boolean {
-      const primarySuccess = primary.delete()
-      const secondarySuccess = secondary.delete()
+      const primarySuccess = primary.delete();
+      const secondarySuccess = secondary.delete();
 
-      return primarySuccess || secondarySuccess
+      return primarySuccess || secondarySuccess;
     },
-  }
+  };
 }

@@ -1,10 +1,9 @@
-import type { Command } from '../commands.js'
+import type { Command } from '../commands.js';
 
 const command = {
   type: 'prompt',
   name: 'init-verifiers',
-  description:
-    'Create verifier skill(s) for automated verification of code changes',
+  description: 'Create verifier skill(s) for automated verification of code changes',
   contentLength: 0, // Dynamic content
   progressMessage: 'analyzing your project and creating verifier skills',
   source: 'builtin',
@@ -255,8 +254,8 @@ After writing the skill file(s), inform the user:
 5. That the verifier will offer to self-update if it detects its own instructions are outdated (wrong dev server command, changed ready signal, etc.)
 `,
       },
-    ]
+    ];
   },
-} satisfies Command
+} satisfies Command;
 
-export default command
+export default command;

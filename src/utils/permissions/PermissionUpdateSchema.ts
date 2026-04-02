@@ -5,21 +5,15 @@
  * so it can be safely imported by src/types/hooks.ts without creating
  * circular dependencies.
  */
-import z from 'zod/v4'
+import z from 'zod/v4';
 // Types extracted to src/types/permissions.ts to break import cycles
-import type {
-  PermissionUpdate,
-  PermissionUpdateDestination,
-} from '../../types/permissions.js'
-import { lazySchema } from '../lazySchema.js'
-import { externalPermissionModeSchema } from './PermissionMode.js'
-import {
-  permissionBehaviorSchema,
-  permissionRuleValueSchema,
-} from './PermissionRule.js'
+import type { PermissionUpdate, PermissionUpdateDestination } from '../../types/permissions.js';
+import { lazySchema } from '../lazySchema.js';
+import { externalPermissionModeSchema } from './PermissionMode.js';
+import { permissionBehaviorSchema, permissionRuleValueSchema } from './PermissionRule.js';
 
 // Re-export for backwards compatibility
-export type { PermissionUpdate, PermissionUpdateDestination }
+export type { PermissionUpdate, PermissionUpdateDestination };
 
 /**
  * PermissionUpdateDestination is where a new permission rule should be saved to.
@@ -37,7 +31,7 @@ export const permissionUpdateDestinationSchema = lazySchema(() =>
     // From the command line arguments
     'cliArg',
   ]),
-)
+);
 
 export const permissionUpdateSchema = lazySchema(() =>
   z.discriminatedUnion('type', [
@@ -75,4 +69,4 @@ export const permissionUpdateSchema = lazySchema(() =>
       destination: permissionUpdateDestinationSchema(),
     }),
   ]),
-)
+);

@@ -1,9 +1,9 @@
-import { isAutoMemoryEnabled } from '../../memdir/paths.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import { isAutoMemoryEnabled } from '../../memdir/paths.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 export function registerRememberSkill(): void {
   if (process.env.USER_TYPE !== 'ant') {
-    return
+    return;
   }
 
   const SKILL_PROMPT = `# Memory Review
@@ -59,7 +59,7 @@ If auto-memory is empty, say so and offer to review CLAUDE.md for cleanup.
 - Do NOT modify files without explicit user approval
 - Do NOT create new files unless the target doesn't exist yet
 - Ask about ambiguous entries — don't guess
-`
+`;
 
   registerBundledSkill({
     name: 'remember',
@@ -70,13 +70,13 @@ If auto-memory is empty, say so and offer to review CLAUDE.md for cleanup.
     userInvocable: true,
     isEnabled: () => isAutoMemoryEnabled(),
     async getPromptForCommand(args) {
-      let prompt = SKILL_PROMPT
+      let prompt = SKILL_PROMPT;
 
       if (args) {
-        prompt += `\n## Additional context from user\n\n${args}`
+        prompt += `\n## Additional context from user\n\n${args}`;
       }
 
-      return [{ type: 'text', text: prompt }]
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

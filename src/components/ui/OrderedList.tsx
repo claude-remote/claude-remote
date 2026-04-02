@@ -1,21 +1,17 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { createContext, isValidElement, type ReactNode, useContext } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box } from '../../ink.js';
 import { OrderedListItem, OrderedListItemContext } from './OrderedListItem.js';
 const OrderedListContext = createContext({
-  marker: ''
+  marker: '',
 });
 type OrderedListProps = {
   children: ReactNode;
 };
 function OrderedListComponent(t0) {
   const $ = _c(9);
-  const {
-    children
-  } = t0;
-  const {
-    marker: parentMarker
-  } = useContext(OrderedListContext);
+  const { children } = t0;
+  const { marker: parentMarker } = useContext(OrderedListContext);
   let numberOfItems = 0;
   for (const child of React.Children.toArray(children)) {
     if (!isValidElement(child) || child.type !== OrderedListItem) {
@@ -34,11 +30,21 @@ function OrderedListComponent(t0) {
         }
         const paddedMarker = `${String(index + 1).padStart(maxMarkerWidth)}.`;
         const marker = `${parentMarker}${paddedMarker}`;
-        return <OrderedListContext.Provider value={{
-          marker
-        }}><OrderedListItemContext.Provider value={{
-            marker
-          }}>{child_0}</OrderedListItemContext.Provider></OrderedListContext.Provider>;
+        return (
+          <OrderedListContext.Provider
+            value={{
+              marker,
+            }}
+          >
+            <OrderedListItemContext.Provider
+              value={{
+                marker,
+              }}
+            >
+              {child_0}
+            </OrderedListItemContext.Provider>
+          </OrderedListContext.Provider>
+        );
       };
       $[4] = maxMarkerWidth;
       $[5] = parentMarker;

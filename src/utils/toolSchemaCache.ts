@@ -1,4 +1,4 @@
-import type { BetaTool } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+import type { BetaTool } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs';
 
 // Session-scoped cache of rendered tool schemas. Tool schemas render at server
 // position 2 (before system prompt), so any byte-level change busts the entire
@@ -11,16 +11,16 @@ import type { BetaTool } from '@anthropic-ai/sdk/resources/beta/messages/message
 // (which would create a cycle via plans→settings→file→growthbook→config→
 // bridgeEnabled→auth).
 type CachedSchema = BetaTool & {
-  strict?: boolean
-  eager_input_streaming?: boolean
-}
+  strict?: boolean;
+  eager_input_streaming?: boolean;
+};
 
-const TOOL_SCHEMA_CACHE = new Map<string, CachedSchema>()
+const TOOL_SCHEMA_CACHE = new Map<string, CachedSchema>();
 
 export function getToolSchemaCache(): Map<string, CachedSchema> {
-  return TOOL_SCHEMA_CACHE
+  return TOOL_SCHEMA_CACHE;
 }
 
 export function clearToolSchemaCache(): void {
-  TOOL_SCHEMA_CACHE.clear()
+  TOOL_SCHEMA_CACHE.clear();
 }

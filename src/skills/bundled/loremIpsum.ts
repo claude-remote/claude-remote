@@ -1,4 +1,4 @@
-import { registerBundledSkill } from '../bundledSkills.js'
+import { registerBundledSkill } from '../bundledSkills.js';
 
 // Verified 1-token words (tested via API token counting)
 // All common English words confirmed to tokenize as single tokens
@@ -197,43 +197,42 @@ const ONE_TOKEN_WORDS = [
   'state',
   'end',
   'start',
-]
+];
 
 function generateLoremIpsum(targetTokens: number): string {
-  let tokens = 0
-  let result = ''
+  let tokens = 0;
+  let result = '';
 
   while (tokens < targetTokens) {
     // Sentence: 10-20 words
-    const sentenceLength = 10 + Math.floor(Math.random() * 11)
-    let wordsInSentence = 0
+    const sentenceLength = 10 + Math.floor(Math.random() * 11);
+    let wordsInSentence = 0;
 
     for (let i = 0; i < sentenceLength && tokens < targetTokens; i++) {
-      const word =
-        ONE_TOKEN_WORDS[Math.floor(Math.random() * ONE_TOKEN_WORDS.length)]
-      result += word
-      tokens++
-      wordsInSentence++
+      const word = ONE_TOKEN_WORDS[Math.floor(Math.random() * ONE_TOKEN_WORDS.length)];
+      result += word;
+      tokens++;
+      wordsInSentence++;
 
       if (i === sentenceLength - 1 || tokens >= targetTokens) {
-        result += '. '
+        result += '. ';
       } else {
-        result += ' '
+        result += ' ';
       }
     }
 
     // Paragraph break every 5-8 sentences (roughly 20% chance per sentence)
     if (wordsInSentence > 0 && Math.random() < 0.2 && tokens < targetTokens) {
-      result += '\n\n'
+      result += '\n\n';
     }
   }
 
-  return result.trim()
+  return result.trim();
 }
 
 export function registerLoremIpsumSkill(): void {
   if (process.env.USER_TYPE !== 'ant') {
-    return
+    return;
   }
 
   registerBundledSkill({
@@ -243,21 +242,21 @@ export function registerLoremIpsumSkill(): void {
     argumentHint: '[token_count]',
     userInvocable: true,
     async getPromptForCommand(args) {
-      const parsed = parseInt(args)
+      const parsed = Number.parseInt(args);
 
-      if (args && (isNaN(parsed) || parsed <= 0)) {
+      if (args && (Number.isNaN(parsed) || parsed <= 0)) {
         return [
           {
             type: 'text',
             text: 'Invalid token count. Please provide a positive number (e.g., /lorem-ipsum 10000).',
           },
-        ]
+        ];
       }
 
-      const targetTokens = parsed || 10000
+      const targetTokens = parsed || 10000;
 
       // Cap at 500k tokens for safety
-      const cappedTokens = Math.min(targetTokens, 500_000)
+      const cappedTokens = Math.min(targetTokens, 500_000);
 
       if (cappedTokens < targetTokens) {
         return [
@@ -265,10 +264,10 @@ export function registerLoremIpsumSkill(): void {
             type: 'text',
             text: `Requested ${targetTokens} tokens, but capped at 500,000 for safety.\n\n${generateLoremIpsum(cappedTokens)}`,
           },
-        ]
+        ];
       }
 
-      const loremText = generateLoremIpsum(cappedTokens)
+      const loremText = generateLoremIpsum(cappedTokens);
 
       // Just dump the lorem ipsum text into the conversation
       return [
@@ -276,7 +275,7 @@ export function registerLoremIpsumSkill(): void {
           type: 'text',
           text: loremText,
         },
-      ]
+      ];
     },
-  })
+  });
 }

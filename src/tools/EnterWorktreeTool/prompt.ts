@@ -26,5 +26,5 @@ export function getEnterWorktreeToolPrompt(): string {
 ## Parameters
 
 - \`name\` (optional): A name for the worktree. If not provided, a random name is generated.
-`
+`;
 }

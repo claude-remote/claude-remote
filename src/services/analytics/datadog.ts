@@ -1,20 +1,19 @@
-import axios from 'axios'
-import { createHash } from 'crypto'
-import memoize from 'lodash-es/memoize.js'
-import { getOrCreateUserID } from '../../utils/config.js'
-import { logError } from '../../utils/log.js'
-import { getCanonicalName } from '../../utils/model/model.js'
-import { getAPIProvider } from '../../utils/model/providers.js'
-import { MODEL_COSTS } from '../../utils/modelCost.js'
-import { isAnalyticsDisabled } from './config.js'
-import { getEventMetadata } from './metadata.js'
+import { createHash } from 'node:crypto';
+import axios from 'axios';
+import memoize from 'lodash-es/memoize.js';
+import { getOrCreateUserID } from '../../utils/config.js';
+import { logError } from '../../utils/log.js';
+import { getCanonicalName } from '../../utils/model/model.js';
+import { getAPIProvider } from '../../utils/model/providers.js';
+import { MODEL_COSTS } from '../../utils/modelCost.js';
+import { isAnalyticsDisabled } from './config.js';
+import { getEventMetadata } from './metadata.js';
 
-const DATADOG_LOGS_ENDPOINT =
-  'https://http-intake.logs.us5.datadoghq.com/api/v2/logs'
-const DATADOG_CLIENT_TOKEN = 'pubbbf48e6d78dae54bceaa4acf463299bf'
-const DEFAULT_FLUSH_INTERVAL_MS = 15000
-const MAX_BATCH_SIZE = 100
-const NETWORK_TIMEOUT_MS = 5000
+const DATADOG_LOGS_ENDPOINT = 'https://http-intake.logs.us5.datadoghq.com/api/v2/logs';
+const DATADOG_CLIENT_TOKEN = 'pubbbf48e6d78dae54bceaa4acf463299bf';
+const DEFAULT_FLUSH_INTERVAL_MS = 15000;
+const MAX_BATCH_SIZE = 100;
+const NETWORK_TIMEOUT_MS = 5000;
 
 const DATADOG_ALLOWED_EVENTS = new Set([
   'chrome_bridge_connection_succeeded',
@@ -61,7 +60,7 @@ const DATADOG_ALLOWED_EVENTS = new Set([
   'tengu_team_mem_sync_push',
   'tengu_team_mem_sync_started',
   'tengu_team_mem_entries_capped',
-])
+]);
 
 const TAG_FIELDS = [
   'arch',
@@ -80,30 +79,30 @@ const TAG_FIELDS = [
   'userType',
   'version',
   'versionBase',
-]
+];
 
 function camelToSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 type DatadogLog = {
-  ddsource: string
-  ddtags: string
-  message: string
-  service: string
-  hostname: string
-  [key: string]: unknown
-}
+  ddsource: string;
+  ddtags: string;
+  message: string;
+  service: string;
+  hostname: string;
+  [key: string]: unknown;
+};
 
-let logBatch: DatadogLog[] = []
-let flushTimer: NodeJS.Timeout | null = null
-let datadogInitialized: boolean | null = null
+let logBatch: DatadogLog[] = [];
+let flushTimer: NodeJS.Timeout | null = null;
+let datadogInitialized: boolean | null = null;
 
 async function flushLogs(): Promise<void> {
-  if (logBatch.length === 0) return
+  if (logBatch.length === 0) return;
 
-  const logsToSend = logBatch
-  logBatch = []
+  const logsToSend = logBatch;
+  logBatch = [];
 
   try {
     await axios.post(DATADOG_LOGS_ENDPOINT, logsToSend, {
@@ -112,36 +111,36 @@ async function flushLogs(): Promise<void> {
         'DD-API-KEY': DATADOG_CLIENT_TOKEN,
       },
       timeout: NETWORK_TIMEOUT_MS,
-    })
+    });
   } catch (error) {
-    logError(error)
+    logError(error);
   }
 }
 
 function scheduleFlush(): void {
-  if (flushTimer) return
+  if (flushTimer) return;
 
   flushTimer = setTimeout(() => {
-    flushTimer = null
-    void flushLogs()
-  }, getFlushIntervalMs()).unref()
+    flushTimer = null;
+    void flushLogs();
+  }, getFlushIntervalMs()).unref();
 }
 
 export const initializeDatadog = memoize(async (): Promise<boolean> => {
   if (isAnalyticsDisabled()) {
-    datadogInitialized = false
-    return false
+    datadogInitialized = false;
+    return false;
   }
 
   try {
-    datadogInitialized = true
-    return true
+    datadogInitialized = true;
+    return true;
   } catch (error) {
-    logError(error)
-    datadogInitialized = false
-    return false
+    logError(error);
+    datadogInitialized = false;
+    return false;
   }
-})
+});
 
 /**
  * Flush remaining Datadog logs and shut down.
@@ -150,10 +149,10 @@ export const initializeDatadog = memoize(async (): Promise<boolean> => {
  */
 export async function shutdownDatadog(): Promise<void> {
   if (flushTimer) {
-    clearTimeout(flushTimer)
-    flushTimer = null
+    clearTimeout(flushTimer);
+    flushTimer = null;
   }
-  await flushLogs()
+  await flushLogs();
 }
 
 // NOTE: use via src/services/analytics/index.ts > logEvent
@@ -162,49 +161,46 @@ export async function trackDatadogEvent(
   properties: { [key: string]: boolean | number | undefined },
 ): Promise<void> {
   if (process.env.NODE_ENV !== 'production') {
-    return
+    return;
   }
 
   // Don't send events for 3P providers (Bedrock, Vertex, Foundry)
   if (getAPIProvider() !== 'firstParty') {
-    return
+    return;
   }
 
   // Fast path: use cached result if available to avoid await overhead
-  let initialized = datadogInitialized
+  let initialized = datadogInitialized;
   if (initialized === null) {
-    initialized = await initializeDatadog()
+    initialized = await initializeDatadog();
   }
   if (!initialized || !DATADOG_ALLOWED_EVENTS.has(eventName)) {
-    return
+    return;
   }
 
   try {
     const metadata = await getEventMetadata({
       model: properties.model,
       betas: properties.betas,
-    })
+    });
     // Destructure to avoid duplicate envContext (once nested, once flattened)
-    const { envContext, ...restMetadata } = metadata
+    const { envContext, ...restMetadata } = metadata;
     const allData: Record<string, unknown> = {
       ...restMetadata,
       ...envContext,
       ...properties,
       userBucket: getUserBucket(),
-    }
+    };
 
     // Normalize MCP tool names to "mcp" for cardinality reduction
-    if (
-      typeof allData.toolName === 'string' &&
-      allData.toolName.startsWith('mcp__')
-    ) {
-      allData.toolName = 'mcp'
+    if (typeof allData.toolName === 'string' && allData.toolName.startsWith('mcp__')) {
+      allData.toolName = 'mcp';
     }
 
     // Normalize model names for cardinality reduction (external users only)
     if (process.env.USER_TYPE !== 'ant' && typeof allData.model === 'string') {
-      const shortName = getCanonicalName(allData.model.replace(/\[1m]$/i, ''))
-      allData.model = shortName in MODEL_COSTS ? shortName : 'other'
+      const shortName = getCanonicalName(allData.model.replace(/\[1m]$/i, ''));
+      allData.model = shortName in MODEL_COSTS ? shortName : 'other';
     }
 
     // Truncate dev version to base + date (remove timestamp and sha for cardinality reduction)
@@ -213,22 +209,22 @@ export async function trackDatadogEvent(
       allData.version = allData.version.replace(
         /^(\d+\.\d+\.\d+-dev\.\d{8})\.t\d+\.sha[a-f0-9]+$/,
         '$1',
-      )
+      );
     }
 
     // Transform status to http_status and http_status_range to avoid Datadog reserved field
     if (allData.status !== undefined && allData.status !== null) {
-      const statusCode = String(allData.status)
-      allData.http_status = statusCode
+      const statusCode = String(allData.status);
+      allData.http_status = statusCode;
 
       // Determine status range (1xx, 2xx, 3xx, 4xx, 5xx)
-      const firstDigit = statusCode.charAt(0)
+      const firstDigit = statusCode.charAt(0);
       if (firstDigit >= '1' && firstDigit <= '5') {
-        allData.http_status_range = `${firstDigit}xx`
+        allData.http_status_range = `${firstDigit}xx`;
       }
 
       // Remove original status field to avoid conflict with Datadog's reserved field
-      delete allData.status
+      allData.status = undefined;
     }
 
     // Build ddtags with high-cardinality fields for filtering.
@@ -236,14 +232,13 @@ export async function trackDatadogEvent(
     // log search API — the `message` field (where eventName also lives)
     // is a DD reserved field and is NOT queryable from dashboard widget
     // queries or the aggregation API. See scripts/release/MONITORING.md.
-    const allDataRecord = allData
+    const allDataRecord = allData;
     const tags = [
       `event:${eventName}`,
       ...TAG_FIELDS.filter(
-        field =>
-          allDataRecord[field] !== undefined && allDataRecord[field] !== null,
-      ).map(field => `${camelToSnakeCase(field)}:${allDataRecord[field]}`),
-    ]
+        (field) => allDataRecord[field] !== undefined && allDataRecord[field] !== null,
+      ).map((field) => `${camelToSnakeCase(field)}:${allDataRecord[field]}`),
+    ];
 
     const log: DatadogLog = {
       ddsource: 'nodejs',
@@ -252,33 +247,33 @@ export async function trackDatadogEvent(
       service: 'claude-code',
       hostname: 'claude-code',
       env: process.env.USER_TYPE,
-    }
+    };
 
     // Add all fields as searchable attributes (not duplicated in tags)
     for (const [key, value] of Object.entries(allData)) {
       if (value !== undefined && value !== null) {
-        log[camelToSnakeCase(key)] = value
+        log[camelToSnakeCase(key)] = value;
       }
     }
 
-    logBatch.push(log)
+    logBatch.push(log);
 
     // Flush immediately if batch is full, otherwise schedule
     if (logBatch.length >= MAX_BATCH_SIZE) {
       if (flushTimer) {
-        clearTimeout(flushTimer)
-        flushTimer = null
+        clearTimeout(flushTimer);
+        flushTimer = null;
       }
-      void flushLogs()
+      void flushLogs();
     } else {
-      scheduleFlush()
+      scheduleFlush();
     }
   } catch (error) {
-    logError(error)
+    logError(error);
   }
 }
 
-const NUM_USER_BUCKETS = 30
+const NUM_USER_BUCKETS = 30;
 
 /**
  * Gets a 'bucket' that the user ID falls into.
@@ -293,15 +288,15 @@ const NUM_USER_BUCKETS = 30
  * while preserving user privacy and reducing cardinality.
  */
 const getUserBucket = memoize((): number => {
-  const userId = getOrCreateUserID()
-  const hash = createHash('sha256').update(userId).digest('hex')
-  return parseInt(hash.slice(0, 8), 16) % NUM_USER_BUCKETS
-})
+  const userId = getOrCreateUserID();
+  const hash = createHash('sha256').update(userId).digest('hex');
+  return Number.parseInt(hash.slice(0, 8), 16) % NUM_USER_BUCKETS;
+});
 
 function getFlushIntervalMs(): number {
   // Allow tests to override to not block on the default flush interval.
   return (
-    parseInt(process.env.CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS || '', 10) ||
+    Number.parseInt(process.env.CLAUDE_CODE_DATADOG_FLUSH_INTERVAL_MS || '', 10) ||
     DEFAULT_FLUSH_INTERVAL_MS
-  )
+  );
 }

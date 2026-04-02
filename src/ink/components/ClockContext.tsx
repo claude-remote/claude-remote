@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { createContext, useEffect, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { FRAME_INTERVAL_MS } from '../constants.js';
 import { useTerminalFocus } from '../hooks/use-terminal-focus.js';
 export type Clock = {
@@ -63,7 +63,7 @@ export function createClock(tickIntervalMs: number): Clock {
       if (ms === currentTickIntervalMs) return;
       currentTickIntervalMs = ms;
       updateInterval();
-    }
+    },
   };
 }
 export const ClockContext = createContext<Clock | null>(null);
@@ -74,9 +74,7 @@ const BLURRED_TICK_INTERVAL_MS = FRAME_INTERVAL_MS * 2;
 // never causes consumer re-renders on its own.
 export function ClockProvider(t0) {
   const $ = _c(7);
-  const {
-    children
-  } = t0;
+  const { children } = t0;
   const [clock] = useState(_temp);
   const focused = useTerminalFocus();
   let t1;

@@ -1,1 +1,1 @@
-export const SKILL_TOOL_NAME = 'Skill'
+export const SKILL_TOOL_NAME = 'Skill';

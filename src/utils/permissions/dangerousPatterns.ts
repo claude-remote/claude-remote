@@ -39,7 +39,7 @@ export const CROSS_PLATFORM_CODE_EXEC = [
   'sh',
   // Remote arbitrary-command wrapper (native OpenSSH on Win10+)
   'ssh',
-] as const
+] as const;
 
 export const DANGEROUS_BASH_PATTERNS: readonly string[] = [
   ...CROSS_PLATFORM_CODE_EXEC,
@@ -77,4 +77,4 @@ export const DANGEROUS_BASH_PATTERNS: readonly string[] = [
         'gsutil',
       ]
     : []),
-]
+];

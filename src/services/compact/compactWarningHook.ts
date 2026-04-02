@@ -1,5 +1,5 @@
-import { useSyncExternalStore } from 'react'
-import { compactWarningStore } from './compactWarningState.js'
+import { useSyncExternalStore } from 'react';
+import { compactWarningStore } from './compactWarningState.js';
 
 /**
  * React hook to subscribe to compact warning suppression state.
@@ -9,8 +9,5 @@ import { compactWarningStore } from './compactWarningState.js'
  * that module graph would drag it into the print-mode startup path.
  */
 export function useCompactWarningSuppression(): boolean {
-  return useSyncExternalStore(
-    compactWarningStore.subscribe,
-    compactWarningStore.getState,
-  )
+  return useSyncExternalStore(compactWarningStore.subscribe, compactWarningStore.getState);
 }

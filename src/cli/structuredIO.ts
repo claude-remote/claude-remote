@@ -1,92 +1,87 @@
-import { feature } from 'src/utils/feature.js'
-import type {
-  ElicitResult,
-  JSONRPCMessage,
-} from '@modelcontextprotocol/sdk/types.js'
-import { randomUUID } from 'crypto'
-import type { AssistantMessage } from 'src//types/message.js'
+import { randomUUID } from 'node:crypto';
+import type { ElicitResult, JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
+import type { AssistantMessage } from 'src//types/message.js';
+import type { Tool, ToolUseContext } from 'src/Tool.js';
 import type {
   HookInput,
   HookJSONOutput,
   PermissionUpdate,
   SDKMessage,
   SDKUserMessage,
-} from 'src/entrypoints/agentSdkTypes.js'
-import { SDKControlElicitationResponseSchema } from 'src/entrypoints/sdk/controlSchemas.js'
+} from 'src/entrypoints/agentSdkTypes.js';
+import { SDKControlElicitationResponseSchema } from 'src/entrypoints/sdk/controlSchemas.js';
 import type {
   SDKControlRequest,
   SDKControlResponse,
   StdinMessage,
   StdoutMessage,
-} from 'src/entrypoints/sdk/controlTypes.js'
-import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js'
-import type { Tool, ToolUseContext } from 'src/Tool.js'
-import { type HookCallback, hookJSONOutputSchema } from 'src/types/hooks.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import { logForDiagnosticsNoPII } from 'src/utils/diagLogs.js'
-import { AbortError } from 'src/utils/errors.js'
+} from 'src/entrypoints/sdk/controlTypes.js';
+import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js';
+import { type HookCallback, hookJSONOutputSchema } from 'src/types/hooks.js';
+import { logForDebugging } from 'src/utils/debug.js';
+import { logForDiagnosticsNoPII } from 'src/utils/diagLogs.js';
+import { AbortError } from 'src/utils/errors.js';
+import { feature } from 'src/utils/feature.js';
 import {
   type Output as PermissionToolOutput,
   permissionPromptToolResultToPermissionDecision,
   outputSchema as permissionToolOutputSchema,
-} from 'src/utils/permissions/PermissionPromptToolResultSchema.js'
+} from 'src/utils/permissions/PermissionPromptToolResultSchema.js';
 import type {
   PermissionDecision,
   PermissionDecisionReason,
-} from 'src/utils/permissions/PermissionResult.js'
-import { hasPermissionsToUseTool } from 'src/utils/permissions/permissions.js'
-import { writeToStdout } from 'src/utils/process.js'
-import { jsonStringify } from 'src/utils/slowOperations.js'
-import { z } from 'zod/v4'
-import { notifyCommandLifecycle } from '../utils/commandLifecycle.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
-import { executePermissionRequestHooks } from '../utils/hooks.js'
+} from 'src/utils/permissions/PermissionResult.js';
+import { hasPermissionsToUseTool } from 'src/utils/permissions/permissions.js';
+import { writeToStdout } from 'src/utils/process.js';
+import { jsonStringify } from 'src/utils/slowOperations.js';
+import { z } from 'zod/v4';
+import { notifyCommandLifecycle } from '../utils/commandLifecycle.js';
+import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js';
+import { executePermissionRequestHooks } from '../utils/hooks.js';
 import {
   applyPermissionUpdates,
   persistPermissionUpdates,
-} from '../utils/permissions/PermissionUpdate.js'
+} from '../utils/permissions/PermissionUpdate.js';
 import {
-  notifySessionStateChanged,
   type RequiresActionDetails,
   type SessionExternalMetadata,
-} from '../utils/sessionState.js'
-import { jsonParse } from '../utils/slowOperations.js'
-import { Stream } from '../utils/stream.js'
-import { ndjsonSafeStringify } from './ndjsonSafeStringify.js'
+  notifySessionStateChanged,
+} from '../utils/sessionState.js';
+import { jsonParse } from '../utils/slowOperations.js';
+import { Stream } from '../utils/stream.js';
+import { ndjsonSafeStringify } from './ndjsonSafeStringify.js';
 
 /**
  * Synthetic tool name used when forwarding sandbox network permission
  * requests via the can_use_tool control_request protocol. SDK hosts
  * see this as a normal tool permission prompt.
  */
-export const SANDBOX_NETWORK_ACCESS_TOOL_NAME = 'SandboxNetworkAccess'
+export const SANDBOX_NETWORK_ACCESS_TOOL_NAME = 'SandboxNetworkAccess';
 
-function serializeDecisionReason(
-  reason: PermissionDecisionReason | undefined,
-): string | undefined {
+function serializeDecisionReason(reason: PermissionDecisionReason | undefined): string | undefined {
   if (!reason) {
-    return undefined
+    return undefined;
   }
 
   if (
     (feature('BASH_CLASSIFIER') || feature('TRANSCRIPT_CLASSIFIER')) &&
     reason.type === 'classifier'
   ) {
-    return reason.reason
+    return reason.reason;
   }
   switch (reason.type) {
     case 'rule':
     case 'mode':
     case 'subcommandResults':
     case 'permissionPromptTool':
-      return undefined
+      return undefined;
     case 'hook':
     case 'asyncAgent':
     case 'sandboxOverride':
     case 'workingDir':
     case 'safetyCheck':
     case 'other':
-      return reason.reason
+      return reason.reason;
   }
 }
 
@@ -98,14 +93,14 @@ function buildRequiresActionDetails(
 ): RequiresActionDetails {
   // Per-tool summary methods may throw on malformed input; permission
   // handling must not break because of a bad description.
-  let description: string
+  let description: string;
   try {
     description =
       tool.getActivityDescription?.(input) ??
       tool.getToolUseSummary?.(input) ??
-      tool.userFacingName(input)
+      tool.userFacingName(input);
   } catch {
-    description = tool.name
+    description = tool.name;
   }
   return {
     tool_name: tool.name,
@@ -113,15 +108,15 @@ function buildRequiresActionDetails(
     tool_use_id: toolUseID,
     request_id: requestId,
     input,
-  }
+  };
 }
 
 type PendingRequest<T> = {
-  resolve: (result: T) => void
-  reject: (error: unknown) => void
-  schema?: z.Schema
-  request: SDKControlRequest
-}
+  resolve: (result: T) => void;
+  reject: (error: unknown) => void;
+  schema?: z.Schema;
+  request: SDKControlRequest;
+};
 
 /**
  * Provides a structured way to read and write SDK messages from stdio,
@@ -130,21 +125,18 @@ type PendingRequest<T> = {
 // Maximum number of resolved tool_use IDs to track. Once exceeded, the oldest
 // entry is evicted. This bounds memory in very long sessions while keeping
 // enough history to catch duplicate control_response deliveries.
-const MAX_RESOLVED_TOOL_USE_IDS = 1000
+const MAX_RESOLVED_TOOL_USE_IDS = 1000;
 
 export class StructuredIO {
-  readonly structuredInput: AsyncGenerator<StdinMessage | SDKMessage>
-  private readonly pendingRequests = new Map<string, PendingRequest<unknown>>()
+  readonly structuredInput: AsyncGenerator<StdinMessage | SDKMessage>;
+  private readonly pendingRequests = new Map<string, PendingRequest<unknown>>();
 
   // CCR external_metadata read back on worker start; null when the
   // transport doesn't restore. Assigned by RemoteIO.
-  restoredWorkerState: Promise<SessionExternalMetadata | null> =
-    Promise.resolve(null)
+  restoredWorkerState: Promise<SessionExternalMetadata | null> = Promise.resolve(null);
 
-  private inputClosed = false
-  private unexpectedResponseCallback?: (
-    response: SDKControlResponse,
-  ) => Promise<void>
+  private inputClosed = false;
+  private unexpectedResponseCallback?: (response: SDKControlResponse) => Promise<void>;
 
   // Tracks tool_use IDs that have been resolved through the normal permission
   // flow (or aborted by a hook). When a duplicate control_response arrives
@@ -152,21 +144,21 @@ export class StructuredIO {
   // handler from re-processing it — which would push duplicate assistant
   // messages into mutableMessages and cause a 400 "tool_use ids must be unique"
   // error from the API.
-  private readonly resolvedToolUseIds = new Set<string>()
-  private prependedLines: string[] = []
-  private onControlRequestSent?: (request: SDKControlRequest) => void
-  private onControlRequestResolved?: (requestId: string) => void
+  private readonly resolvedToolUseIds = new Set<string>();
+  private prependedLines: string[] = [];
+  private onControlRequestSent?: (request: SDKControlRequest) => void;
+  private onControlRequestResolved?: (requestId: string) => void;
 
   // sendRequest() and print.ts both enqueue here; the drain loop is the
   // only writer. Prevents control_request from overtaking queued stream_events.
-  readonly outbound = new Stream<StdoutMessage>()
+  readonly outbound = new Stream<StdoutMessage>();
 
   constructor(
     private readonly input: AsyncIterable<string>,
     private readonly replayUserMessages?: boolean,
   ) {
-    this.input = input
-    this.structuredInput = this.read()
+    this.input = input;
+    this.structuredInput = this.read();
   }
 
   /**
@@ -175,12 +167,12 @@ export class StructuredIO {
    */
   private trackResolvedToolUseId(request: SDKControlRequest): void {
     if (request.request.subtype === 'can_use_tool') {
-      this.resolvedToolUseIds.add(request.request.tool_use_id)
+      this.resolvedToolUseIds.add(request.request.tool_use_id);
       if (this.resolvedToolUseIds.size > MAX_RESOLVED_TOOL_USE_IDS) {
         // Evict the oldest entry (Sets iterate in insertion order)
-        const first = this.resolvedToolUseIds.values().next().value
+        const first = this.resolvedToolUseIds.values().next().value;
         if (first !== undefined) {
-          this.resolvedToolUseIds.delete(first)
+          this.resolvedToolUseIds.delete(first);
         }
       }
     }
@@ -188,12 +180,12 @@ export class StructuredIO {
 
   /** Flush pending internal events. No-op for non-remote IO. Overridden by RemoteIO. */
   flushInternalEvents(): Promise<void> {
-    return Promise.resolve()
+    return Promise.resolve();
   }
 
   /** Internal-event queue depth. Overridden by RemoteIO; zero otherwise. */
   get internalEventsPending(): number {
-    return 0
+    return 0;
   }
 
   /**
@@ -203,17 +195,17 @@ export class StructuredIO {
    */
   prependUserMessage(content: string): void {
     this.prependedLines.push(
-      jsonStringify({
+      `${jsonStringify({
         type: 'user',
         session_id: '',
         message: { role: 'user', content },
         parent_tool_use_id: null,
-      } satisfies SDKUserMessage) + '\n',
-    )
+      } satisfies SDKUserMessage)}\n`,
+    );
   }
 
   private async *read() {
-    let content = ''
+    let content = '';
 
     // Called once before for-await (an empty this.input otherwise skips the
     // loop body entirely), then again per block. prependedLines re-check is
@@ -222,54 +214,50 @@ export class StructuredIO {
     const splitAndProcess = async function* (this: StructuredIO) {
       for (;;) {
         if (this.prependedLines.length > 0) {
-          content = this.prependedLines.join('') + content
-          this.prependedLines = []
+          content = this.prependedLines.join('') + content;
+          this.prependedLines = [];
         }
-        const newline = content.indexOf('\n')
-        if (newline === -1) break
-        const line = content.slice(0, newline)
-        content = content.slice(newline + 1)
-        const message = await this.processLine(line)
+        const newline = content.indexOf('\n');
+        if (newline === -1) break;
+        const line = content.slice(0, newline);
+        content = content.slice(newline + 1);
+        const message = await this.processLine(line);
         if (message) {
           logForDiagnosticsNoPII('info', 'cli_stdin_message_parsed', {
             type: message.type,
-          })
-          yield message
+          });
+          yield message;
         }
       }
-    }.bind(this)
+    }.bind(this);
 
-    yield* splitAndProcess()
+    yield* splitAndProcess();
 
     for await (const block of this.input) {
-      content += block
-      yield* splitAndProcess()
+      content += block;
+      yield* splitAndProcess();
     }
     if (content) {
-      const message = await this.processLine(content)
+      const message = await this.processLine(content);
       if (message) {
-        yield message
+        yield message;
       }
     }
-    this.inputClosed = true
+    this.inputClosed = true;
     for (const request of this.pendingRequests.values()) {
       // Reject all pending requests if the input stream
-      request.reject(
-        new Error('Tool permission stream closed before response received'),
-      )
+      request.reject(new Error('Tool permission stream closed before response received'));
     }
   }
 
   getPendingPermissionRequests() {
     return Array.from(this.pendingRequests.values())
-      .map(entry => entry.request)
-      .filter(pr => pr.request.subtype === 'can_use_tool')
+      .map((entry) => entry.request)
+      .filter((pr) => pr.request.subtype === 'can_use_tool');
   }
 
-  setUnexpectedResponseCallback(
-    callback: (response: SDKControlResponse) => Promise<void>,
-  ): void {
-    this.unexpectedResponseCallback = callback
+  setUnexpectedResponseCallback(callback: (response: SDKControlResponse) => Promise<void>): void {
+    this.unexpectedResponseCallback = callback;
   }
 
   /**
@@ -281,29 +269,29 @@ export class StructuredIO {
    * callback is aborted via the signal — otherwise the callback hangs.
    */
   injectControlResponse(response: SDKControlResponse): void {
-    const requestId = response.response?.request_id
-    if (!requestId) return
-    const request = this.pendingRequests.get(requestId)
-    if (!request) return
-    this.trackResolvedToolUseId(request.request)
-    this.pendingRequests.delete(requestId)
+    const requestId = response.response?.request_id;
+    if (!requestId) return;
+    const request = this.pendingRequests.get(requestId);
+    if (!request) return;
+    this.trackResolvedToolUseId(request.request);
+    this.pendingRequests.delete(requestId);
     // Cancel the SDK consumer's canUseTool callback — the bridge won.
     void this.write({
       type: 'control_cancel_request',
       request_id: requestId,
-    })
+    });
     if (response.response.subtype === 'error') {
-      request.reject(new Error(response.response.error))
+      request.reject(new Error(response.response.error));
     } else {
-      const result = response.response.response
+      const result = response.response.response;
       if (request.schema) {
         try {
-          request.resolve(request.schema.parse(result))
+          request.resolve(request.schema.parse(result));
         } catch (error) {
-          request.reject(error)
+          request.reject(error);
         }
       } else {
-        request.resolve({})
+        request.resolve({});
       }
     }
   }
@@ -313,10 +301,8 @@ export class StructuredIO {
    * is written to stdout. Used by the bridge to forward permission
    * requests to claude.ai.
    */
-  setOnControlRequestSent(
-    callback: ((request: SDKControlRequest) => void) | undefined,
-  ): void {
-    this.onControlRequestSent = callback
+  setOnControlRequestSent(callback: ((request: SDKControlRequest) => void) | undefined): void {
+    this.onControlRequestSent = callback;
   }
 
   /**
@@ -324,40 +310,32 @@ export class StructuredIO {
    * from the SDK consumer (via stdin). Used by the bridge to cancel the
    * stale permission prompt on claude.ai when the SDK consumer wins the race.
    */
-  setOnControlRequestResolved(
-    callback: ((requestId: string) => void) | undefined,
-  ): void {
-    this.onControlRequestResolved = callback
+  setOnControlRequestResolved(callback: ((requestId: string) => void) | undefined): void {
+    this.onControlRequestResolved = callback;
   }
 
-  private async processLine(
-    line: string,
-  ): Promise<StdinMessage | SDKMessage | undefined> {
+  private async processLine(line: string): Promise<StdinMessage | SDKMessage | undefined> {
     // Skip empty lines (e.g. from double newlines in piped stdin)
     if (!line) {
-      return undefined
+      return undefined;
     }
     try {
-      const message = normalizeControlMessageKeys(jsonParse(line)) as
-        | StdinMessage
-        | SDKMessage
+      const message = normalizeControlMessageKeys(jsonParse(line)) as StdinMessage | SDKMessage;
       if (message.type === 'keep_alive') {
         // Silently ignore keep-alive messages
-        return undefined
+        return undefined;
       }
       if (message.type === 'update_environment_variables') {
         // Apply environment variable updates directly to process.env.
         // Used by bridge session runner for auth token refresh
         // (CLAUDE_CODE_SESSION_ACCESS_TOKEN) which must be readable
         // by the REPL process itself, not just child Bash commands.
-        const keys = Object.keys(message.variables)
+        const keys = Object.keys(message.variables);
         for (const [key, value] of Object.entries(message.variables)) {
-          process.env[key] = value as string
+          process.env[key] = value as string;
         }
-        logForDebugging(
-          `[structuredIO] applied update_environment_variables: ${keys.join(', ')}`,
-        )
-        return undefined
+        logForDebugging(`[structuredIO] applied update_environment_variables: ${keys.join(', ')}`);
+        return undefined;
       }
       if (message.type === 'control_response') {
         // Close lifecycle for every control_response, including duplicates
@@ -365,13 +343,11 @@ export class StructuredIO {
         // is the only path that sees them. uuid is server-injected into the
         // payload.
         const uuid =
-          'uuid' in message && typeof message.uuid === 'string'
-            ? message.uuid
-            : undefined
+          'uuid' in message && typeof message.uuid === 'string' ? message.uuid : undefined;
         if (uuid) {
-          notifyCommandLifecycle(uuid, 'completed')
+          notifyCommandLifecycle(uuid, 'completed');
         }
-        const request = this.pendingRequests.get(message.response.request_id)
+        const request = this.pendingRequests.get(message.response.request_id);
         if (!request) {
           // Check if this tool_use was already resolved through the normal
           // permission flow. Duplicate control_response deliveries (e.g. from
@@ -379,54 +355,46 @@ export class StructuredIO {
           // re-processing them would push duplicate assistant messages into
           // the conversation, causing API 400 errors.
           const responsePayload =
-            message.response.subtype === 'success'
-              ? message.response.response
-              : undefined
-          const toolUseID = responsePayload?.toolUseID
-          if (
-            typeof toolUseID === 'string' &&
-            this.resolvedToolUseIds.has(toolUseID)
-          ) {
+            message.response.subtype === 'success' ? message.response.response : undefined;
+          const toolUseID = responsePayload?.toolUseID;
+          if (typeof toolUseID === 'string' && this.resolvedToolUseIds.has(toolUseID)) {
             logForDebugging(
               `Ignoring duplicate control_response for already-resolved toolUseID=${toolUseID} request_id=${message.response.request_id}`,
-            )
-            return undefined
+            );
+            return undefined;
           }
           if (this.unexpectedResponseCallback) {
-            await this.unexpectedResponseCallback(message)
+            await this.unexpectedResponseCallback(message);
           }
-          return undefined // Ignore responses for requests we don't know about
+          return undefined; // Ignore responses for requests we don't know about
         }
-        this.trackResolvedToolUseId(request.request)
-        this.pendingRequests.delete(message.response.request_id)
+        this.trackResolvedToolUseId(request.request);
+        this.pendingRequests.delete(message.response.request_id);
         // Notify the bridge when the SDK consumer resolves a can_use_tool
         // request, so it can cancel the stale permission prompt on claude.ai.
-        if (
-          request.request.request.subtype === 'can_use_tool' &&
-          this.onControlRequestResolved
-        ) {
-          this.onControlRequestResolved(message.response.request_id)
+        if (request.request.request.subtype === 'can_use_tool' && this.onControlRequestResolved) {
+          this.onControlRequestResolved(message.response.request_id);
         }
 
         if (message.response.subtype === 'error') {
-          request.reject(new Error(message.response.error))
-          return undefined
+          request.reject(new Error(message.response.error));
+          return undefined;
         }
-        const result = message.response.response
+        const result = message.response.response;
         if (request.schema) {
           try {
-            request.resolve(request.schema.parse(result))
+            request.resolve(request.schema.parse(result));
           } catch (error) {
-            request.reject(error)
+            request.reject(error);
           }
         } else {
-          request.resolve({})
+          request.resolve({});
         }
         // Propagate control responses when replay is enabled
         if (this.replayUserMessages) {
-          return message
+          return message;
         }
-        return undefined
+        return undefined;
       }
       if (
         message.type !== 'user' &&
@@ -436,34 +404,31 @@ export class StructuredIO {
       ) {
         logForDebugging(`Ignoring unknown message type: ${message.type}`, {
           level: 'warn',
-        })
-        return undefined
+        });
+        return undefined;
       }
       if (message.type === 'control_request') {
         if (!message.request) {
-          exitWithMessage(`Error: Missing request on control_request`)
+          exitWithMessage('Error: Missing request on control_request');
         }
-        return message
+        return message;
       }
       if (message.type === 'assistant' || message.type === 'system') {
-        return message
+        return message;
       }
       if (message.message.role !== 'user') {
-        exitWithMessage(
-          `Error: Expected message role 'user', got '${message.message.role}'`,
-        )
+        exitWithMessage(`Error: Expected message role 'user', got '${message.message.role}'`);
       }
-      return message
+      return message;
     } catch (error) {
-      // biome-ignore lint/suspicious/noConsole:: intentional console output
-      console.error(`Error parsing streaming input line: ${line}: ${error}`)
+      console.error(`Error parsing streaming input line: ${line}: ${error}`);
       // eslint-disable-next-line custom-rules/no-process-exit
-      process.exit(1)
+      process.exit(1);
     }
   }
 
   async write(message: StdoutMessage): Promise<void> {
-    writeToStdout(ndjsonSafeStringify(message) + '\n')
+    writeToStdout(`${ndjsonSafeStringify(message)}\n`);
   }
 
   private async sendRequest<Response>(
@@ -476,36 +441,36 @@ export class StructuredIO {
       type: 'control_request',
       request_id: requestId,
       request,
-    }
+    };
     if (this.inputClosed) {
-      throw new Error('Stream closed')
+      throw new Error('Stream closed');
     }
     if (signal?.aborted) {
-      throw new Error('Request aborted')
+      throw new Error('Request aborted');
     }
-    this.outbound.enqueue(message)
+    this.outbound.enqueue(message);
     if (request.subtype === 'can_use_tool' && this.onControlRequestSent) {
-      this.onControlRequestSent(message)
+      this.onControlRequestSent(message);
     }
     const aborted = () => {
       this.outbound.enqueue({
         type: 'control_cancel_request',
         request_id: requestId,
-      })
+      });
       // Immediately reject the outstanding promise, without
       // waiting for the host to acknowledge the cancellation.
-      const request = this.pendingRequests.get(requestId)
+      const request = this.pendingRequests.get(requestId);
       if (request) {
         // Track the tool_use ID as resolved before rejecting, so that a
         // late response from the host is ignored by the orphan handler.
-        this.trackResolvedToolUseId(request.request)
-        request.reject(new AbortError())
+        this.trackResolvedToolUseId(request.request);
+        request.reject(new AbortError());
       }
-    }
+    };
     if (signal) {
       signal.addEventListener('abort', aborted, {
         once: true,
-      })
+      });
     }
     try {
       return await new Promise<Response>((resolve, reject) => {
@@ -515,24 +480,22 @@ export class StructuredIO {
             request_id: requestId,
             request,
           },
-          resolve: result => {
-            resolve(result as Response)
+          resolve: (result) => {
+            resolve(result as Response);
           },
           reject,
           schema,
-        })
-      })
+        });
+      });
     } finally {
       if (signal) {
-        signal.removeEventListener('abort', aborted)
+        signal.removeEventListener('abort', aborted);
       }
-      this.pendingRequests.delete(requestId)
+      this.pendingRequests.delete(requestId);
     }
   }
 
-  createCanUseTool(
-    onPermissionPrompt?: (details: RequiresActionDetails) => void,
-  ): CanUseToolFn {
+  createCanUseTool(onPermissionPrompt?: (details: RequiresActionDetails) => void): CanUseToolFn {
     return async (
       tool: Tool,
       input: { [key: string]: unknown },
@@ -543,19 +506,10 @@ export class StructuredIO {
     ): Promise<PermissionDecision> => {
       const mainPermissionResult =
         forceDecision ??
-        (await hasPermissionsToUseTool(
-          tool,
-          input,
-          toolUseContext,
-          assistantMessage,
-          toolUseID,
-        ))
+        (await hasPermissionsToUseTool(tool, input, toolUseContext, assistantMessage, toolUseID));
       // If the tool is allowed or denied, return the result
-      if (
-        mainPermissionResult.behavior === 'allow' ||
-        mainPermissionResult.behavior === 'deny'
-      ) {
-        return mainPermissionResult
+      if (mainPermissionResult.behavior === 'allow' || mainPermissionResult.behavior === 'deny') {
+        return mainPermissionResult;
       }
 
       // Run PermissionRequest hooks in parallel with the SDK permission
@@ -566,11 +520,11 @@ export class StructuredIO {
       // Whichever resolves first wins; the loser is cancelled/ignored.
 
       // AbortController used to cancel the SDK request if a hook decides first
-      const hookAbortController = new AbortController()
-      const parentSignal = toolUseContext.abortController.signal
+      const hookAbortController = new AbortController();
+      const parentSignal = toolUseContext.abortController.signal;
       // Forward parent abort to our local controller
-      const onParentAbort = () => hookAbortController.abort()
-      parentSignal.addEventListener('abort', onParentAbort, { once: true })
+      const onParentAbort = () => hookAbortController.abort();
+      parentSignal.addEventListener('abort', onParentAbort, { once: true });
 
       try {
         // Start the hook evaluation (runs in background)
@@ -580,13 +534,11 @@ export class StructuredIO {
           input,
           toolUseContext,
           mainPermissionResult.suggestions,
-        ).then(decision => ({ source: 'hook' as const, decision }))
+        ).then((decision) => ({ source: 'hook' as const, decision }));
 
         // Start the SDK permission prompt immediately (don't wait for hooks)
-        const requestId = randomUUID()
-        onPermissionPrompt?.(
-          buildRequiresActionDetails(tool, input, toolUseID, requestId),
-        )
+        const requestId = randomUUID();
+        onPermissionPrompt?.(buildRequiresActionDetails(tool, input, toolUseID, requestId));
         const sdkPromise = this.sendRequest<PermissionToolOutput>(
           {
             subtype: 'can_use_tool',
@@ -594,38 +546,36 @@ export class StructuredIO {
             input,
             permission_suggestions: mainPermissionResult.suggestions,
             blocked_path: mainPermissionResult.blockedPath,
-            decision_reason: serializeDecisionReason(
-              mainPermissionResult.decisionReason,
-            ),
+            decision_reason: serializeDecisionReason(mainPermissionResult.decisionReason),
             tool_use_id: toolUseID,
             agent_id: toolUseContext.agentId,
           },
           permissionToolOutputSchema(),
           hookAbortController.signal,
           requestId,
-        ).then(result => ({ source: 'sdk' as const, result }))
+        ).then((result) => ({ source: 'sdk' as const, result }));
 
         // Race: hook completion vs SDK prompt response.
         // The hook promise always resolves (never rejects), returning
         // undefined if no hook made a decision.
-        const winner = await Promise.race([hookPromise, sdkPromise])
+        const winner = await Promise.race([hookPromise, sdkPromise]);
 
         if (winner.source === 'hook') {
           if (winner.decision) {
             // Hook decided — abort the pending SDK request.
             // Suppress the expected AbortError rejection from sdkPromise.
-            sdkPromise.catch(() => {})
-            hookAbortController.abort()
-            return winner.decision
+            sdkPromise.catch(() => {});
+            hookAbortController.abort();
+            return winner.decision;
           }
           // Hook passed through (no decision) — wait for the SDK prompt
-          const sdkResult = await sdkPromise
+          const sdkResult = await sdkPromise;
           return permissionPromptToolResultToPermissionDecision(
             sdkResult.result,
             tool,
             input,
             toolUseContext,
-          )
+          );
         }
 
         // SDK prompt responded first — use its result (hook still running
@@ -635,7 +585,7 @@ export class StructuredIO {
           tool,
           input,
           toolUseContext,
-        )
+        );
       } catch (error) {
         return permissionPromptToolResultToPermissionDecision(
           {
@@ -646,16 +596,16 @@ export class StructuredIO {
           tool,
           input,
           toolUseContext,
-        )
+        );
       } finally {
         // Only transition back to 'running' if no other permission prompts
         // are pending (concurrent tool execution can have multiple in-flight).
         if (this.getPendingPermissionRequests().length === 0) {
-          notifySessionStateChanged('running')
+          notifySessionStateChanged('running');
         }
-        parentSignal.removeEventListener('abort', onParentAbort)
+        parentSignal.removeEventListener('abort', onParentAbort);
       }
-    }
+    };
   }
 
   createHookCallback(callbackId: string, timeout?: number): HookCallback {
@@ -677,15 +627,14 @@ export class StructuredIO {
             },
             hookJSONOutputSchema(),
             abort,
-          )
-          return result
+          );
+          return result;
         } catch (error) {
-          // biome-ignore lint/suspicious/noConsole:: intentional console output
-          console.error(`Error in hook callback ${callbackId}:`, error)
-          return {}
+          console.error(`Error in hook callback ${callbackId}:`, error);
+          return {};
         }
       },
-    }
+    };
   }
 
   /**
@@ -713,10 +662,10 @@ export class StructuredIO {
         },
         SDKControlElicitationResponseSchema(),
         signal,
-      )
-      return result
+      );
+      return result;
     } catch {
-      return { action: 'cancel' as const }
+      return { action: 'cancel' as const };
     }
   }
 
@@ -729,8 +678,8 @@ export class StructuredIO {
    * for network access without requiring a new protocol subtype.
    */
   createSandboxAskCallback(): (hostPattern: {
-    host: string
-    port?: number
+    host: string;
+    port?: number;
   }) => Promise<boolean> {
     return async (hostPattern): Promise<boolean> => {
       try {
@@ -743,22 +692,19 @@ export class StructuredIO {
             description: `Allow network connection to ${hostPattern.host}?`,
           },
           permissionToolOutputSchema(),
-        )
-        return result.behavior === 'allow'
+        );
+        return result.behavior === 'allow';
       } catch {
         // If the request fails (stream closed, abort, etc.), deny the connection
-        return false
+        return false;
       }
-    }
+    };
   }
 
   /**
    * Sends an MCP message to an SDK server and waits for the response
    */
-  async sendMcpMessage(
-    serverName: string,
-    message: JSONRPCMessage,
-  ): Promise<JSONRPCMessage> {
+  async sendMcpMessage(serverName: string, message: JSONRPCMessage): Promise<JSONRPCMessage> {
     const response = await this.sendRequest<{ mcp_response: JSONRPCMessage }>(
       {
         subtype: 'mcp_message',
@@ -768,16 +714,15 @@ export class StructuredIO {
       z.object({
         mcp_response: z.any() as z.Schema<JSONRPCMessage>,
       }),
-    )
-    return response.mcp_response
+    );
+    return response.mcp_response;
   }
 }
 
 function exitWithMessage(message: string): never {
-  // biome-ignore lint/suspicious/noConsole:: intentional console output
-  console.error(message)
+  console.error(message);
   // eslint-disable-next-line custom-rules/no-process-exit
-  process.exit(1)
+  process.exit(1);
 }
 
 /**
@@ -791,8 +736,8 @@ async function executePermissionRequestHooksForSDK(
   toolUseContext: ToolUseContext,
   suggestions: PermissionUpdate[] | undefined,
 ): Promise<PermissionDecision | undefined> {
-  const appState = toolUseContext.getAppState()
-  const permissionMode = appState.toolPermissionContext.mode
+  const appState = toolUseContext.getAppState();
+  const permissionMode = appState.toolPermissionContext.mode;
 
   // Iterate directly over the generator instead of using `all`
   const hookGenerator = executePermissionRequestHooks(
@@ -803,7 +748,7 @@ async function executePermissionRequestHooksForSDK(
     permissionMode,
     suggestions,
     toolUseContext.abortController.signal,
-  )
+  );
 
   for await (const hookResult of hookGenerator) {
     if (
@@ -811,24 +756,24 @@ async function executePermissionRequestHooksForSDK(
       (hookResult.permissionRequestResult.behavior === 'allow' ||
         hookResult.permissionRequestResult.behavior === 'deny')
     ) {
-      const decision = hookResult.permissionRequestResult
+      const decision = hookResult.permissionRequestResult;
       if (decision.behavior === 'allow') {
-        const finalInput = decision.updatedInput || input
+        const finalInput = decision.updatedInput || input;
 
         // Apply permission updates if provided by hook ("always allow")
-        const permissionUpdates = decision.updatedPermissions ?? []
+        const permissionUpdates = decision.updatedPermissions ?? [];
         if (permissionUpdates.length > 0) {
-          persistPermissionUpdates(permissionUpdates)
-          const currentAppState = toolUseContext.getAppState()
+          persistPermissionUpdates(permissionUpdates);
+          const currentAppState = toolUseContext.getAppState();
           const updatedContext = applyPermissionUpdates(
             currentAppState.toolPermissionContext,
             permissionUpdates,
-          )
+          );
           // Update permission context via setAppState
-          toolUseContext.setAppState(prev => {
-            if (prev.toolPermissionContext === updatedContext) return prev
-            return { ...prev, toolPermissionContext: updatedContext }
-          })
+          toolUseContext.setAppState((prev) => {
+            if (prev.toolPermissionContext === updatedContext) return prev;
+            return { ...prev, toolPermissionContext: updatedContext };
+          });
         }
 
         return {
@@ -839,21 +784,19 @@ async function executePermissionRequestHooksForSDK(
             type: 'hook',
             hookName: 'PermissionRequest',
           },
-        }
-      } else {
-        // Hook denied the permission
-        return {
-          behavior: 'deny',
-          message:
-            decision.message || 'Permission denied by PermissionRequest hook',
-          decisionReason: {
-            type: 'hook',
-            hookName: 'PermissionRequest',
-          },
-        }
+        };
       }
+      // Hook denied the permission
+      return {
+        behavior: 'deny',
+        message: decision.message || 'Permission denied by PermissionRequest hook',
+        decisionReason: {
+          type: 'hook',
+          hookName: 'PermissionRequest',
+        },
+      };
     }
   }
 
-  return undefined
+  return undefined;
 }

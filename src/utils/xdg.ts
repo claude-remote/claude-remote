@@ -7,21 +7,21 @@
  * @see https://specifications.freedesktop.org/basedir-spec/latest/
  */
 
-import { homedir as osHomedir } from 'os'
-import { join } from 'path'
+import { homedir as osHomedir } from 'node:os';
+import { join } from 'node:path';
 
-type EnvLike = Record<string, string | undefined>
+type EnvLike = Record<string, string | undefined>;
 
 type XDGOptions = {
-  env?: EnvLike
-  homedir?: string
-}
+  env?: EnvLike;
+  homedir?: string;
+};
 
 function resolveOptions(options?: XDGOptions): { env: EnvLike; home: string } {
   return {
     env: options?.env ?? process.env,
     home: options?.homedir ?? process.env.HOME ?? osHomedir(),
-  }
+  };
 }
 
 /**
@@ -30,8 +30,8 @@ function resolveOptions(options?: XDGOptions): { env: EnvLike; home: string } {
  * @param options Optional env and homedir overrides for testing
  */
 export function getXDGStateHome(options?: XDGOptions): string {
-  const { env, home } = resolveOptions(options)
-  return env.XDG_STATE_HOME ?? join(home, '.local', 'state')
+  const { env, home } = resolveOptions(options);
+  return env.XDG_STATE_HOME ?? join(home, '.local', 'state');
 }
 
 /**
@@ -40,8 +40,8 @@ export function getXDGStateHome(options?: XDGOptions): string {
  * @param options Optional env and homedir overrides for testing
  */
 export function getXDGCacheHome(options?: XDGOptions): string {
-  const { env, home } = resolveOptions(options)
-  return env.XDG_CACHE_HOME ?? join(home, '.cache')
+  const { env, home } = resolveOptions(options);
+  return env.XDG_CACHE_HOME ?? join(home, '.cache');
 }
 
 /**
@@ -50,8 +50,8 @@ export function getXDGCacheHome(options?: XDGOptions): string {
  * @param options Optional env and homedir overrides for testing
  */
 export function getXDGDataHome(options?: XDGOptions): string {
-  const { env, home } = resolveOptions(options)
-  return env.XDG_DATA_HOME ?? join(home, '.local', 'share')
+  const { env, home } = resolveOptions(options);
+  return env.XDG_DATA_HOME ?? join(home, '.local', 'share');
 }
 
 /**
@@ -60,6 +60,6 @@ export function getXDGDataHome(options?: XDGOptions): string {
  * @param options Optional homedir override for testing
  */
 export function getUserBinDir(options?: XDGOptions): string {
-  const { home } = resolveOptions(options)
-  return join(home, '.local', 'bin')
+  const { home } = resolveOptions(options);
+  return join(home, '.local', 'bin');
 }

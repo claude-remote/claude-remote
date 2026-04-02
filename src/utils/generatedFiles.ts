@@ -1,4 +1,4 @@
-import { basename, extname, posix, sep } from 'path'
+import { basename, extname, posix, sep } from 'node:path';
 
 /**
  * File patterns that should be excluded from attribution.
@@ -19,7 +19,7 @@ const EXCLUDED_FILENAMES = new Set([
   'pipfile.lock',
   'shrinkwrap.json',
   'npm-shrinkwrap.json',
-])
+]);
 
 // File extension patterns (case-insensitive)
 const EXCLUDED_EXTENSIONS = new Set([
@@ -32,7 +32,7 @@ const EXCLUDED_EXTENSIONS = new Set([
   '.generated.ts',
   '.generated.js',
   '.d.ts', // TypeScript declaration files
-])
+]);
 
 // Directory patterns that indicate generated/vendored content
 const EXCLUDED_DIRECTORIES = [
@@ -56,7 +56,7 @@ const EXCLUDED_DIRECTORIES = [
   '/.venv/',
   '/target/release/',
   '/target/debug/',
-]
+];
 
 // Filename patterns using regex for more complex matching
 const EXCLUDED_FILENAME_PATTERNS = [
@@ -74,7 +74,7 @@ const EXCLUDED_FILENAME_PATTERNS = [
   /^.*\.grpc\.[a-z]+$/i, // gRPC generated files
   /^.*\.swagger\.[a-z]+$/i, // Swagger generated files
   /^.*\.openapi\.[a-z]+$/i, // OpenAPI generated files
-]
+];
 
 /**
  * Check if a file should be excluded from attribution based on Linguist-style rules.
@@ -84,45 +84,44 @@ const EXCLUDED_FILENAME_PATTERNS = [
  */
 export function isGeneratedFile(filePath: string): boolean {
   // Normalize path separators for consistent pattern matching (patterns use posix-style /)
-  const normalizedPath =
-    posix.sep + filePath.split(sep).join(posix.sep).replace(/^\/+/, '')
-  const fileName = basename(filePath).toLowerCase()
-  const ext = extname(filePath).toLowerCase()
+  const normalizedPath = posix.sep + filePath.split(sep).join(posix.sep).replace(/^\/+/, '');
+  const fileName = basename(filePath).toLowerCase();
+  const ext = extname(filePath).toLowerCase();
 
   // Check exact filename matches
   if (EXCLUDED_FILENAMES.has(fileName)) {
-    return true
+    return true;
   }
 
   // Check extension matches
   if (EXCLUDED_EXTENSIONS.has(ext)) {
-    return true
+    return true;
   }
 
   // Check for compound extensions like .min.js
-  const parts = fileName.split('.')
+  const parts = fileName.split('.');
   if (parts.length > 2) {
-    const compoundExt = '.' + parts.slice(-2).join('.')
+    const compoundExt = `.${parts.slice(-2).join('.')}`;
     if (EXCLUDED_EXTENSIONS.has(compoundExt)) {
-      return true
+      return true;
     }
   }
 
   // Check directory patterns
   for (const dir of EXCLUDED_DIRECTORIES) {
     if (normalizedPath.includes(dir)) {
-      return true
+      return true;
     }
   }
 
   // Check filename patterns
   for (const pattern of EXCLUDED_FILENAME_PATTERNS) {
     if (pattern.test(fileName)) {
-      return true
+      return true;
     }
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -132,5 +131,5 @@ export function isGeneratedFile(filePath: string): boolean {
  * @returns Array of files that are not generated
  */
 export function filterGeneratedFiles(files: string[]): string[] {
-  return files.filter(file => !isGeneratedFile(file))
+  return files.filter((file) => !isGeneratedFile(file));
 }

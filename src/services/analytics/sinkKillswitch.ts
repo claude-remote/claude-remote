@@ -1,9 +1,9 @@
-import { getDynamicConfig_CACHED_MAY_BE_STALE } from './growthbook.js'
+import { getDynamicConfig_CACHED_MAY_BE_STALE } from './growthbook.js';
 
 // Mangled name: per-sink analytics killswitch
-const SINK_KILLSWITCH_CONFIG_NAME = 'tengu_frond_boric'
+const SINK_KILLSWITCH_CONFIG_NAME = 'tengu_frond_boric';
 
-export type SinkName = 'datadog' | 'firstParty'
+export type SinkName = 'datadog' | 'firstParty';
 
 /**
  * GrowthBook JSON config that disables individual analytics sinks.
@@ -16,10 +16,11 @@ export type SinkName = 'datadog' | 'firstParty'
  * Call at per-event dispatch sites instead.
  */
 export function isSinkKilled(sink: SinkName): boolean {
-  const config = getDynamicConfig_CACHED_MAY_BE_STALE<
-    Partial<Record<SinkName, boolean>>
-  >(SINK_KILLSWITCH_CONFIG_NAME, {})
+  const config = getDynamicConfig_CACHED_MAY_BE_STALE<Partial<Record<SinkName, boolean>>>(
+    SINK_KILLSWITCH_CONFIG_NAME,
+    {},
+  );
   // getFeatureValue_CACHED_MAY_BE_STALE guards on `!== undefined`, so a
   // cached JSON null leaks through instead of falling back to {}.
-  return config?.[sink] === true
+  return config?.[sink] === true;
 }

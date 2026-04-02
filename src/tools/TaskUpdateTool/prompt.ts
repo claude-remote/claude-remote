@@ -1,4 +1,4 @@
-export const DESCRIPTION = 'Update a task in the task list'
+export const DESCRIPTION = 'Update a task in the task list';
 
 export const PROMPT = `Use this tool to update a task in the task list.
 
@@ -74,4 +74,4 @@ Set up task dependencies:
 \`\`\`json
 {"taskId": "2", "addBlockedBy": ["1"]}
 \`\`\`
-`
+`;

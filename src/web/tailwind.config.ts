@@ -13,6 +13,6 @@ export default {
       animation: {
         'slide-in-top': 'slide-in-top 0.3s ease-out',
       },
-    }
-  }
+    },
+  },
 };

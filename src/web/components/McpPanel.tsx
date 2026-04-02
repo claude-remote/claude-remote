@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
-import type { McpServerInfo } from '@/shared/types';
 import type { ClientCommand } from '@/shared/protocol';
+import type { McpServerInfo } from '@/shared/types';
 
 interface McpPanelProps {
   servers: McpServerInfo[];
@@ -80,9 +80,7 @@ export function McpPanel({ servers, sendCommand }: McpPanelProps) {
     return (
       <section className="rounded border border-stone-800 bg-gray-950 p-4">
         <h2 className="text-sm font-medium text-gray-300">MCP Servers</h2>
-        <p className="mt-3 text-center text-sm text-stone-500">
-          No MCP servers configured
-        </p>
+        <p className="mt-3 text-center text-sm text-stone-500">No MCP servers configured</p>
       </section>
     );
   }
@@ -188,9 +186,7 @@ function ToolList({ server }: { server: McpServerInfo }) {
   if (!server.tools || server.tools.length === 0) {
     return (
       <p className="py-2 text-xs text-stone-500">
-        {server.toolCount > 0
-          ? `${server.toolCount} tool(s) available`
-          : 'No tools registered'}
+        {server.toolCount > 0 ? `${server.toolCount} tool(s) available` : 'No tools registered'}
       </p>
     );
   }
@@ -200,9 +196,7 @@ function ToolList({ server }: { server: McpServerInfo }) {
       {server.tools.map((tool) => (
         <li key={tool.name} className="flex items-start gap-2 text-xs">
           <span className="font-mono text-stone-300">{tool.name}</span>
-          {tool.description && (
-            <span className="text-stone-500">{tool.description}</span>
-          )}
+          {tool.description && <span className="text-stone-500">{tool.description}</span>}
         </li>
       ))}
     </ul>
@@ -238,16 +232,12 @@ function ServerTableRow({
             <span className="font-medium">{server.name}</span>
             <span className="text-xs text-stone-600">({server.type})</span>
           </button>
-          {server.error && (
-            <p className="mt-0.5 text-xs text-red-400">{server.error}</p>
-          )}
+          {server.error && <p className="mt-0.5 text-xs text-red-400">{server.error}</p>}
         </td>
         <td className="py-2 pr-3">
           <StatusBadge status={server.status} />
         </td>
-        <td className="py-2 pr-3 text-xs text-stone-400">
-          {server.toolCount}
-        </td>
+        <td className="py-2 pr-3 text-xs text-stone-400">{server.toolCount}</td>
         <td className="py-2 text-right">
           <div className="flex items-center justify-end gap-3">
             <button
@@ -332,9 +322,7 @@ function ServerCard({
       </div>
 
       {/* Error */}
-      {server.error && (
-        <p className="mt-1.5 text-xs text-red-400">{server.error}</p>
-      )}
+      {server.error && <p className="mt-1.5 text-xs text-red-400">{server.error}</p>}
 
       {/* Expanded tool list */}
       {expanded && (

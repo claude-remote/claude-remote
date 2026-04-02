@@ -13,9 +13,9 @@
  * env var at CLI startup. Only `init.ts` imports this file.
  */
 
-import { getGlobalConfig } from './config.js'
-import { logForDebugging } from './debug.js'
-import { getSettingsForSource } from './settings/settings.js'
+import { getGlobalConfig } from './config.js';
+import { logForDebugging } from './debug.js';
+import { getSettingsForSource } from './settings/settings.js';
 
 /**
  * Apply NODE_EXTRA_CA_CERTS from settings.json to process.env early in init,
@@ -33,14 +33,14 @@ import { getSettingsForSource } from './settings/settings.js'
  */
 export function applyExtraCACertsFromConfig(): void {
   if (process.env.NODE_EXTRA_CA_CERTS) {
-    return // Already set in environment, nothing to do
+    return; // Already set in environment, nothing to do
   }
-  const configPath = getExtraCertsPathFromConfig()
+  const configPath = getExtraCertsPathFromConfig();
   if (configPath) {
-    process.env.NODE_EXTRA_CA_CERTS = configPath
+    process.env.NODE_EXTRA_CA_CERTS = configPath;
     logForDebugging(
       `CA certs: Applied NODE_EXTRA_CA_CERTS from config to process.env: ${configPath}`,
-    )
+    );
   }
 }
 
@@ -58,31 +58,28 @@ export function applyExtraCACertsFromConfig(): void {
  */
 function getExtraCertsPathFromConfig(): string | undefined {
   try {
-    const globalConfig = getGlobalConfig()
-    const globalEnv = globalConfig?.env
+    const globalConfig = getGlobalConfig();
+    const globalEnv = globalConfig?.env;
     // Only read from user-controlled settings (~/.claude/settings.json),
     // not project-level settings, to prevent malicious projects from
     // injecting CA certs before the trust dialog.
-    const settings = getSettingsForSource('userSettings')
-    const settingsEnv = settings?.env
+    const settings = getSettingsForSource('userSettings');
+    const settingsEnv = settings?.env;
 
     logForDebugging(
       `CA certs: Config fallback - globalEnv keys: ${globalEnv ? Object.keys(globalEnv).join(',') : 'none'}, settingsEnv keys: ${settingsEnv ? Object.keys(settingsEnv).join(',') : 'none'}`,
-    )
+    );
 
     // Settings override global config (same precedence as applyConfigEnvironmentVariables)
-    const path =
-      settingsEnv?.NODE_EXTRA_CA_CERTS || globalEnv?.NODE_EXTRA_CA_CERTS
+    const path = settingsEnv?.NODE_EXTRA_CA_CERTS || globalEnv?.NODE_EXTRA_CA_CERTS;
     if (path) {
-      logForDebugging(
-        `CA certs: Found NODE_EXTRA_CA_CERTS in config/settings: ${path}`,
-      )
+      logForDebugging(`CA certs: Found NODE_EXTRA_CA_CERTS in config/settings: ${path}`);
     }
-    return path
+    return path;
   } catch (error) {
     logForDebugging(`CA certs: Config fallback failed: ${error}`, {
       level: 'error',
-    })
-    return undefined
+    });
+    return undefined;
   }
 }

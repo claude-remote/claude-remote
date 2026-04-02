@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionMeta } from '@/shared/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface Favorite {
   id: string;
@@ -114,9 +114,7 @@ export function CwdPicker({
         className="flex w-full items-center gap-2 rounded border border-gray-800 bg-gray-900 px-3 py-2 text-left hover:border-gray-700 transition-colors"
       >
         <span className="text-xs text-gray-500">CWD</span>
-        <span className="flex-1 truncate text-sm font-medium text-gray-200">
-          {cwd}
-        </span>
+        <span className="flex-1 truncate text-sm font-medium text-gray-200">{cwd}</span>
         <span className="text-xs text-gray-600">{open ? '\u25B2' : '\u25BC'}</span>
       </button>
 
@@ -134,9 +132,7 @@ export function CwdPicker({
               placeholder="Type path to navigate..."
               className="w-full rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-sm text-gray-200 placeholder-gray-600 outline-none focus:border-gray-600"
             />
-            {loadingSuggestions && (
-              <p className="mt-1 text-xs text-gray-600">Loading...</p>
-            )}
+            {loadingSuggestions && <p className="mt-1 text-xs text-gray-600">Loading...</p>}
             {suggestions.length > 0 && (
               <ul className="mt-1 max-h-32 overflow-auto">
                 {suggestions.map((dir) => (

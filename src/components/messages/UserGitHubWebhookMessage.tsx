@@ -1,5 +1,5 @@
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
-import * as React from 'react';
+import type * as React from 'react';
 import { Box, Text } from '../../ink.js';
 
 type Props = {
@@ -7,10 +7,7 @@ type Props = {
   param: TextBlockParam;
 };
 
-export function UserGitHubWebhookMessage({
-  addMargin,
-  param,
-}: Props): React.ReactNode {
+export function UserGitHubWebhookMessage({ addMargin, param }: Props): React.ReactNode {
   return (
     <Box paddingLeft={addMargin ? 2 : 0}>
       <Text>{param.text}</Text>

@@ -1,27 +1,24 @@
-import axios, { type AxiosResponse } from 'axios'
-import { LRUCache } from 'lru-cache'
+import axios, { type AxiosResponse } from 'axios';
+import { LRUCache } from 'lru-cache';
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../services/analytics/index.js'
-import { queryHaiku } from '../../services/api/claude.js'
-import { AbortError } from '../../utils/errors.js'
-import { getWebFetchUserAgent } from '../../utils/http.js'
-import { logError } from '../../utils/log.js'
-import {
-  isBinaryContentType,
-  persistBinaryContent,
-} from '../../utils/mcpOutputStorage.js'
-import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
-import { asSystemPrompt } from '../../utils/systemPromptType.js'
-import { isPreapprovedHost } from './preapproved.js'
-import { makeSecondaryModelPrompt } from './prompt.js'
+} from '../../services/analytics/index.js';
+import { queryHaiku } from '../../services/api/claude.js';
+import { AbortError } from '../../utils/errors.js';
+import { getWebFetchUserAgent } from '../../utils/http.js';
+import { logError } from '../../utils/log.js';
+import { isBinaryContentType, persistBinaryContent } from '../../utils/mcpOutputStorage.js';
+import { getSettings_DEPRECATED } from '../../utils/settings/settings.js';
+import { asSystemPrompt } from '../../utils/systemPromptType.js';
+import { isPreapprovedHost } from './preapproved.js';
+import { makeSecondaryModelPrompt } from './prompt.js';
 
 // Custom error classes for domain blocking
 class DomainBlockedError extends Error {
   constructor(domain: string) {
-    super(`Claude Code is unable to fetch from ${domain}`)
-    this.name = 'DomainBlockedError'
+    super(`Claude Code is unable to fetch from ${domain}`);
+    this.name = 'DomainBlockedError';
   }
 }
 
@@ -29,8 +26,8 @@ class DomainCheckFailedError extends Error {
   constructor(domain: string) {
     super(
       `Unable to verify if domain ${domain} is safe to fetch. This may be due to network restrictions or enterprise security policies blocking claude.ai.`,
-    )
-    this.name = 'DomainCheckFailedError'
+    );
+    this.name = 'DomainCheckFailedError';
   }
 }
 
@@ -42,31 +39,31 @@ class EgressBlockedError extends Error {
         domain,
         message: `Access to ${domain} is blocked by the network egress proxy.`,
       }),
-    )
-    this.name = 'EgressBlockedError'
+    );
+    this.name = 'EgressBlockedError';
   }
 }
 
 // Cache for storing fetched URL content
 type CacheEntry = {
-  bytes: number
-  code: number
-  codeText: string
-  content: string
-  contentType: string
-  persistedPath?: string
-  persistedSize?: number
-}
+  bytes: number;
+  code: number;
+  codeText: string;
+  content: string;
+  contentType: string;
+  persistedPath?: string;
+  persistedSize?: number;
+};
 
 // Cache with 15-minute TTL and 50MB size limit
 // LRUCache handles automatic expiration and eviction
-const CACHE_TTL_MS = 15 * 60 * 1000 // 15 minutes
-const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024 // 50MB
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_CACHE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 
 const URL_CACHE = new LRUCache<string, CacheEntry>({
   maxSize: MAX_CACHE_SIZE_BYTES,
   ttl: CACHE_TTL_MS,
-})
+});
 
 // Separate cache for preflight domain checks. URL_CACHE is URL-keyed, so
 // fetching two paths on the same domain triggers two identical preflight
@@ -75,11 +72,11 @@ const URL_CACHE = new LRUCache<string, CacheEntry>({
 const DOMAIN_CHECK_CACHE = new LRUCache<string, true>({
   max: 128,
   ttl: 5 * 60 * 1000, // 5 minutes — shorter than URL_CACHE TTL
-})
+});
 
 export function clearWebFetchCache(): void {
-  URL_CACHE.clear()
-  DOMAIN_CHECK_CACHE.clear()
+  URL_CACHE.clear();
+  DOMAIN_CHECK_CACHE.clear();
 }
 
 // Lazy singleton — defers the turndown → @mixmark-io/domino import (~1.4MB
@@ -87,13 +84,13 @@ export function clearWebFetchCache(): void {
 // calls (construction builds 15 rule objects; .turndown() is stateless).
 // @types/turndown ships only `export =` (no .d.mts), so TS types the import
 // as the class itself while Bun wraps CJS in { default } — hence the cast.
-type TurndownCtor = typeof import('turndown')
-let turndownServicePromise: Promise<InstanceType<TurndownCtor>> | undefined
+type TurndownCtor = typeof import('turndown');
+let turndownServicePromise: Promise<InstanceType<TurndownCtor>> | undefined;
 function getTurndownService(): Promise<InstanceType<TurndownCtor>> {
-  return (turndownServicePromise ??= import('turndown').then(m => {
-    const Turndown = (m as unknown as { default: TurndownCtor }).default
-    return new Turndown()
-  }))
+  return (turndownServicePromise ??= import('turndown').then((m) => {
+    const Turndown = (m as unknown as { default: TurndownCtor }).default;
+    return new Turndown();
+  }));
 }
 
 // PSR requested limiting the length of URLs to 250 to lower the potential
@@ -103,49 +100,49 @@ function getTurndownService(): Promise<InstanceType<TurndownCtor>> {
 // which provides a primary security boundary. In addition, Claude Code has
 // other data exfil channels, and this one does not seem relatively high risk,
 // so I'm removing that length restriction. -ab
-const MAX_URL_LENGTH = 2000
+const MAX_URL_LENGTH = 2000;
 
 // Per PSR:
 // "Implement resource consumption controls because setting limits on CPU,
 // memory, and network usage for the Web Fetch tool can prevent a single
 // request or user from overwhelming the system."
-const MAX_HTTP_CONTENT_LENGTH = 10 * 1024 * 1024
+const MAX_HTTP_CONTENT_LENGTH = 10 * 1024 * 1024;
 
 // Timeout for the main HTTP fetch request (60 seconds).
 // Prevents hanging indefinitely on slow/unresponsive servers.
-const FETCH_TIMEOUT_MS = 60_000
+const FETCH_TIMEOUT_MS = 60_000;
 
 // Timeout for the domain blocklist preflight check (10 seconds).
-const DOMAIN_CHECK_TIMEOUT_MS = 10_000
+const DOMAIN_CHECK_TIMEOUT_MS = 10_000;
 
 // Cap same-host redirect hops. Without this a malicious server can return
 // a redirect loop (/a → /b → /a …) and the per-request FETCH_TIMEOUT_MS
 // resets on every hop, hanging the tool until user interrupt. 10 matches
 // common client defaults (axios=5, follow-redirects=21, Chrome=20).
-const MAX_REDIRECTS = 10
+const MAX_REDIRECTS = 10;
 
 // Truncate to not spend too many tokens
-export const MAX_MARKDOWN_LENGTH = 100_000
+export const MAX_MARKDOWN_LENGTH = 100_000;
 
 export function isPreapprovedUrl(url: string): boolean {
   try {
-    const parsedUrl = new URL(url)
-    return isPreapprovedHost(parsedUrl.hostname, parsedUrl.pathname)
+    const parsedUrl = new URL(url);
+    return isPreapprovedHost(parsedUrl.hostname, parsedUrl.pathname);
   } catch {
-    return false
+    return false;
   }
 }
 
 export function validateURL(url: string): boolean {
   if (url.length > MAX_URL_LENGTH) {
-    return false
+    return false;
   }
 
-  let parsed
+  let parsed;
   try {
-    parsed = new URL(url)
+    parsed = new URL(url);
   } catch {
-    return false
+    return false;
   }
 
   // We don't need to check protocol here, as we'll upgrade http to https when making the request
@@ -154,51 +151,49 @@ export function validateURL(url: string): boolean {
   // we should block URLs with usernames/passwords too, even though these
   // seem exceedingly unlikely.
   if (parsed.username || parsed.password) {
-    return false
+    return false;
   }
 
   // Initial filter that this isn't a privileged, company-internal URL
   // by checking that the hostname is publicly resolvable
-  const hostname = parsed.hostname
-  const parts = hostname.split('.')
+  const hostname = parsed.hostname;
+  const parts = hostname.split('.');
   if (parts.length < 2) {
-    return false
+    return false;
   }
 
-  return true
+  return true;
 }
 
 type DomainCheckResult =
   | { status: 'allowed' }
   | { status: 'blocked' }
-  | { status: 'check_failed'; error: Error }
+  | { status: 'check_failed'; error: Error };
 
-export async function checkDomainBlocklist(
-  domain: string,
-): Promise<DomainCheckResult> {
+export async function checkDomainBlocklist(domain: string): Promise<DomainCheckResult> {
   if (DOMAIN_CHECK_CACHE.has(domain)) {
-    return { status: 'allowed' }
+    return { status: 'allowed' };
   }
   try {
     const response = await axios.get(
       `https://api.anthropic.com/api/web/domain_info?domain=${encodeURIComponent(domain)}`,
       { timeout: DOMAIN_CHECK_TIMEOUT_MS },
-    )
+    );
     if (response.status === 200) {
       if (response.data.can_fetch === true) {
-        DOMAIN_CHECK_CACHE.set(domain, true)
-        return { status: 'allowed' }
+        DOMAIN_CHECK_CACHE.set(domain, true);
+        return { status: 'allowed' };
       }
-      return { status: 'blocked' }
+      return { status: 'blocked' };
     }
     // Non-200 status but didn't throw
     return {
       status: 'check_failed',
       error: new Error(`Domain check returned status ${response.status}`),
-    }
+    };
   } catch (e) {
-    logError(e)
-    return { status: 'check_failed', error: e as Error }
+    logError(e);
+    return { status: 'check_failed', error: e as Error };
   }
 }
 
@@ -209,36 +204,33 @@ export async function checkDomainBlocklist(
  * - Keep the origin the same but change path/query params
  * - Or both of the above
  */
-export function isPermittedRedirect(
-  originalUrl: string,
-  redirectUrl: string,
-): boolean {
+export function isPermittedRedirect(originalUrl: string, redirectUrl: string): boolean {
   try {
-    const parsedOriginal = new URL(originalUrl)
-    const parsedRedirect = new URL(redirectUrl)
+    const parsedOriginal = new URL(originalUrl);
+    const parsedRedirect = new URL(redirectUrl);
 
     if (parsedRedirect.protocol !== parsedOriginal.protocol) {
-      return false
+      return false;
     }
 
     if (parsedRedirect.port !== parsedOriginal.port) {
-      return false
+      return false;
     }
 
     if (parsedRedirect.username || parsedRedirect.password) {
-      return false
+      return false;
     }
 
     // Now check hostname conditions
     // 1. Adding www. is allowed: example.com -> www.example.com
     // 2. Removing www. is allowed: www.example.com -> example.com
     // 3. Same host (with or without www.) is allowed: paths can change
-    const stripWww = (hostname: string) => hostname.replace(/^www\./, '')
-    const originalHostWithoutWww = stripWww(parsedOriginal.hostname)
-    const redirectHostWithoutWww = stripWww(parsedRedirect.hostname)
-    return originalHostWithoutWww === redirectHostWithoutWww
+    const stripWww = (hostname: string) => hostname.replace(/^www\./, '');
+    const originalHostWithoutWww = stripWww(parsedOriginal.hostname);
+    const redirectHostWithoutWww = stripWww(parsedRedirect.hostname);
+    return originalHostWithoutWww === redirectHostWithoutWww;
   } catch (_error) {
-    return false
+    return false;
   }
 }
 
@@ -253,11 +245,11 @@ export function isPermittedRedirect(
  * unknowingly"
  */
 type RedirectInfo = {
-  type: 'redirect'
-  originalUrl: string
-  redirectUrl: string
-  statusCode: number
-}
+  type: 'redirect';
+  originalUrl: string;
+  redirectUrl: string;
+  statusCode: number;
+};
 
 export async function getWithPermittedRedirects(
   url: string,
@@ -266,7 +258,7 @@ export async function getWithPermittedRedirects(
   depth = 0,
 ): Promise<AxiosResponse<ArrayBuffer> | RedirectInfo> {
   if (depth > MAX_REDIRECTS) {
-    throw new Error(`Too many redirects (exceeded ${MAX_REDIRECTS})`)
+    throw new Error(`Too many redirects (exceeded ${MAX_REDIRECTS})`);
   }
   try {
     return await axios.get(url, {
@@ -279,38 +271,32 @@ export async function getWithPermittedRedirects(
         Accept: 'text/markdown, text/html, */*',
         'User-Agent': getWebFetchUserAgent(),
       },
-    })
+    });
   } catch (error) {
     if (
       axios.isAxiosError(error) &&
       error.response &&
       [301, 302, 307, 308].includes(error.response.status)
     ) {
-      const redirectLocation = error.response.headers.location
+      const redirectLocation = error.response.headers.location;
       if (!redirectLocation) {
-        throw new Error('Redirect missing Location header')
+        throw new Error('Redirect missing Location header');
       }
 
       // Resolve relative URLs against the original URL
-      const redirectUrl = new URL(redirectLocation, url).toString()
+      const redirectUrl = new URL(redirectLocation, url).toString();
 
       if (redirectChecker(url, redirectUrl)) {
         // Recursively follow the permitted redirect
-        return getWithPermittedRedirects(
-          redirectUrl,
-          signal,
-          redirectChecker,
-          depth + 1,
-        )
-      } else {
-        // Return redirect information to the caller
-        return {
-          type: 'redirect',
-          originalUrl: url,
-          redirectUrl,
-          statusCode: error.response.status,
-        }
+        return getWithPermittedRedirects(redirectUrl, signal, redirectChecker, depth + 1);
       }
+      // Return redirect information to the caller
+      return {
+        type: 'redirect',
+        originalUrl: url,
+        redirectUrl,
+        statusCode: error.response.status,
+      };
     }
 
     // Detect egress proxy blocks: the proxy returns 403 with
@@ -320,40 +306,40 @@ export async function getWithPermittedRedirects(
       error.response?.status === 403 &&
       error.response.headers['x-proxy-error'] === 'blocked-by-allowlist'
     ) {
-      const hostname = new URL(url).hostname
-      throw new EgressBlockedError(hostname)
+      const hostname = new URL(url).hostname;
+      throw new EgressBlockedError(hostname);
     }
 
-    throw error
+    throw error;
   }
 }
 
 function isRedirectInfo(
   response: AxiosResponse<ArrayBuffer> | RedirectInfo,
 ): response is RedirectInfo {
-  return 'type' in response && response.type === 'redirect'
+  return 'type' in response && response.type === 'redirect';
 }
 
 export type FetchedContent = {
-  content: string
-  bytes: number
-  code: number
-  codeText: string
-  contentType: string
-  persistedPath?: string
-  persistedSize?: number
-}
+  content: string;
+  bytes: number;
+  code: number;
+  codeText: string;
+  contentType: string;
+  persistedPath?: string;
+  persistedSize?: number;
+};
 
 export async function getURLMarkdownContent(
   url: string,
   abortController: AbortController,
 ): Promise<FetchedContent | RedirectInfo> {
   if (!validateURL(url)) {
-    throw new Error('Invalid URL')
+    throw new Error('Invalid URL');
   }
 
   // Check cache (LRUCache handles TTL automatically)
-  const cachedEntry = URL_CACHE.get(url)
+  const cachedEntry = URL_CACHE.get(url);
   if (cachedEntry) {
     return {
       bytes: cachedEntry.bytes,
@@ -363,106 +349,102 @@ export async function getURLMarkdownContent(
       contentType: cachedEntry.contentType,
       persistedPath: cachedEntry.persistedPath,
       persistedSize: cachedEntry.persistedSize,
-    }
+    };
   }
 
-  let parsedUrl: URL
-  let upgradedUrl = url
+  let parsedUrl: URL;
+  let upgradedUrl = url;
 
   try {
-    parsedUrl = new URL(url)
+    parsedUrl = new URL(url);
 
     // Upgrade http to https if needed
     if (parsedUrl.protocol === 'http:') {
-      parsedUrl.protocol = 'https:'
-      upgradedUrl = parsedUrl.toString()
+      parsedUrl.protocol = 'https:';
+      upgradedUrl = parsedUrl.toString();
     }
 
-    const hostname = parsedUrl.hostname
+    const hostname = parsedUrl.hostname;
 
     // Check if the user has opted to skip the blocklist check
     // This is for enterprise customers with restrictive security policies
     // that prevent outbound connections to claude.ai
-    const settings = getSettings_DEPRECATED()
+    const settings = getSettings_DEPRECATED();
     if (!settings.skipWebFetchPreflight) {
-      const checkResult = await checkDomainBlocklist(hostname)
+      const checkResult = await checkDomainBlocklist(hostname);
       switch (checkResult.status) {
         case 'allowed':
           // Continue with the fetch
-          break
+          break;
         case 'blocked':
-          throw new DomainBlockedError(hostname)
+          throw new DomainBlockedError(hostname);
         case 'check_failed':
-          throw new DomainCheckFailedError(hostname)
+          throw new DomainCheckFailedError(hostname);
       }
     }
 
     if (process.env.USER_TYPE === 'ant') {
       logEvent('tengu_web_fetch_host', {
-        hostname:
-          hostname as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      })
+        hostname: hostname as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      });
     }
   } catch (e) {
-    if (
-      e instanceof DomainBlockedError ||
-      e instanceof DomainCheckFailedError
-    ) {
+    if (e instanceof DomainBlockedError || e instanceof DomainCheckFailedError) {
       // Expected user-facing failures - re-throw without logging as internal error
-      throw e
+      throw e;
     }
-    logError(e)
+    logError(e);
   }
 
   const response = await getWithPermittedRedirects(
     upgradedUrl,
     abortController.signal,
     isPermittedRedirect,
-  )
+  );
 
   // Check if we got a redirect response
   if (isRedirectInfo(response)) {
-    return response
+    return response;
   }
 
-  const rawBuffer = Buffer.from(response.data)
+  const rawBuffer = Buffer.from(response.data);
   // Release the axios-held ArrayBuffer copy; rawBuffer owns the bytes now.
   // This lets GC reclaim up to MAX_HTTP_CONTENT_LENGTH (10MB) before Turndown
   // builds its DOM tree (which can be 3-5x the HTML size).
-  ;(response as { data: unknown }).data = null
-  const contentType = response.headers['content-type'] ?? ''
+  (response as { data: unknown }).data = null;
+  const contentType = response.headers['content-type'] ?? '';
 
   // Binary content: save raw bytes to disk with a proper extension so Claude
   // can inspect the file later. We still fall through to the utf-8 decode +
   // Haiku path below — for PDFs in particular the decoded string has enough
   // ASCII structure (/Title, text streams) that Haiku can summarize it, and
   // the saved file is a supplement rather than a replacement.
-  let persistedPath: string | undefined
-  let persistedSize: number | undefined
+  let persistedPath: string | undefined;
+  let persistedSize: number | undefined;
   if (isBinaryContentType(contentType)) {
-    const persistId = `webfetch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const result = await persistBinaryContent(rawBuffer, contentType, persistId)
+    const persistId = `webfetch-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const result = await persistBinaryContent(rawBuffer, contentType, persistId);
     if (!('error' in result)) {
-      persistedPath = result.filepath
-      persistedSize = result.size
+      persistedPath = result.filepath;
+      persistedSize = result.size;
     }
   }
 
-  const bytes = rawBuffer.length
-  const htmlContent = rawBuffer.toString('utf-8')
+  const bytes = rawBuffer.length;
+  const htmlContent = rawBuffer.toString('utf-8');
 
-  let markdownContent: string
-  let contentBytes: number
+  let markdownContent: string;
+  let contentBytes: number;
   if (contentType.includes('text/html')) {
-    markdownContent = (await getTurndownService()).turndown(htmlContent)
-    contentBytes = Buffer.byteLength(markdownContent)
+    markdownContent = (await getTurndownService()).turndown(htmlContent);
+    contentBytes = Buffer.byteLength(markdownContent);
   } else {
     // It's not HTML - just use it raw. The decoded string's UTF-8 byte
     // length equals rawBuffer.length (modulo U+FFFD replacement on invalid
     // bytes — negligible for cache eviction accounting), so skip the O(n)
     // Buffer.byteLength scan.
-    markdownContent = htmlContent
-    contentBytes = bytes
+    markdownContent = htmlContent;
+    contentBytes = bytes;
   }
 
   // Store the fetched content in cache. Note that it's stored under
@@ -475,10 +457,10 @@ export async function getURLMarkdownContent(
     contentType,
     persistedPath,
     persistedSize,
-  }
+  };
   // lru-cache requires positive integers; clamp to 1 for empty responses.
-  URL_CACHE.set(url, entry, { size: Math.max(1, contentBytes) })
-  return entry
+  URL_CACHE.set(url, entry, { size: Math.max(1, contentBytes) });
+  return entry;
 }
 
 export async function applyPromptToMarkdown(
@@ -491,15 +473,10 @@ export async function applyPromptToMarkdown(
   // Truncate content to avoid "Prompt is too long" errors from the secondary model
   const truncatedContent =
     markdownContent.length > MAX_MARKDOWN_LENGTH
-      ? markdownContent.slice(0, MAX_MARKDOWN_LENGTH) +
-        '\n\n[Content truncated due to length...]'
-      : markdownContent
+      ? `${markdownContent.slice(0, MAX_MARKDOWN_LENGTH)}\n\n[Content truncated due to length...]`
+      : markdownContent;
 
-  const modelPrompt = makeSecondaryModelPrompt(
-    truncatedContent,
-    prompt,
-    isPreapprovedDomain,
-  )
+  const modelPrompt = makeSecondaryModelPrompt(truncatedContent, prompt, isPreapprovedDomain);
   const assistantMessage = await queryHaiku({
     systemPrompt: asSystemPrompt([]),
     userPrompt: modelPrompt,
@@ -511,20 +488,20 @@ export async function applyPromptToMarkdown(
       hasAppendSystemPrompt: false,
       mcpTools: [],
     },
-  })
+  });
 
   // We need to bubble this up, so that the tool call throws, causing us to return
   // an is_error tool_use block to the server, and render a red dot in the UI.
   if (signal.aborted) {
-    throw new AbortError()
+    throw new AbortError();
   }
 
-  const { content } = assistantMessage.message
+  const { content } = assistantMessage.message;
   if (content.length > 0) {
-    const contentBlock = content[0]
+    const contentBlock = content[0];
     if ('text' in contentBlock!) {
-      return contentBlock.text
+      return contentBlock.text;
     }
   }
-  return 'No response from model'
+  return 'No response from model';
 }

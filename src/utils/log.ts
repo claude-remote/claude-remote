@@ -1,25 +1,18 @@
-import { feature } from 'src/utils/feature.js'
-import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import { readdir, readFile, stat } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
-import { join } from 'path'
-import type { QuerySource } from 'src/constants/querySource.js'
-import {
-  setLastAPIRequest,
-  setLastAPIRequestMessages,
-} from '../bootstrap/state.js'
-import { TICK_TAG } from '../constants/xml.js'
-import {
-  type LogOption,
-  type SerializedMessage,
-  sortLogs,
-} from '../types/logs.js'
-import { CACHE_PATHS } from './cachePaths.js'
-import { stripDisplayTags, stripDisplayTagsAllowEmpty } from './displayTags.js'
-import { isEnvTruthy } from './envUtils.js'
-import { toError } from './errors.js'
-import { isEssentialTrafficOnly } from './privacyLevel.js'
-import { jsonParse } from './slowOperations.js'
+import { readFile, readdir, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs';
+import memoize from 'lodash-es/memoize.js';
+import type { QuerySource } from 'src/constants/querySource.js';
+import { feature } from 'src/utils/feature.js';
+import { setLastAPIRequest, setLastAPIRequestMessages } from '../bootstrap/state.js';
+import { TICK_TAG } from '../constants/xml.js';
+import { type LogOption, type SerializedMessage, sortLogs } from '../types/logs.js';
+import { CACHE_PATHS } from './cachePaths.js';
+import { stripDisplayTags, stripDisplayTagsAllowEmpty } from './displayTags.js';
+import { isEnvTruthy } from './envUtils.js';
+import { toError } from './errors.js';
+import { isEssentialTrafficOnly } from './privacyLevel.js';
+import { jsonParse } from './slowOperations.js';
 
 /**
  * Gets the display title for a log/session with fallback logic.
@@ -27,21 +20,16 @@ import { jsonParse } from './slowOperations.js'
  * Strips display-unfriendly tags (like <ide_opened_file>) from the result.
  * Falls back to a truncated session ID when no other title is available.
  */
-export function getLogDisplayTitle(
-  log: LogOption,
-  defaultTitle?: string,
-): string {
+export function getLogDisplayTitle(log: LogOption, defaultTitle?: string): string {
   // Skip firstPrompt if it's a tick/goal message (autonomous mode auto-prompt)
-  const isAutonomousPrompt = log.firstPrompt?.startsWith(`<${TICK_TAG}>`)
+  const isAutonomousPrompt = log.firstPrompt?.startsWith(`<${TICK_TAG}>`);
   // Strip display-unfriendly tags (command-name, ide_opened_file, etc.) early
   // so that command-only prompts (e.g. /clear) become empty and fall through
   // to the next fallback instead of showing raw XML tags.
   // Note: stripDisplayTags returns the original when stripping yields empty,
   // so we call stripDisplayTagsAllowEmpty to detect command-only prompts.
-  const strippedFirstPrompt = log.firstPrompt
-    ? stripDisplayTagsAllowEmpty(log.firstPrompt)
-    : ''
-  const useFirstPrompt = strippedFirstPrompt && !isAutonomousPrompt
+  const strippedFirstPrompt = log.firstPrompt ? stripDisplayTagsAllowEmpty(log.firstPrompt) : '';
+  const useFirstPrompt = strippedFirstPrompt && !isAutonomousPrompt;
   const title =
     log.agentName ||
     log.customTitle ||
@@ -52,51 +40,51 @@ export function getLogDisplayTitle(
     (isAutonomousPrompt ? 'Autonomous session' : undefined) ||
     // Fall back to truncated session ID for lite logs with no metadata
     (log.sessionId ? log.sessionId.slice(0, 8) : '') ||
-    ''
+    '';
   // Strip display-unfriendly tags (like <ide_opened_file>) for cleaner titles
-  return stripDisplayTags(title).trim()
+  return stripDisplayTags(title).trim();
 }
 
 export function dateToFilename(date: Date): string {
-  return date.toISOString().replace(/[:.]/g, '-')
+  return date.toISOString().replace(/[:.]/g, '-');
 }
 
 // In-memory error log for recent errors
 // Moved from bootstrap/state.ts to break import cycle
-const MAX_IN_MEMORY_ERRORS = 100
-let inMemoryErrorLog: Array<{ error: string; timestamp: string }> = []
+const MAX_IN_MEMORY_ERRORS = 100;
+let inMemoryErrorLog: Array<{ error: string; timestamp: string }> = [];
 
 function addToInMemoryErrorLog(errorInfo: {
-  error: string
-  timestamp: string
+  error: string;
+  timestamp: string;
 }): void {
   if (inMemoryErrorLog.length >= MAX_IN_MEMORY_ERRORS) {
-    inMemoryErrorLog.shift() // Remove oldest error
+    inMemoryErrorLog.shift(); // Remove oldest error
   }
-  inMemoryErrorLog.push(errorInfo)
+  inMemoryErrorLog.push(errorInfo);
 }
 
 /**
  * Sink interface for the error logging backend
  */
 export type ErrorLogSink = {
-  logError: (error: Error) => void
-  logMCPError: (serverName: string, error: unknown) => void
-  logMCPDebug: (serverName: string, message: string) => void
-  getErrorsPath: () => string
-  getMCPLogsPath: (serverName: string) => string
-}
+  logError: (error: Error) => void;
+  logMCPError: (serverName: string, error: unknown) => void;
+  logMCPDebug: (serverName: string, message: string) => void;
+  getErrorsPath: () => string;
+  getMCPLogsPath: (serverName: string) => string;
+};
 
 // Queued events for events logged before sink is attached
 type QueuedErrorEvent =
   | { type: 'error'; error: Error }
   | { type: 'mcpError'; serverName: string; error: unknown }
-  | { type: 'mcpDebug'; serverName: string; message: string }
+  | { type: 'mcpDebug'; serverName: string; message: string };
 
-const errorQueue: QueuedErrorEvent[] = []
+const errorQueue: QueuedErrorEvent[] = [];
 
 // Sink - initialized during app startup
-let errorLogSink: ErrorLogSink | null = null
+let errorLogSink: ErrorLogSink | null = null;
 
 /**
  * Attach the error log sink that will receive all error events.
@@ -108,26 +96,26 @@ let errorLogSink: ErrorLogSink | null = null
  */
 export function attachErrorLogSink(newSink: ErrorLogSink): void {
   if (errorLogSink !== null) {
-    return
+    return;
   }
-  errorLogSink = newSink
+  errorLogSink = newSink;
 
   // Drain the queue immediately - errors should not be delayed
   if (errorQueue.length > 0) {
-    const queuedEvents = [...errorQueue]
-    errorQueue.length = 0
+    const queuedEvents = [...errorQueue];
+    errorQueue.length = 0;
 
     for (const event of queuedEvents) {
       switch (event.type) {
         case 'error':
-          errorLogSink.logError(event.error)
-          break
+          errorLogSink.logError(event.error);
+          break;
         case 'mcpError':
-          errorLogSink.logMCPError(event.serverName, event.error)
-          break
+          errorLogSink.logMCPError(event.serverName, event.error);
+          break;
         case 'mcpDebug':
-          errorLogSink.logMCPDebug(event.serverName, event.message)
-          break
+          errorLogSink.logMCPDebug(event.serverName, event.message);
+          break;
       }
     }
   }
@@ -152,16 +140,15 @@ export function attachErrorLogSink(newSink: ErrorLogSink): void {
  * - In-memory: Call `getInMemoryErrors()` to get recent errors for the current session
  */
 const isHardFailMode = memoize((): boolean => {
-  return process.argv.includes('--hard-fail')
-})
+  return process.argv.includes('--hard-fail');
+});
 
 export function logError(error: unknown): void {
-  const err = toError(error)
+  const err = toError(error);
   if (feature('HARD_FAIL') && isHardFailMode()) {
-    // biome-ignore lint/suspicious/noConsole:: intentional crash output
-    console.error('[HARD FAIL] logError called with:', err.stack || err.message)
+    console.error('[HARD FAIL] logError called with:', err.stack || err.message);
     // eslint-disable-next-line custom-rules/no-process-exit
-    process.exit(1)
+    process.exit(1);
   }
   try {
     // Check if error reporting should be disabled
@@ -173,33 +160,33 @@ export function logError(error: unknown): void {
       process.env.DISABLE_ERROR_REPORTING ||
       isEssentialTrafficOnly()
     ) {
-      return
+      return;
     }
 
-    const errorStr = err.stack || err.message
+    const errorStr = err.stack || err.message;
 
     const errorInfo = {
       error: errorStr,
       timestamp: new Date().toISOString(),
-    }
+    };
 
     // Always add to in-memory log (no dependencies needed)
-    addToInMemoryErrorLog(errorInfo)
+    addToInMemoryErrorLog(errorInfo);
 
     // If sink not attached, queue the event
     if (errorLogSink === null) {
-      errorQueue.push({ type: 'error', error: err })
-      return
+      errorQueue.push({ type: 'error', error: err });
+      return;
     }
 
-    errorLogSink.logError(err)
+    errorLogSink.logError(err);
   } catch {
     // pass
   }
 }
 
 export function getInMemoryErrors(): { error: string; timestamp: string }[] {
-  return [...inMemoryErrorLog]
+  return [...inMemoryErrorLog];
 }
 
 /**
@@ -207,7 +194,7 @@ export function getInMemoryErrors(): { error: string; timestamp: string }[] {
  * @returns List of error logs sorted by date
  */
 export function loadErrorLogs(): Promise<LogOption[]> {
-  return loadLogList(CACHE_PATHS.errors())
+  return loadLogList(CACHE_PATHS.errors());
 }
 
 /**
@@ -215,11 +202,9 @@ export function loadErrorLogs(): Promise<LogOption[]> {
  * @param index Index in the sorted list of logs (0-based)
  * @returns Log data or null if not found
  */
-export async function getErrorLogByIndex(
-  index: number,
-): Promise<LogOption | null> {
-  const logs = await loadErrorLogs()
-  return logs[index] || null
+export async function getErrorLogByIndex(index: number): Promise<LogOption | null> {
+  const logs = await loadErrorLogs();
+  return logs[index] || null;
 }
 
 /**
@@ -229,34 +214,33 @@ export async function getErrorLogByIndex(
  * @private
  */
 async function loadLogList(path: string): Promise<LogOption[]> {
-  let files: Awaited<ReturnType<typeof readdir>>
+  let files: Awaited<ReturnType<typeof readdir>>;
   try {
-    files = await readdir(path, { withFileTypes: true }) as any
+    files = (await readdir(path, { withFileTypes: true })) as any;
   } catch {
-    logError(new Error(`No logs found at ${path}`))
-    return []
+    logError(new Error(`No logs found at ${path}`));
+    return [];
   }
   const logData = await Promise.all(
     files.map(async (file, i) => {
-      const fullPath = join(path, file.name as unknown as string)
-      const content = await readFile(fullPath, { encoding: 'utf8' })
-      const messages = jsonParse(content) as SerializedMessage[]
-      const firstMessage = messages[0]
-      const lastMessage = messages[messages.length - 1]
+      const fullPath = join(path, file.name as unknown as string);
+      const content = await readFile(fullPath, { encoding: 'utf8' });
+      const messages = jsonParse(content) as SerializedMessage[];
+      const firstMessage = messages[0];
+      const lastMessage = messages[messages.length - 1];
       const firstPrompt =
-        firstMessage?.type === 'user' &&
-        typeof firstMessage?.message?.content === 'string'
+        firstMessage?.type === 'user' && typeof firstMessage?.message?.content === 'string'
           ? firstMessage?.message?.content
-          : 'No prompt'
+          : 'No prompt';
 
       // For new random filenames, we'll get stats from the file itself
-      const fileStats = await stat(fullPath)
+      const fileStats = await stat(fullPath);
 
       // Check if it's a sidechain by looking at filename
-      const isSidechain = fullPath.includes('sidechain')
+      const isSidechain = fullPath.includes('sidechain');
 
       // For new files, use the file modified time as date
-      const date = dateToFilename(fileStats.mtime)
+      const date = dateToFilename(fileStats.mtime);
 
       return {
         date,
@@ -268,44 +252,44 @@ async function loadLogList(path: string): Promise<LogOption[]> {
           ? parseISOString(lastMessage.timestamp)
           : parseISOString(date),
         firstPrompt:
-          firstPrompt.split('\n')[0]?.slice(0, 50) +
-            (firstPrompt.length > 50 ? '…' : '') || 'No prompt',
+          firstPrompt.split('\n')[0]?.slice(0, 50) + (firstPrompt.length > 50 ? '…' : '') ||
+          'No prompt',
         messageCount: messages.length,
         isSidechain,
-      }
+      };
     }),
-  )
+  );
 
-  return sortLogs(logData.filter(_ => _ !== null)).map((_, i) => ({
+  return sortLogs(logData.filter((_) => _ !== null)).map((_, i) => ({
     ..._,
     value: i,
-  }))
+  }));
 }
 
 function parseISOString(s: string): Date {
-  const b = s.split(/\D+/)
+  const b = s.split(/\D+/);
   return new Date(
     Date.UTC(
-      parseInt(b[0]!, 10),
-      parseInt(b[1]!, 10) - 1,
-      parseInt(b[2]!, 10),
-      parseInt(b[3]!, 10),
-      parseInt(b[4]!, 10),
-      parseInt(b[5]!, 10),
-      parseInt(b[6]!, 10),
+      Number.parseInt(b[0]!, 10),
+      Number.parseInt(b[1]!, 10) - 1,
+      Number.parseInt(b[2]!, 10),
+      Number.parseInt(b[3]!, 10),
+      Number.parseInt(b[4]!, 10),
+      Number.parseInt(b[5]!, 10),
+      Number.parseInt(b[6]!, 10),
     ),
-  )
+  );
 }
 
 export function logMCPError(serverName: string, error: unknown): void {
   try {
     // If sink not attached, queue the event
     if (errorLogSink === null) {
-      errorQueue.push({ type: 'mcpError', serverName, error })
-      return
+      errorQueue.push({ type: 'mcpError', serverName, error });
+      return;
     }
 
-    errorLogSink.logMCPError(serverName, error)
+    errorLogSink.logMCPError(serverName, error);
   } catch {
     // Silently fail
   }
@@ -315,11 +299,11 @@ export function logMCPDebug(serverName: string, message: string): void {
   try {
     // If sink not attached, queue the event
     if (errorLogSink === null) {
-      errorQueue.push({ type: 'mcpDebug', serverName, message })
-      return
+      errorQueue.push({ type: 'mcpDebug', serverName, message });
+      return;
     }
 
-    errorLogSink.logMCPDebug(serverName, message)
+    errorLogSink.logMCPDebug(serverName, message);
   } catch {
     // Silently fail
   }
@@ -335,20 +319,20 @@ export function captureAPIRequest(
   // startsWith, not exact match — users with non-default output styles get
   // variants like 'repl_main_thread:outputStyle:Explanatory' (querySource.ts).
   if (!querySource || !querySource.startsWith('repl_main_thread')) {
-    return
+    return;
   }
 
   // Store params WITHOUT messages to avoid retaining the entire conversation
   // for all users. Messages are already persisted to the transcript file and
   // available via React state.
-  const { messages, ...paramsWithoutMessages } = params
-  setLastAPIRequest(paramsWithoutMessages)
+  const { messages, ...paramsWithoutMessages } = params;
+  setLastAPIRequest(paramsWithoutMessages);
   // For ant users only: also keep a reference to the final messages array so
   // /share's serialized_conversation.json captures the exact post-compaction,
   // CLAUDE.md-injected payload the API received. Overwritten each turn;
   // dumpPrompts.ts already holds 5 full request bodies for ants, so this is
   // not a new retention class.
-  setLastAPIRequestMessages(process.env.USER_TYPE === 'ant' ? messages : null)
+  setLastAPIRequestMessages(process.env.USER_TYPE === 'ant' ? messages : null);
 }
 
 /**
@@ -356,7 +340,7 @@ export function captureAPIRequest(
  * @internal
  */
 export function _resetErrorLogForTesting(): void {
-  errorLogSink = null
-  errorQueue.length = 0
-  inMemoryErrorLog = []
+  errorLogSink = null;
+  errorQueue.length = 0;
+  inMemoryErrorLog = [];
 }

@@ -4,7 +4,7 @@
  * clamp to 0.
  */
 export function memoryAgeDays(mtimeMs: number): number {
-  return Math.max(0, Math.floor((Date.now() - mtimeMs) / 86_400_000))
+  return Math.max(0, Math.floor((Date.now() - mtimeMs) / 86_400_000));
 }
 
 /**
@@ -13,10 +13,10 @@ export function memoryAgeDays(mtimeMs: number): number {
  * "47 days ago" does.
  */
 export function memoryAge(mtimeMs: number): string {
-  const d = memoryAgeDays(mtimeMs)
-  if (d === 0) return 'today'
-  if (d === 1) return 'yesterday'
-  return `${d} days ago`
+  const d = memoryAgeDays(mtimeMs);
+  if (d === 0) return 'today';
+  if (d === 1) return 'yesterday';
+  return `${d} days ago`;
 }
 
 /**
@@ -31,14 +31,9 @@ export function memoryAge(mtimeMs: number): string {
  * the citation makes the stale claim sound more authoritative, not less.
  */
 export function memoryFreshnessText(mtimeMs: number): string {
-  const d = memoryAgeDays(mtimeMs)
-  if (d <= 1) return ''
-  return (
-    `This memory is ${d} days old. ` +
-    `Memories are point-in-time observations, not live state — ` +
-    `claims about code behavior or file:line citations may be outdated. ` +
-    `Verify against current code before asserting as fact.`
-  )
+  const d = memoryAgeDays(mtimeMs);
+  if (d <= 1) return '';
+  return `This memory is ${d} days old. Memories are point-in-time observations, not live state — claims about code behavior or file:line citations may be outdated. Verify against current code before asserting as fact.`;
 }
 
 /**
@@ -47,7 +42,7 @@ export function memoryFreshnessText(mtimeMs: number): string {
  * don't add their own system-reminder wrapper (e.g. FileReadTool output).
  */
 export function memoryFreshnessNote(mtimeMs: number): string {
-  const text = memoryFreshnessText(mtimeMs)
-  if (!text) return ''
-  return `<system-reminder>${text}</system-reminder>\n`
+  const text = memoryFreshnessText(mtimeMs);
+  if (!text) return '';
+  return `<system-reminder>${text}</system-reminder>\n`;
 }

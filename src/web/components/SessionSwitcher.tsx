@@ -47,16 +47,20 @@ export function SessionSwitcher({
           className="flex h-6 w-6 items-center justify-center rounded text-stone-400 transition-colors hover:bg-stone-800 hover:text-stone-200"
           title="New session"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {sessions.length === 0 && (
-          <p className="px-3 py-4 text-xs text-stone-600">No sessions</p>
-        )}
+        {sessions.length === 0 && <p className="px-3 py-4 text-xs text-stone-600">No sessions</p>}
 
         <ul className="space-y-0.5 p-1.5">
           {sessions.map((session) => {

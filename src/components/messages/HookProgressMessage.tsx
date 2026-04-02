@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js';
 import type { buildMessageLookups } from 'src/utils/messages.js';
 import { Box, Text } from '../../ink.js';
@@ -13,12 +13,7 @@ type Props = {
 };
 export function HookProgressMessage(t0) {
   const $ = _c(22);
-  const {
-    hookEvent,
-    lookups,
-    toolUseID,
-    isTranscriptMode
-  } = t0;
+  const { hookEvent, lookups, toolUseID, isTranscriptMode } = t0;
   let t1;
   if ($[0] !== hookEvent || $[1] !== lookups.inProgressHookCounts || $[2] !== toolUseID) {
     t1 = lookups.inProgressHookCounts.get(toolUseID)?.get(hookEvent) ?? 0;
@@ -34,7 +29,7 @@ export function HookProgressMessage(t0) {
   if (inProgressHookCount === 0) {
     return null;
   }
-  if (hookEvent === "PreToolUse" || hookEvent === "PostToolUse") {
+  if (hookEvent === 'PreToolUse' || hookEvent === 'PostToolUse') {
     if (isTranscriptMode) {
       let t2;
       if ($[4] !== inProgressHookCount) {
@@ -46,13 +41,17 @@ export function HookProgressMessage(t0) {
       }
       let t3;
       if ($[6] !== hookEvent) {
-        t3 = <Text dimColor={true} bold={true}>{hookEvent}</Text>;
+        t3 = (
+          <Text dimColor={true} bold={true}>
+            {hookEvent}
+          </Text>
+        );
         $[6] = hookEvent;
         $[7] = t3;
       } else {
         t3 = $[7];
       }
-      const t4 = inProgressHookCount === 1 ? " hook" : " hooks";
+      const t4 = inProgressHookCount === 1 ? ' hook' : ' hooks';
       let t5;
       if ($[8] !== t4) {
         t5 = <Text dimColor={true}>{t4} ran</Text>;
@@ -63,7 +62,15 @@ export function HookProgressMessage(t0) {
       }
       let t6;
       if ($[10] !== t2 || $[11] !== t3 || $[12] !== t5) {
-        t6 = <MessageResponse><Box flexDirection="row">{t2}{t3}{t5}</Box></MessageResponse>;
+        t6 = (
+          <MessageResponse>
+            <Box flexDirection="row">
+              {t2}
+              {t3}
+              {t5}
+            </Box>
+          </MessageResponse>
+        );
         $[10] = t2;
         $[11] = t3;
         $[12] = t5;
@@ -79,7 +86,7 @@ export function HookProgressMessage(t0) {
     return null;
   }
   let t2;
-  if ($[14] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[14] === Symbol.for('react.memo_cache_sentinel')) {
     t2 = <Text dimColor={true}>Running </Text>;
     $[14] = t2;
   } else {
@@ -87,13 +94,17 @@ export function HookProgressMessage(t0) {
   }
   let t3;
   if ($[15] !== hookEvent) {
-    t3 = <Text dimColor={true} bold={true}>{hookEvent}</Text>;
+    t3 = (
+      <Text dimColor={true} bold={true}>
+        {hookEvent}
+      </Text>
+    );
     $[15] = hookEvent;
     $[16] = t3;
   } else {
     t3 = $[16];
   }
-  const t4 = inProgressHookCount === 1 ? " hook\u2026" : " hooks\u2026";
+  const t4 = inProgressHookCount === 1 ? ' hook\u2026' : ' hooks\u2026';
   let t5;
   if ($[17] !== t4) {
     t5 = <Text dimColor={true}>{t4}</Text>;
@@ -104,7 +115,15 @@ export function HookProgressMessage(t0) {
   }
   let t6;
   if ($[19] !== t3 || $[20] !== t5) {
-    t6 = <MessageResponse><Box flexDirection="row">{t2}{t3}{t5}</Box></MessageResponse>;
+    t6 = (
+      <MessageResponse>
+        <Box flexDirection="row">
+          {t2}
+          {t3}
+          {t5}
+        </Box>
+      </MessageResponse>
+    );
     $[19] = t3;
     $[20] = t5;
     $[21] = t6;

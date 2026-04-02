@@ -3,10 +3,10 @@
  * Keep selectors pure and simple - just data extraction, no side effects.
  */
 
-import type { InProcessTeammateTaskState } from '../tasks/InProcessTeammateTask/types.js'
-import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
-import type { LocalAgentTaskState } from '../tasks/LocalAgentTask/LocalAgentTask.js'
-import type { AppState } from './AppStateStore.js'
+import type { InProcessTeammateTaskState } from '../tasks/InProcessTeammateTask/types.js';
+import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js';
+import type { LocalAgentTaskState } from '../tasks/LocalAgentTask/LocalAgentTask.js';
+import type { AppState } from './AppStateStore.js';
 
 /**
  * Get the currently viewed teammate task, if any.
@@ -18,25 +18,25 @@ import type { AppState } from './AppStateStore.js'
 export function getViewedTeammateTask(
   appState: Pick<AppState, 'viewingAgentTaskId' | 'tasks'>,
 ): InProcessTeammateTaskState | undefined {
-  const { viewingAgentTaskId, tasks } = appState
+  const { viewingAgentTaskId, tasks } = appState;
 
   // Not viewing any teammate
   if (!viewingAgentTaskId) {
-    return undefined
+    return undefined;
   }
 
   // Look up the task
-  const task = tasks[viewingAgentTaskId]
+  const task = tasks[viewingAgentTaskId];
   if (!task) {
-    return undefined
+    return undefined;
   }
 
   // Verify it's an in-process teammate task
   if (!isInProcessTeammateTask(task)) {
-    return undefined
+    return undefined;
   }
 
-  return task
+  return task;
 }
 
 /**
@@ -46,7 +46,7 @@ export function getViewedTeammateTask(
 export type ActiveAgentForInput =
   | { type: 'leader' }
   | { type: 'viewed'; task: InProcessTeammateTaskState }
-  | { type: 'named_agent'; task: LocalAgentTaskState }
+  | { type: 'named_agent'; task: LocalAgentTaskState };
 
 /**
  * Determine where user input should be routed.
@@ -56,21 +56,19 @@ export type ActiveAgentForInput =
  *
  * Used by input routing logic to direct user messages to the correct agent.
  */
-export function getActiveAgentForInput(
-  appState: AppState,
-): ActiveAgentForInput {
-  const viewedTask = getViewedTeammateTask(appState)
+export function getActiveAgentForInput(appState: AppState): ActiveAgentForInput {
+  const viewedTask = getViewedTeammateTask(appState);
   if (viewedTask) {
-    return { type: 'viewed', task: viewedTask }
+    return { type: 'viewed', task: viewedTask };
   }
 
-  const { viewingAgentTaskId, tasks } = appState
+  const { viewingAgentTaskId, tasks } = appState;
   if (viewingAgentTaskId) {
-    const task = tasks[viewingAgentTaskId]
+    const task = tasks[viewingAgentTaskId];
     if (task?.type === 'local_agent') {
-      return { type: 'named_agent', task }
+      return { type: 'named_agent', task };
     }
   }
 
-  return { type: 'leader' }
+  return { type: 'leader' };
 }

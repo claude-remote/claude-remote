@@ -1,14 +1,14 @@
-import { feature } from 'src/utils/feature.js'
-import { useEffect, useRef } from 'react'
-import { useNotifications } from 'src/context/notifications.js'
-import { getIsRemoteMode } from '../../bootstrap/state.js'
-import { useAppState } from '../../state/AppState.js'
-import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
+import { useEffect, useRef } from 'react';
+import { useNotifications } from 'src/context/notifications.js';
+import { feature } from 'src/utils/feature.js';
+import { getIsRemoteMode } from '../../bootstrap/state.js';
+import { useAppState } from '../../state/AppState.js';
+import type { PermissionMode } from '../../utils/permissions/PermissionMode.js';
 import {
   getAutoModeUnavailableNotification,
   getAutoModeUnavailableReason,
-} from '../../utils/permissions/permissionSetup.js'
-import { hasAutoModeOptIn } from '../../utils/settings/settings.js'
+} from '../../utils/permissions/permissionSetup.js';
+import { hasAutoModeOptIn } from '../../utils/settings/settings.js';
 
 /**
  * Shows a one-shot notification when the shift-tab carousel wraps past where
@@ -17,40 +17,38 @@ import { hasAutoModeOptIn } from '../../utils/settings/settings.js'
  * handled by verifyAutoModeGateAccess → checkAndDisableAutoModeIfNeeded.
  */
 export function useAutoModeUnavailableNotification(): void {
-  const { addNotification } = useNotifications()
-  const mode = useAppState(s => s.toolPermissionContext.mode)
-  const isAutoModeAvailable = useAppState(
-    s => s.toolPermissionContext.isAutoModeAvailable,
-  )
-  const shownRef = useRef(false)
-  const prevModeRef = useRef<PermissionMode>(mode)
+  const { addNotification } = useNotifications();
+  const mode = useAppState((s) => s.toolPermissionContext.mode);
+  const isAutoModeAvailable = useAppState((s) => s.toolPermissionContext.isAutoModeAvailable);
+  const shownRef = useRef(false);
+  const prevModeRef = useRef<PermissionMode>(mode);
 
   useEffect(() => {
-    const prevMode = prevModeRef.current
-    prevModeRef.current = mode
+    const prevMode = prevModeRef.current;
+    prevModeRef.current = mode;
 
-    if (!feature('TRANSCRIPT_CLASSIFIER')) return
-    if (getIsRemoteMode()) return
-    if (shownRef.current) return
+    if (!feature('TRANSCRIPT_CLASSIFIER')) return;
+    if (getIsRemoteMode()) return;
+    if (shownRef.current) return;
 
     const wrappedPastAutoSlot =
       mode === 'default' &&
       prevMode !== 'default' &&
       prevMode !== 'auto' &&
       !isAutoModeAvailable &&
-      hasAutoModeOptIn()
+      hasAutoModeOptIn();
 
-    if (!wrappedPastAutoSlot) return
+    if (!wrappedPastAutoSlot) return;
 
-    const reason = getAutoModeUnavailableReason()
-    if (!reason) return
+    const reason = getAutoModeUnavailableReason();
+    if (!reason) return;
 
-    shownRef.current = true
+    shownRef.current = true;
     addNotification({
       key: 'auto-mode-unavailable',
       text: getAutoModeUnavailableNotification(reason),
       color: 'warning',
       priority: 'medium',
-    })
-  }, [mode, isAutoModeAvailable, addNotification])
+    });
+  }, [mode, isAutoModeAvailable, addNotification]);
 }

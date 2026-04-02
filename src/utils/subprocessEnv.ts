@@ -1,4 +1,4 @@
-import { isEnvTruthy } from './envUtils.js'
+import { isEnvTruthy } from './envUtils.js';
 
 /**
  * Env vars to strip from subprocess environments when running inside GitHub
@@ -50,7 +50,7 @@ const GHA_SUBPROCESS_SCRUB = [
   'OVERRIDE_GITHUB_TOKEN',
   'DEFAULT_WORKFLOW_TOKEN',
   'SSH_SIGNING_KEY',
-] as const
+] as const;
 
 /**
  * Returns a copy of process.env with sensitive secrets stripped, for use when
@@ -64,16 +64,14 @@ const GHA_SUBPROCESS_SCRUB = [
 // Registered by init.ts after the upstreamproxy module is dynamically imported
 // in CCR sessions. Stays undefined in non-CCR startups so we never pull in the
 // upstreamproxy module graph (upstreamproxy.ts + relay.ts) via a static import.
-let _getUpstreamProxyEnv: (() => Record<string, string>) | undefined
+let _getUpstreamProxyEnv: (() => Record<string, string>) | undefined;
 
 /**
  * Called from init.ts to wire up the proxy env function after the upstreamproxy
  * module has been lazily loaded. Must be called before any subprocess is spawned.
  */
-export function registerUpstreamProxyEnvFn(
-  fn: () => Record<string, string>,
-): void {
-  _getUpstreamProxyEnv = fn
+export function registerUpstreamProxyEnvFn(fn: () => Record<string, string>): void {
+  _getUpstreamProxyEnv = fn;
 }
 
 export function subprocessEnv(): NodeJS.ProcessEnv {
@@ -81,19 +79,17 @@ export function subprocessEnv(): NodeJS.ProcessEnv {
   // in agent subprocesses route through the local relay. Returns {} when the
   // proxy is disabled or not registered (non-CCR), so this is a no-op outside
   // CCR containers.
-  const proxyEnv = _getUpstreamProxyEnv?.() ?? {}
+  const proxyEnv = _getUpstreamProxyEnv?.() ?? {};
 
   if (!isEnvTruthy(process.env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB)) {
-    return Object.keys(proxyEnv).length > 0
-      ? { ...process.env, ...proxyEnv }
-      : process.env
+    return Object.keys(proxyEnv).length > 0 ? { ...process.env, ...proxyEnv } : process.env;
   }
-  const env = { ...process.env, ...proxyEnv }
+  const env = { ...process.env, ...proxyEnv };
   for (const k of GHA_SUBPROCESS_SCRUB) {
-    delete env[k]
+    delete env[k];
     // GitHub Actions auto-creates INPUT_<NAME> for `with:` inputs, duplicating
     // secrets like INPUT_ANTHROPIC_API_KEY. No-op for vars that aren't action inputs.
-    delete env[`INPUT_${k}`]
+    delete env[`INPUT_${k}`];
   }
-  return env
+  return env;
 }

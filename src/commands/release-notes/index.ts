@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const releaseNotes: Command = {
   description: 'View release notes',
@@ -6,6 +6,6 @@ const releaseNotes: Command = {
   type: 'local',
   supportsNonInteractive: true,
   load: () => import('./release-notes.js'),
-}
+};
 
-export default releaseNotes
+export default releaseNotes;

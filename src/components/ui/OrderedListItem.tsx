@@ -1,20 +1,16 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { createContext, type ReactNode, useContext } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../ink.js';
 export const OrderedListItemContext = createContext({
-  marker: ''
+  marker: '',
 });
 type OrderedListItemProps = {
   children: ReactNode;
 };
 export function OrderedListItem(t0) {
   const $ = _c(7);
-  const {
-    children
-  } = t0;
-  const {
-    marker
-  } = useContext(OrderedListItemContext);
+  const { children } = t0;
+  const { marker } = useContext(OrderedListItemContext);
   let t1;
   if ($[0] !== marker) {
     t1 = <Text dimColor={true}>{marker}</Text>;
@@ -33,7 +29,12 @@ export function OrderedListItem(t0) {
   }
   let t3;
   if ($[4] !== t1 || $[5] !== t2) {
-    t3 = <Box gap={1}>{t1}{t2}</Box>;
+    t3 = (
+      <Box gap={1}>
+        {t1}
+        {t2}
+      </Box>
+    );
     $[4] = t1;
     $[5] = t2;
     $[6] = t3;

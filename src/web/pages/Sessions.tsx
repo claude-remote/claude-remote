@@ -280,10 +280,7 @@ export function Sessions() {
     <div className="flex min-h-screen bg-stone-950">
       {/* Sidebar switcher - hidden on mobile */}
       <aside className="hidden w-56 shrink-0 md:block">
-        <SessionSwitcher
-          sessions={sessions}
-          onCreateSession={handleCreateSession}
-        />
+        <SessionSwitcher sessions={sessions} onCreateSession={handleCreateSession} />
       </aside>
 
       <main className="mx-auto w-full max-w-5xl space-y-6 p-4 sm:p-6">
@@ -294,7 +291,13 @@ export function Sessions() {
             onClick={handleCreateSession}
             className="flex items-center gap-1.5 rounded-lg bg-stone-100 px-4 py-2 text-sm font-medium text-stone-900 transition-colors hover:bg-white"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             New Session

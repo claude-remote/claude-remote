@@ -1,25 +1,25 @@
-import type { ToolInput } from './useFilePermissionDialog.js'
+import type { ToolInput } from './useFilePermissionDialog.js';
 
 export interface FileEdit {
-  old_string: string
-  new_string: string
-  replace_all?: boolean
+  old_string: string;
+  new_string: string;
+  replace_all?: boolean;
 }
 
 export interface IDEDiffConfig {
-  filePath: string
-  edits?: FileEdit[]
-  editMode?: 'single' | 'multiple'
+  filePath: string;
+  edits?: FileEdit[];
+  editMode?: 'single' | 'multiple';
 }
 
 export interface IDEDiffChangeInput {
-  file_path: string
-  edits: FileEdit[]
+  file_path: string;
+  edits: FileEdit[];
 }
 
 export interface IDEDiffSupport<TInput extends ToolInput> {
-  getConfig(input: TInput): IDEDiffConfig
-  applyChanges(input: TInput, modifiedEdits: FileEdit[]): TInput
+  getConfig(input: TInput): IDEDiffConfig;
+  applyChanges(input: TInput, modifiedEdits: FileEdit[]): TInput;
 }
 
 export function createSingleEditDiffConfig(
@@ -38,5 +38,5 @@ export function createSingleEditDiffConfig(
       },
     ],
     editMode: 'single',
-  }
+  };
 }

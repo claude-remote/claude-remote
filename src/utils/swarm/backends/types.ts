@@ -1,4 +1,4 @@
-import type { AgentColorName } from '../../../tools/AgentTool/agentColorManager.js'
+import type { AgentColorName } from '../../../tools/AgentTool/agentColorManager.js';
 
 /**
  * Types of backends available for teammate execution.
@@ -6,30 +6,30 @@ import type { AgentColorName } from '../../../tools/AgentTool/agentColorManager.
  * - 'iterm2': Uses iTerm2 native split panes via the it2 CLI
  * - 'in-process': Runs teammate in the same Node.js process with isolated context
  */
-export type BackendType = 'tmux' | 'iterm2' | 'in-process'
+export type BackendType = 'tmux' | 'iterm2' | 'in-process';
 
 /**
  * Subset of BackendType for pane-based backends only.
  * Used in messages and types that specifically deal with terminal panes.
  */
-export type PaneBackendType = 'tmux' | 'iterm2'
+export type PaneBackendType = 'tmux' | 'iterm2';
 
 /**
  * Opaque identifier for a pane managed by a backend.
  * For tmux, this is the tmux pane ID (e.g., "%1").
  * For iTerm2, this is the session ID returned by it2.
  */
-export type PaneId = string
+export type PaneId = string;
 
 /**
  * Result of creating a new teammate pane.
  */
 export type CreatePaneResult = {
   /** The pane ID for the newly created pane */
-  paneId: PaneId
+  paneId: PaneId;
   /** Whether this is the first teammate pane (affects layout strategy) */
-  isFirstTeammate: boolean
-}
+  isFirstTeammate: boolean;
+};
 
 /**
  * Interface for pane management backends.
@@ -38,27 +38,27 @@ export type CreatePaneResult = {
  */
 export type PaneBackend = {
   /** The type identifier for this backend */
-  readonly type: BackendType
+  readonly type: BackendType;
 
   /** Human-readable display name for this backend */
-  readonly displayName: string
+  readonly displayName: string;
 
   /** Whether this backend supports hiding and showing panes */
-  readonly supportsHideShow: boolean
+  readonly supportsHideShow: boolean;
 
   /**
    * Checks if this backend is available on the system.
    * For tmux: checks if tmux command exists.
    * For iTerm2: checks if it2 CLI is installed and configured.
    */
-  isAvailable(): Promise<boolean>
+  isAvailable(): Promise<boolean>;
 
   /**
    * Checks if we're currently running inside this backend's environment.
    * For tmux: checks if we're in a tmux session.
    * For iTerm2: checks if we're running in iTerm2.
    */
-  isRunningInside(): Promise<boolean>
+  isRunningInside(): Promise<boolean>;
 
   /**
    * Creates a new pane for a teammate in the swarm view.
@@ -68,10 +68,7 @@ export type PaneBackend = {
    * @param color - The color to use for the pane border/title
    * @returns The pane ID and whether this was the first teammate
    */
-  createTeammatePaneInSwarmView(
-    name: string,
-    color: AgentColorName,
-  ): Promise<CreatePaneResult>
+  createTeammatePaneInSwarmView(name: string, color: AgentColorName): Promise<CreatePaneResult>;
 
   /**
    * Sends a command to execute in a specific pane.
@@ -80,11 +77,7 @@ export type PaneBackend = {
    * @param command - The command string to execute
    * @param useExternalSession - If true, uses external session socket (tmux-specific)
    */
-  sendCommandToPane(
-    paneId: PaneId,
-    command: string,
-    useExternalSession?: boolean,
-  ): Promise<void>
+  sendCommandToPane(paneId: PaneId, command: string, useExternalSession?: boolean): Promise<void>;
 
   /**
    * Sets the border color for a pane.
@@ -97,7 +90,7 @@ export type PaneBackend = {
     paneId: PaneId,
     color: AgentColorName,
     useExternalSession?: boolean,
-  ): Promise<void>
+  ): Promise<void>;
 
   /**
    * Sets the title for a pane (displayed in pane border/header).
@@ -112,7 +105,7 @@ export type PaneBackend = {
     name: string,
     color: AgentColorName,
     useExternalSession?: boolean,
-  ): Promise<void>
+  ): Promise<void>;
 
   /**
    * Enables pane border status display (shows titles in borders).
@@ -120,10 +113,7 @@ export type PaneBackend = {
    * @param windowTarget - The window to enable status for (optional)
    * @param useExternalSession - If true, uses external session socket (tmux-specific)
    */
-  enablePaneBorderStatus(
-    windowTarget?: string,
-    useExternalSession?: boolean,
-  ): Promise<void>
+  enablePaneBorderStatus(windowTarget?: string, useExternalSession?: boolean): Promise<void>;
 
   /**
    * Rebalances panes to achieve the desired layout.
@@ -131,7 +121,7 @@ export type PaneBackend = {
    * @param windowTarget - The window containing the panes
    * @param hasLeader - Whether there's a leader pane (affects layout strategy)
    */
-  rebalancePanes(windowTarget: string, hasLeader: boolean): Promise<void>
+  rebalancePanes(windowTarget: string, hasLeader: boolean): Promise<void>;
 
   /**
    * Kills/closes a specific pane.
@@ -140,7 +130,7 @@ export type PaneBackend = {
    * @param useExternalSession - If true, uses external session socket (tmux-specific)
    * @returns true if the pane was killed successfully, false otherwise
    */
-  killPane(paneId: PaneId, useExternalSession?: boolean): Promise<boolean>
+  killPane(paneId: PaneId, useExternalSession?: boolean): Promise<boolean>;
 
   /**
    * Hides a pane by breaking it out into a hidden window.
@@ -150,7 +140,7 @@ export type PaneBackend = {
    * @param useExternalSession - If true, uses external session socket (tmux-specific)
    * @returns true if the pane was hidden successfully, false otherwise
    */
-  hidePane(paneId: PaneId, useExternalSession?: boolean): Promise<boolean>
+  hidePane(paneId: PaneId, useExternalSession?: boolean): Promise<boolean>;
 
   /**
    * Shows a previously hidden pane by joining it back into the main window.
@@ -164,20 +154,20 @@ export type PaneBackend = {
     paneId: PaneId,
     targetWindowOrPane: string,
     useExternalSession?: boolean,
-  ): Promise<boolean>
-}
+  ): Promise<boolean>;
+};
 
 /**
  * Result from backend detection.
  */
 export type BackendDetectionResult = {
   /** The backend that should be used */
-  backend: PaneBackend
+  backend: PaneBackend;
   /** Whether we're running inside the backend's native environment */
-  isNative: boolean
+  isNative: boolean;
   /** If iTerm2 is detected but it2 not installed, this will be true */
-  needsIt2Setup?: boolean
-}
+  needsIt2Setup?: boolean;
+};
 
 // =============================================================================
 // In-Process Teammate Types
@@ -190,84 +180,84 @@ export type BackendDetectionResult = {
  */
 export type TeammateIdentity = {
   /** Agent name (e.g., "researcher", "tester") */
-  name: string
+  name: string;
   /** Team name this teammate belongs to */
-  teamName: string
+  teamName: string;
   /** Assigned color for UI differentiation */
-  color?: AgentColorName
+  color?: AgentColorName;
   /** Whether plan mode approval is required before implementation */
-  planModeRequired?: boolean
-}
+  planModeRequired?: boolean;
+};
 
 /**
  * Configuration for spawning a teammate (any execution mode).
  */
 export type TeammateSpawnConfig = TeammateIdentity & {
   /** Initial prompt to send to the teammate */
-  prompt: string
+  prompt: string;
   /** Working directory for the teammate */
-  cwd: string
+  cwd: string;
   /** Model to use for this teammate */
-  model?: string
+  model?: string;
   /** System prompt for this teammate (resolved from workflow config) */
-  systemPrompt?: string
+  systemPrompt?: string;
   /** How to apply the system prompt: 'replace' or 'append' to default */
-  systemPromptMode?: 'default' | 'replace' | 'append'
+  systemPromptMode?: 'default' | 'replace' | 'append';
   /** Optional git worktree path */
-  worktreePath?: string
+  worktreePath?: string;
   /** Parent session ID (for context linking) */
-  parentSessionId: string
+  parentSessionId: string;
   /** Tool permissions to grant this teammate */
-  permissions?: string[]
+  permissions?: string[];
   /** Whether this teammate can show permission prompts for unlisted tools.
    * When false (default), unlisted tools are auto-denied. */
-  allowPermissionPrompts?: boolean
-}
+  allowPermissionPrompts?: boolean;
+};
 
 /**
  * Result from spawning a teammate.
  */
 export type TeammateSpawnResult = {
   /** Whether spawn was successful */
-  success: boolean
+  success: boolean;
   /** Unique agent ID (format: agentName@teamName) */
-  agentId: string
+  agentId: string;
   /** Error message if spawn failed */
-  error?: string
+  error?: string;
 
   /**
    * Abort controller for lifecycle management (in-process only).
    * Leader uses this to cancel/kill the teammate.
    * For pane-based teammates, use kill() method instead.
    */
-  abortController?: AbortController
+  abortController?: AbortController;
 
   /**
    * Task ID in AppState.tasks (in-process only).
    * Used for UI rendering and progress tracking.
    * agentId is the logical identifier; taskId is for AppState indexing.
    */
-  taskId?: string
+  taskId?: string;
 
   /** Pane ID (pane-based only) */
-  paneId?: PaneId
-}
+  paneId?: PaneId;
+};
 
 /**
  * Message to send to a teammate.
  */
 export type TeammateMessage = {
   /** Message content */
-  text: string
+  text: string;
   /** Sender agent ID */
-  from: string
+  from: string;
   /** Sender display color */
-  color?: string
+  color?: string;
   /** Message timestamp (ISO string) */
-  timestamp?: string
+  timestamp?: string;
   /** 5-10 word summary shown as preview in the UI */
-  summary?: string
-}
+  summary?: string;
+};
 
 /**
  * Common interface for teammate execution backends.
@@ -278,26 +268,26 @@ export type TeammateMessage = {
  */
 export type TeammateExecutor = {
   /** Backend type identifier */
-  readonly type: BackendType
+  readonly type: BackendType;
 
   /** Check if this executor is available on the system */
-  isAvailable(): Promise<boolean>
+  isAvailable(): Promise<boolean>;
 
   /** Spawn a new teammate with the given configuration */
-  spawn(config: TeammateSpawnConfig): Promise<TeammateSpawnResult>
+  spawn(config: TeammateSpawnConfig): Promise<TeammateSpawnResult>;
 
   /** Send a message to a teammate */
-  sendMessage(agentId: string, message: TeammateMessage): Promise<void>
+  sendMessage(agentId: string, message: TeammateMessage): Promise<void>;
 
   /** Terminate a teammate (graceful shutdown request) */
-  terminate(agentId: string, reason?: string): Promise<boolean>
+  terminate(agentId: string, reason?: string): Promise<boolean>;
 
   /** Force kill a teammate (immediate termination) */
-  kill(agentId: string): Promise<boolean>
+  kill(agentId: string): Promise<boolean>;
 
   /** Check if a teammate is still active */
-  isActive(agentId: string): Promise<boolean>
-}
+  isActive(agentId: string): Promise<boolean>;
+};
 
 // =============================================================================
 // Type Guards
@@ -307,5 +297,5 @@ export type TeammateExecutor = {
  * Type guard to check if a backend type uses terminal panes.
  */
 export function isPaneBackend(type: BackendType): type is 'tmux' | 'iterm2' {
-  return type === 'tmux' || type === 'iterm2'
+  return type === 'tmux' || type === 'iterm2';
 }

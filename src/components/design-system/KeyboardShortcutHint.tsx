@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import Text from '../../ink/components/Text.js';
 type Props = {
   /** The key or chord to display (e.g., "ctrl+o", "Enter", "↑/↓") */
@@ -37,12 +37,7 @@ type Props = {
  */
 export function KeyboardShortcutHint(t0) {
   const $ = _c(9);
-  const {
-    shortcut,
-    action,
-    parens: t1,
-    bold: t2
-  } = t0;
+  const { shortcut, action, parens: t1, bold: t2 } = t0;
   const parens = t1 === undefined ? false : t1;
   const bold = t2 === undefined ? false : t2;
   let t3;
@@ -58,7 +53,11 @@ export function KeyboardShortcutHint(t0) {
   if (parens) {
     let t4;
     if ($[3] !== action || $[4] !== shortcutText) {
-      t4 = <Text>({shortcutText} to {action})</Text>;
+      t4 = (
+        <Text>
+          ({shortcutText} to {action})
+        </Text>
+      );
       $[3] = action;
       $[4] = shortcutText;
       $[5] = t4;
@@ -69,7 +68,11 @@ export function KeyboardShortcutHint(t0) {
   }
   let t4;
   if ($[6] !== action || $[7] !== shortcutText) {
-    t4 = <Text>{shortcutText} to {action}</Text>;
+    t4 = (
+      <Text>
+        {shortcutText} to {action}
+      </Text>
+    );
     $[6] = action;
     $[7] = shortcutText;
     $[8] = t4;

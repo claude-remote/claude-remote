@@ -1,12 +1,12 @@
-import { feature } from 'src/utils/feature.js';
-import * as React from 'react';
+import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { feature } from 'src/utils/feature.js';
 import { useNotifications } from '../context/notifications.js';
 import { useIsModalOverlayActive } from '../context/overlayContext.js';
 import { useGetVoiceState, useSetVoiceState, useVoiceState } from '../context/voice.js';
-import { KeyboardEvent } from '../ink/events/keyboard-event.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until REPL wires handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js';
+import { KeyboardEvent } from '../ink/events/keyboard-event.js';
 import { useOptionalKeybindingContext } from '../keybindings/KeybindingContext.js';
 import { keystrokesEqual } from '../keybindings/resolver.js';
 import type { ParsedKeystroke } from '../keybindings/types.js';
@@ -20,17 +20,19 @@ import { useVoiceEnabled } from './useVoiceEnabled.js';
 // was loaded before the spy was installed (test ordering independence).
 const voiceNs: {
   useVoice: typeof import('./useVoice.js').useVoice;
-} = feature('VOICE_MODE') ? require('./useVoice.js') : {
-  useVoice: ({
-    enabled: _e
-  }: {
-    onTranscript: (t: string) => void;
-    enabled: boolean;
-  }) => ({
-    state: 'idle' as const,
-    handleKeyEvent: (_fallbackMs?: number) => {}
-  })
-};
+} = feature('VOICE_MODE')
+  ? require('./useVoice.js')
+  : {
+      useVoice: ({
+        enabled: _e,
+      }: {
+        onTranscript: (t: string) => void;
+        enabled: boolean;
+      }) => ({
+        state: 'idle' as const,
+        handleKeyEvent: (_fallbackMs?: number) => {},
+      }),
+    };
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // Maximum gap (ms) between key presses to count as held (auto-repeat).
@@ -82,7 +84,7 @@ const DEFAULT_VOICE_KEYSTROKE: ParsedKeystroke = {
   alt: false,
   shift: false,
   meta: false,
-  super: false
+  super: false,
 };
 type InsertTextHandle = {
   insert: (text: string) => void;
@@ -118,11 +120,9 @@ type UseVoiceIntegrationResult = {
 export function useVoiceIntegration({
   setInputValueRaw,
   inputValueRef,
-  insertTextRef
+  insertTextRef,
 }: UseVoiceIntegrationArgs): UseVoiceIntegrationResult {
-  const {
-    addNotification
-  } = useNotifications();
+  const { addNotification } = useNotifications();
 
   // Tracks the input content before/after the cursor when voice starts,
   // so interim transcripts can be inserted at the cursor position without
@@ -149,53 +149,52 @@ export function useVoiceIntegration({
   // defensive cleanup only removes leaks). Returns the number of
   // trailing chars remaining after stripping. When nothing changes, no
   // state update is performed.
-  const stripTrailing = useCallback((maxStrip: number, {
-    char = ' ',
-    anchor = false,
-    floor = 0
-  }: StripOpts = {}) => {
-    const prev = inputValueRef.current;
-    const offset = insertTextRef.current?.cursorOffset ?? prev.length;
-    const beforeCursor = prev.slice(0, offset);
-    const afterCursor = prev.slice(offset);
-    // When the hold key is space, also count full-width spaces (U+3000)
-    // that a CJK IME may have inserted for the same physical key.
-    // U+3000 is BMP single-code-unit so indices align with beforeCursor.
-    const scan = char === ' ' ? normalizeFullWidthSpace(beforeCursor) : beforeCursor;
-    let trailing = 0;
-    while (trailing < scan.length && scan[scan.length - 1 - trailing] === char) {
-      trailing++;
-    }
-    const stripCount = Math.max(0, Math.min(trailing - floor, maxStrip));
-    const remaining = trailing - stripCount;
-    const stripped = beforeCursor.slice(0, beforeCursor.length - stripCount);
-    // When anchoring with a non-space suffix, insert a gap space so the
-    // waveform cursor sits on the gap instead of covering the first
-    // suffix letter. The interim transcript effect maintains this same
-    // structure (prefix + leading + interim + trailing + suffix), so
-    // the gap is seamless once transcript text arrives.
-    // Always overwrite on anchor — if a prior activation failed to start
-    // voice (voiceState stayed 'idle'), the cleanup effect didn't fire and
-    // the old anchor is stale. anchor=true is only passed on the single
-    // activation call, never during recording, so overwrite is safe.
-    let gap = '';
-    if (anchor) {
-      voicePrefixRef.current = stripped;
-      voiceSuffixRef.current = afterCursor;
-      if (afterCursor.length > 0 && !/^\s/.test(afterCursor)) {
-        gap = ' ';
+  const stripTrailing = useCallback(
+    (maxStrip: number, { char = ' ', anchor = false, floor = 0 }: StripOpts = {}) => {
+      const prev = inputValueRef.current;
+      const offset = insertTextRef.current?.cursorOffset ?? prev.length;
+      const beforeCursor = prev.slice(0, offset);
+      const afterCursor = prev.slice(offset);
+      // When the hold key is space, also count full-width spaces (U+3000)
+      // that a CJK IME may have inserted for the same physical key.
+      // U+3000 is BMP single-code-unit so indices align with beforeCursor.
+      const scan = char === ' ' ? normalizeFullWidthSpace(beforeCursor) : beforeCursor;
+      let trailing = 0;
+      while (trailing < scan.length && scan[scan.length - 1 - trailing] === char) {
+        trailing++;
       }
-    }
-    const newValue = stripped + gap + afterCursor;
-    if (anchor) lastSetInputRef.current = newValue;
-    if (newValue === prev && stripCount === 0) return remaining;
-    if (insertTextRef.current) {
-      insertTextRef.current.setInputWithCursor(newValue, stripped.length);
-    } else {
-      setInputValueRaw(newValue);
-    }
-    return remaining;
-  }, [setInputValueRaw, inputValueRef, insertTextRef]);
+      const stripCount = Math.max(0, Math.min(trailing - floor, maxStrip));
+      const remaining = trailing - stripCount;
+      const stripped = beforeCursor.slice(0, beforeCursor.length - stripCount);
+      // When anchoring with a non-space suffix, insert a gap space so the
+      // waveform cursor sits on the gap instead of covering the first
+      // suffix letter. The interim transcript effect maintains this same
+      // structure (prefix + leading + interim + trailing + suffix), so
+      // the gap is seamless once transcript text arrives.
+      // Always overwrite on anchor — if a prior activation failed to start
+      // voice (voiceState stayed 'idle'), the cleanup effect didn't fire and
+      // the old anchor is stale. anchor=true is only passed on the single
+      // activation call, never during recording, so overwrite is safe.
+      let gap = '';
+      if (anchor) {
+        voicePrefixRef.current = stripped;
+        voiceSuffixRef.current = afterCursor;
+        if (afterCursor.length > 0 && !/^\s/.test(afterCursor)) {
+          gap = ' ';
+        }
+      }
+      const newValue = stripped + gap + afterCursor;
+      if (anchor) lastSetInputRef.current = newValue;
+      if (newValue === prev && stripCount === 0) return remaining;
+      if (insertTextRef.current) {
+        insertTextRef.current.setInputWithCursor(newValue, stripped.length);
+      } else {
+        setInputValueRaw(newValue);
+      }
+      return remaining;
+    },
+    [setInputValueRaw, inputValueRef, insertTextRef],
+  );
 
   // Undo the gap space inserted by stripTrailing(..., {anchor:true}) and
   // reset the voice prefix/suffix refs. Called when voice activation fails
@@ -220,14 +219,12 @@ export function useVoiceIntegration({
   // Voice state selectors. useVoiceEnabled = user intent (settings) +
   // auth + GB kill-switch, with the auth half memoized on authVersion so
   // render loops never hit a cold keychain spawn.
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
+
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle' as const;
-  const voiceInterimTranscript = (feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_0 => s_0.voiceInterimTranscript) : '') as string;
+  const voiceState = feature('VOICE_MODE') ? useVoiceState((s) => s.voiceState) : ('idle' as const);
+  const voiceInterimTranscript = (
+    feature('VOICE_MODE') ? useVoiceState((s_0) => s_0.voiceInterimTranscript) : ''
+  ) as string;
 
   // Set the voice anchor for focus mode (where recording starts via terminal
   // focus, not key hold). Key-hold sets the anchor in stripTrailing.
@@ -261,7 +258,8 @@ export function useVoiceIntegration({
     // window between CloseStream and WS close — this catches refined
     // TranscriptText arriving then and re-filling a cleared input.
     if (inputValueRef.current !== lastSetInputRef.current) return;
-    const needsSpace = prefix_0.length > 0 && !/\s$/.test(prefix_0) && voiceInterimTranscript.length > 0;
+    const needsSpace =
+      prefix_0.length > 0 && !/\s$/.test(prefix_0) && voiceInterimTranscript.length > 0;
     // Don't gate on voiceInterimTranscript.length -- when interim clears to ''
     // after handleVoiceTranscript sets the final text, the trailing space
     // between prefix and suffix must still be preserved.
@@ -278,36 +276,39 @@ export function useVoiceIntegration({
     }
     lastSetInputRef.current = newValue_0;
   }, [voiceInterimTranscript, setInputValueRaw, inputValueRef, insertTextRef]);
-  const handleVoiceTranscript = useCallback((text: string) => {
-    if (!feature('VOICE_MODE')) return;
-    const prefix_1 = voicePrefixRef.current;
-    // No voice anchor — voice was reset (or never started). Nothing to do.
-    if (prefix_1 === null) return;
-    const suffix_1 = voiceSuffixRef.current;
-    // Submit race: finishRecording() → user presses Enter (input cleared)
-    // → WebSocket close → this callback fires with stale prefix/suffix.
-    // If the input isn't what this hook last set (via the interim effect
-    // or anchor), the user submitted or edited — don't re-fill. Comparing
-    // against `text.length` would false-positive when the final is longer
-    // than the interim (ASR routinely adds punctuation/corrections).
-    if (inputValueRef.current !== lastSetInputRef.current) return;
-    const needsSpace_0 = prefix_1.length > 0 && !/\s$/.test(prefix_1) && text.length > 0;
-    const needsTrailingSpace_0 = suffix_1.length > 0 && !/^\s/.test(suffix_1) && text.length > 0;
-    const leadingSpace_0 = needsSpace_0 ? ' ' : '';
-    const trailingSpace_0 = needsTrailingSpace_0 ? ' ' : '';
-    const newInput = prefix_1 + leadingSpace_0 + text + trailingSpace_0 + suffix_1;
-    // Position cursor after the transcribed text (before suffix)
-    const cursorPos_0 = prefix_1.length + leadingSpace_0.length + text.length;
-    if (insertTextRef.current) {
-      insertTextRef.current.setInputWithCursor(newInput, cursorPos_0);
-    } else {
-      setInputValueRaw(newInput);
-    }
-    lastSetInputRef.current = newInput;
-    // Update the prefix to include this chunk so focus mode can continue
-    // appending subsequent transcripts after it.
-    voicePrefixRef.current = prefix_1 + leadingSpace_0 + text;
-  }, [setInputValueRaw, inputValueRef, insertTextRef]);
+  const handleVoiceTranscript = useCallback(
+    (text: string) => {
+      if (!feature('VOICE_MODE')) return;
+      const prefix_1 = voicePrefixRef.current;
+      // No voice anchor — voice was reset (or never started). Nothing to do.
+      if (prefix_1 === null) return;
+      const suffix_1 = voiceSuffixRef.current;
+      // Submit race: finishRecording() → user presses Enter (input cleared)
+      // → WebSocket close → this callback fires with stale prefix/suffix.
+      // If the input isn't what this hook last set (via the interim effect
+      // or anchor), the user submitted or edited — don't re-fill. Comparing
+      // against `text.length` would false-positive when the final is longer
+      // than the interim (ASR routinely adds punctuation/corrections).
+      if (inputValueRef.current !== lastSetInputRef.current) return;
+      const needsSpace_0 = prefix_1.length > 0 && !/\s$/.test(prefix_1) && text.length > 0;
+      const needsTrailingSpace_0 = suffix_1.length > 0 && !/^\s/.test(suffix_1) && text.length > 0;
+      const leadingSpace_0 = needsSpace_0 ? ' ' : '';
+      const trailingSpace_0 = needsTrailingSpace_0 ? ' ' : '';
+      const newInput = prefix_1 + leadingSpace_0 + text + trailingSpace_0 + suffix_1;
+      // Position cursor after the transcribed text (before suffix)
+      const cursorPos_0 = prefix_1.length + leadingSpace_0.length + text.length;
+      if (insertTextRef.current) {
+        insertTextRef.current.setInputWithCursor(newInput, cursorPos_0);
+      } else {
+        setInputValueRaw(newInput);
+      }
+      lastSetInputRef.current = newInput;
+      // Update the prefix to include this chunk so focus mode can continue
+      // appending subsequent transcripts after it.
+      voicePrefixRef.current = prefix_1 + leadingSpace_0 + text;
+    },
+    [setInputValueRaw, inputValueRef, insertTextRef],
+  );
   const voice = voiceNs.useVoice({
     onTranscript: handleVoiceTranscript,
     onError: (message: string) => {
@@ -316,11 +317,11 @@ export function useVoiceIntegration({
         text: message,
         color: 'error',
         priority: 'immediate',
-        timeoutMs: 10_000
+        timeoutMs: 10_000,
       });
     },
     enabled: voiceEnabled,
-    focusMode: false
+    focusMode: false,
   });
 
   // Compute the character range of interim (not-yet-finalized) transcript
@@ -330,19 +331,20 @@ export function useVoiceIntegration({
     if (voicePrefixRef.current === null) return null;
     if (voiceInterimTranscript.length === 0) return null;
     const prefix_2 = voicePrefixRef.current;
-    const needsSpace_1 = prefix_2.length > 0 && !/\s$/.test(prefix_2) && voiceInterimTranscript.length > 0;
+    const needsSpace_1 =
+      prefix_2.length > 0 && !/\s$/.test(prefix_2) && voiceInterimTranscript.length > 0;
     const start = prefix_2.length + (needsSpace_1 ? 1 : 0);
     const end = start + voiceInterimTranscript.length;
     return {
       start,
-      end
+      end,
     };
   }, [voiceInterimTranscript]);
   return {
     stripTrailing,
     resetAnchor,
     handleKeyEvent: voice.handleKeyEvent,
-    interimRange
+    interimRange,
   };
 }
 
@@ -374,7 +376,7 @@ export function useVoiceKeybindingHandler({
   voiceHandleKeyEvent,
   stripTrailing,
   resetAnchor,
-  isActive
+  isActive,
 }: {
   voiceHandleKeyEvent: (fallbackMs?: number) => void;
   stripTrailing: (maxStrip: number, opts?: StripOpts) => number;
@@ -387,11 +389,9 @@ export function useVoiceKeybindingHandler({
   const setVoiceState = useSetVoiceState();
   const keybindingContext = useOptionalKeybindingContext();
   const isModalOverlayActive = useIsModalOverlayActive();
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
+
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
-  const voiceState = feature('VOICE_MODE') ?
-  // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle';
+  const voiceState = feature('VOICE_MODE') ? useVoiceState((s) => s.voiceState) : 'idle';
 
   // Find the configured key for voice:pushToTalk from keybinding context.
   // Forward iteration with last-wins (matching the resolver): if a later
@@ -426,7 +426,16 @@ export function useVoiceKeybindingHandler({
   // Modifier combos (meta+k, ctrl+x) also auto-repeat (the letter part
   // repeats) but don't insert text, so they're swallowed from the first
   // press with no stripping needed. matchesKeyboardEvent handles those.
-  const bareChar = voiceKeystroke !== null && voiceKeystroke.key.length === 1 && !voiceKeystroke.ctrl && !voiceKeystroke.alt && !voiceKeystroke.shift && !voiceKeystroke.meta && !voiceKeystroke.super ? voiceKeystroke.key : null;
+  const bareChar =
+    voiceKeystroke !== null &&
+    voiceKeystroke.key.length === 1 &&
+    !voiceKeystroke.ctrl &&
+    !voiceKeystroke.alt &&
+    !voiceKeystroke.shift &&
+    !voiceKeystroke.meta &&
+    !voiceKeystroke.super
+      ? voiceKeystroke.key
+      : null;
   const rapidCountRef = useRef(0);
   // How many rapid chars we intentionally let through to the text
   // input (the first WARMUP_THRESHOLD). The activation strip removes
@@ -456,11 +465,11 @@ export function useVoiceKeybindingHandler({
       rapidCountRef.current = 0;
       charsInInputRef.current = 0;
       recordingFloorRef.current = 0;
-      setVoiceState(prev => {
+      setVoiceState((prev) => {
         if (!prev.voiceWarmingUp) return prev;
         return {
           ...prev,
-          voiceWarmingUp: false
+          voiceWarmingUp: false,
         };
       });
     }
@@ -522,7 +531,7 @@ export function useVoiceKeybindingHandler({
       if (bareChar !== null) {
         stripTrailing(repeatCount, {
           char: bareChar,
-          floor: recordingFloorRef.current
+          floor: recordingFloorRef.current,
         });
       }
       voiceHandleKeyEvent();
@@ -557,11 +566,11 @@ export function useVoiceKeybindingHandler({
       }
       rapidCountRef.current = 0;
       isHoldActiveRef.current = true;
-      setVoiceState(prev_0 => {
+      setVoiceState((prev_0) => {
         if (!prev_0.voiceWarmingUp) return prev_0;
         return {
           ...prev_0,
-          voiceWarmingUp: false
+          voiceWarmingUp: false,
         };
       });
       if (bareChar !== null) {
@@ -572,7 +581,7 @@ export function useVoiceKeybindingHandler({
         // recording-time leak cleanup.
         recordingFloorRef.current = stripTrailing(charsInInputRef.current + repeatCount, {
           char: bareChar,
-          anchor: true
+          anchor: true,
         });
         charsInInputRef.current = 0;
         voiceHandleKeyEvent();
@@ -583,7 +592,7 @@ export function useVoiceKeybindingHandler({
         // so the gap to the next keypress is the OS initial repeat
         // *delay* (up to ~2s), not the repeat *rate* (~30-80ms).
         stripTrailing(0, {
-          anchor: true
+          anchor: true,
         });
         voiceHandleKeyEvent(MODIFIER_FIRST_PRESS_FALLBACK_MS);
       }
@@ -613,7 +622,7 @@ export function useVoiceKeybindingHandler({
       e.stopImmediatePropagation();
       stripTrailing(repeatCount, {
         char: bareChar,
-        floor: charsInInputRef.current
+        floor: charsInInputRef.current,
       });
     } else {
       charsInInputRef.current += repeatCount;
@@ -621,49 +630,59 @@ export function useVoiceKeybindingHandler({
 
     // Show warmup feedback once we detect a hold pattern
     if (rapidCountRef.current >= WARMUP_THRESHOLD) {
-      setVoiceState(prev_1 => {
+      setVoiceState((prev_1) => {
         if (prev_1.voiceWarmingUp) return prev_1;
         return {
           ...prev_1,
-          voiceWarmingUp: true
+          voiceWarmingUp: true,
         };
       });
     }
     if (resetTimerRef.current) {
       clearTimeout(resetTimerRef.current);
     }
-    resetTimerRef.current = setTimeout((resetTimerRef_0, rapidCountRef_0, charsInInputRef_0, setVoiceState_0) => {
-      resetTimerRef_0.current = null;
-      rapidCountRef_0.current = 0;
-      charsInInputRef_0.current = 0;
-      setVoiceState_0(prev_2 => {
-        if (!prev_2.voiceWarmingUp) return prev_2;
-        return {
-          ...prev_2,
-          voiceWarmingUp: false
-        };
-      });
-    }, RAPID_KEY_GAP_MS, resetTimerRef, rapidCountRef, charsInInputRef, setVoiceState);
+    resetTimerRef.current = setTimeout(
+      (resetTimerRef_0, rapidCountRef_0, charsInInputRef_0, setVoiceState_0) => {
+        resetTimerRef_0.current = null;
+        rapidCountRef_0.current = 0;
+        charsInInputRef_0.current = 0;
+        setVoiceState_0((prev_2) => {
+          if (!prev_2.voiceWarmingUp) return prev_2;
+          return {
+            ...prev_2,
+            voiceWarmingUp: false,
+          };
+        });
+      },
+      RAPID_KEY_GAP_MS,
+      resetTimerRef,
+      rapidCountRef,
+      charsInInputRef,
+      setVoiceState,
+    );
   };
 
   // Backward-compat bridge: REPL.tsx doesn't yet wire handleKeyDown to
   // <Box onKeyDown>. Subscribe via useInput and adapt InputEvent →
   // KeyboardEvent until the consumer is migrated (separate PR).
   // TODO(onKeyDown-migration): remove once REPL passes handleKeyDown.
-  useInput((_input, _key, event) => {
-    const kbEvent = new KeyboardEvent(event.keypress);
-    handleKeyDown(kbEvent);
-    // handleKeyDown stopped the adapter event, not the InputEvent the
-    // emitter actually checks — forward it so the text input's useInput
-    // listener is skipped and held spaces don't leak into the prompt.
-    if (kbEvent.didStopImmediatePropagation()) {
-      event.stopImmediatePropagation();
-    }
-  }, {
-    isActive
-  });
+  useInput(
+    (_input, _key, event) => {
+      const kbEvent = new KeyboardEvent(event.keypress);
+      handleKeyDown(kbEvent);
+      // handleKeyDown stopped the adapter event, not the InputEvent the
+      // emitter actually checks — forward it so the text input's useInput
+      // listener is skipped and held spaces don't leak into the prompt.
+      if (kbEvent.didStopImmediatePropagation()) {
+        event.stopImmediatePropagation();
+      }
+    },
+    {
+      isActive,
+    },
+  );
   return {
-    handleKeyDown
+    handleKeyDown,
   };
 }
 

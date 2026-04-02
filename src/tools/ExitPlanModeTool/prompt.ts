@@ -1,7 +1,7 @@
 // External stub for ExitPlanModeTool prompt - excludes Ant-only allowedPrompts section
 
 // Hardcoded to avoid relative import issues in stub
-const ASK_USER_QUESTION_TOOL_NAME = 'AskUserQuestion'
+const ASK_USER_QUESTION_TOOL_NAME = 'AskUserQuestion';
 
 export const EXIT_PLAN_MODE_V2_TOOL_PROMPT = `Use this tool when you are in plan mode and have finished writing your plan to the plan file and are ready for user approval.
 
@@ -26,4 +26,4 @@ Ensure your plan is complete and unambiguous:
 1. Initial task: "Search for and understand the implementation of vim mode in the codebase" - Do not use the exit plan mode tool because you are not planning the implementation steps of a task.
 2. Initial task: "Help me implement yank mode for vim" - Use the exit plan mode tool after you have finished planning the implementation steps of the task.
 3. Initial task: "Add a new feature to handle user authentication" - If unsure about auth method (OAuth, JWT, etc.), use ${ASK_USER_QUESTION_TOOL_NAME} first, then use exit plan mode tool after clarifying the approach.
-`
+`;

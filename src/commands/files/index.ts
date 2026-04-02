@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const files = {
   type: 'local',
@@ -7,6 +7,6 @@ const files = {
   isEnabled: () => process.env.USER_TYPE === 'ant',
   supportsNonInteractive: true,
   load: () => import('./files.js'),
-} satisfies Command
+} satisfies Command;
 
-export default files
+export default files;

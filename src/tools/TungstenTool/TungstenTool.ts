@@ -1,6 +1,6 @@
-import { z } from 'zod/v4'
+import { z } from 'zod/v4';
 
-const inputSchema = z.object({}).passthrough()
+const inputSchema = z.object({}).passthrough();
 
 export const TungstenTool = {
   name: 'tungsten',
@@ -8,10 +8,10 @@ export const TungstenTool = {
   maxResultSizeChars: 0,
   inputSchema,
   async description() {
-    return 'Unavailable in this local recovery build.'
+    return 'Unavailable in this local recovery build.';
   },
   async prompt() {
-    return 'TungstenTool is unavailable in this local recovery build.'
+    return 'TungstenTool is unavailable in this local recovery build.';
   },
   async call() {
     return {
@@ -19,24 +19,24 @@ export const TungstenTool = {
         success: false,
         error: 'TungstenTool is unavailable in this local recovery build.',
       },
-    }
+    };
   },
   isConcurrencySafe() {
-    return true
+    return true;
   },
   isEnabled() {
-    return false
+    return false;
   },
   isReadOnly() {
-    return true
+    return true;
   },
   async checkPermissions() {
     return {
       behavior: 'deny' as const,
       message: 'TungstenTool is unavailable in this local recovery build.',
-    }
+    };
   },
-}
+};
 
 export function clearSessionsWithTungstenUsage(): void {}
 

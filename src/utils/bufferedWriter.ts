@@ -1,54 +1,54 @@
-type WriteFn = (content: string) => void
+type WriteFn = (content: string) => void;
 
 export type BufferedWriter = {
-  write: (content: string) => void
-  flush: () => void
-  dispose: () => void
-}
+  write: (content: string) => void;
+  flush: () => void;
+  dispose: () => void;
+};
 
 export function createBufferedWriter({
   writeFn,
   flushIntervalMs = 1000,
   maxBufferSize = 100,
-  maxBufferBytes = Infinity,
+  maxBufferBytes = Number.POSITIVE_INFINITY,
   immediateMode = false,
 }: {
-  writeFn: WriteFn
-  flushIntervalMs?: number
-  maxBufferSize?: number
-  maxBufferBytes?: number
-  immediateMode?: boolean
+  writeFn: WriteFn;
+  flushIntervalMs?: number;
+  maxBufferSize?: number;
+  maxBufferBytes?: number;
+  immediateMode?: boolean;
 }): BufferedWriter {
-  let buffer: string[] = []
-  let bufferBytes = 0
-  let flushTimer: NodeJS.Timeout | null = null
+  let buffer: string[] = [];
+  let bufferBytes = 0;
+  let flushTimer: NodeJS.Timeout | null = null;
   // Batch detached by overflow that hasn't been written yet. Tracked so
   // flush()/dispose() can drain it synchronously if the process exits
   // before the setImmediate fires.
-  let pendingOverflow: string[] | null = null
+  let pendingOverflow: string[] | null = null;
 
   function clearTimer(): void {
     if (flushTimer) {
-      clearTimeout(flushTimer)
-      flushTimer = null
+      clearTimeout(flushTimer);
+      flushTimer = null;
     }
   }
 
   function flush(): void {
     if (pendingOverflow) {
-      writeFn(pendingOverflow.join(''))
-      pendingOverflow = null
+      writeFn(pendingOverflow.join(''));
+      pendingOverflow = null;
     }
-    if (buffer.length === 0) return
-    writeFn(buffer.join(''))
-    buffer = []
-    bufferBytes = 0
-    clearTimer()
+    if (buffer.length === 0) return;
+    writeFn(buffer.join(''));
+    buffer = [];
+    bufferBytes = 0;
+    clearTimer();
   }
 
   function scheduleFlush(): void {
     if (!flushTimer) {
-      flushTimer = setTimeout(flush, flushIntervalMs)
+      flushTimer = setTimeout(flush, flushIntervalMs);
     }
   }
 
@@ -61,40 +61,40 @@ export function createBufferedWriter({
     if (pendingOverflow) {
       // A previous overflow write is still queued. Coalesce into it to
       // preserve ordering — writes land in a single setImmediate-ordered batch.
-      pendingOverflow.push(...buffer)
-      buffer = []
-      bufferBytes = 0
-      clearTimer()
-      return
+      pendingOverflow.push(...buffer);
+      buffer = [];
+      bufferBytes = 0;
+      clearTimer();
+      return;
     }
-    const detached = buffer
-    buffer = []
-    bufferBytes = 0
-    clearTimer()
-    pendingOverflow = detached
+    const detached = buffer;
+    buffer = [];
+    bufferBytes = 0;
+    clearTimer();
+    pendingOverflow = detached;
     setImmediate(() => {
-      const toWrite = pendingOverflow
-      pendingOverflow = null
-      if (toWrite) writeFn(toWrite.join(''))
-    })
+      const toWrite = pendingOverflow;
+      pendingOverflow = null;
+      if (toWrite) writeFn(toWrite.join(''));
+    });
   }
 
   return {
     write(content: string): void {
       if (immediateMode) {
-        writeFn(content)
-        return
+        writeFn(content);
+        return;
       }
-      buffer.push(content)
-      bufferBytes += content.length
-      scheduleFlush()
+      buffer.push(content);
+      bufferBytes += content.length;
+      scheduleFlush();
       if (buffer.length >= maxBufferSize || bufferBytes >= maxBufferBytes) {
-        flushDeferred()
+        flushDeferred();
       }
     },
     flush,
     dispose(): void {
-      flush()
+      flush();
     },
-  }
+  };
 }

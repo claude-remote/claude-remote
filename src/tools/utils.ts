@@ -3,7 +3,7 @@ import type {
   AttachmentMessage,
   SystemMessage,
   UserMessage,
-} from 'src/types/message.js'
+} from 'src/types/message.js';
 
 /**
  * Tags user messages with a sourceToolUseID so they stay transient until the tool resolves.
@@ -14,14 +14,14 @@ export function tagMessagesWithToolUseID(
   toolUseID: string | undefined,
 ): (UserMessage | AttachmentMessage | SystemMessage)[] {
   if (!toolUseID) {
-    return messages
+    return messages;
   }
-  return messages.map(m => {
+  return messages.map((m) => {
     if (m.type === 'user') {
-      return { ...m, sourceToolUseID: toolUseID }
+      return { ...m, sourceToolUseID: toolUseID };
     }
-    return m
-  })
+    return m;
+  });
 }
 
 /**
@@ -32,9 +32,7 @@ export function getToolUseIDFromParentMessage(
   toolName: string,
 ): string | undefined {
   const toolUseBlock = parentMessage.message.content.find(
-    block => block.type === 'tool_use' && block.name === toolName,
-  )
-  return toolUseBlock && toolUseBlock.type === 'tool_use'
-    ? toolUseBlock.id
-    : undefined
+    (block) => block.type === 'tool_use' && block.name === toolName,
+  );
+  return toolUseBlock && toolUseBlock.type === 'tool_use' ? toolUseBlock.id : undefined;
 }

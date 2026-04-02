@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const time: CommandSpec = {
   name: 'time',
@@ -8,6 +8,6 @@ const time: CommandSpec = {
     description: 'Command to time',
     isCommand: true,
   },
-}
+};
 
-export default time
+export default time;

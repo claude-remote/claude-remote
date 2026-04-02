@@ -1,20 +1,20 @@
-import { feature } from 'src/utils/feature.js'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react';
+import type { ToolPermissionContext } from 'src/Tool.js';
 import {
   type AppState,
   useAppState,
   useAppStateStore,
   useSetAppState,
-} from 'src/state/AppState.js'
-import type { ToolPermissionContext } from 'src/Tool.js'
-import { getIsRemoteMode } from '../../bootstrap/state.js'
+} from 'src/state/AppState.js';
+import { feature } from 'src/utils/feature.js';
+import { getIsRemoteMode } from '../../bootstrap/state.js';
 import {
   createDisabledBypassPermissionsContext,
   shouldDisableBypassPermissions,
   verifyAutoModeGateAccess,
-} from './permissionSetup.js'
+} from './permissionSetup.js';
 
-let bypassPermissionsCheckRan = false
+let bypassPermissionsCheckRan = false;
 
 export async function checkAndDisableBypassPermissionsIfNeeded(
   toolPermissionContext: ToolPermissionContext,
@@ -23,27 +23,25 @@ export async function checkAndDisableBypassPermissionsIfNeeded(
   // Check if bypassPermissions should be disabled based on Statsig gate
   // Do this only once, before the first query, to ensure we have the latest gate value
   if (bypassPermissionsCheckRan) {
-    return
+    return;
   }
-  bypassPermissionsCheckRan = true
+  bypassPermissionsCheckRan = true;
 
   if (!toolPermissionContext.isBypassPermissionsModeAvailable) {
-    return
+    return;
   }
 
-  const shouldDisable = await shouldDisableBypassPermissions()
+  const shouldDisable = await shouldDisableBypassPermissions();
   if (!shouldDisable) {
-    return
+    return;
   }
 
-  setAppState(prev => {
+  setAppState((prev) => {
     return {
       ...prev,
-      toolPermissionContext: createDisabledBypassPermissionsContext(
-        prev.toolPermissionContext,
-      ),
-    }
-  })
+      toolPermissionContext: createDisabledBypassPermissionsContext(prev.toolPermissionContext),
+    };
+  });
 }
 
 /**
@@ -51,25 +49,22 @@ export async function checkAndDisableBypassPermissionsIfNeeded(
  * Call this after /login so the gate check re-runs with the new org.
  */
 export function resetBypassPermissionsCheck(): void {
-  bypassPermissionsCheckRan = false
+  bypassPermissionsCheckRan = false;
 }
 
 export function useKickOffCheckAndDisableBypassPermissionsIfNeeded(): void {
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext)
-  const setAppState = useSetAppState()
+  const toolPermissionContext = useAppState((s) => s.toolPermissionContext);
+  const setAppState = useSetAppState();
 
   // Run once, when the component mounts
   useEffect(() => {
-    if (getIsRemoteMode()) return
-    void checkAndDisableBypassPermissionsIfNeeded(
-      toolPermissionContext,
-      setAppState,
-    )
+    if (getIsRemoteMode()) return;
+    void checkAndDisableBypassPermissionsIfNeeded(toolPermissionContext, setAppState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 }
 
-let autoModeCheckRan = false
+let autoModeCheckRan = false;
 
 export async function checkAndDisableAutoModeIfNeeded(
   toolPermissionContext: ToolPermissionContext,
@@ -78,25 +73,23 @@ export async function checkAndDisableAutoModeIfNeeded(
 ): Promise<void> {
   if (feature('TRANSCRIPT_CLASSIFIER')) {
     if (autoModeCheckRan) {
-      return
+      return;
     }
-    autoModeCheckRan = true
+    autoModeCheckRan = true;
 
     const { updateContext, notification } = await verifyAutoModeGateAccess(
       toolPermissionContext,
       fastMode,
-    )
-    setAppState(prev => {
+    );
+    setAppState((prev) => {
       // Apply the transform to CURRENT context, not the stale snapshot we
       // passed to verifyAutoModeGateAccess. The async GrowthBook await inside
       // can be outrun by a mid-turn shift-tab; spreading a stale context here
       // would revert the user's mode change.
-      const nextCtx = updateContext(prev.toolPermissionContext)
+      const nextCtx = updateContext(prev.toolPermissionContext);
       const newState =
-        nextCtx === prev.toolPermissionContext
-          ? prev
-          : { ...prev, toolPermissionContext: nextCtx }
-      if (!notification) return newState
+        nextCtx === prev.toolPermissionContext ? prev : { ...prev, toolPermissionContext: nextCtx };
+      if (!notification) return newState;
       return {
         ...newState,
         notifications: {
@@ -111,8 +104,8 @@ export async function checkAndDisableAutoModeIfNeeded(
             },
           ],
         },
-      }
-    })
+      };
+    });
   }
 }
 
@@ -121,16 +114,16 @@ export async function checkAndDisableAutoModeIfNeeded(
  * Call this after /login so the gate check re-runs with the new org.
  */
 export function resetAutoModeGateCheck(): void {
-  autoModeCheckRan = false
+  autoModeCheckRan = false;
 }
 
 export function useKickOffCheckAndDisableAutoModeIfNeeded(): void {
-  const mainLoopModel = useAppState(s => s.mainLoopModel)
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
-  const fastMode = useAppState(s => s.fastMode)
-  const setAppState = useSetAppState()
-  const store = useAppStateStore()
-  const isFirstRunRef = useRef(true)
+  const mainLoopModel = useAppState((s) => s.mainLoopModel);
+  const mainLoopModelForSession = useAppState((s) => s.mainLoopModelForSession);
+  const fastMode = useAppState((s) => s.fastMode);
+  const setAppState = useSetAppState();
+  const store = useAppStateStore();
+  const isFirstRunRef = useRef(true);
 
   // Runs on mount (startup check) AND whenever the model or fast mode changes
   // (kick-out / carousel-restore). Watching both model fields covers /model,
@@ -139,17 +132,17 @@ export function useKickOffCheckAndDisableAutoModeIfNeeded(): void {
   // breaker. The print.ts headless paths are covered by the sync
   // isAutoModeGateEnabled() check.
   useEffect(() => {
-    if (getIsRemoteMode()) return
+    if (getIsRemoteMode()) return;
     if (isFirstRunRef.current) {
-      isFirstRunRef.current = false
+      isFirstRunRef.current = false;
     } else {
-      resetAutoModeGateCheck()
+      resetAutoModeGateCheck();
     }
     void checkAndDisableAutoModeIfNeeded(
       store.getState().toolPermissionContext,
       setAppState,
       fastMode,
-    )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainLoopModel, mainLoopModelForSession, fastMode])
+  }, [mainLoopModel, mainLoopModelForSession, fastMode]);
 }

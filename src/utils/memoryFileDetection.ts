@@ -1,36 +1,33 @@
-import { feature } from 'src/utils/feature.js'
-import { normalize, posix, win32 } from 'path'
+import { normalize, posix, win32 } from 'node:path';
+import { feature } from 'src/utils/feature.js';
 import {
   getAutoMemPath,
   getMemoryBaseDir,
-  isAutoMemoryEnabled,
   isAutoMemPath,
-} from '../memdir/paths.js'
-import { isAgentMemoryPath } from '../tools/AgentTool/agentMemory.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import {
-  posixPathToWindowsPath,
-  windowsPathToPosixPath,
-} from './windowsPaths.js'
+  isAutoMemoryEnabled,
+} from '../memdir/paths.js';
+import { isAgentMemoryPath } from '../tools/AgentTool/agentMemory.js';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { posixPathToWindowsPath, windowsPathToPosixPath } from './windowsPaths.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemPaths = feature('TEAMMEM')
   ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
-  : null
+  : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-const IS_WINDOWS = process.platform === 'win32'
+const IS_WINDOWS = process.platform === 'win32';
 
 // Normalize path separators to posix (/). Does NOT translate drive encoding.
 function toPosix(p: string): string {
-  return p.split(win32.sep).join(posix.sep)
+  return p.split(win32.sep).join(posix.sep);
 }
 
 // Convert a path to a stable string-comparable form: forward-slash separated,
 // and on Windows, lowercased (Windows filesystems are case-insensitive).
 function toComparable(p: string): string {
-  const posixForm = toPosix(p)
-  return IS_WINDOWS ? posixForm.toLowerCase() : posixForm
+  const posixForm = toPosix(p);
+  return IS_WINDOWS ? posixForm.toLowerCase() : posixForm;
 }
 
 /**
@@ -40,22 +37,22 @@ function toComparable(p: string): string {
 export function detectSessionFileType(
   filePath: string,
 ): 'session_memory' | 'session_transcript' | null {
-  const configDir = getClaudeConfigHomeDir()
+  const configDir = getClaudeConfigHomeDir();
   // Compare in forward-slash form; on Windows also case-fold. The caller
   // (isShellCommandTargetingMemory) converts MinGW /c/... → native before
   // reaching here, so we only need separator + case normalization.
-  const normalized = toComparable(filePath)
-  const configDirCmp = toComparable(configDir)
+  const normalized = toComparable(filePath);
+  const configDirCmp = toComparable(configDir);
   if (!normalized.startsWith(configDirCmp)) {
-    return null
+    return null;
   }
   if (normalized.includes('/session-memory/') && normalized.endsWith('.md')) {
-    return 'session_memory'
+    return 'session_memory';
   }
   if (normalized.includes('/projects/') && normalized.endsWith('.jsonl')) {
-    return 'session_transcript'
+    return 'session_transcript';
   }
-  return null
+  return null;
 }
 
 /**
@@ -65,20 +62,20 @@ export function detectSessionFileType(
 export function detectSessionPatternType(
   pattern: string,
 ): 'session_memory' | 'session_transcript' | null {
-  const normalized = pattern.split(win32.sep).join(posix.sep)
+  const normalized = pattern.split(win32.sep).join(posix.sep);
   if (
     normalized.includes('session-memory') &&
     (normalized.includes('.md') || normalized.endsWith('*'))
   ) {
-    return 'session_memory'
+    return 'session_memory';
   }
   if (
     normalized.includes('.jsonl') ||
     (normalized.includes('projects') && normalized.includes('*.jsonl'))
   ) {
-    return 'session_transcript'
+    return 'session_transcript';
   }
-  return null
+  return null;
 }
 
 /**
@@ -86,12 +83,12 @@ export function detectSessionPatternType(
  */
 export function isAutoMemFile(filePath: string): boolean {
   if (isAutoMemoryEnabled()) {
-    return isAutoMemPath(filePath)
+    return isAutoMemPath(filePath);
   }
-  return false
+  return false;
 }
 
-export type MemoryScope = 'personal' | 'team'
+export type MemoryScope = 'personal' | 'team';
 
 /**
  * Determine which memory store (if any) a path belongs to.
@@ -104,13 +101,13 @@ export type MemoryScope = 'personal' | 'team'
  * hierarchy handles the overlap differently (team writes intentionally fire both).
  */
 export function memoryScopeForPath(filePath: string): MemoryScope | null {
-  if (feature('TEAMMEM') && teamMemPaths!.isTeamMemFile(filePath)) {
-    return 'team'
+  if (feature('TEAMMEM') && teamMemPaths?.isTeamMemFile(filePath)) {
+    return 'team';
   }
   if (isAutoMemFile(filePath)) {
-    return 'personal'
+    return 'personal';
   }
-  return null
+  return null;
 }
 
 /**
@@ -118,9 +115,9 @@ export function memoryScopeForPath(filePath: string): MemoryScope | null {
  */
 function isAgentMemFile(filePath: string): boolean {
   if (isAutoMemoryEnabled()) {
-    return isAgentMemoryPath(filePath)
+    return isAgentMemoryPath(filePath);
   }
-  return false
+  return false;
 }
 
 /**
@@ -132,18 +129,18 @@ function isAgentMemFile(filePath: string): boolean {
  */
 export function isAutoManagedMemoryFile(filePath: string): boolean {
   if (isAutoMemFile(filePath)) {
-    return true
+    return true;
   }
-  if (feature('TEAMMEM') && teamMemPaths!.isTeamMemFile(filePath)) {
-    return true
+  if (feature('TEAMMEM') && teamMemPaths?.isTeamMemFile(filePath)) {
+    return true;
   }
   if (detectSessionFileType(filePath) !== null) {
-    return true
+    return true;
   }
   if (isAgentMemFile(filePath)) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 // Check if a directory path is a memory-related directory.
@@ -155,55 +152,51 @@ export function isMemoryDirectory(dirPath: string): boolean {
   // string matching. MinGW /c/... paths are converted to native before
   // reaching here (extraction-time in isShellCommandTargetingMemory), so
   // normalize() never sees them.
-  const normalizedPath = normalize(dirPath)
-  const normalizedCmp = toComparable(normalizedPath)
+  const normalizedPath = normalize(dirPath);
+  const normalizedCmp = toComparable(normalizedPath);
   // Agent memory directories can be under cwd (project scope), configDir, or memoryBaseDir
   if (
     isAutoMemoryEnabled() &&
-    (normalizedCmp.includes('/agent-memory/') ||
-      normalizedCmp.includes('/agent-memory-local/'))
+    (normalizedCmp.includes('/agent-memory/') || normalizedCmp.includes('/agent-memory-local/'))
   ) {
-    return true
+    return true;
   }
   // Team memory directories live under <autoMemPath>/team/
   if (
     feature('TEAMMEM') &&
-    teamMemPaths!.isTeamMemoryEnabled() &&
-    teamMemPaths!.isTeamMemPath(normalizedPath)
+    teamMemPaths?.isTeamMemoryEnabled() &&
+    teamMemPaths?.isTeamMemPath(normalizedPath)
   ) {
-    return true
+    return true;
   }
   // Check the auto-memory path override (CLAUDE_COWORK_MEMORY_PATH_OVERRIDE)
   if (isAutoMemoryEnabled()) {
-    const autoMemPath = getAutoMemPath()
-    const autoMemDirCmp = toComparable(autoMemPath.replace(/[/\\]+$/, ''))
-    const autoMemPathCmp = toComparable(autoMemPath)
-    if (
-      normalizedCmp === autoMemDirCmp ||
-      normalizedCmp.startsWith(autoMemPathCmp)
-    ) {
-      return true
+    const autoMemPath = getAutoMemPath();
+    const autoMemDirCmp = toComparable(autoMemPath.replace(/[/\\]+$/, ''));
+    const autoMemPathCmp = toComparable(autoMemPath);
+    if (normalizedCmp === autoMemDirCmp || normalizedCmp.startsWith(autoMemPathCmp)) {
+      return true;
     }
   }
 
-  const configDirCmp = toComparable(getClaudeConfigHomeDir())
-  const memoryBaseCmp = toComparable(getMemoryBaseDir())
-  const underConfig = normalizedCmp.startsWith(configDirCmp)
-  const underMemoryBase = normalizedCmp.startsWith(memoryBaseCmp)
+  const configDirCmp = toComparable(getClaudeConfigHomeDir());
+  const memoryBaseCmp = toComparable(getMemoryBaseDir());
+  const underConfig = normalizedCmp.startsWith(configDirCmp);
+  const underMemoryBase = normalizedCmp.startsWith(memoryBaseCmp);
 
   if (!underConfig && !underMemoryBase) {
-    return false
+    return false;
   }
   if (normalizedCmp.includes('/session-memory/')) {
-    return true
+    return true;
   }
   if (underConfig && normalizedCmp.includes('/projects/')) {
-    return true
+    return true;
   }
   if (isAutoMemoryEnabled() && normalizedCmp.includes('/memory/')) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -213,11 +206,9 @@ export function isMemoryDirectory(dirPath: string): boolean {
  * collapse logic.
  */
 export function isShellCommandTargetingMemory(command: string): boolean {
-  const configDir = getClaudeConfigHomeDir()
-  const memoryBase = getMemoryBaseDir()
-  const autoMemDir = isAutoMemoryEnabled()
-    ? getAutoMemPath().replace(/[/\\]+$/, '')
-    : ''
+  const configDir = getClaudeConfigHomeDir();
+  const memoryBase = getMemoryBaseDir();
+  const autoMemDir = isAutoMemoryEnabled() ? getAutoMemPath().replace(/[/\\]+$/, '') : '';
 
   // Quick check: does the command mention the config, memory base, or
   // auto-mem directory? Compare in forward-slash form (PowerShell on Windows
@@ -226,18 +217,18 @@ export function isShellCommandTargetingMemory(command: string): boolean {
   // Git Bash which emits that encoding. On Linux/Mac, configDir is already
   // posix so only one form to check — and crucially, windowsPathToPosixPath
   // is NOT called, so Linux paths like /m/foo aren't misinterpreted as MinGW.
-  const commandCmp = toComparable(command)
-  const dirs = [configDir, memoryBase, autoMemDir].filter(Boolean)
-  const matchesAnyDir = dirs.some(d => {
-    if (commandCmp.includes(toComparable(d))) return true
+  const commandCmp = toComparable(command);
+  const dirs = [configDir, memoryBase, autoMemDir].filter(Boolean);
+  const matchesAnyDir = dirs.some((d) => {
+    if (commandCmp.includes(toComparable(d))) return true;
     if (IS_WINDOWS) {
       // BashTool on Windows (Git Bash) emits /c/Users/... — check MinGW form too
-      return commandCmp.includes(windowsPathToPosixPath(d).toLowerCase())
+      return commandCmp.includes(windowsPathToPosixPath(d).toLowerCase());
     }
-    return false
-  })
+    return false;
+  });
   if (!matchesAnyDir) {
-    return false
+    return false;
   }
 
   // Extract absolute path-like tokens. Matches Unix absolute paths (/foo/bar),
@@ -246,28 +237,26 @@ export function isShellCommandTargetingMemory(command: string): boolean {
   // tokens (\foo) are intentionally excluded — they appear in regex/grep
   // patterns and would cause false-positive memory classification after
   // normalization flips backslashes to forward slashes.
-  const matches = command.match(/(?:[A-Za-z]:[/\\]|\/)[^\s'"]+/g)
+  const matches = command.match(/(?:[A-Za-z]:[/\\]|\/)[^\s'"]+/g);
   if (!matches) {
-    return false
+    return false;
   }
 
   for (const match of matches) {
     // Strip trailing shell metacharacters that could be adjacent to a path
-    const cleanPath = match.replace(/[,;|&>]+$/, '')
+    const cleanPath = match.replace(/[,;|&>]+$/, '');
     // On Windows, convert MinGW /c/... → native C:\... at this single
     // point. Downstream predicates (isAutoManagedMemoryFile, isMemoryDirectory,
     // isAutoMemPath, isAgentMemoryPath) then receive native paths and only
     // need toComparable() for matching. On other platforms, paths are already
     // native — no conversion, so /m/foo etc. pass through unmodified.
-    const nativePath = IS_WINDOWS
-      ? posixPathToWindowsPath(cleanPath)
-      : cleanPath
+    const nativePath = IS_WINDOWS ? posixPathToWindowsPath(cleanPath) : cleanPath;
     if (isAutoManagedMemoryFile(nativePath) || isMemoryDirectory(nativePath)) {
-      return true
+      return true;
     }
   }
 
-  return false
+  return false;
 }
 
 // Check if a glob/pattern targets auto-managed memory files only.
@@ -276,14 +265,14 @@ export function isShellCommandTargetingMemory(command: string): boolean {
 // counted as "memory" operations.
 export function isAutoManagedMemoryPattern(pattern: string): boolean {
   if (detectSessionPatternType(pattern) !== null) {
-    return true
+    return true;
   }
   if (
     isAutoMemoryEnabled() &&
     (pattern.replace(/\\/g, '/').includes('agent-memory/') ||
       pattern.replace(/\\/g, '/').includes('agent-memory-local/'))
   ) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }

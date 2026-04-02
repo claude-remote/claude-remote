@@ -184,8 +184,8 @@ export const CLM_ALLOWED_TYPES: ReadonlySet<string> = new Set(
     'system.object',
     // ModuleSpecification — full qualified name
     'microsoft.powershell.commands.modulespecification',
-  ].map(t => t.toLowerCase()),
-)
+  ].map((t) => t.toLowerCase()),
+);
 
 /**
  * Normalize a type name from AST TypeName.FullName or TypeName.Name.
@@ -199,7 +199,7 @@ export function normalizeTypeName(name: string): string {
     .toLowerCase()
     .replace(/\[\]$/, '')
     .replace(/\[.*\]$/, '')
-    .trim()
+    .trim();
 }
 
 /**
@@ -207,5 +207,5 @@ export function normalizeTypeName(name: string): string {
  * Types NOT in this set trigger ask — they access system APIs CLM blocks.
  */
 export function isClmAllowedType(typeName: string): boolean {
-  return CLM_ALLOWED_TYPES.has(normalizeTypeName(typeName))
+  return CLM_ALLOWED_TYPES.has(normalizeTypeName(typeName));
 }

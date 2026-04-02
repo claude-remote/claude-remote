@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const addDir = {
   type: 'local-jsx',
@@ -6,6 +6,6 @@ const addDir = {
   description: 'Add a new working directory',
   argumentHint: '<path>',
   load: () => import('./add-dir.js'),
-} satisfies Command
+} satisfies Command;
 
-export default addDir
+export default addDir;

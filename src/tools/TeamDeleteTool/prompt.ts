@@ -12,5 +12,5 @@ This operation:
 **IMPORTANT**: TeamDelete will fail if the team still has active members. Gracefully terminate teammates first, then call TeamDelete after all teammates have shut down.
 
 Use this when all teammates have finished their work and you want to clean up the team resources. The team name is automatically determined from the current session's team context.
-`.trim()
+`.trim();
 }

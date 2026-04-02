@@ -1,10 +1,4 @@
-import {
-  CellWidth,
-  cellAtIndex,
-  type Screen,
-  type StylePool,
-  setCellStyleId,
-} from './screen.js'
+import { CellWidth, type Screen, type StylePool, cellAtIndex, setCellStyleId } from './screen.js';
 
 /**
  * Highlight all visible occurrences of `query` in the screen buffer by
@@ -24,21 +18,17 @@ import {
  * Returns true if any match was highlighted (damage gate — caller forces
  * full-frame damage when true).
  */
-export function applySearchHighlight(
-  screen: Screen,
-  query: string,
-  stylePool: StylePool,
-): boolean {
-  if (!query) return false
-  const lq = query.toLowerCase()
-  const qlen = lq.length
-  const w = screen.width
-  const noSelect = screen.noSelect
-  const height = screen.height
+export function applySearchHighlight(screen: Screen, query: string, stylePool: StylePool): boolean {
+  if (!query) return false;
+  const lq = query.toLowerCase();
+  const qlen = lq.length;
+  const w = screen.width;
+  const noSelect = screen.noSelect;
+  const height = screen.height;
 
-  let applied = false
+  let applied = false;
   for (let row = 0; row < height; row++) {
-    const rowOff = row * w
+    const rowOff = row * w;
     // Build row text (already lowercased) + code-unit→cell-index map.
     // Three skip conditions, all aligned with setCellStyleId /
     // extractRowText (selection.ts):
@@ -51,43 +41,43 @@ export function applySearchHighlight(
     // codeUnitToCell maps positions in the LOWERCASED text — U+0130
     // (Turkish İ) lowercases to 2 code units, so lowering the joined
     // string would desync indexOf positions from the map.
-    let text = ''
-    const colOf: number[] = []
-    const codeUnitToCell: number[] = []
+    let text = '';
+    const colOf: number[] = [];
+    const codeUnitToCell: number[] = [];
     for (let col = 0; col < w; col++) {
-      const idx = rowOff + col
-      const cell = cellAtIndex(screen, idx)
+      const idx = rowOff + col;
+      const cell = cellAtIndex(screen, idx);
       if (
         cell.width === CellWidth.SpacerTail ||
         cell.width === CellWidth.SpacerHead ||
         noSelect[idx] === 1
       ) {
-        continue
+        continue;
       }
-      const lc = cell.char.toLowerCase()
-      const cellIdx = colOf.length
+      const lc = cell.char.toLowerCase();
+      const cellIdx = colOf.length;
       for (let i = 0; i < lc.length; i++) {
-        codeUnitToCell.push(cellIdx)
+        codeUnitToCell.push(cellIdx);
       }
-      text += lc
-      colOf.push(col)
+      text += lc;
+      colOf.push(col);
     }
 
-    let pos = text.indexOf(lq)
+    let pos = text.indexOf(lq);
     while (pos >= 0) {
-      applied = true
-      const startCi = codeUnitToCell[pos]!
-      const endCi = codeUnitToCell[pos + qlen - 1]!
+      applied = true;
+      const startCi = codeUnitToCell[pos]!;
+      const endCi = codeUnitToCell[pos + qlen - 1]!;
       for (let ci = startCi; ci <= endCi; ci++) {
-        const col = colOf[ci]!
-        const cell = cellAtIndex(screen, rowOff + col)
-        setCellStyleId(screen, col, row, stylePool.withInverse(cell.styleId))
+        const col = colOf[ci]!;
+        const cell = cellAtIndex(screen, rowOff + col);
+        setCellStyleId(screen, col, row, stylePool.withInverse(cell.styleId));
       }
       // Non-overlapping advance (less/vim/grep/Ctrl+F). pos+1 would find
       // 'aa' at 0 AND 1 in 'aaa' → double-invert cell 1.
-      pos = text.indexOf(lq, pos + qlen)
+      pos = text.indexOf(lq, pos + qlen);
     }
   }
 
-  return applied
+  return applied;
 }

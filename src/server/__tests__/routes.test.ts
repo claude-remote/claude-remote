@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 
-import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 import { TokenService } from '@/server/auth/token';
 import { registerAuthRoutes } from '@/server/routes/auth';
-import { registerHealthRoutes } from '@/server/routes/health';
-import { registerSessionRoutes } from '@/server/routes/sessions';
-import { registerFileRoutes } from '@/server/routes/files';
-import { registerSkillRoutes } from '@/server/routes/skills';
 import { registerConfigRoutes } from '@/server/routes/config';
-import { registerMcpRoutes } from '@/server/routes/mcp';
+import { registerFileRoutes } from '@/server/routes/files';
+import { registerHealthRoutes } from '@/server/routes/health';
 import { registerHistoryRoutes } from '@/server/routes/history';
+import { registerMcpRoutes } from '@/server/routes/mcp';
+import { registerSessionRoutes } from '@/server/routes/sessions';
+import { registerSkillRoutes } from '@/server/routes/skills';
+import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 
 // Minimal Hub stub for testing routes
 function createMockHub() {
@@ -27,7 +27,9 @@ function createMockHub() {
           createdAt: 1000,
           updatedAt: 2000,
           status: 'active' as const,
-          clients: [{ id: 'c1', type: 'web' as const, writerStatus: 'active' as const, connectedAt: 1000 }],
+          clients: [
+            { id: 'c1', type: 'web' as const, writerStatus: 'active' as const, connectedAt: 1000 },
+          ],
           messages: [],
           tasks: [],
         },

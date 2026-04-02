@@ -1,11 +1,11 @@
-import { resetSdkInitState } from '../../bootstrap/state.js'
-import { isRestrictedToPluginOnly } from '../settings/pluginOnlyPolicy.js'
+import { resetSdkInitState } from '../../bootstrap/state.js';
+import { isRestrictedToPluginOnly } from '../settings/pluginOnlyPolicy.js';
 // Import as module object so spyOn works in tests (direct imports bypass spies)
-import * as settingsModule from '../settings/settings.js'
-import { resetSettingsCache } from '../settings/settingsCache.js'
-import type { HooksSettings } from '../settings/types.js'
+import * as settingsModule from '../settings/settings.js';
+import { resetSettingsCache } from '../settings/settingsCache.js';
+import type { HooksSettings } from '../settings/types.js';
 
-let initialHooksConfig: HooksSettings | null = null
+let initialHooksConfig: HooksSettings | null = null;
 
 /**
  * Get hooks from allowed sources.
@@ -16,16 +16,16 @@ let initialHooksConfig: HooksSettings | null = null
  * Otherwise, returns merged hooks from all sources (backwards compatible).
  */
 function getHooksFromAllowedSources(): HooksSettings {
-  const policySettings = settingsModule.getSettingsForSource('policySettings')
+  const policySettings = settingsModule.getSettingsForSource('policySettings');
 
   // If managed settings disables all hooks, return empty
   if (policySettings?.disableAllHooks === true) {
-    return {}
+    return {};
   }
 
   // If allowManagedHooksOnly is set in managed settings, only use managed hooks
   if (policySettings?.allowManagedHooksOnly === true) {
-    return policySettings.hooks ?? {}
+    return policySettings.hooks ?? {};
   }
 
   // strictPluginOnlyCustomization: block user/project/local settings hooks.
@@ -37,19 +37,19 @@ function getHooksFromAllowedSources(): HooksSettings {
   // agents skip registration under ["hooks"]. A blanket execution-time
   // block here would over-kill plugin agents' hooks.
   if (isRestrictedToPluginOnly('hooks')) {
-    return policySettings?.hooks ?? {}
+    return policySettings?.hooks ?? {};
   }
 
-  const mergedSettings = settingsModule.getSettings_DEPRECATED()
+  const mergedSettings = settingsModule.getSettings_DEPRECATED();
 
   // If disableAllHooks is set in non-managed settings, only managed hooks still run
   // (non-managed settings cannot override managed hooks)
   if (mergedSettings.disableAllHooks === true) {
-    return policySettings?.hooks ?? {}
+    return policySettings?.hooks ?? {};
   }
 
   // Otherwise, use all hooks (merged from all sources) - backwards compatible
-  return mergedSettings.hooks ?? {}
+  return mergedSettings.hooks ?? {};
 }
 
 /**
@@ -60,9 +60,9 @@ function getHooksFromAllowedSources(): HooksSettings {
  *   cannot disable managed hooks, so they effectively become managed-only)
  */
 export function shouldAllowManagedHooksOnly(): boolean {
-  const policySettings = settingsModule.getSettingsForSource('policySettings')
+  const policySettings = settingsModule.getSettingsForSource('policySettings');
   if (policySettings?.allowManagedHooksOnly === true) {
-    return true
+    return true;
   }
   // If disableAllHooks is set but NOT from managed settings,
   // treat as managed-only (non-managed hooks disabled, managed hooks still run)
@@ -70,9 +70,9 @@ export function shouldAllowManagedHooksOnly(): boolean {
     settingsModule.getSettings_DEPRECATED().disableAllHooks === true &&
     policySettings?.disableAllHooks !== true
   ) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -81,10 +81,7 @@ export function shouldAllowManagedHooksOnly(): boolean {
  * When disableAllHooks is set in non-managed settings, managed hooks still run.
  */
 export function shouldDisableAllHooksIncludingManaged(): boolean {
-  return (
-    settingsModule.getSettingsForSource('policySettings')?.disableAllHooks ===
-    true
-  )
+  return settingsModule.getSettingsForSource('policySettings')?.disableAllHooks === true;
 }
 
 /**
@@ -93,7 +90,7 @@ export function shouldDisableAllHooksIncludingManaged(): boolean {
  * Respects the allowManagedHooksOnly setting
  */
 export function captureHooksConfigSnapshot(): void {
-  initialHooksConfig = getHooksFromAllowedSources()
+  initialHooksConfig = getHooksFromAllowedSources();
 }
 
 /**
@@ -107,8 +104,8 @@ export function updateHooksConfigSnapshot(): void {
   // edits settings.json externally and then runs /hooks - the session cache
   // may not have been invalidated yet (e.g., if the file watcher's stability
   // threshold hasn't elapsed).
-  resetSettingsCache()
-  initialHooksConfig = getHooksFromAllowedSources()
+  resetSettingsCache();
+  initialHooksConfig = getHooksFromAllowedSources();
 }
 
 /**
@@ -118,9 +115,9 @@ export function updateHooksConfigSnapshot(): void {
  */
 export function getHooksConfigFromSnapshot(): HooksSettings | null {
   if (initialHooksConfig === null) {
-    captureHooksConfigSnapshot()
+    captureHooksConfigSnapshot();
   }
-  return initialHooksConfig
+  return initialHooksConfig;
 }
 
 /**
@@ -128,6 +125,6 @@ export function getHooksConfigFromSnapshot(): HooksSettings | null {
  * Also resets SDK init state to prevent test pollution
  */
 export function resetHooksConfigSnapshot(): void {
-  initialHooksConfig = null
-  resetSdkInitState()
+  initialHooksConfig = null;
+  resetSdkInitState();
 }

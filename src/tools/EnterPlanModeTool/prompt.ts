@@ -1,5 +1,5 @@
-import { isPlanModeInterviewPhaseEnabled } from '../../utils/planModeV2.js'
-import { ASK_USER_QUESTION_TOOL_NAME } from '../AskUserQuestionTool/prompt.js'
+import { isPlanModeInterviewPhaseEnabled } from '../../utils/planModeV2.js';
+import { ASK_USER_QUESTION_TOOL_NAME } from '../AskUserQuestionTool/prompt.js';
 
 const WHAT_HAPPENS_SECTION = `## What Happens in Plan Mode
 
@@ -11,14 +11,12 @@ In plan mode, you'll:
 5. Use ${ASK_USER_QUESTION_TOOL_NAME} if you need to clarify approaches
 6. Exit plan mode with ExitPlanMode when ready to implement
 
-`
+`;
 
 function getEnterPlanModeToolPromptExternal(): string {
   // When interview phase is enabled, omit the "What Happens" section —
   // detailed workflow instructions arrive via the plan_mode attachment (messages.ts).
-  const whatHappens = isPlanModeInterviewPhaseEnabled()
-    ? ''
-    : WHAT_HAPPENS_SECTION
+  const whatHappens = isPlanModeInterviewPhaseEnabled() ? '' : WHAT_HAPPENS_SECTION;
 
   return `Use this tool proactively when you're about to start a non-trivial implementation task. Getting user sign-off on your approach before writing code prevents wasted effort and ensures alignment. This tool transitions you into plan mode where you can explore the codebase and design an implementation approach for user approval.
 
@@ -95,15 +93,13 @@ User: "What files handle routing?"
 - This tool REQUIRES user approval - they must consent to entering plan mode
 - If unsure whether to use it, err on the side of planning - it's better to get alignment upfront than to redo work
 - Users appreciate being consulted before significant changes are made to their codebase
-`
+`;
 }
 
 function getEnterPlanModeToolPromptAnt(): string {
   // When interview phase is enabled, omit the "What Happens" section —
   // detailed workflow instructions arrive via the plan_mode attachment (messages.ts).
-  const whatHappens = isPlanModeInterviewPhaseEnabled()
-    ? ''
-    : WHAT_HAPPENS_SECTION
+  const whatHappens = isPlanModeInterviewPhaseEnabled() ? '' : WHAT_HAPPENS_SECTION;
 
   return `Use this tool when a task has genuine ambiguity about the right approach and getting user input before coding would prevent significant rework. This tool transitions you into plan mode where you can explore the codebase and design an implementation approach for user approval.
 
@@ -160,11 +156,11 @@ User: "Fix the typo in the README"
 ## Important Notes
 
 - This tool REQUIRES user approval - they must consent to entering plan mode
-`
+`;
 }
 
 export function getEnterPlanModeToolPrompt(): string {
   return process.env.USER_TYPE === 'ant'
     ? getEnterPlanModeToolPromptAnt()
-    : getEnterPlanModeToolPromptExternal()
+    : getEnterPlanModeToolPromptExternal();
 }

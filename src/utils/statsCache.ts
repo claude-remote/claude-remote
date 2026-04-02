@@ -1,24 +1,24 @@
-import { feature } from 'src/utils/feature.js'
-import { randomBytes } from 'crypto'
-import { open } from 'fs/promises'
-import { join } from 'path'
-import type { ModelUsage } from '../entrypoints/agentSdkTypes.js'
-import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import { errorMessage } from './errors.js'
-import { getFsImplementation } from './fsOperations.js'
-import { logError } from './log.js'
-import { jsonParse, jsonStringify } from './slowOperations.js'
-import type { DailyActivity, DailyModelTokens, SessionStats } from './stats.js'
+import { randomBytes } from 'node:crypto';
+import { open } from 'node:fs/promises';
+import { join } from 'node:path';
+import { feature } from 'src/utils/feature.js';
+import type { ModelUsage } from '../entrypoints/agentSdkTypes.js';
+import { logForDebugging } from './debug.js';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { errorMessage } from './errors.js';
+import { getFsImplementation } from './fsOperations.js';
+import { logError } from './log.js';
+import { jsonParse, jsonStringify } from './slowOperations.js';
+import type { DailyActivity, DailyModelTokens, SessionStats } from './stats.js';
 
-export const STATS_CACHE_VERSION = 3
-const MIN_MIGRATABLE_VERSION = 1
-const STATS_CACHE_FILENAME = 'stats-cache.json'
+export const STATS_CACHE_VERSION = 3;
+const MIN_MIGRATABLE_VERSION = 1;
+const STATS_CACHE_FILENAME = 'stats-cache.json';
 
 /**
  * Simple in-memory lock to prevent concurrent cache operations.
  */
-let statsCacheLockPromise: Promise<void> | null = null
+let statsCacheLockPromise: Promise<void> | null = null;
 
 /**
  * Execute a function while holding the stats cache lock.
@@ -27,21 +27,21 @@ let statsCacheLockPromise: Promise<void> | null = null
 export async function withStatsCacheLock<T>(fn: () => Promise<T>): Promise<T> {
   // Wait for any existing lock to be released
   while (statsCacheLockPromise) {
-    await statsCacheLockPromise
+    await statsCacheLockPromise;
   }
 
   // Create our lock
-  let releaseLock: (() => void) | undefined
-  statsCacheLockPromise = new Promise<void>(resolve => {
-    releaseLock = resolve
-  })
+  let releaseLock: (() => void) | undefined;
+  statsCacheLockPromise = new Promise<void>((resolve) => {
+    releaseLock = resolve;
+  });
 
   try {
-    return await fn()
+    return await fn();
   } finally {
     // Release the lock
-    statsCacheLockPromise = null
-    releaseLock?.()
+    statsCacheLockPromise = null;
+    releaseLock?.();
   }
 }
 
@@ -51,31 +51,31 @@ export async function withStatsCacheLock<T>(fn: () => Promise<T>): Promise<T> {
  * All fields are bounded to prevent unbounded file growth.
  */
 export type PersistedStatsCache = {
-  version: number
+  version: number;
   // Last date that was fully computed (YYYY-MM-DD format)
   // Stats up to and including this date are considered complete
-  lastComputedDate: string | null
+  lastComputedDate: string | null;
   // Daily aggregates needed for heatmap, streaks, trends (bounded by days)
-  dailyActivity: DailyActivity[]
-  dailyModelTokens: DailyModelTokens[]
+  dailyActivity: DailyActivity[];
+  dailyModelTokens: DailyModelTokens[];
   // Model usage aggregated (bounded by number of models)
-  modelUsage: { [modelName: string]: ModelUsage }
+  modelUsage: { [modelName: string]: ModelUsage };
   // Session aggregates (replaces unbounded sessionStats array)
-  totalSessions: number
-  totalMessages: number
-  longestSession: SessionStats | null
+  totalSessions: number;
+  totalMessages: number;
+  longestSession: SessionStats | null;
   // First session date ever recorded
-  firstSessionDate: string | null
+  firstSessionDate: string | null;
   // Hour counts for peak hour calculation (bounded to 24 entries)
-  hourCounts: { [hour: number]: number }
+  hourCounts: { [hour: number]: number };
   // Speculation time saved across all sessions
-  totalSpeculationTimeSavedMs: number
+  totalSpeculationTimeSavedMs: number;
   // Shot distribution: map of shot count → number of sessions (ant-only)
-  shotDistribution?: { [shotCount: number]: number }
-}
+  shotDistribution?: { [shotCount: number]: number };
+};
 
 export function getStatsCachePath(): string {
-  return join(getClaudeConfigHomeDir(), STATS_CACHE_FILENAME)
+  return join(getClaudeConfigHomeDir(), STATS_CACHE_FILENAME);
 }
 
 function getEmptyCache(): PersistedStatsCache {
@@ -92,7 +92,7 @@ function getEmptyCache(): PersistedStatsCache {
     hourCounts: {},
     totalSpeculationTimeSavedMs: 0,
     shotDistribution: {},
-  }
+  };
 }
 
 /**
@@ -112,7 +112,7 @@ function migrateStatsCache(
     parsed.version < MIN_MIGRATABLE_VERSION ||
     parsed.version > STATS_CACHE_VERSION
   ) {
-    return null
+    return null;
   }
   if (
     !Array.isArray(parsed.dailyActivity) ||
@@ -120,7 +120,7 @@ function migrateStatsCache(
     typeof parsed.totalSessions !== 'number' ||
     typeof parsed.totalMessages !== 'number'
   ) {
-    return null
+    return null;
   }
   return {
     version: STATS_CACHE_VERSION,
@@ -137,7 +137,7 @@ function migrateStatsCache(
     // Preserve undefined (don't default to {}) so the SHOT_STATS recompute
     // check in loadStatsCache fires for v1/v2 caches that lacked this field.
     shotDistribution: parsed.shotDistribution,
-  }
+  };
 }
 
 /**
@@ -145,37 +145,33 @@ function migrateStatsCache(
  * Returns an empty cache if the file doesn't exist or is invalid.
  */
 export async function loadStatsCache(): Promise<PersistedStatsCache> {
-  const fs = getFsImplementation()
-  const cachePath = getStatsCachePath()
+  const fs = getFsImplementation();
+  const cachePath = getStatsCachePath();
 
   try {
-    const content = await fs.readFile(cachePath, { encoding: 'utf-8' })
-    const parsed = jsonParse(content) as PersistedStatsCache
+    const content = await fs.readFile(cachePath, { encoding: 'utf-8' });
+    const parsed = jsonParse(content) as PersistedStatsCache;
 
     // Validate version
     if (parsed.version !== STATS_CACHE_VERSION) {
-      const migrated = migrateStatsCache(parsed)
+      const migrated = migrateStatsCache(parsed);
       if (!migrated) {
         logForDebugging(
           `Stats cache version ${parsed.version} not migratable (expected ${STATS_CACHE_VERSION}), returning empty cache`,
-        )
-        return getEmptyCache()
+        );
+        return getEmptyCache();
       }
-      logForDebugging(
-        `Migrated stats cache from v${parsed.version} to v${STATS_CACHE_VERSION}`,
-      )
+      logForDebugging(`Migrated stats cache from v${parsed.version} to v${STATS_CACHE_VERSION}`);
       // Persist migration so we don't re-migrate on every load.
       // aggregateClaudeCodeStats() skips its save when lastComputedDate is
       // already current, so without this the on-disk file stays at the old
       // version indefinitely.
-      await saveStatsCache(migrated)
+      await saveStatsCache(migrated);
       if (feature('SHOT_STATS') && !migrated.shotDistribution) {
-        logForDebugging(
-          'Migrated stats cache missing shotDistribution, forcing recomputation',
-        )
-        return getEmptyCache()
+        logForDebugging('Migrated stats cache missing shotDistribution, forcing recomputation');
+        return getEmptyCache();
       }
-      return migrated
+      return migrated;
     }
 
     // Basic validation
@@ -185,25 +181,21 @@ export async function loadStatsCache(): Promise<PersistedStatsCache> {
       typeof parsed.totalSessions !== 'number' ||
       typeof parsed.totalMessages !== 'number'
     ) {
-      logForDebugging(
-        'Stats cache has invalid structure, returning empty cache',
-      )
-      return getEmptyCache()
+      logForDebugging('Stats cache has invalid structure, returning empty cache');
+      return getEmptyCache();
     }
 
     // If SHOT_STATS is enabled but cache doesn't have shotDistribution,
     // force full recomputation to get historical shot data
     if (feature('SHOT_STATS') && !parsed.shotDistribution) {
-      logForDebugging(
-        'Stats cache missing shotDistribution, forcing recomputation',
-      )
-      return getEmptyCache()
+      logForDebugging('Stats cache missing shotDistribution, forcing recomputation');
+      return getEmptyCache();
     }
 
-    return parsed
+    return parsed;
   } catch (error) {
-    logForDebugging(`Failed to load stats cache: ${errorMessage(error)}`)
-    return getEmptyCache()
+    logForDebugging(`Failed to load stats cache: ${errorMessage(error)}`);
+    return getEmptyCache();
   }
 }
 
@@ -211,42 +203,38 @@ export async function loadStatsCache(): Promise<PersistedStatsCache> {
  * Save the stats cache to disk atomically.
  * Uses a temp file + rename pattern to prevent corruption.
  */
-export async function saveStatsCache(
-  cache: PersistedStatsCache,
-): Promise<void> {
-  const fs = getFsImplementation()
-  const cachePath = getStatsCachePath()
-  const tempPath = `${cachePath}.${randomBytes(8).toString('hex')}.tmp`
+export async function saveStatsCache(cache: PersistedStatsCache): Promise<void> {
+  const fs = getFsImplementation();
+  const cachePath = getStatsCachePath();
+  const tempPath = `${cachePath}.${randomBytes(8).toString('hex')}.tmp`;
 
   try {
     // Ensure the directory exists
-    const configDir = getClaudeConfigHomeDir()
+    const configDir = getClaudeConfigHomeDir();
     try {
-      await fs.mkdir(configDir)
+      await fs.mkdir(configDir);
     } catch {
       // Directory already exists or other error - proceed
     }
 
     // Write to temp file with fsync for atomic write safety
-    const content = jsonStringify(cache, null, 2)
-    const handle = await open(tempPath, 'w', 0o600)
+    const content = jsonStringify(cache, null, 2);
+    const handle = await open(tempPath, 'w', 0o600);
     try {
-      await handle.writeFile(content, { encoding: 'utf-8' })
-      await handle.sync()
+      await handle.writeFile(content, { encoding: 'utf-8' });
+      await handle.sync();
     } finally {
-      await handle.close()
+      await handle.close();
     }
 
     // Atomic rename
-    await fs.rename(tempPath, cachePath)
-    logForDebugging(
-      `Stats cache saved successfully (lastComputedDate: ${cache.lastComputedDate})`,
-    )
+    await fs.rename(tempPath, cachePath);
+    logForDebugging(`Stats cache saved successfully (lastComputedDate: ${cache.lastComputedDate})`);
   } catch (error) {
-    logError(error)
+    logError(error);
     // Clean up temp file
     try {
-      await fs.unlink(tempPath)
+      await fs.unlink(tempPath);
     } catch {
       // Ignore cleanup errors
     }
@@ -260,104 +248,93 @@ export async function saveStatsCache(
 export function mergeCacheWithNewStats(
   existingCache: PersistedStatsCache,
   newStats: {
-    dailyActivity: DailyActivity[]
-    dailyModelTokens: DailyModelTokens[]
-    modelUsage: { [modelName: string]: ModelUsage }
-    sessionStats: SessionStats[]
-    hourCounts: { [hour: number]: number }
-    totalSpeculationTimeSavedMs: number
-    shotDistribution?: { [shotCount: number]: number }
+    dailyActivity: DailyActivity[];
+    dailyModelTokens: DailyModelTokens[];
+    modelUsage: { [modelName: string]: ModelUsage };
+    sessionStats: SessionStats[];
+    hourCounts: { [hour: number]: number };
+    totalSpeculationTimeSavedMs: number;
+    shotDistribution?: { [shotCount: number]: number };
   },
   newLastComputedDate: string,
 ): PersistedStatsCache {
   // Merge daily activity - combine by date
-  const dailyActivityMap = new Map<string, DailyActivity>()
+  const dailyActivityMap = new Map<string, DailyActivity>();
   for (const day of existingCache.dailyActivity) {
-    dailyActivityMap.set(day.date, { ...day })
+    dailyActivityMap.set(day.date, { ...day });
   }
   for (const day of newStats.dailyActivity) {
-    const existing = dailyActivityMap.get(day.date)
+    const existing = dailyActivityMap.get(day.date);
     if (existing) {
-      existing.messageCount += day.messageCount
-      existing.sessionCount += day.sessionCount
-      existing.toolCallCount += day.toolCallCount
+      existing.messageCount += day.messageCount;
+      existing.sessionCount += day.sessionCount;
+      existing.toolCallCount += day.toolCallCount;
     } else {
-      dailyActivityMap.set(day.date, { ...day })
+      dailyActivityMap.set(day.date, { ...day });
     }
   }
 
   // Merge daily model tokens - combine by date
-  const dailyModelTokensMap = new Map<string, { [model: string]: number }>()
+  const dailyModelTokensMap = new Map<string, { [model: string]: number }>();
   for (const day of existingCache.dailyModelTokens) {
-    dailyModelTokensMap.set(day.date, { ...day.tokensByModel })
+    dailyModelTokensMap.set(day.date, { ...day.tokensByModel });
   }
   for (const day of newStats.dailyModelTokens) {
-    const existing = dailyModelTokensMap.get(day.date)
+    const existing = dailyModelTokensMap.get(day.date);
     if (existing) {
       for (const [model, tokens] of Object.entries(day.tokensByModel)) {
-        existing[model] = (existing[model] || 0) + tokens
+        existing[model] = (existing[model] || 0) + tokens;
       }
     } else {
-      dailyModelTokensMap.set(day.date, { ...day.tokensByModel })
+      dailyModelTokensMap.set(day.date, { ...day.tokensByModel });
     }
   }
 
   // Merge model usage
-  const modelUsage = { ...existingCache.modelUsage }
+  const modelUsage = { ...existingCache.modelUsage };
   for (const [model, usage] of Object.entries(newStats.modelUsage)) {
     if (modelUsage[model]) {
       modelUsage[model] = {
-        inputTokens: modelUsage[model]!.inputTokens + usage.inputTokens,
-        outputTokens: modelUsage[model]!.outputTokens + usage.outputTokens,
-        cacheReadInputTokens:
-          modelUsage[model]!.cacheReadInputTokens + usage.cacheReadInputTokens,
+        inputTokens: modelUsage[model]?.inputTokens + usage.inputTokens,
+        outputTokens: modelUsage[model]?.outputTokens + usage.outputTokens,
+        cacheReadInputTokens: modelUsage[model]?.cacheReadInputTokens + usage.cacheReadInputTokens,
         cacheCreationInputTokens:
-          modelUsage[model]!.cacheCreationInputTokens +
-          usage.cacheCreationInputTokens,
-        webSearchRequests:
-          modelUsage[model]!.webSearchRequests + usage.webSearchRequests,
-        costUSD: modelUsage[model]!.costUSD + usage.costUSD,
-        contextWindow: Math.max(
-          modelUsage[model]!.contextWindow,
-          usage.contextWindow,
-        ),
-        maxOutputTokens: Math.max(
-          modelUsage[model]!.maxOutputTokens,
-          usage.maxOutputTokens,
-        ),
-      }
+          modelUsage[model]?.cacheCreationInputTokens + usage.cacheCreationInputTokens,
+        webSearchRequests: modelUsage[model]?.webSearchRequests + usage.webSearchRequests,
+        costUSD: modelUsage[model]?.costUSD + usage.costUSD,
+        contextWindow: Math.max(modelUsage[model]?.contextWindow, usage.contextWindow),
+        maxOutputTokens: Math.max(modelUsage[model]?.maxOutputTokens, usage.maxOutputTokens),
+      };
     } else {
-      modelUsage[model] = { ...usage }
+      modelUsage[model] = { ...usage };
     }
   }
 
   // Merge hour counts
-  const hourCounts = { ...existingCache.hourCounts }
+  const hourCounts = { ...existingCache.hourCounts };
   for (const [hour, count] of Object.entries(newStats.hourCounts)) {
-    const hourNum = parseInt(hour, 10)
-    hourCounts[hourNum] = (hourCounts[hourNum] || 0) + count
+    const hourNum = Number.parseInt(hour, 10);
+    hourCounts[hourNum] = (hourCounts[hourNum] || 0) + count;
   }
 
   // Update session aggregates
-  const totalSessions =
-    existingCache.totalSessions + newStats.sessionStats.length
+  const totalSessions = existingCache.totalSessions + newStats.sessionStats.length;
   const totalMessages =
-    existingCache.totalMessages +
-    newStats.sessionStats.reduce((sum, s) => sum + s.messageCount, 0)
+    existingCache.totalMessages + newStats.sessionStats.reduce((sum, s) => sum + s.messageCount, 0);
 
   // Find longest session (compare existing with new)
-  let longestSession = existingCache.longestSession
+  let longestSession = existingCache.longestSession;
   for (const session of newStats.sessionStats) {
     if (!longestSession || session.duration > longestSession.duration) {
-      longestSession = session
+      longestSession = session;
     }
   }
 
   // Find first session date
-  let firstSessionDate = existingCache.firstSessionDate
+  let firstSessionDate = existingCache.firstSessionDate;
   for (const session of newStats.sessionStats) {
     if (!firstSessionDate || session.timestamp < firstSessionDate) {
-      firstSessionDate = session.timestamp
+      firstSessionDate = session.timestamp;
     }
   }
 
@@ -377,52 +354,49 @@ export function mergeCacheWithNewStats(
     firstSessionDate,
     hourCounts,
     totalSpeculationTimeSavedMs:
-      existingCache.totalSpeculationTimeSavedMs +
-      newStats.totalSpeculationTimeSavedMs,
-  }
+      existingCache.totalSpeculationTimeSavedMs + newStats.totalSpeculationTimeSavedMs,
+  };
 
   if (feature('SHOT_STATS')) {
     const shotDistribution: { [shotCount: number]: number } = {
       ...(existingCache.shotDistribution || {}),
+    };
+    for (const [count, sessions] of Object.entries(newStats.shotDistribution || {})) {
+      const key = Number.parseInt(count, 10);
+      shotDistribution[key] = (shotDistribution[key] || 0) + sessions;
     }
-    for (const [count, sessions] of Object.entries(
-      newStats.shotDistribution || {},
-    )) {
-      const key = parseInt(count, 10)
-      shotDistribution[key] = (shotDistribution[key] || 0) + sessions
-    }
-    result.shotDistribution = shotDistribution
+    result.shotDistribution = shotDistribution;
   }
 
-  return result
+  return result;
 }
 
 /**
  * Extract the date portion (YYYY-MM-DD) from a Date object.
  */
 export function toDateString(date: Date): string {
-  const parts = date.toISOString().split('T')
-  const dateStr = parts[0]
+  const parts = date.toISOString().split('T');
+  const dateStr = parts[0];
   if (!dateStr) {
-    throw new Error('Invalid ISO date string')
+    throw new Error('Invalid ISO date string');
   }
-  return dateStr
+  return dateStr;
 }
 
 /**
  * Get today's date in YYYY-MM-DD format.
  */
 export function getTodayDateString(): string {
-  return toDateString(new Date())
+  return toDateString(new Date());
 }
 
 /**
  * Get yesterday's date in YYYY-MM-DD format.
  */
 export function getYesterdayDateString(): string {
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  return toDateString(yesterday)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return toDateString(yesterday);
 }
 
 /**
@@ -430,5 +404,5 @@ export function getYesterdayDateString(): string {
  * Both should be in YYYY-MM-DD format.
  */
 export function isDateBefore(date1: string, date2: string): boolean {
-  return date1 < date2
+  return date1 < date2;
 }

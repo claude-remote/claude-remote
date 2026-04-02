@@ -1,28 +1,28 @@
-import { randomUUID } from 'crypto'
-import { copyFile, writeFile } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
-import { join, resolve, sep } from 'path'
-import type { AgentId, SessionId } from 'src/types/ids.js'
-import type { LogOption } from 'src/types/logs.js'
+import { randomUUID } from 'node:crypto';
+import { copyFile, writeFile } from 'node:fs/promises';
+import { join, resolve, sep } from 'node:path';
+import memoize from 'lodash-es/memoize.js';
+import type { AgentId, SessionId } from 'src/types/ids.js';
+import type { LogOption } from 'src/types/logs.js';
 import type {
   AssistantMessage,
   AttachmentMessage,
   SystemFileSnapshotMessage,
   UserMessage,
-} from 'src/types/message.js'
-import { getPlanSlugCache, getSessionId } from '../bootstrap/state.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../tools/ExitPlanModeTool/constants.js'
-import { getCwd } from './cwd.js'
-import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import { isENOENT } from './errors.js'
-import { getEnvironmentKind } from './filePersistence/outputsScanner.js'
-import { getFsImplementation } from './fsOperations.js'
-import { logError } from './log.js'
-import { getInitialSettings } from './settings/settings.js'
-import { generateWordSlug } from './words.js'
+} from 'src/types/message.js';
+import { getPlanSlugCache, getSessionId } from '../bootstrap/state.js';
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../tools/ExitPlanModeTool/constants.js';
+import { getCwd } from './cwd.js';
+import { logForDebugging } from './debug.js';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { isENOENT } from './errors.js';
+import { getEnvironmentKind } from './filePersistence/outputsScanner.js';
+import { getFsImplementation } from './fsOperations.js';
+import { logError } from './log.js';
+import { getInitialSettings } from './settings/settings.js';
+import { generateWordSlug } from './words.js';
 
-const MAX_SLUG_RETRIES = 10
+const MAX_SLUG_RETRIES = 10;
 
 /**
  * Get or generate a word slug for the current session's plan.
@@ -30,29 +30,29 @@ const MAX_SLUG_RETRIES = 10
  * If a plan file with the generated slug already exists, retries up to 10 times.
  */
 export function getPlanSlug(sessionId?: SessionId): string {
-  const id = sessionId ?? getSessionId()
-  const cache = getPlanSlugCache()
-  let slug = cache.get(id)
+  const id = sessionId ?? getSessionId();
+  const cache = getPlanSlugCache();
+  let slug = cache.get(id);
   if (!slug) {
-    const plansDir = getPlansDirectory()
+    const plansDir = getPlansDirectory();
     // Try to find a unique slug that doesn't conflict with existing files
     for (let i = 0; i < MAX_SLUG_RETRIES; i++) {
-      slug = generateWordSlug()
-      const filePath = join(plansDir, `${slug}.md`)
+      slug = generateWordSlug();
+      const filePath = join(plansDir, `${slug}.md`);
       if (!getFsImplementation().existsSync(filePath)) {
-        break
+        break;
       }
     }
-    cache.set(id, slug!)
+    cache.set(id, slug!);
   }
-  return slug!
+  return slug!;
 }
 
 /**
  * Set a specific plan slug for a session (used when resuming a session)
  */
 export function setPlanSlug(sessionId: SessionId, slug: string): void {
-  getPlanSlugCache().set(sessionId, slug)
+  getPlanSlugCache().set(sessionId, slug);
 }
 
 /**
@@ -60,8 +60,8 @@ export function setPlanSlug(sessionId: SessionId, slug: string): void {
  * This should be called on /clear to ensure a fresh plan file is used.
  */
 export function clearPlanSlug(sessionId?: SessionId): void {
-  const id = sessionId ?? getSessionId()
-  getPlanSlugCache().delete(id)
+  const id = sessionId ?? getSessionId();
+  getPlanSlugCache().delete(id);
 }
 
 /**
@@ -69,7 +69,7 @@ export function clearPlanSlug(sessionId?: SessionId): void {
  * Use this on /clear to free sub-session slug entries.
  */
 export function clearAllPlanSlugs(): void {
-  getPlanSlugCache().clear()
+  getPlanSlugCache().clear();
 }
 
 // Memoized: called from render bodies (FileReadTool/FileEditTool/FileWriteTool UI.tsx)
@@ -77,38 +77,36 @@ export function clearAllPlanSlugs(): void {
 // mkdirSync result is stable for the session. Without memoization, each rendered tool
 // message triggers a mkdirSync syscall (regressed in #20005).
 export const getPlansDirectory = memoize(function getPlansDirectory(): string {
-  const settings = getInitialSettings()
-  const settingsDir = settings.plansDirectory
-  let plansPath: string
+  const settings = getInitialSettings();
+  const settingsDir = settings.plansDirectory;
+  let plansPath: string;
 
   if (settingsDir) {
     // Settings.json (relative to project root)
-    const cwd = getCwd()
-    const resolved = resolve(cwd, settingsDir)
+    const cwd = getCwd();
+    const resolved = resolve(cwd, settingsDir);
 
     // Validate path stays within project root to prevent path traversal
     if (!resolved.startsWith(cwd + sep) && resolved !== cwd) {
-      logError(
-        new Error(`plansDirectory must be within project root: ${settingsDir}`),
-      )
-      plansPath = join(getClaudeConfigHomeDir(), 'plans')
+      logError(new Error(`plansDirectory must be within project root: ${settingsDir}`));
+      plansPath = join(getClaudeConfigHomeDir(), 'plans');
     } else {
-      plansPath = resolved
+      plansPath = resolved;
     }
   } else {
     // Default
-    plansPath = join(getClaudeConfigHomeDir(), 'plans')
+    plansPath = join(getClaudeConfigHomeDir(), 'plans');
   }
 
   // Ensure directory exists (mkdirSync with recursive: true is a no-op if it exists)
   try {
-    getFsImplementation().mkdirSync(plansPath)
+    getFsImplementation().mkdirSync(plansPath);
   } catch (error) {
-    logError(error)
+    logError(error);
   }
 
-  return plansPath
-})
+  return plansPath;
+});
 
 /**
  * Get the file path for a session's plan
@@ -117,15 +115,15 @@ export const getPlansDirectory = memoize(function getPlansDirectory(): string {
  * For subagents (agentId provided), returns {planSlug}-agent-{agentId}.md
  */
 export function getPlanFilePath(agentId?: AgentId): string {
-  const planSlug = getPlanSlug(getSessionId())
+  const planSlug = getPlanSlug(getSessionId());
 
   // Main conversation: simple filename with word slug
   if (!agentId) {
-    return join(getPlansDirectory(), `${planSlug}.md`)
+    return join(getPlansDirectory(), `${planSlug}.md`);
   }
 
   // Subagents: include agent ID
-  return join(getPlansDirectory(), `${planSlug}-agent-${agentId}.md`)
+  return join(getPlansDirectory(), `${planSlug}-agent-${agentId}.md`);
 }
 
 /**
@@ -133,13 +131,13 @@ export function getPlanFilePath(agentId?: AgentId): string {
  * @param agentId Optional agent ID for subagents. If not provided, returns main session plan.
  */
 export function getPlan(agentId?: AgentId): string | null {
-  const filePath = getPlanFilePath(agentId)
+  const filePath = getPlanFilePath(agentId);
   try {
-    return getFsImplementation().readFileSync(filePath, { encoding: 'utf-8' })
+    return getFsImplementation().readFileSync(filePath, { encoding: 'utf-8' });
   } catch (error) {
-    if (isENOENT(error)) return null
-    logError(error)
-    return null
+    if (isENOENT(error)) return null;
+    logError(error);
+    return null;
   }
 }
 
@@ -147,7 +145,7 @@ export function getPlan(agentId?: AgentId): string | null {
  * Extract the plan slug from a log's message history.
  */
 function getSlugFromLog(log: LogOption): string | undefined {
-  return log.messages.find(m => m.slug)?.slug
+  return log.messages.find((m) => m.slug)?.slug;
 }
 
 /**
@@ -165,68 +163,64 @@ export async function copyPlanForResume(
   log: LogOption,
   targetSessionId?: SessionId,
 ): Promise<boolean> {
-  const slug = getSlugFromLog(log)
+  const slug = getSlugFromLog(log);
   if (!slug) {
-    return false
+    return false;
   }
 
   // Set the slug for the target session ID (or current if not provided)
-  const sessionId = targetSessionId ?? getSessionId()
-  setPlanSlug(sessionId, slug)
+  const sessionId = targetSessionId ?? getSessionId();
+  setPlanSlug(sessionId, slug);
 
   // Attempt to read the plan file directly — recovery triggers on ENOENT.
-  const planPath = join(getPlansDirectory(), `${slug}.md`)
+  const planPath = join(getPlansDirectory(), `${slug}.md`);
   try {
-    await getFsImplementation().readFile(planPath, { encoding: 'utf-8' })
-    return true
+    await getFsImplementation().readFile(planPath, { encoding: 'utf-8' });
+    return true;
   } catch (e: unknown) {
     if (!isENOENT(e)) {
       // Don't throw — called fire-and-forget (void copyPlanForResume(...)) with no .catch()
-      logError(e)
-      return false
+      logError(e);
+      return false;
     }
     // Only attempt recovery in remote sessions (CCR) where files don't persist
     if (getEnvironmentKind() === null) {
-      return false
+      return false;
     }
 
-    logForDebugging(
-      `Plan file missing during resume: ${planPath}. Attempting recovery.`,
-    )
+    logForDebugging(`Plan file missing during resume: ${planPath}. Attempting recovery.`);
 
     // Try file snapshot first (written incrementally during session)
-    const snapshotPlan = findFileSnapshotEntry(log.messages, 'plan')
-    let recovered: string | null = null
+    const snapshotPlan = findFileSnapshotEntry(log.messages, 'plan');
+    let recovered: string | null = null;
     if (snapshotPlan && snapshotPlan.content.length > 0) {
-      recovered = snapshotPlan.content
-      logForDebugging(
-        `Plan recovered from file snapshot, ${recovered.length} chars`,
-        { level: 'info' },
-      )
+      recovered = snapshotPlan.content;
+      logForDebugging(`Plan recovered from file snapshot, ${recovered.length} chars`, {
+        level: 'info',
+      });
     } else {
       // Fall back to searching message history
-      recovered = recoverPlanFromMessages(log)
+      recovered = recoverPlanFromMessages(log);
       if (recovered) {
-        logForDebugging(
-          `Plan recovered from message history, ${recovered.length} chars`,
-          { level: 'info' },
-        )
+        logForDebugging(`Plan recovered from message history, ${recovered.length} chars`, {
+          level: 'info',
+        });
       }
     }
 
     if (recovered) {
       try {
-        await writeFile(planPath, recovered, { encoding: 'utf-8' })
-        return true
+        await writeFile(planPath, recovered, { encoding: 'utf-8' });
+        return true;
       } catch (writeError) {
-        logError(writeError)
-        return false
+        logError(writeError);
+        return false;
       }
     }
     logForDebugging(
       'Plan file recovery failed: no file snapshot or plan content found in message history',
-    )
-    return false
+    );
+    return false;
   }
 }
 
@@ -240,26 +234,26 @@ export async function copyPlanForFork(
   log: LogOption,
   targetSessionId: SessionId,
 ): Promise<boolean> {
-  const originalSlug = getSlugFromLog(log)
+  const originalSlug = getSlugFromLog(log);
   if (!originalSlug) {
-    return false
+    return false;
   }
 
-  const plansDir = getPlansDirectory()
-  const originalPlanPath = join(plansDir, `${originalSlug}.md`)
+  const plansDir = getPlansDirectory();
+  const originalPlanPath = join(plansDir, `${originalSlug}.md`);
 
   // Generate a new slug for the forked session (do NOT reuse the original)
-  const newSlug = getPlanSlug(targetSessionId)
-  const newPlanPath = join(plansDir, `${newSlug}.md`)
+  const newSlug = getPlanSlug(targetSessionId);
+  const newPlanPath = join(plansDir, `${newSlug}.md`);
   try {
-    await copyFile(originalPlanPath, newPlanPath)
-    return true
+    await copyFile(originalPlanPath, newPlanPath);
+    return true;
   } catch (error) {
     if (isENOENT(error)) {
-      return false
+      return false;
     }
-    logError(error)
-    return false
+    logError(error);
+    return false;
   }
 }
 
@@ -278,23 +272,20 @@ export async function copyPlanForFork(
  */
 function recoverPlanFromMessages(log: LogOption): string | null {
   for (let i = log.messages.length - 1; i >= 0; i--) {
-    const msg = log.messages[i]
+    const msg = log.messages[i];
     if (!msg) {
-      continue
+      continue;
     }
 
     if (msg.type === 'assistant') {
-      const { content } = (msg as AssistantMessage).message
+      const { content } = (msg as AssistantMessage).message;
       if (Array.isArray(content)) {
         for (const block of content) {
-          if (
-            block.type === 'tool_use' &&
-            block.name === EXIT_PLAN_MODE_V2_TOOL_NAME
-          ) {
-            const input = block.input as Record<string, unknown> | undefined
-            const plan = input?.plan
+          if (block.type === 'tool_use' && block.name === EXIT_PLAN_MODE_V2_TOOL_NAME) {
+            const input = block.input as Record<string, unknown> | undefined;
+            const plan = input?.plan;
             if (typeof plan === 'string' && plan.length > 0) {
-              return plan
+              return plan;
             }
           }
         }
@@ -302,27 +293,23 @@ function recoverPlanFromMessages(log: LogOption): string | null {
     }
 
     if (msg.type === 'user') {
-      const userMsg = msg as UserMessage
-      if (
-        typeof userMsg.planContent === 'string' &&
-        userMsg.planContent.length > 0
-      ) {
-        return userMsg.planContent
+      const userMsg = msg as UserMessage;
+      if (typeof userMsg.planContent === 'string' && userMsg.planContent.length > 0) {
+        return userMsg.planContent;
       }
     }
 
     if (msg.type === 'attachment') {
-      const attachmentMsg = msg as AttachmentMessage
+      const attachmentMsg = msg as AttachmentMessage;
       if (attachmentMsg.attachment?.type === 'plan_file_reference') {
-        const plan = (attachmentMsg.attachment as { planContent?: string })
-          .planContent
+        const plan = (attachmentMsg.attachment as { planContent?: string }).planContent;
         if (typeof plan === 'string' && plan.length > 0) {
-          return plan
+          return plan;
         }
       }
     }
   }
-  return null
+  return null;
 }
 
 /**
@@ -334,7 +321,7 @@ function findFileSnapshotEntry(
   key: string,
 ): { key: string; path: string; content: string } | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]
+    const msg = messages[i];
     if (
       msg?.type === 'system' &&
       'subtype' in msg &&
@@ -342,14 +329,14 @@ function findFileSnapshotEntry(
       'snapshotFiles' in msg
     ) {
       const files = msg.snapshotFiles as Array<{
-        key: string
-        path: string
-        content: string
-      }>
-      return files.find(f => f.key === key)
+        key: string;
+        path: string;
+        content: string;
+      }>;
+      return files.find((f) => f.key === key);
     }
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -359,23 +346,23 @@ function findFileSnapshotEntry(
  */
 export async function persistFileSnapshotIfRemote(): Promise<void> {
   if (getEnvironmentKind() === null) {
-    return
+    return;
   }
   try {
-    const snapshotFiles: SystemFileSnapshotMessage['snapshotFiles'] = []
+    const snapshotFiles: SystemFileSnapshotMessage['snapshotFiles'] = [];
 
     // Snapshot plan file
-    const plan = getPlan()
+    const plan = getPlan();
     if (plan) {
       snapshotFiles.push({
         key: 'plan',
         path: getPlanFilePath(),
         content: plan,
-      })
+      });
     }
 
     if (snapshotFiles.length === 0) {
-      return
+      return;
     }
 
     const message: SystemFileSnapshotMessage = {
@@ -387,11 +374,11 @@ export async function persistFileSnapshotIfRemote(): Promise<void> {
       timestamp: new Date().toISOString(),
       uuid: randomUUID(),
       snapshotFiles,
-    }
+    };
 
-    const { recordTranscript } = await import('./sessionStorage.js')
-    await recordTranscript([message])
+    const { recordTranscript } = await import('./sessionStorage.js');
+    await recordTranscript([message]);
   } catch (error) {
-    logError(error)
+    logError(error);
   }
 }

@@ -38,8 +38,8 @@ export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
       return context.json({ error: 'path query parameter required' }, 400);
     }
 
-    const offset = parseInt(context.req.query('offset') ?? '0', 10);
-    const limit = parseInt(context.req.query('limit') ?? '200', 10);
+    const offset = Number.parseInt(context.req.query('offset') ?? '0', 10);
+    const limit = Number.parseInt(context.req.query('limit') ?? '200', 10);
 
     // TODO(T17): implement whitelisted file reading with security checks
     const result: FileContent = {

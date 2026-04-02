@@ -1,15 +1,15 @@
-import type { SettingSource } from './constants.js'
-import type { SettingsJson } from './types.js'
-import type { SettingsWithErrors, ValidationError } from './validation.js'
+import type { SettingSource } from './constants.js';
+import type { SettingsJson } from './types.js';
+import type { SettingsWithErrors, ValidationError } from './validation.js';
 
-let sessionSettingsCache: SettingsWithErrors | null = null
+let sessionSettingsCache: SettingsWithErrors | null = null;
 
 export function getSessionSettingsCache(): SettingsWithErrors | null {
-  return sessionSettingsCache
+  return sessionSettingsCache;
 }
 
 export function setSessionSettingsCache(value: SettingsWithErrors): void {
-  sessionSettingsCache = value
+  sessionSettingsCache = value;
 }
 
 /**
@@ -17,20 +17,18 @@ export function setSessionSettingsCache(value: SettingsWithErrors): void {
  * merged sessionSettingsCache — same resetSettingsCache() triggers
  * (settings write, --add-dir, plugin init, hooks refresh).
  */
-const perSourceCache = new Map<SettingSource, SettingsJson | null>()
+const perSourceCache = new Map<SettingSource, SettingsJson | null>();
 
-export function getCachedSettingsForSource(
-  source: SettingSource,
-): SettingsJson | null | undefined {
+export function getCachedSettingsForSource(source: SettingSource): SettingsJson | null | undefined {
   // undefined = cache miss; null = cached "no settings for this source"
-  return perSourceCache.has(source) ? perSourceCache.get(source) : undefined
+  return perSourceCache.has(source) ? perSourceCache.get(source) : undefined;
 }
 
 export function setCachedSettingsForSource(
   source: SettingSource,
   value: SettingsJson | null,
 ): void {
-  perSourceCache.set(source, value)
+  perSourceCache.set(source, value);
 }
 
 /**
@@ -39,23 +37,23 @@ export function setCachedSettingsForSource(
  * startup — this dedupes the disk read + zod parse.
  */
 type ParsedSettings = {
-  settings: SettingsJson | null
-  errors: ValidationError[]
-}
-const parseFileCache = new Map<string, ParsedSettings>()
+  settings: SettingsJson | null;
+  errors: ValidationError[];
+};
+const parseFileCache = new Map<string, ParsedSettings>();
 
 export function getCachedParsedFile(path: string): ParsedSettings | undefined {
-  return parseFileCache.get(path)
+  return parseFileCache.get(path);
 }
 
 export function setCachedParsedFile(path: string, value: ParsedSettings): void {
-  parseFileCache.set(path, value)
+  parseFileCache.set(path, value);
 }
 
 export function resetSettingsCache(): void {
-  sessionSettingsCache = null
-  perSourceCache.clear()
-  parseFileCache.clear()
+  sessionSettingsCache = null;
+  perSourceCache.clear();
+  parseFileCache.clear();
 }
 
 /**
@@ -63,18 +61,16 @@ export function resetSettingsCache(): void {
  * pluginLoader writes here after loading plugins;
  * loadSettingsFromDisk reads it as the lowest-priority base.
  */
-let pluginSettingsBase: Record<string, unknown> | undefined
+let pluginSettingsBase: Record<string, unknown> | undefined;
 
 export function getPluginSettingsBase(): Record<string, unknown> | undefined {
-  return pluginSettingsBase
+  return pluginSettingsBase;
 }
 
-export function setPluginSettingsBase(
-  settings: Record<string, unknown> | undefined,
-): void {
-  pluginSettingsBase = settings
+export function setPluginSettingsBase(settings: Record<string, unknown> | undefined): void {
+  pluginSettingsBase = settings;
 }
 
 export function clearPluginSettingsBase(): void {
-  pluginSettingsBase = undefined
+  pluginSettingsBase = undefined;
 }

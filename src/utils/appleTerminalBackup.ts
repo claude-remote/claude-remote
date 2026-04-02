@@ -1,100 +1,96 @@
-import { stat } from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
-import { getGlobalConfig, saveGlobalConfig } from './config.js'
-import { execFileNoThrow } from './execFileNoThrow.js'
-import { logError } from './log.js'
+import { stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { getGlobalConfig, saveGlobalConfig } from './config.js';
+import { execFileNoThrow } from './execFileNoThrow.js';
+import { logError } from './log.js';
 export function markTerminalSetupInProgress(backupPath: string): void {
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     appleTerminalSetupInProgress: true,
     appleTerminalBackupPath: backupPath,
-  }))
+  }));
 }
 
 export function markTerminalSetupComplete(): void {
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     appleTerminalSetupInProgress: false,
-  }))
+  }));
 }
 
 function getTerminalRecoveryInfo(): {
-  inProgress: boolean
-  backupPath: string | null
+  inProgress: boolean;
+  backupPath: string | null;
 } {
-  const config = getGlobalConfig()
+  const config = getGlobalConfig();
   return {
     inProgress: config.appleTerminalSetupInProgress ?? false,
     backupPath: config.appleTerminalBackupPath || null,
-  }
+  };
 }
 
 export function getTerminalPlistPath(): string {
-  return join(homedir(), 'Library', 'Preferences', 'com.apple.Terminal.plist')
+  return join(homedir(), 'Library', 'Preferences', 'com.apple.Terminal.plist');
 }
 
 export async function backupTerminalPreferences(): Promise<string | null> {
-  const terminalPlistPath = getTerminalPlistPath()
-  const backupPath = `${terminalPlistPath}.bak`
+  const terminalPlistPath = getTerminalPlistPath();
+  const backupPath = `${terminalPlistPath}.bak`;
 
   try {
     const { code } = await execFileNoThrow('defaults', [
       'export',
       'com.apple.Terminal',
       terminalPlistPath,
-    ])
+    ]);
 
     if (code !== 0) {
-      return null
+      return null;
     }
 
     try {
-      await stat(terminalPlistPath)
+      await stat(terminalPlistPath);
     } catch {
-      return null
+      return null;
     }
 
-    await execFileNoThrow('defaults', [
-      'export',
-      'com.apple.Terminal',
-      backupPath,
-    ])
+    await execFileNoThrow('defaults', ['export', 'com.apple.Terminal', backupPath]);
 
-    markTerminalSetupInProgress(backupPath)
+    markTerminalSetupInProgress(backupPath);
 
-    return backupPath
+    return backupPath;
   } catch (error) {
-    logError(error)
-    return null
+    logError(error);
+    return null;
   }
 }
 
 type RestoreResult =
   | {
-      status: 'restored' | 'no_backup'
+      status: 'restored' | 'no_backup';
     }
   | {
-      status: 'failed'
-      backupPath: string
-    }
+      status: 'failed';
+      backupPath: string;
+    };
 
 export async function checkAndRestoreTerminalBackup(): Promise<RestoreResult> {
-  const { inProgress, backupPath } = getTerminalRecoveryInfo()
+  const { inProgress, backupPath } = getTerminalRecoveryInfo();
   if (!inProgress) {
-    return { status: 'no_backup' }
+    return { status: 'no_backup' };
   }
 
   if (!backupPath) {
-    markTerminalSetupComplete()
-    return { status: 'no_backup' }
+    markTerminalSetupComplete();
+    return { status: 'no_backup' };
   }
 
   try {
-    await stat(backupPath)
+    await stat(backupPath);
   } catch {
-    markTerminalSetupComplete()
-    return { status: 'no_backup' }
+    markTerminalSetupComplete();
+    return { status: 'no_backup' };
   }
 
   try {
@@ -102,23 +98,19 @@ export async function checkAndRestoreTerminalBackup(): Promise<RestoreResult> {
       'import',
       'com.apple.Terminal',
       backupPath,
-    ])
+    ]);
 
     if (code !== 0) {
-      return { status: 'failed', backupPath }
+      return { status: 'failed', backupPath };
     }
 
-    await execFileNoThrow('killall', ['cfprefsd'])
+    await execFileNoThrow('killall', ['cfprefsd']);
 
-    markTerminalSetupComplete()
-    return { status: 'restored' }
+    markTerminalSetupComplete();
+    return { status: 'restored' };
   } catch (restoreError) {
-    logError(
-      new Error(
-        `Failed to restore Terminal.app settings with: ${restoreError}`,
-      ),
-    )
-    markTerminalSetupComplete()
-    return { status: 'failed', backupPath }
+    logError(new Error(`Failed to restore Terminal.app settings with: ${restoreError}`));
+    markTerminalSetupComplete();
+    return { status: 'failed', backupPath };
   }
 }

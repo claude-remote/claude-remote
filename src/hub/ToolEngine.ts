@@ -314,8 +314,7 @@ export class ToolEngine {
         output,
       };
     } catch (err) {
-      const isAbort =
-        err instanceof Error && err.name === 'AbortError';
+      const isAbort = err instanceof Error && err.name === 'AbortError';
       const status: ToolExecutionStatus = isAbort ? 'interrupted' : 'failed';
       const errorMsg = err instanceof Error ? err.message : String(err);
 

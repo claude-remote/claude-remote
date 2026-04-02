@@ -5,7 +5,7 @@
  * - clearSessionCaches: import from './clear/caches.js'
  * - clearConversation: import from './clear/conversation.js'
  */
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const clear = {
   type: 'local',
@@ -14,6 +14,6 @@ const clear = {
   aliases: ['reset', 'new'],
   supportsNonInteractive: false, // Should just create a new session
   load: () => import('./clear.js'),
-} satisfies Command
+} satisfies Command;
 
-export default clear
+export default clear;

@@ -1,11 +1,11 @@
-import { Event } from './event.js'
+import { Event } from './event.js';
 
-type EventPhase = 'none' | 'capturing' | 'at_target' | 'bubbling'
+type EventPhase = 'none' | 'capturing' | 'at_target' | 'bubbling';
 
 type TerminalEventInit = {
-  bubbles?: boolean
-  cancelable?: boolean
-}
+  bubbles?: boolean;
+  cancelable?: boolean;
+};
 
 /**
  * Base class for all terminal events with DOM-style propagation.
@@ -17,53 +17,53 @@ type TerminalEventInit = {
  * stopPropagation(), preventDefault(), timeStamp.
  */
 export class TerminalEvent extends Event {
-  readonly type: string
-  readonly timeStamp: number
-  readonly bubbles: boolean
-  readonly cancelable: boolean
+  readonly type: string;
+  readonly timeStamp: number;
+  readonly bubbles: boolean;
+  readonly cancelable: boolean;
 
-  private _target: EventTarget | null = null
-  private _currentTarget: EventTarget | null = null
-  private _eventPhase: EventPhase = 'none'
-  private _propagationStopped = false
-  private _defaultPrevented = false
+  private _target: EventTarget | null = null;
+  private _currentTarget: EventTarget | null = null;
+  private _eventPhase: EventPhase = 'none';
+  private _propagationStopped = false;
+  private _defaultPrevented = false;
 
   constructor(type: string, init?: TerminalEventInit) {
-    super()
-    this.type = type
-    this.timeStamp = performance.now()
-    this.bubbles = init?.bubbles ?? true
-    this.cancelable = init?.cancelable ?? true
+    super();
+    this.type = type;
+    this.timeStamp = performance.now();
+    this.bubbles = init?.bubbles ?? true;
+    this.cancelable = init?.cancelable ?? true;
   }
 
   get target(): EventTarget | null {
-    return this._target
+    return this._target;
   }
 
   get currentTarget(): EventTarget | null {
-    return this._currentTarget
+    return this._currentTarget;
   }
 
   get eventPhase(): EventPhase {
-    return this._eventPhase
+    return this._eventPhase;
   }
 
   get defaultPrevented(): boolean {
-    return this._defaultPrevented
+    return this._defaultPrevented;
   }
 
   stopPropagation(): void {
-    this._propagationStopped = true
+    this._propagationStopped = true;
   }
 
   override stopImmediatePropagation(): void {
-    super.stopImmediatePropagation()
-    this._propagationStopped = true
+    super.stopImmediatePropagation();
+    this._propagationStopped = true;
   }
 
   preventDefault(): void {
     if (this.cancelable) {
-      this._defaultPrevented = true
+      this._defaultPrevented = true;
     }
   }
 
@@ -71,27 +71,27 @@ export class TerminalEvent extends Event {
 
   /** @internal */
   _setTarget(target: EventTarget): void {
-    this._target = target
+    this._target = target;
   }
 
   /** @internal */
   _setCurrentTarget(target: EventTarget | null): void {
-    this._currentTarget = target
+    this._currentTarget = target;
   }
 
   /** @internal */
   _setEventPhase(phase: EventPhase): void {
-    this._eventPhase = phase
+    this._eventPhase = phase;
   }
 
   /** @internal */
   _isPropagationStopped(): boolean {
-    return this._propagationStopped
+    return this._propagationStopped;
   }
 
   /** @internal */
   _isImmediatePropagationStopped(): boolean {
-    return this.didStopImmediatePropagation()
+    return this.didStopImmediatePropagation();
   }
 
   /**
@@ -102,6 +102,6 @@ export class TerminalEvent extends Event {
 }
 
 export type EventTarget = {
-  parentNode: EventTarget | undefined
-  _eventHandlers?: Record<string, unknown>
-}
+  parentNode: EventTarget | undefined;
+  _eventHandlers?: Record<string, unknown>;
+};

@@ -1,7 +1,7 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { stringWidth } from '../../ink/stringWidth.js';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../ink.js';
+import { stringWidth } from '../../ink/stringWidth.js';
 import TextInput from '../TextInput.js';
 type Props = {
   value: string;
@@ -10,12 +10,8 @@ type Props = {
 };
 function HistorySearchInput(t0) {
   const $ = _c(9);
-  const {
-    value,
-    onChange,
-    historyFailedMatch
-  } = t0;
-  const t1 = historyFailedMatch ? "no matching prompt:" : "search prompts:";
+  const { value, onChange, historyFailedMatch } = t0;
+  const t1 = historyFailedMatch ? 'no matching prompt:' : 'search prompts:';
   let t2;
   if ($[0] !== t1) {
     t2 = <Text dimColor={true}>{t1}</Text>;
@@ -27,7 +23,19 @@ function HistorySearchInput(t0) {
   const t3 = stringWidth(value) + 1;
   let t4;
   if ($[2] !== onChange || $[3] !== t3 || $[4] !== value) {
-    t4 = <TextInput value={value} onChange={onChange} cursorOffset={value.length} onChangeCursorOffset={_temp} columns={t3} focus={true} showCursor={true} multiline={false} dimColor={true} />;
+    t4 = (
+      <TextInput
+        value={value}
+        onChange={onChange}
+        cursorOffset={value.length}
+        onChangeCursorOffset={_temp}
+        columns={t3}
+        focus={true}
+        showCursor={true}
+        multiline={false}
+        dimColor={true}
+      />
+    );
     $[2] = onChange;
     $[3] = t3;
     $[4] = value;
@@ -37,7 +45,12 @@ function HistorySearchInput(t0) {
   }
   let t5;
   if ($[6] !== t2 || $[7] !== t4) {
-    t5 = <Box gap={1}>{t2}{t4}</Box>;
+    t5 = (
+      <Box gap={1}>
+        {t2}
+        {t4}
+      </Box>
+    );
     $[6] = t2;
     $[7] = t4;
     $[8] = t5;

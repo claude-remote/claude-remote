@@ -1,6 +1,6 @@
-import type { McpbManifest } from '@anthropic-ai/mcpb'
-import { errorMessage } from '../errors.js'
-import { jsonParse } from '../slowOperations.js'
+import type { McpbManifest } from '@anthropic-ai/mcpb';
+import { errorMessage } from '../errors.js';
+import { jsonParse } from '../slowOperations.js';
 
 /**
  * Parses and validates a DXT manifest from a JSON object.
@@ -10,14 +10,12 @@ import { jsonParse } from '../slowOperations.js'
  * schemas.js and schemas-loose.js). Deferring the import keeps ~700KB of bound
  * closures out of the startup heap for sessions that never touch .dxt/.mcpb.
  */
-export async function validateManifest(
-  manifestJson: unknown,
-): Promise<McpbManifest> {
-  const { McpbManifestSchema } = await import('@anthropic-ai/mcpb')
-  const parseResult = McpbManifestSchema.safeParse(manifestJson)
+export async function validateManifest(manifestJson: unknown): Promise<McpbManifest> {
+  const { McpbManifestSchema } = await import('@anthropic-ai/mcpb');
+  const parseResult = McpbManifestSchema.safeParse(manifestJson);
 
   if (!parseResult.success) {
-    const errors = parseResult.error.flatten()
+    const errors = parseResult.error.flatten();
     const errorMessages = [
       ...Object.entries(errors.fieldErrors).map(
         ([field, errs]) => `${field}: ${(errs as string[] | undefined)?.join(', ')}`,
@@ -25,12 +23,12 @@ export async function validateManifest(
       ...(errors.formErrors || []),
     ]
       .filter(Boolean)
-      .join('; ')
+      .join('; ');
 
-    throw new Error(`Invalid manifest: ${errorMessages}`)
+    throw new Error(`Invalid manifest: ${errorMessages}`);
   }
 
-  return parseResult.data
+  return parseResult.data;
 }
 
 /**
@@ -39,15 +37,15 @@ export async function validateManifest(
 export async function parseAndValidateManifestFromText(
   manifestText: string,
 ): Promise<McpbManifest> {
-  let manifestJson: unknown
+  let manifestJson: unknown;
 
   try {
-    manifestJson = jsonParse(manifestText)
+    manifestJson = jsonParse(manifestText);
   } catch (error) {
-    throw new Error(`Invalid JSON in manifest.json: ${errorMessage(error)}`)
+    throw new Error(`Invalid JSON in manifest.json: ${errorMessage(error)}`);
   }
 
-  return validateManifest(manifestJson)
+  return validateManifest(manifestJson);
 }
 
 /**
@@ -56,8 +54,8 @@ export async function parseAndValidateManifestFromText(
 export async function parseAndValidateManifestFromBytes(
   manifestData: Uint8Array,
 ): Promise<McpbManifest> {
-  const manifestText = new TextDecoder().decode(manifestData)
-  return parseAndValidateManifestFromText(manifestText)
+  const manifestText = new TextDecoder().decode(manifestData);
+  return parseAndValidateManifestFromText(manifestText);
 }
 
 /**
@@ -74,15 +72,15 @@ export function generateExtensionId(
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-_.]/g, '')
       .replace(/-+/g, '-')
-      .replace(/^-+|-+$/g, '')
+      .replace(/^-+|-+$/g, '');
 
-  const authorName = manifest.author.name
-  const extensionName = manifest.name
+  const authorName = manifest.author.name;
+  const extensionName = manifest.name;
 
-  const sanitizedAuthor = sanitize(authorName)
-  const sanitizedName = sanitize(extensionName)
+  const sanitizedAuthor = sanitize(authorName);
+  const sanitizedName = sanitize(extensionName);
 
   return prefix
     ? `${prefix}.${sanitizedAuthor}.${sanitizedName}`
-    : `${sanitizedAuthor}.${sanitizedName}`
+    : `${sanitizedAuthor}.${sanitizedName}`;
 }

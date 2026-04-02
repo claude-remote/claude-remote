@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { MessageResponse } from '../../components/MessageResponse.js';
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits.js';
 import { Box, Text } from '../../ink.js';
@@ -19,22 +19,25 @@ function getSearchSummary(results: (SearchResult | string | null | undefined)[])
   }
   return {
     searchCount,
-    totalResultCount
+    totalResultCount,
   };
 }
-export function renderToolUseMessage({
-  query,
-  allowed_domains,
-  blocked_domains
-}: Partial<{
-  query: string;
-  allowed_domains?: string[];
-  blocked_domains?: string[];
-}>, {
-  verbose
-}: {
-  verbose: boolean;
-}): React.ReactNode {
+export function renderToolUseMessage(
+  {
+    query,
+    allowed_domains,
+    blocked_domains,
+  }: Partial<{
+    query: string;
+    allowed_domains?: string[];
+    blocked_domains?: string[];
+  }>,
+  {
+    verbose,
+  }: {
+    verbose: boolean;
+  },
+): React.ReactNode {
   if (!query) {
     return null;
   }
@@ -52,7 +55,9 @@ export function renderToolUseMessage({
   }
   return message;
 }
-export function renderToolUseProgressMessage(progressMessages: ProgressMessage<WebSearchProgress>[]): React.ReactNode {
+export function renderToolUseProgressMessage(
+  progressMessages: ProgressMessage<WebSearchProgress>[],
+): React.ReactNode {
   if (progressMessages.length === 0) {
     return null;
   }
@@ -63,36 +68,47 @@ export function renderToolUseProgressMessage(progressMessages: ProgressMessage<W
   const data = lastProgress.data;
   switch (data.type) {
     case 'query_update':
-      return <MessageResponse>
+      return (
+        <MessageResponse>
           <Text dimColor>Searching: {data.query}</Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
     case 'search_results_received':
-      return <MessageResponse>
+      return (
+        <MessageResponse>
           <Text dimColor>
             Found {data.resultCount} results for &quot;{data.query}&quot;
           </Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
     default:
       return null;
   }
 }
 export function renderToolResultMessage(output: Output): React.ReactNode {
-  const {
-    searchCount
-  } = getSearchSummary(output.results ?? []);
-  const timeDisplay = output.durationSeconds >= 1 ? `${Math.round(output.durationSeconds)}s` : `${Math.round(output.durationSeconds * 1000)}ms`;
-  return <Box justifyContent="space-between" width="100%">
+  const { searchCount } = getSearchSummary(output.results ?? []);
+  const timeDisplay =
+    output.durationSeconds >= 1
+      ? `${Math.round(output.durationSeconds)}s`
+      : `${Math.round(output.durationSeconds * 1000)}ms`;
+  return (
+    <Box justifyContent="space-between" width="100%">
       <MessageResponse height={1}>
         <Text>
           Did {searchCount} search
           {searchCount !== 1 ? 'es' : ''} in {timeDisplay}
         </Text>
       </MessageResponse>
-    </Box>;
+    </Box>
+  );
 }
-export function getToolUseSummary(input: Partial<{
-  query: string;
-}> | undefined): string | null {
+export function getToolUseSummary(
+  input:
+    | Partial<{
+        query: string;
+      }>
+    | undefined,
+): string | null {
   if (!input?.query) {
     return null;
   }

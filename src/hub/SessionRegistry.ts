@@ -1,16 +1,16 @@
-import { randomUUID } from 'crypto'
-import type { HubClientInfo, Session } from './HubProtocol.js'
+import { randomUUID } from 'node:crypto';
+import type { HubClientInfo, Session } from './HubProtocol.js';
 
 type CreateSessionInput = {
-  cwd: string
-  name?: string
-}
+  cwd: string;
+  name?: string;
+};
 
 export class SessionRegistry {
-  private readonly sessions = new Map<string, Session>()
+  private readonly sessions = new Map<string, Session>();
 
   createSession(input: CreateSessionInput): Session {
-    const now = Date.now()
+    const now = Date.now();
     const session: Session = {
       id: randomUUID(),
       name: input.name ?? 'Untitled session',
@@ -21,24 +21,24 @@ export class SessionRegistry {
       clients: [],
       messages: [],
       tasks: [],
-    }
+    };
 
-    this.sessions.set(session.id, session)
-    return session
+    this.sessions.set(session.id, session);
+    return session;
   }
 
   listSessions(): Session[] {
-    return [...this.sessions.values()]
+    return [...this.sessions.values()];
   }
 
   getSession(sessionId: string): Session | undefined {
-    return this.sessions.get(sessionId)
+    return this.sessions.get(sessionId);
   }
 
   attachClient(sessionId: string, client: HubClientInfo): Session | undefined {
-    const session = this.sessions.get(sessionId)
+    const session = this.sessions.get(sessionId);
     if (!session) {
-      return undefined
+      return undefined;
     }
 
     const attachedSession: Session = {
@@ -46,9 +46,9 @@ export class SessionRegistry {
       status: 'active',
       updatedAt: Date.now(),
       clients: [...session.clients, client],
-    }
+    };
 
-    this.sessions.set(sessionId, attachedSession)
-    return attachedSession
+    this.sessions.set(sessionId, attachedSession);
+    return attachedSession;
   }
 }

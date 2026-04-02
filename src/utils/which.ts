@@ -1,5 +1,5 @@
-import { execa } from 'execa'
-import { execSync_DEPRECATED } from './execSyncWrapper.js'
+import { execa } from 'execa';
+import { execSync_DEPRECATED } from './execSyncWrapper.js';
 
 async function whichNodeAsync(command: string): Promise<string | null> {
   if (process.platform === 'win32') {
@@ -8,12 +8,12 @@ async function whichNodeAsync(command: string): Promise<string | null> {
       shell: true,
       stderr: 'ignore',
       reject: false,
-    })
+    });
     if (result.exitCode !== 0 || !result.stdout) {
-      return null
+      return null;
     }
     // where.exe returns multiple paths separated by newlines, return the first
-    return result.stdout.trim().split(/\r?\n/)[0] || null
+    return result.stdout.trim().split(/\r?\n/)[0] || null;
   }
 
   // On POSIX systems (macOS, Linux, WSL), use which
@@ -23,11 +23,11 @@ async function whichNodeAsync(command: string): Promise<string | null> {
     shell: true,
     stderr: 'ignore',
     reject: false,
-  })
+  });
   if (result.exitCode !== 0 || !result.stdout) {
-    return null
+    return null;
   }
-  return result.stdout.trim()
+  return result.stdout.trim();
 }
 
 function whichNodeSync(command: string): string | null {
@@ -36,11 +36,11 @@ function whichNodeSync(command: string): string | null {
       const result = execSync_DEPRECATED(`where.exe ${command}`, {
         encoding: 'utf-8',
         stdio: ['ignore', 'pipe', 'ignore'],
-      })
-      const output = result.toString().trim()
-      return output.split(/\r?\n/)[0] || null
+      });
+      const output = result.toString().trim();
+      return output.split(/\r?\n/)[0] || null;
     } catch {
-      return null
+      return null;
     }
   }
 
@@ -48,17 +48,14 @@ function whichNodeSync(command: string): string | null {
     const result = execSync_DEPRECATED(`which ${command}`, {
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    return result.toString().trim() || null
+    });
+    return result.toString().trim() || null;
   } catch {
-    return null
+    return null;
   }
 }
 
-const bunWhich =
-  typeof Bun !== 'undefined' && typeof Bun.which === 'function'
-    ? Bun.which
-    : null
+const bunWhich = typeof Bun !== 'undefined' && typeof Bun.which === 'function' ? Bun.which : null;
 
 /**
  * Finds the full path to a command executable.
@@ -69,8 +66,8 @@ const bunWhich =
  * @returns The full path to the command, or null if not found
  */
 export const which: (command: string) => Promise<string | null> = bunWhich
-  ? async command => bunWhich(command)
-  : whichNodeAsync
+  ? async (command) => bunWhich(command)
+  : whichNodeAsync;
 
 /**
  * Synchronous version of `which`.
@@ -78,5 +75,4 @@ export const which: (command: string) => Promise<string | null> = bunWhich
  * @param command - The command name to look up
  * @returns The full path to the command, or null if not found
  */
-export const whichSync: (command: string) => string | null =
-  bunWhich ?? whichNodeSync
+export const whichSync: (command: string) => string | null = bunWhich ?? whichNodeSync;

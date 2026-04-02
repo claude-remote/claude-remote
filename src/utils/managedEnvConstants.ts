@@ -53,20 +53,20 @@ const PROVIDER_MANAGED_ENV_VARS = new Set([
   'ANTHROPIC_SMALL_FAST_MODEL',
   'ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION',
   'CLAUDE_CODE_SUBAGENT_MODEL',
-])
+]);
 
 const PROVIDER_MANAGED_ENV_PREFIXES = [
   // Per-model Vertex region overrides — scales with model releases, so
   // prefix-matched to avoid drift on each launch.
   'VERTEX_REGION_CLAUDE_',
-]
+];
 
 export function isProviderManagedEnvVar(key: string): boolean {
-  const upper = key.toUpperCase()
+  const upper = key.toUpperCase();
   return (
     PROVIDER_MANAGED_ENV_VARS.has(upper) ||
-    PROVIDER_MANAGED_ENV_PREFIXES.some(p => upper.startsWith(p))
-  )
+    PROVIDER_MANAGED_ENV_PREFIXES.some((p) => upper.startsWith(p))
+  );
 }
 
 /**
@@ -79,7 +79,7 @@ export const DANGEROUS_SHELL_SETTINGS = [
   'gcpAuthRefresh',
   'otelHeadersHelper',
   'statusLine',
-] as const
+] as const;
 
 /**
  * Safe environment variables that can be applied before trust dialog.
@@ -188,4 +188,4 @@ export const SAFE_ENV_VARS = new Set([
   'VERTEX_REGION_CLAUDE_4_5_SONNET',
   'VERTEX_REGION_CLAUDE_4_6_SONNET',
   'VERTEX_REGION_CLAUDE_HAIKU_4_5',
-])
+]);

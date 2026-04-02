@@ -1,19 +1,11 @@
-import { z } from 'zod/v4'
-import { buildTool, type ToolDef } from '../../Tool.js'
-import {
-  executeTaskCreatedHooks,
-  getTaskCreatedHookMessage,
-} from '../../utils/hooks.js'
-import { lazySchema } from '../../utils/lazySchema.js'
-import {
-  createTask,
-  deleteTask,
-  getTaskListId,
-  isTodoV2Enabled,
-} from '../../utils/tasks.js'
-import { getAgentName, getTeamName } from '../../utils/teammate.js'
-import { TASK_CREATE_TOOL_NAME } from './constants.js'
-import { DESCRIPTION, getPrompt } from './prompt.js'
+import { z } from 'zod/v4';
+import { type ToolDef, buildTool } from '../../Tool.js';
+import { executeTaskCreatedHooks, getTaskCreatedHookMessage } from '../../utils/hooks.js';
+import { lazySchema } from '../../utils/lazySchema.js';
+import { createTask, deleteTask, getTaskListId, isTodoV2Enabled } from '../../utils/tasks.js';
+import { getAgentName, getTeamName } from '../../utils/teammate.js';
+import { TASK_CREATE_TOOL_NAME } from './constants.js';
+import { DESCRIPTION, getPrompt } from './prompt.js';
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -30,8 +22,8 @@ const inputSchema = lazySchema(() =>
       .optional()
       .describe('Arbitrary metadata to attach to the task'),
   }),
-)
-type InputSchema = ReturnType<typeof inputSchema>
+);
+type InputSchema = ReturnType<typeof inputSchema>;
 
 const outputSchema = lazySchema(() =>
   z.object({
@@ -40,42 +32,42 @@ const outputSchema = lazySchema(() =>
       subject: z.string(),
     }),
   }),
-)
-type OutputSchema = ReturnType<typeof outputSchema>
+);
+type OutputSchema = ReturnType<typeof outputSchema>;
 
-export type Output = z.infer<OutputSchema>
+export type Output = z.infer<OutputSchema>;
 
 export const TaskCreateTool = buildTool({
   name: TASK_CREATE_TOOL_NAME,
   searchHint: 'create a task in the task list',
   maxResultSizeChars: 100_000,
   async description() {
-    return DESCRIPTION
+    return DESCRIPTION;
   },
   async prompt() {
-    return getPrompt()
+    return getPrompt();
   },
   get inputSchema(): InputSchema {
-    return inputSchema()
+    return inputSchema();
   },
   get outputSchema(): OutputSchema {
-    return outputSchema()
+    return outputSchema();
   },
   userFacingName() {
-    return 'TaskCreate'
+    return 'TaskCreate';
   },
   shouldDefer: true,
   isEnabled() {
-    return isTodoV2Enabled()
+    return isTodoV2Enabled();
   },
   isConcurrencySafe() {
-    return true
+    return true;
   },
   toAutoClassifierInput(input) {
-    return input.subject
+    return input.subject;
   },
   renderToolUseMessage() {
-    return null
+    return null;
   },
   async call({ subject, description, activeForm, metadata }, context) {
     const taskId = await createTask(getTaskListId(), {
@@ -87,9 +79,9 @@ export const TaskCreateTool = buildTool({
       blocks: [],
       blockedBy: [],
       metadata,
-    })
+    });
 
-    const blockingErrors: string[] = []
+    const blockingErrors: string[] = [];
     const generator = executeTaskCreatedHooks(
       taskId,
       subject,
@@ -100,23 +92,23 @@ export const TaskCreateTool = buildTool({
       context?.abortController?.signal,
       undefined,
       context,
-    )
+    );
     for await (const result of generator) {
       if (result.blockingError) {
-        blockingErrors.push(getTaskCreatedHookMessage(result.blockingError))
+        blockingErrors.push(getTaskCreatedHookMessage(result.blockingError));
       }
     }
 
     if (blockingErrors.length > 0) {
-      await deleteTask(getTaskListId(), taskId)
-      throw new Error(blockingErrors.join('\n'))
+      await deleteTask(getTaskListId(), taskId);
+      throw new Error(blockingErrors.join('\n'));
     }
 
     // Auto-expand task list when creating tasks
-    context.setAppState(prev => {
-      if (prev.expandedView === 'tasks') return prev
-      return { ...prev, expandedView: 'tasks' as const }
-    })
+    context.setAppState((prev) => {
+      if (prev.expandedView === 'tasks') return prev;
+      return { ...prev, expandedView: 'tasks' as const };
+    });
 
     return {
       data: {
@@ -125,14 +117,14 @@ export const TaskCreateTool = buildTool({
           subject,
         },
       },
-    }
+    };
   },
   mapToolResultToToolResultBlockParam(content, toolUseID) {
-    const { task } = content as Output
+    const { task } = content as Output;
     return {
       tool_use_id: toolUseID,
       type: 'tool_result',
       content: `Task #${task.id} created successfully: ${task.subject}`,
-    }
+    };
   },
-} satisfies ToolDef<InputSchema, Output>)
+} satisfies ToolDef<InputSchema, Output>);

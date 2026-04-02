@@ -1,22 +1,22 @@
-import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js'
-import { EXIT_PLAN_MODE_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js'
-import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from 'src/tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from 'src/tools/GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from 'src/tools/GrepTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from 'src/tools/NotebookEditTool/constants.js'
-import { hasEmbeddedSearchTools } from 'src/utils/embeddedTools.js'
-import { AGENT_TOOL_NAME } from '../constants.js'
-import type { BuiltInAgentDefinition } from '../loadAgentsDir.js'
-import { EXPLORE_AGENT } from './exploreAgent.js'
+import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js';
+import { EXIT_PLAN_MODE_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js';
+import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js';
+import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js';
+import { FILE_WRITE_TOOL_NAME } from 'src/tools/FileWriteTool/prompt.js';
+import { GLOB_TOOL_NAME } from 'src/tools/GlobTool/prompt.js';
+import { GREP_TOOL_NAME } from 'src/tools/GrepTool/prompt.js';
+import { NOTEBOOK_EDIT_TOOL_NAME } from 'src/tools/NotebookEditTool/constants.js';
+import { hasEmbeddedSearchTools } from 'src/utils/embeddedTools.js';
+import { AGENT_TOOL_NAME } from '../constants.js';
+import type { BuiltInAgentDefinition } from '../loadAgentsDir.js';
+import { EXPLORE_AGENT } from './exploreAgent.js';
 
 function getPlanV2SystemPrompt(): string {
   // Ant-native builds alias find/grep to embedded bfs/ugrep and remove the
   // dedicated Glob/Grep tools, so point at find/grep instead.
   const searchToolsHint = hasEmbeddedSearchTools()
     ? `\`find\`, \`grep\`, and ${FILE_READ_TOOL_NAME}`
-    : `${GLOB_TOOL_NAME}, ${GREP_TOOL_NAME}, and ${FILE_READ_TOOL_NAME}`
+    : `${GLOB_TOOL_NAME}, ${GREP_TOOL_NAME}, and ${FILE_READ_TOOL_NAME}`;
 
   return `You are a software architect and planning specialist for Claude Code. Your role is to explore the codebase and design implementation plans.
 
@@ -67,7 +67,7 @@ List 3-5 files most critical for implementing this plan:
 - path/to/file2.ts
 - path/to/file3.ts
 
-REMEMBER: You can ONLY explore and plan. You CANNOT and MUST NOT write, edit, or modify any files. You do NOT have access to file editing tools.`
+REMEMBER: You can ONLY explore and plan. You CANNOT and MUST NOT write, edit, or modify any files. You do NOT have access to file editing tools.`;
 }
 
 export const PLAN_AGENT: BuiltInAgentDefinition = {
@@ -89,4 +89,4 @@ export const PLAN_AGENT: BuiltInAgentDefinition = {
   // Dropping it from context saves tokens without blocking access.
   omitClaudeMd: true,
   getSystemPrompt: () => getPlanV2SystemPrompt(),
-}
+};

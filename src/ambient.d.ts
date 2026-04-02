@@ -19,7 +19,7 @@ declare function getAntModels(...args: any[]): any;
 declare function getAntModelOverrideConfig(...args: any[]): any;
 
 declare namespace JSX {
-  interface Element {}
+  type Element = {};
   interface IntrinsicElements {
     [elemName: string]: any;
   }
@@ -28,10 +28,10 @@ declare namespace JSX {
 declare namespace React {
   namespace JSX {
     interface IntrinsicElements {
-      'ink-box': any
-      'ink-text': any
-      'ink-link': any
-      'ink-raw-ansi': any
+      'ink-box': any;
+      'ink-text': any;
+      'ink-link': any;
+      'ink-raw-ansi': any;
     }
   }
 }
@@ -47,97 +47,97 @@ declare module 'qrcode' {
 }
 
 declare module 'bidi-js' {
-  const mod: any
-  export = mod
+  const mod: any;
+  export = mod;
 }
 
 declare module 'code-excerpt' {
   export type CodeExcerpt = {
-    line: number
-    value: string
-  }
-  const codeExcerpt: any
-  export default codeExcerpt
+    line: number;
+    value: string;
+  };
+  const codeExcerpt: any;
+  export default codeExcerpt;
 }
 
 declare module 'signal-exit' {
-  export const onExit: any
+  export const onExit: any;
 }
 
 declare module 'lru-cache' {
   export class LRUCache<K = any, V = any> {
-    size: number
-    max: number
-    maxSize: number
-    calculatedSize: number
-    constructor(...args: any[])
-    get(...args: any[]): V | undefined
-    set(...args: any[]): this
-    has(...args: any[]): boolean
-    delete(...args: any[]): boolean
-    clear(...args: any[]): void
-    keys(...args: any[]): Generator<K, any, any>
-    entries(...args: any[]): Generator<[K, V], any, any>
-    dump(...args: any[]): any[]
-    load(...args: any[]): void
-    peek(...args: any[]): V | undefined
+    size: number;
+    max: number;
+    maxSize: number;
+    calculatedSize: number;
+    constructor(...args: any[]);
+    get(...args: any[]): V | undefined;
+    set(...args: any[]): this;
+    has(...args: any[]): boolean;
+    delete(...args: any[]): boolean;
+    clear(...args: any[]): void;
+    keys(...args: any[]): Generator<K, any, any>;
+    entries(...args: any[]): Generator<[K, V], any, any>;
+    dump(...args: any[]): any[];
+    load(...args: any[]): void;
+    peek(...args: any[]): V | undefined;
   }
-  const mod: any
-  export default mod
+  const mod: any;
+  export default mod;
 }
 
 declare module 'https-proxy-agent' {
-  export type HttpsProxyAgentOptions<T = any> = any
-  export type HttpsProxyAgent<T = any> = any
-  export const HttpsProxyAgent: any
+  export type HttpsProxyAgentOptions<T = any> = any;
+  export type HttpsProxyAgent<T = any> = any;
+  export const HttpsProxyAgent: any;
 }
 
 declare module 'react-router-dom' {
-  export const BrowserRouter: any
-  export const Navigate: any
-  export const Route: any
-  export const Routes: any
-  export const useLocation: any
-  export const useNavigate: any
-  export const useParams: any
-  const mod: any
-  export default mod
+  export const BrowserRouter: any;
+  export const Navigate: any;
+  export const Route: any;
+  export const Routes: any;
+  export const useLocation: any;
+  export const useNavigate: any;
+  export const useParams: any;
+  const mod: any;
+  export default mod;
 }
 
 declare module 'vite' {
-  export const defineConfig: any
+  export const defineConfig: any;
 }
 
 declare module '@vitejs/plugin-react' {
-  const mod: any
-  export default mod
+  const mod: any;
+  export default mod;
 }
 
 declare module '@anthropic-ai/sandbox-runtime' {
-  export type FsReadRestrictionConfig = any
-  export type FsWriteRestrictionConfig = any
-  export type IgnoreViolationsConfig = any
-  export type NetworkHostPattern = any
-  export type NetworkRestrictionConfig = any
-  export type SandboxAskCallback = any
-  export type SandboxDependencyCheck = any
-  export type SandboxRuntimeConfig = any
-  export type SandboxViolationEvent = any
-  export type SandboxViolationStore = any
-  export const SandboxManager: any
-  export const SandboxRuntimeConfigSchema: any
-  export const SandboxViolationStore: any
+  export type FsReadRestrictionConfig = any;
+  export type FsWriteRestrictionConfig = any;
+  export type IgnoreViolationsConfig = any;
+  export type NetworkHostPattern = any;
+  export type NetworkRestrictionConfig = any;
+  export type SandboxAskCallback = any;
+  export type SandboxDependencyCheck = any;
+  export type SandboxRuntimeConfig = any;
+  export type SandboxViolationEvent = any;
+  export type SandboxViolationStore = any;
+  export const SandboxManager: any;
+  export const SandboxRuntimeConfigSchema: any;
+  export const SandboxViolationStore: any;
 }
 
 declare module 'ajv' {
-  export const Ajv: any
-  const Ajv: any
-  export default Ajv
+  export const Ajv: any;
+  const Ajv: any;
+  export default Ajv;
 }
 
 declare module '@growthbook/growthbook' {
-  export type GrowthBook = any
-  export const GrowthBook: any
+  export type GrowthBook = any;
+  export const GrowthBook: any;
 }
 
 declare module 'ws' {
@@ -258,28 +258,28 @@ declare module '@modelcontextprotocol/sdk/shared/transport.js' {
 
 declare module 'hono' {
   export class Hono {
-    use(...args: any[]): any
-    get(...args: any[]): any
-    patch(...args: any[]): any
-    post(...args: any[]): any
-    request(...args: any[]): Promise<Response>
-    fetch(...args: any[]): any
+    use(...args: any[]): any;
+    get(...args: any[]): any;
+    patch(...args: any[]): any;
+    post(...args: any[]): any;
+    request(...args: any[]): Promise<Response>;
+    fetch(...args: any[]): any;
   }
   export type MiddlewareHandler = any;
 }
 
 declare module 'hono/cors' {
-  export const cors: any
+  export const cors: any;
 }
 
 declare module 'hono/logger' {
-  export const logger: any
+  export const logger: any;
 }
 
 declare module 'usehooks-ts' {
-  export function useInterval(...args: any[]): any
-  export function useDebounceCallback(...args: any[]): any
-  export function useEventCallback(...args: any[]): any
+  export function useInterval(...args: any[]): any;
+  export function useDebounceCallback(...args: any[]): any;
+  export function useEventCallback(...args: any[]): any;
 }
 
 declare module 'fuse.js' {
@@ -401,10 +401,10 @@ declare module 'vscode-languageserver-protocol' {
 }
 
 declare module 'highlight.js' {
-  export const getLanguage: any
-  export const highlight: any
-  const mod: any
-  export default mod
+  export const getLanguage: any;
+  export const highlight: any;
+  const mod: any;
+  export default mod;
 }
 
 declare module 'plist' {
@@ -1120,7 +1120,7 @@ declare module '*bridge/webhookSanitizer.js' {
 }
 
 declare module '*ssh/SSHSessionManager.js' {
-  export type SSHSessionManager = any
+  export type SSHSessionManager = any;
   const mod: any;
   export = mod;
 }
@@ -1151,16 +1151,16 @@ declare module '*services/tips/types.js' {
 }
 
 declare module '*LocalWorkflowTask/LocalWorkflowTask.js' {
-  export type LocalWorkflowTaskState = any
+  export type LocalWorkflowTaskState = any;
 }
 
 declare module '*MonitorMcpTask/MonitorMcpTask.js' {
-  export type MonitorMcpTaskState = any
+  export type MonitorMcpTaskState = any;
 }
 
 declare module '*types/tools.js' {
-  export type REPLToolProgress = any
-  export type ToolProgressData = any
+  export type REPLToolProgress = any;
+  export type ToolProgressData = any;
 }
 
 declare module '*coordinator/workerAgent.js' {

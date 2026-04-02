@@ -6,8 +6,8 @@
  * (which would defeat LODESTONE tree-shaking).
  */
 
-import { getGlobalConfig, saveGlobalConfig } from '../config.js'
-import { logForDebugging } from '../debug.js'
+import { getGlobalConfig, saveGlobalConfig } from '../config.js';
+import { logForDebugging } from '../debug.js';
 
 /**
  * Map TERM_PROGRAM env var values (lowercased) to the `app` name used by
@@ -23,7 +23,7 @@ const TERM_PROGRAM_TO_APP: Record<string, string> = {
   alacritty: 'Alacritty',
   wezterm: 'WezTerm',
   apple_terminal: 'Terminal',
-}
+};
 
 /**
  * Capture the current terminal from TERM_PROGRAM and store it for the deep
@@ -38,17 +38,17 @@ const TERM_PROGRAM_TO_APP: Record<string, string> = {
 export function updateDeepLinkTerminalPreference(): void {
   // Only detectMacosTerminal reads the stored value — skip the write on
   // other platforms.
-  if (process.platform !== 'darwin') return
+  if (process.platform !== 'darwin') return;
 
-  const termProgram = process.env.TERM_PROGRAM
-  if (!termProgram) return
+  const termProgram = process.env.TERM_PROGRAM;
+  if (!termProgram) return;
 
-  const app = TERM_PROGRAM_TO_APP[termProgram.toLowerCase()]
-  if (!app) return
+  const app = TERM_PROGRAM_TO_APP[termProgram.toLowerCase()];
+  if (!app) return;
 
-  const config = getGlobalConfig()
-  if (config.deepLinkTerminal === app) return
+  const config = getGlobalConfig();
+  if (config.deepLinkTerminal === app) return;
 
-  saveGlobalConfig(current => ({ ...current, deepLinkTerminal: app }))
-  logForDebugging(`Stored deep link terminal preference: ${app}`)
+  saveGlobalConfig((current) => ({ ...current, deepLinkTerminal: app }));
+  logForDebugging(`Stored deep link terminal preference: ${app}`);
 }

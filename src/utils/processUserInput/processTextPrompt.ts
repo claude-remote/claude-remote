@@ -1,20 +1,13 @@
-import type { ContentBlockParam } from '@anthropic-ai/sdk/resources'
-import { randomUUID } from 'crypto'
-import { setPromptId } from 'src/bootstrap/state.js'
-import type {
-  AttachmentMessage,
-  SystemMessage,
-  UserMessage,
-} from 'src/types/message.js'
-import { logEvent } from '../../services/analytics/index.js'
-import type { PermissionMode } from '../../types/permissions.js'
-import { createUserMessage } from '../messages.js'
-import { logOTelEvent, redactIfDisabled } from '../telemetry/events.js'
-import { startInteractionSpan } from '../telemetry/sessionTracing.js'
-import {
-  matchesKeepGoingKeyword,
-  matchesNegativeKeyword,
-} from '../userPromptKeywords.js'
+import { randomUUID } from 'node:crypto';
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources';
+import { setPromptId } from 'src/bootstrap/state.js';
+import type { AttachmentMessage, SystemMessage, UserMessage } from 'src/types/message.js';
+import { logEvent } from '../../services/analytics/index.js';
+import type { PermissionMode } from '../../types/permissions.js';
+import { createUserMessage } from '../messages.js';
+import { logOTelEvent, redactIfDisabled } from '../telemetry/events.js';
+import { startInteractionSpan } from '../telemetry/sessionTracing.js';
+import { matchesKeepGoingKeyword, matchesNegativeKeyword } from '../userPromptKeywords.js';
 
 export function processTextPrompt(
   input: string | Array<ContentBlockParam>,
@@ -25,17 +18,15 @@ export function processTextPrompt(
   permissionMode?: PermissionMode,
   isMeta?: boolean,
 ): {
-  messages: (UserMessage | AttachmentMessage | SystemMessage)[]
-  shouldQuery: boolean
+  messages: (UserMessage | AttachmentMessage | SystemMessage)[];
+  shouldQuery: boolean;
 } {
-  const promptId = randomUUID()
-  setPromptId(promptId)
+  const promptId = randomUUID();
+  setPromptId(promptId);
 
   const userPromptText =
-    typeof input === 'string'
-      ? input
-      : input.find(block => block.type === 'text')?.text || ''
-  startInteractionSpan(userPromptText)
+    typeof input === 'string' ? input : input.find((block) => block.type === 'text')?.text || '';
+  startInteractionSpan(userPromptText);
 
   // Emit user_prompt OTEL event for both string (CLI) and array (SDK/VS Code)
   // input shapes. Previously gated on `typeof input === 'string'`, so VS Code
@@ -47,21 +38,21 @@ export function processTextPrompt(
   const otelPromptText =
     typeof input === 'string'
       ? input
-      : input.findLast(block => block.type === 'text')?.text || ''
+      : input.findLast((block) => block.type === 'text')?.text || '';
   if (otelPromptText) {
     void logOTelEvent('user_prompt', {
       prompt_length: String(otelPromptText.length),
       prompt: redactIfDisabled(otelPromptText),
       'prompt.id': promptId,
-    })
+    });
   }
 
-  const isNegative = matchesNegativeKeyword(userPromptText)
-  const isKeepGoing = matchesKeepGoingKeyword(userPromptText)
+  const isNegative = matchesNegativeKeyword(userPromptText);
+  const isKeepGoing = matchesKeepGoingKeyword(userPromptText);
   logEvent('tengu_input_prompt', {
     is_negative: isNegative,
     is_keep_going: isKeepGoing,
-  })
+  });
 
   // If we have pasted images, create a message with image content
   if (imageContentBlocks.length > 0) {
@@ -71,19 +62,19 @@ export function processTextPrompt(
         ? input.trim()
           ? [{ type: 'text' as const, text: input }]
           : []
-        : input
+        : input;
     const userMessage = createUserMessage({
       content: [...textContent, ...imageContentBlocks],
       uuid: uuid,
       imagePasteIds: imagePasteIds.length > 0 ? imagePasteIds : undefined,
       permissionMode,
       isMeta: isMeta || undefined,
-    })
+    });
 
     return {
       messages: [userMessage, ...attachmentMessages],
       shouldQuery: true,
-    }
+    };
   }
 
   const userMessage = createUserMessage({
@@ -91,10 +82,10 @@ export function processTextPrompt(
     uuid,
     permissionMode,
     isMeta: isMeta || undefined,
-  })
+  });
 
   return {
     messages: [userMessage, ...attachmentMessages],
     shouldQuery: true,
-  }
+  };
 }

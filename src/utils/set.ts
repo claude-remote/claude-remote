@@ -2,13 +2,13 @@
  * Note: this code is hot, so is optimized for speed.
  */
 export function difference<A>(a: Set<A>, b: Set<A>): Set<A> {
-  const result = new Set<A>()
+  const result = new Set<A>();
   for (const item of a) {
     if (!b.has(item)) {
-      result.add(item)
+      result.add(item);
     }
   }
-  return result
+  return result;
 }
 
 /**
@@ -16,14 +16,14 @@ export function difference<A>(a: Set<A>, b: Set<A>): Set<A> {
  */
 export function intersects<A>(a: Set<A>, b: Set<A>): boolean {
   if (a.size === 0 || b.size === 0) {
-    return false
+    return false;
   }
   for (const item of a) {
     if (b.has(item)) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 /**
@@ -32,22 +32,22 @@ export function intersects<A>(a: Set<A>, b: Set<A>): boolean {
 export function every<A>(a: ReadonlySet<A>, b: ReadonlySet<A>): boolean {
   for (const item of a) {
     if (!b.has(item)) {
-      return false
+      return false;
     }
   }
-  return true
+  return true;
 }
 
 /**
  * Note: this code is hot, so is optimized for speed.
  */
 export function union<A>(a: Set<A>, b: Set<A>): Set<A> {
-  const result = new Set<A>()
+  const result = new Set<A>();
   for (const item of a) {
-    result.add(item)
+    result.add(item);
   }
   for (const item of b) {
-    result.add(item)
+    result.add(item);
   }
-  return result
+  return result;
 }

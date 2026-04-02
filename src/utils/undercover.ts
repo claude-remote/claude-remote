@@ -21,19 +21,19 @@
  * function in this file reduces to a trivial return.
  */
 
-import { getRepoClassCached } from './commitAttribution.js'
-import { getGlobalConfig } from './config.js'
-import { isEnvTruthy } from './envUtils.js'
+import { getRepoClassCached } from './commitAttribution.js';
+import { getGlobalConfig } from './config.js';
+import { isEnvTruthy } from './envUtils.js';
 
 export function isUndercover(): boolean {
   if (process.env.USER_TYPE === 'ant') {
-    if (isEnvTruthy(process.env.CLAUDE_CODE_UNDERCOVER)) return true
+    if (isEnvTruthy(process.env.CLAUDE_CODE_UNDERCOVER)) return true;
     // Auto: active unless we've positively confirmed we're in an allowlisted
     // internal repo. 'external', 'none', and null (check not yet run) all
     // resolve to ON. The check is primed in setup.ts; only 'internal' → OFF.
-    return getRepoClassCached() !== 'internal'
+    return getRepoClassCached() !== 'internal';
   }
-  return false
+  return false;
 }
 
 export function getUndercoverInstructions(): string {
@@ -66,9 +66,9 @@ BAD (never write these):
 - "1-shotted by claude-opus-4-6"
 - "Generated with Claude Code"
 - "Co-Authored-By: Claude Opus 4.6 <…>"
-`
+`;
   }
-  return ''
+  return '';
 }
 
 /**
@@ -80,10 +80,10 @@ BAD (never write these):
 export function shouldShowUndercoverAutoNotice(): boolean {
   if (process.env.USER_TYPE === 'ant') {
     // If forced via env, user already knows; don't nag.
-    if (isEnvTruthy(process.env.CLAUDE_CODE_UNDERCOVER)) return false
-    if (!isUndercover()) return false
-    if (getGlobalConfig().hasSeenUndercoverAutoNotice) return false
-    return true
+    if (isEnvTruthy(process.env.CLAUDE_CODE_UNDERCOVER)) return false;
+    if (!isUndercover()) return false;
+    if (getGlobalConfig().hasSeenUndercoverAutoNotice) return false;
+    return true;
   }
-  return false
+  return false;
 }

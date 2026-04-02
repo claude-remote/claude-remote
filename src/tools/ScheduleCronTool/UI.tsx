@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { MessageResponse } from '../../components/MessageResponse.js';
 import { Text } from '../../ink.js';
 import { truncate } from '../../utils/format.js';
@@ -8,34 +8,41 @@ import type { ListOutput } from './CronListTool.js';
 
 // --- CronCreate -------------------------------------------------------------
 
-export function renderCreateToolUseMessage(input: Partial<{
-  cron: string;
-  prompt: string;
-}>): React.ReactNode {
+export function renderCreateToolUseMessage(
+  input: Partial<{
+    cron: string;
+    prompt: string;
+  }>,
+): React.ReactNode {
   return `${input.cron ?? ''}${input.prompt ? `: ${truncate(input.prompt, 60, true)}` : ''}`;
 }
 export function renderCreateResultMessage(output: CreateOutput): React.ReactNode {
-  return <MessageResponse>
+  return (
+    <MessageResponse>
       <Text>
-        Scheduled <Text bold>{output.id}</Text>{' '}
-        <Text dimColor>({output.humanSchedule})</Text>
+        Scheduled <Text bold>{output.id}</Text> <Text dimColor>({output.humanSchedule})</Text>
       </Text>
-    </MessageResponse>;
+    </MessageResponse>
+  );
 }
 
 // --- CronDelete -------------------------------------------------------------
 
-export function renderDeleteToolUseMessage(input: Partial<{
-  id: string;
-}>): React.ReactNode {
+export function renderDeleteToolUseMessage(
+  input: Partial<{
+    id: string;
+  }>,
+): React.ReactNode {
   return input.id ?? '';
 }
 export function renderDeleteResultMessage(output: DeleteOutput): React.ReactNode {
-  return <MessageResponse>
+  return (
+    <MessageResponse>
       <Text>
         Cancelled <Text bold>{output.id}</Text>
       </Text>
-    </MessageResponse>;
+    </MessageResponse>
+  );
 }
 
 // --- CronList ---------------------------------------------------------------
@@ -45,15 +52,21 @@ export function renderListToolUseMessage(): React.ReactNode {
 }
 export function renderListResultMessage(output: ListOutput): React.ReactNode {
   if (output.jobs.length === 0) {
-    return <MessageResponse>
+    return (
+      <MessageResponse>
         <Text dimColor>No scheduled jobs</Text>
-      </MessageResponse>;
+      </MessageResponse>
+    );
   }
-  return <MessageResponse>
-      {output.jobs.map(j => <Text key={j.id}>
+  return (
+    <MessageResponse>
+      {output.jobs.map((j) => (
+        <Text key={j.id}>
           <Text bold>{j.id}</Text> <Text dimColor>{j.humanSchedule}</Text>
-        </Text>)}
-    </MessageResponse>;
+        </Text>
+      ))}
+    </MessageResponse>
+  );
 }
 
 // --- Shared -----------------------------------------------------------------

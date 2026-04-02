@@ -1,5 +1,5 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
-import React from 'react';
+import type React from 'react';
 import { MessageResponse } from 'src/components/MessageResponse.js';
 import { extractTag } from 'src/utils/messages.js';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js';
@@ -11,17 +11,20 @@ import { GrepTool } from '../GrepTool/GrepTool.js';
 export function userFacingName(): string {
   return 'Search';
 }
-export function renderToolUseMessage({
-  pattern,
-  path
-}: Partial<{
-  pattern: string;
-  path: string;
-}>, {
-  verbose
-}: {
-  verbose: boolean;
-}): React.ReactNode {
+export function renderToolUseMessage(
+  {
+    pattern,
+    path,
+  }: Partial<{
+    pattern: string;
+    path: string;
+  }>,
+  {
+    verbose,
+  }: {
+    verbose: boolean;
+  },
+): React.ReactNode {
   if (!pattern) {
     return null;
   }
@@ -30,31 +33,42 @@ export function renderToolUseMessage({
   }
   return `pattern: "${pattern}", path: "${verbose ? path : getDisplayPath(path)}"`;
 }
-export function renderToolUseErrorMessage(result: ToolResultBlockParam['content'], {
-  verbose
-}: {
-  verbose: boolean;
-}): React.ReactNode {
+export function renderToolUseErrorMessage(
+  result: ToolResultBlockParam['content'],
+  {
+    verbose,
+  }: {
+    verbose: boolean;
+  },
+): React.ReactNode {
   if (!verbose && typeof result === 'string' && extractTag(result, 'tool_use_error')) {
     const errorMessage = extractTag(result, 'tool_use_error');
     if (errorMessage?.includes(FILE_NOT_FOUND_CWD_NOTE)) {
-      return <MessageResponse>
+      return (
+        <MessageResponse>
           <Text color="error">File not found</Text>
-        </MessageResponse>;
+        </MessageResponse>
+      );
     }
-    return <MessageResponse>
+    return (
+      <MessageResponse>
         <Text color="error">Error searching files</Text>
-      </MessageResponse>;
+      </MessageResponse>
+    );
   }
   return <FallbackToolUseErrorMessage result={result} verbose={verbose} />;
 }
 
 // Note: GlobTool reuses GrepTool's renderToolResultMessage
 export const renderToolResultMessage = GrepTool.renderToolResultMessage;
-export function getToolUseSummary(input: Partial<{
-  pattern: string;
-  path: string;
-}> | undefined): string | null {
+export function getToolUseSummary(
+  input:
+    | Partial<{
+        pattern: string;
+        path: string;
+      }>
+    | undefined,
+): string | null {
   if (!input?.pattern) {
     return null;
   }

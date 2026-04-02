@@ -1,10 +1,7 @@
-import { execa } from 'execa'
-import { which } from '../which.js'
+import { execa } from 'execa';
+import { which } from '../which.js';
 
-export type GhAuthStatus =
-  | 'authenticated'
-  | 'not_authenticated'
-  | 'not_installed'
+export type GhAuthStatus = 'authenticated' | 'not_authenticated' | 'not_installed';
 
 /**
  * Returns gh CLI install + auth status for telemetry.
@@ -15,15 +12,15 @@ export type GhAuthStatus =
  * stdout: 'ignore' so the token never enters this process.
  */
 export async function getGhAuthStatus(): Promise<GhAuthStatus> {
-  const ghPath = await which('gh')
+  const ghPath = await which('gh');
   if (!ghPath) {
-    return 'not_installed'
+    return 'not_installed';
   }
   const { exitCode } = await execa('gh', ['auth', 'token'], {
     stdout: 'ignore',
     stderr: 'ignore',
     timeout: 5000,
     reject: false,
-  })
-  return exitCode === 0 ? 'authenticated' : 'not_authenticated'
+  });
+  return exitCode === 0 ? 'authenticated' : 'not_authenticated';
 }

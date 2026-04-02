@@ -82,12 +82,9 @@ export function ModelSelector({ config, options, onConfigChange }: ModelSelector
 
       {/* Model dropdown list */}
       {dropdownOpen && options.availableModels.length > 0 && (
-        <ul
-          role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 w-56 rounded-md border border-gray-700 bg-gray-900 py-1 shadow-lg"
-        >
+        <ul className="absolute left-0 top-full z-50 mt-1 w-56 rounded-md border border-gray-700 bg-gray-900 py-1 shadow-lg">
           {options.availableModels.map((model) => (
-            <li key={model.id} role="option" aria-selected={model.id === config.model}>
+            <li key={model.id} aria-selected={model.id === config.model}>
               <button
                 type="button"
                 className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
@@ -104,7 +101,11 @@ export function ModelSelector({ config, options, onConfigChange }: ModelSelector
                   </span>
                 )}
                 {model.id === config.model && (
-                  <svg className="h-3 w-3 shrink-0 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="h-3 w-3 shrink-0 text-blue-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"

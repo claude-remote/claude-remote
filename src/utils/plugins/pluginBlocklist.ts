@@ -8,20 +8,13 @@
  * for UI reason/text only. If re-introduced, serve from downloads.claude.ai.
  */
 
-import { uninstallPluginOp } from '../../services/plugins/pluginOperations.js'
-import { logForDebugging } from '../debug.js'
-import { errorMessage } from '../errors.js'
-import { loadInstalledPluginsV2 } from './installedPluginsManager.js'
-import {
-  getMarketplace,
-  loadKnownMarketplacesConfigSafe,
-} from './marketplaceManager.js'
-import {
-  addFlaggedPlugin,
-  getFlaggedPlugins,
-  loadFlaggedPlugins,
-} from './pluginFlagging.js'
-import type { InstalledPluginsFileV2, PluginMarketplace } from './schemas.js'
+import { uninstallPluginOp } from '../../services/plugins/pluginOperations.js';
+import { logForDebugging } from '../debug.js';
+import { errorMessage } from '../errors.js';
+import { loadInstalledPluginsV2 } from './installedPluginsManager.js';
+import { getMarketplace, loadKnownMarketplacesConfigSafe } from './marketplaceManager.js';
+import { addFlaggedPlugin, getFlaggedPlugins, loadFlaggedPlugins } from './pluginFlagging.js';
+import type { InstalledPluginsFileV2, PluginMarketplace } from './schemas.js';
 
 /**
  * Detect plugins installed from a marketplace that are no longer listed there.
@@ -36,20 +29,20 @@ export function detectDelistedPlugins(
   marketplace: PluginMarketplace,
   marketplaceName: string,
 ): string[] {
-  const marketplacePluginNames = new Set(marketplace.plugins.map(p => p.name))
-  const suffix = `@${marketplaceName}`
+  const marketplacePluginNames = new Set(marketplace.plugins.map((p) => p.name));
+  const suffix = `@${marketplaceName}`;
 
-  const delisted: string[] = []
+  const delisted: string[] = [];
   for (const pluginId of Object.keys(installedPlugins.plugins)) {
-    if (!pluginId.endsWith(suffix)) continue
+    if (!pluginId.endsWith(suffix)) continue;
 
-    const pluginName = pluginId.slice(0, -suffix.length)
+    const pluginName = pluginId.slice(0, -suffix.length);
     if (!marketplacePluginNames.has(pluginName)) {
-      delisted.push(pluginId)
+      delisted.push(pluginId);
     }
   }
 
-  return delisted
+  return delisted;
 }
 
 /**
@@ -62,66 +55,61 @@ export function detectDelistedPlugins(
  * @returns List of newly flagged plugin IDs
  */
 export async function detectAndUninstallDelistedPlugins(): Promise<string[]> {
-  await loadFlaggedPlugins()
+  await loadFlaggedPlugins();
 
-  const installedPlugins = loadInstalledPluginsV2()
-  const alreadyFlagged = getFlaggedPlugins()
+  const installedPlugins = loadInstalledPluginsV2();
+  const alreadyFlagged = getFlaggedPlugins();
   // Read-only iteration — Safe variant so a corrupted config doesn't throw
   // out of this function (it's called in the same try-block as loadAllPlugins
   // in useManagePlugins, so a throw here would void loadAllPlugins' resilience).
-  const knownMarketplaces = await loadKnownMarketplacesConfigSafe()
-  const newlyFlagged: string[] = []
+  const knownMarketplaces = await loadKnownMarketplacesConfigSafe();
+  const newlyFlagged: string[] = [];
 
   for (const marketplaceName of Object.keys(knownMarketplaces)) {
     try {
-      const marketplace = await getMarketplace(marketplaceName)
+      const marketplace = await getMarketplace(marketplaceName);
 
-      if (!marketplace.forceRemoveDeletedPlugins) continue
+      if (!marketplace.forceRemoveDeletedPlugins) continue;
 
-      const delisted = detectDelistedPlugins(
-        installedPlugins,
-        marketplace,
-        marketplaceName,
-      )
+      const delisted = detectDelistedPlugins(installedPlugins, marketplace, marketplaceName);
 
       for (const pluginId of delisted) {
-        if (pluginId in alreadyFlagged) continue
+        if (pluginId in alreadyFlagged) continue;
 
         // Skip managed-only plugins — enterprise admin should handle those
-        const installations = installedPlugins.plugins[pluginId] ?? []
+        const installations = installedPlugins.plugins[pluginId] ?? [];
         const hasUserInstall = installations.some(
-          i =>
-            i.scope === 'user' || i.scope === 'project' || i.scope === 'local',
-        )
-        if (!hasUserInstall) continue
+          (i) => i.scope === 'user' || i.scope === 'project' || i.scope === 'local',
+        );
+        if (!hasUserInstall) continue;
 
         // Auto-uninstall the delisted plugin from all user-controllable scopes
         for (const installation of installations) {
-          const { scope } = installation
+          const { scope } = installation;
           if (scope !== 'user' && scope !== 'project' && scope !== 'local') {
-            continue
+            continue;
           }
           try {
-            await uninstallPluginOp(pluginId, scope)
+            await uninstallPluginOp(pluginId, scope);
           } catch (error) {
             logForDebugging(
               `Failed to auto-uninstall delisted plugin ${pluginId} from ${scope}: ${errorMessage(error)}`,
               { level: 'error' },
-            )
+            );
           }
         }
 
-        await addFlaggedPlugin(pluginId)
-        newlyFlagged.push(pluginId)
+        await addFlaggedPlugin(pluginId);
+        newlyFlagged.push(pluginId);
       }
     } catch (error) {
       // Marketplace may not be available yet — log and continue
       logForDebugging(
         `Failed to check for delisted plugins in "${marketplaceName}": ${errorMessage(error)}`,
         { level: 'warn' },
-      )
+      );
     }
   }
 
-  return newlyFlagged
+  return newlyFlagged;
 }

@@ -1,4 +1,4 @@
-import { getPluginErrorMessage, type PluginError } from '../../types/plugin.js';
+import { type PluginError, getPluginErrorMessage } from '../../types/plugin.js';
 export function formatErrorMessage(error: PluginError): string {
   switch (error.type) {
     case 'path-not-found':
@@ -21,11 +21,12 @@ export function formatErrorMessage(error: PluginError): string {
       return `Failed to load marketplace "${error.marketplace}": ${error.reason}`;
     case 'mcp-config-invalid':
       return `Invalid MCP server config for "${error.serverName}": ${error.validationError}`;
-    case 'mcp-server-suppressed-duplicate':
-      {
-        const dup = error.duplicateOf.startsWith('plugin:') ? `server provided by plugin "${error.duplicateOf.split(':')[1] ?? '?'}"` : `already-configured "${error.duplicateOf}"`;
-        return `MCP server "${error.serverName}" skipped — same command/URL as ${dup}`;
-      }
+    case 'mcp-server-suppressed-duplicate': {
+      const dup = error.duplicateOf.startsWith('plugin:')
+        ? `server provided by plugin "${error.duplicateOf.split(':')[1] ?? '?'}"`
+        : `already-configured "${error.duplicateOf}"`;
+      return `MCP server "${error.serverName}" skipped — same command/URL as ${dup}`;
+    }
     case 'hook-load-failed':
       return `Failed to load hooks from ${error.hookPath}: ${error.reason}`;
     case 'component-load-failed':
@@ -37,15 +38,21 @@ export function formatErrorMessage(error: PluginError): string {
     case 'mcpb-invalid-manifest':
       return `MCPB manifest invalid at ${error.mcpbPath}: ${error.validationError}`;
     case 'marketplace-blocked-by-policy':
-      return error.blockedByBlocklist ? `Marketplace "${error.marketplace}" is blocked by enterprise policy` : `Marketplace "${error.marketplace}" is not in the allowed marketplace list`;
+      return error.blockedByBlocklist
+        ? `Marketplace "${error.marketplace}" is blocked by enterprise policy`
+        : `Marketplace "${error.marketplace}" is not in the allowed marketplace list`;
     case 'dependency-unsatisfied':
-      return error.reason === 'not-enabled' ? `Dependency "${error.dependency}" is disabled` : `Dependency "${error.dependency}" is not installed`;
+      return error.reason === 'not-enabled'
+        ? `Dependency "${error.dependency}" is disabled`
+        : `Dependency "${error.dependency}" is not installed`;
     case 'lsp-config-invalid':
       return `Invalid LSP server config for "${error.serverName}": ${error.validationError}`;
     case 'lsp-server-start-failed':
       return `LSP server "${error.serverName}" failed to start: ${error.reason}`;
     case 'lsp-server-crashed':
-      return error.signal ? `LSP server "${error.serverName}" crashed with signal ${error.signal}` : `LSP server "${error.serverName}" crashed with exit code ${error.exitCode ?? 'unknown'}`;
+      return error.signal
+        ? `LSP server "${error.serverName}" crashed with signal ${error.signal}`
+        : `LSP server "${error.serverName}" crashed with exit code ${error.exitCode ?? 'unknown'}`;
     case 'lsp-request-timeout':
       return `LSP server "${error.serverName}" timed out on ${error.method} after ${error.timeoutMs}ms`;
     case 'lsp-request-failed':
@@ -63,7 +70,9 @@ export function getErrorGuidance(error: PluginError): string | null {
     case 'path-not-found':
       return 'Check that the path in your manifest or marketplace config is correct';
     case 'git-auth-failed':
-      return error.authType === 'ssh' ? 'Configure SSH keys or use HTTPS URL instead' : 'Configure credentials or use SSH URL instead';
+      return error.authType === 'ssh'
+        ? 'Configure SSH keys or use HTTPS URL instead'
+        : 'Configure credentials or use SSH URL instead';
     case 'git-timeout':
     case 'network-error':
       return 'Check your internet connection and try again';
@@ -74,20 +83,21 @@ export function getErrorGuidance(error: PluginError): string | null {
     case 'plugin-not-found':
       return `Plugin may not exist in marketplace "${error.marketplace}"`;
     case 'marketplace-not-found':
-      return error.availableMarketplaces.length > 0 ? `Available marketplaces: ${error.availableMarketplaces.join(', ')}` : 'Add the marketplace first using /plugin marketplace add';
+      return error.availableMarketplaces.length > 0
+        ? `Available marketplaces: ${error.availableMarketplaces.join(', ')}`
+        : 'Add the marketplace first using /plugin marketplace add';
     case 'mcp-config-invalid':
       return 'Check MCP server configuration in .mcp.json or manifest';
-    case 'mcp-server-suppressed-duplicate':
-      {
-        // duplicateOf is "plugin:name:srv" when another plugin won dedup —
-        // users can't remove plugin-provided servers from their MCP config,
-        // so point them at the winning plugin instead.
-        if (error.duplicateOf.startsWith('plugin:')) {
-          const winningPlugin = error.duplicateOf.split(':')[1] ?? 'the other plugin';
-          return `Disable plugin "${winningPlugin}" if you want this plugin's version instead`;
-        }
-        return `Remove "${error.duplicateOf}" from your MCP config if you want the plugin's version instead`;
+    case 'mcp-server-suppressed-duplicate': {
+      // duplicateOf is "plugin:name:srv" when another plugin won dedup —
+      // users can't remove plugin-provided servers from their MCP config,
+      // so point them at the winning plugin instead.
+      if (error.duplicateOf.startsWith('plugin:')) {
+        const winningPlugin = error.duplicateOf.split(':')[1] ?? 'the other plugin';
+        return `Disable plugin "${winningPlugin}" if you want this plugin's version instead`;
       }
+      return `Remove "${error.duplicateOf}" from your MCP config if you want the plugin's version instead`;
+    }
     case 'hook-load-failed':
       return 'Check hooks.json file syntax and structure';
     case 'component-load-failed':
@@ -102,9 +112,13 @@ export function getErrorGuidance(error: PluginError): string | null {
       if (error.blockedByBlocklist) {
         return 'This marketplace source is explicitly blocked by your administrator';
       }
-      return error.allowedSources.length > 0 ? `Allowed sources: ${error.allowedSources.join(', ')}` : 'Contact your administrator to configure allowed marketplace sources';
+      return error.allowedSources.length > 0
+        ? `Allowed sources: ${error.allowedSources.join(', ')}`
+        : 'Contact your administrator to configure allowed marketplace sources';
     case 'dependency-unsatisfied':
-      return error.reason === 'not-enabled' ? `Enable "${error.dependency}" or uninstall "${error.plugin}"` : `Install "${error.dependency}" or uninstall "${error.plugin}"`;
+      return error.reason === 'not-enabled'
+        ? `Enable "${error.dependency}" or uninstall "${error.plugin}"`
+        : `Install "${error.dependency}" or uninstall "${error.plugin}"`;
     case 'lsp-config-invalid':
       return 'Check LSP server configuration in the plugin manifest';
     case 'lsp-server-start-failed':

@@ -1,37 +1,37 @@
-import type { AppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppState.js';
 
 /**
  * Parse `@agent-name message` syntax for direct team member messaging.
  */
 export function parseDirectMemberMessage(input: string): {
-  recipientName: string
-  message: string
+  recipientName: string;
+  message: string;
 } | null {
-  const match = input.match(/^@([\w-]+)\s+(.+)$/s)
-  if (!match) return null
+  const match = input.match(/^@([\w-]+)\s+(.+)$/s);
+  if (!match) return null;
 
-  const [, recipientName, message] = match
-  if (!recipientName || !message) return null
+  const [, recipientName, message] = match;
+  if (!recipientName || !message) return null;
 
-  const trimmedMessage = message.trim()
-  if (!trimmedMessage) return null
+  const trimmedMessage = message.trim();
+  if (!trimmedMessage) return null;
 
-  return { recipientName, message: trimmedMessage }
+  return { recipientName, message: trimmedMessage };
 }
 
 export type DirectMessageResult =
   | { success: true; recipientName: string }
   | {
-      success: false
-      error: 'no_team_context' | 'unknown_recipient'
-      recipientName?: string
-    }
+      success: false;
+      error: 'no_team_context' | 'unknown_recipient';
+      recipientName?: string;
+    };
 
 type WriteToMailboxFn = (
   recipientName: string,
   message: { from: string; text: string; timestamp: string },
   teamName: string,
-) => Promise<void>
+) => Promise<void>;
 
 /**
  * Send a direct message to a team member, bypassing the model.
@@ -43,16 +43,14 @@ export async function sendDirectMemberMessage(
   writeToMailbox?: WriteToMailboxFn,
 ): Promise<DirectMessageResult> {
   if (!teamContext || !writeToMailbox) {
-    return { success: false, error: 'no_team_context' }
+    return { success: false, error: 'no_team_context' };
   }
 
   // Find team member by name
-  const member = Object.values(teamContext.teammates ?? {}).find(
-    t => t.name === recipientName,
-  )
+  const member = Object.values(teamContext.teammates ?? {}).find((t) => t.name === recipientName);
 
   if (!member) {
-    return { success: false, error: 'unknown_recipient', recipientName }
+    return { success: false, error: 'unknown_recipient', recipientName };
   }
 
   await writeToMailbox(
@@ -63,7 +61,7 @@ export async function sendDirectMemberMessage(
       timestamp: new Date().toISOString(),
     },
     teamContext.teamName,
-  )
+  );
 
-  return { success: true, recipientName }
+  return { success: true, recipientName };
 }

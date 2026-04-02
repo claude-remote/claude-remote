@@ -14,20 +14,20 @@
  *                   (transport replacement — new transport will drain)
  */
 export class FlushGate<T> {
-  private _active = false
-  private _pending: T[] = []
+  private _active = false;
+  private _pending: T[] = [];
 
   get active(): boolean {
-    return this._active
+    return this._active;
   }
 
   get pendingCount(): number {
-    return this._pending.length
+    return this._pending.length;
   }
 
   /** Mark flush as in-progress. enqueue() will start queuing items. */
   start(): void {
-    this._active = true
+    this._active = true;
   }
 
   /**
@@ -35,8 +35,8 @@ export class FlushGate<T> {
    * Caller is responsible for sending the returned items.
    */
   end(): T[] {
-    this._active = false
-    return this._pending.splice(0)
+    this._active = false;
+    return this._pending.splice(0);
   }
 
   /**
@@ -44,9 +44,9 @@ export class FlushGate<T> {
    * If flush is not active, return false (caller should send directly).
    */
   enqueue(...items: T[]): boolean {
-    if (!this._active) return false
-    this._pending.push(...items)
-    return true
+    if (!this._active) return false;
+    this._pending.push(...items);
+    return true;
   }
 
   /**
@@ -54,10 +54,10 @@ export class FlushGate<T> {
    * Returns the number of items dropped.
    */
   drop(): number {
-    this._active = false
-    const count = this._pending.length
-    this._pending.length = 0
-    return count
+    this._active = false;
+    const count = this._pending.length;
+    this._pending.length = 0;
+    return count;
   }
 
   /**
@@ -66,6 +66,6 @@ export class FlushGate<T> {
    * transport's flush will drain the pending items.
    */
   deactivate(): void {
-    this._active = false
+    this._active = false;
   }
 }

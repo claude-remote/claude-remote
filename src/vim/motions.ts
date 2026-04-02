@@ -4,24 +4,20 @@
  * Pure functions for resolving vim motions to cursor positions.
  */
 
-import type { Cursor } from '../utils/Cursor.js'
+import type { Cursor } from '../utils/Cursor.js';
 
 /**
  * Resolve a motion to a target cursor position.
  * Does not modify anything - pure calculation.
  */
-export function resolveMotion(
-  key: string,
-  cursor: Cursor,
-  count: number,
-): Cursor {
-  let result = cursor
+export function resolveMotion(key: string, cursor: Cursor, count: number): Cursor {
+  let result = cursor;
   for (let i = 0; i < count; i++) {
-    const next = applySingleMotion(key, result)
-    if (next.equals(result)) break
-    result = next
+    const next = applySingleMotion(key, result);
+    if (next.equals(result)) break;
+    result = next;
   }
-  return result
+  return result;
 }
 
 /**
@@ -30,39 +26,39 @@ export function resolveMotion(
 function applySingleMotion(key: string, cursor: Cursor): Cursor {
   switch (key) {
     case 'h':
-      return cursor.left()
+      return cursor.left();
     case 'l':
-      return cursor.right()
+      return cursor.right();
     case 'j':
-      return cursor.downLogicalLine()
+      return cursor.downLogicalLine();
     case 'k':
-      return cursor.upLogicalLine()
+      return cursor.upLogicalLine();
     case 'gj':
-      return cursor.down()
+      return cursor.down();
     case 'gk':
-      return cursor.up()
+      return cursor.up();
     case 'w':
-      return cursor.nextVimWord()
+      return cursor.nextVimWord();
     case 'b':
-      return cursor.prevVimWord()
+      return cursor.prevVimWord();
     case 'e':
-      return cursor.endOfVimWord()
+      return cursor.endOfVimWord();
     case 'W':
-      return cursor.nextWORD()
+      return cursor.nextWORD();
     case 'B':
-      return cursor.prevWORD()
+      return cursor.prevWORD();
     case 'E':
-      return cursor.endOfWORD()
+      return cursor.endOfWORD();
     case '0':
-      return cursor.startOfLogicalLine()
+      return cursor.startOfLogicalLine();
     case '^':
-      return cursor.firstNonBlankInLogicalLine()
+      return cursor.firstNonBlankInLogicalLine();
     case '$':
-      return cursor.endOfLogicalLine()
+      return cursor.endOfLogicalLine();
     case 'G':
-      return cursor.startOfLastLine()
+      return cursor.startOfLastLine();
     default:
-      return cursor
+      return cursor;
   }
 }
 
@@ -70,7 +66,7 @@ function applySingleMotion(key: string, cursor: Cursor): Cursor {
  * Check if a motion is inclusive (includes character at destination).
  */
 export function isInclusiveMotion(key: string): boolean {
-  return 'eE$'.includes(key)
+  return 'eE$'.includes(key);
 }
 
 /**
@@ -78,5 +74,5 @@ export function isInclusiveMotion(key: string): boolean {
  * Note: gj/gk are characterwise exclusive per `:help gj`, not linewise.
  */
 export function isLinewiseMotion(key: string): boolean {
-  return 'jkG'.includes(key) || key === 'gg'
+  return 'jkG'.includes(key) || key === 'gg';
 }

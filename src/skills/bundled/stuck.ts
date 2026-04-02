@@ -1,4 +1,4 @@
-import { registerBundledSkill } from '../bundledSkills.js'
+import { registerBundledSkill } from '../bundledSkills.js';
 
 // Prompt text contains `ps` commands as instructions for Claude to run,
 // not commands this file executes.
@@ -56,11 +56,11 @@ If Slack MCP isn't available, format the report as a message the user can copy-p
 ## Notes
 - Don't kill or signal any processes — this is diagnostic only.
 - If the user gave an argument (e.g., a specific PID or symptom), focus there first.
-`
+`;
 
 export function registerStuckSkill(): void {
   if (process.env.USER_TYPE !== 'ant') {
-    return
+    return;
   }
 
   registerBundledSkill({
@@ -69,11 +69,11 @@ export function registerStuckSkill(): void {
       '[ANT-ONLY] Investigate frozen/stuck/slow Claude Code sessions on this machine and post a diagnostic report to #claude-code-feedback.',
     userInvocable: true,
     async getPromptForCommand(args) {
-      let prompt = STUCK_PROMPT
+      let prompt = STUCK_PROMPT;
       if (args) {
-        prompt += `\n## User-provided context\n\n${args}\n`
+        prompt += `\n## User-provided context\n\n${args}\n`;
       }
-      return [{ type: 'text', text: prompt }]
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

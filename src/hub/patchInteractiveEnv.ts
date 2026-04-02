@@ -41,35 +41,32 @@ export function patchInteractiveEnv(): void {
   // non-TTY streams they are simply `undefined`.  defineProperty with
   // configurable:true lets downstream code (e.g. renderOptions.ts) re-patch
   // if needed.
-  patchTTY(process.stdout, 'stdout')
-  patchTTY(process.stderr, 'stderr')
-  patchTTY(process.stdin, 'stdin')
+  patchTTY(process.stdout, 'stdout');
+  patchTTY(process.stderr, 'stderr');
+  patchTTY(process.stdin, 'stdin');
 
   // ── 2. Terminal environment variables ─────────────────────────────────
   // Only set if not already present — respects user-configured values.
-  process.env.TERM ??= 'xterm-256color'
-  process.env.TERM_PROGRAM ??= 'xterm'
-  process.env.COLORTERM ??= 'truecolor'
-  process.env.COLUMNS ??= '120'
-  process.env.LINES ??= '40'
+  process.env.TERM ??= 'xterm-256color';
+  process.env.TERM_PROGRAM ??= 'xterm';
+  process.env.COLORTERM ??= 'truecolor';
+  process.env.COLUMNS ??= '120';
+  process.env.LINES ??= '40';
 
   // ── 3. Explicit interactive flag ──────────────────────────────────────
   // Some code paths read this env var directly before bootstrap/state.ts
   // has a chance to call setIsInteractive().
-  process.env.CLAUDE_INTERACTIVE = 'true'
+  process.env.CLAUDE_INTERACTIVE = 'true';
 }
 
-function patchTTY(
-  stream: NodeJS.ReadStream | NodeJS.WriteStream,
-  _name: string,
-): void {
-  if (stream.isTTY) return // already a real TTY — don't touch
+function patchTTY(stream: NodeJS.ReadStream | NodeJS.WriteStream, _name: string): void {
+  if (stream.isTTY) return; // already a real TTY — don't touch
 
   Object.defineProperty(stream, 'isTTY', {
     value: true,
     writable: true,
     configurable: true,
-  })
+  });
 }
 
 /**
@@ -77,8 +74,8 @@ function patchTTY(
  * Hub startup to log a summary (useful for debugging).
  */
 export function verifyInteractiveEnv(): {
-  ok: boolean
-  details: Record<string, unknown>
+  ok: boolean;
+  details: Record<string, unknown>;
 } {
   const details: Record<string, unknown> = {
     'stdout.isTTY': process.stdout.isTTY,
@@ -90,14 +87,14 @@ export function verifyInteractiveEnv(): {
     COLUMNS: process.env.COLUMNS,
     LINES: process.env.LINES,
     CLAUDE_INTERACTIVE: process.env.CLAUDE_INTERACTIVE,
-  }
+  };
 
   const ok =
     process.stdout.isTTY === true &&
     process.stderr.isTTY === true &&
     process.stdin.isTTY === true &&
     process.env.TERM !== undefined &&
-    process.env.CLAUDE_INTERACTIVE === 'true'
+    process.env.CLAUDE_INTERACTIVE === 'true';
 
-  return { ok, details }
+  return { ok, details };
 }

@@ -4,23 +4,23 @@
  * line format for detailed reports.
  */
 
-import type { performance as PerformanceType } from 'perf_hooks'
-import { formatFileSize } from './format.js'
+import type { performance as PerformanceType } from 'node:perf_hooks';
+import { formatFileSize } from './format.js';
 
 // Lazy-load performance API only when profiling is enabled.
 // Shared across all profilers — perf_hooks.performance is a process-wide singleton.
-let performance: typeof PerformanceType | null = null
+let performance: typeof PerformanceType | null = null;
 
 export function getPerformance(): typeof PerformanceType {
   if (!performance) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    performance = require('perf_hooks').performance
+    performance = require('node:perf_hooks').performance;
   }
-  return performance!
+  return performance!;
 }
 
 export function formatMs(ms: number): string {
-  return ms.toFixed(3)
+  return ms.toFixed(3);
 }
 
 /**
@@ -41,6 +41,6 @@ export function formatTimelineLine(
 ): string {
   const memInfo = memory
     ? ` | RSS: ${formatFileSize(memory.rss)}, Heap: ${formatFileSize(memory.heapUsed)}`
-    : ''
-  return `[+${formatMs(totalMs).padStart(totalPad)}ms] (+${formatMs(deltaMs).padStart(deltaPad)}ms) ${name}${extra}${memInfo}`
+    : '';
+  return `[+${formatMs(totalMs).padStart(totalPad)}ms] (+${formatMs(deltaMs).padStart(deltaPad)}ms) ${name}${extra}${memInfo}`;
 }

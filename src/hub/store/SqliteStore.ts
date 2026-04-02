@@ -1,8 +1,13 @@
 import { Database } from 'bun:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  DEFAULT_DATABASE_PATH,
+  DEFAULT_MAX_MESSAGES_IN_MEMORY,
+  DEFAULT_MAX_SESSIONS,
+} from '@/shared/constants';
 import type {
   HistorySearchResult,
   Message,
@@ -12,11 +17,6 @@ import type {
   SessionStatus,
   Task,
 } from '@/shared/types';
-import {
-  DEFAULT_DATABASE_PATH,
-  DEFAULT_MAX_MESSAGES_IN_MEMORY,
-  DEFAULT_MAX_SESSIONS,
-} from '@/shared/constants';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -116,8 +116,7 @@ export class SqliteStore {
   constructor(options: SqliteStoreOptions = {}) {
     this.databasePath = options.databasePath ?? DEFAULT_DATABASE_PATH;
     this.maxSessions = options.maxSessions ?? DEFAULT_MAX_SESSIONS;
-    this.maxMessagesInMemory =
-      options.maxMessagesInMemory ?? DEFAULT_MAX_MESSAGES_IN_MEMORY;
+    this.maxMessagesInMemory = options.maxMessagesInMemory ?? DEFAULT_MAX_MESSAGES_IN_MEMORY;
   }
 
   /* ======================== Connection ======================== */
@@ -166,10 +165,10 @@ export class SqliteStore {
 
       const tx = db.transaction(() => {
         db.exec(migration.sql);
-        db.run(
-          'INSERT INTO _migrations (version, applied_at) VALUES (?, ?)',
-          [migration.version, Math.floor(Date.now() / 1000)],
-        );
+        db.run('INSERT INTO _migrations (version, applied_at) VALUES (?, ?)', [
+          migration.version,
+          Math.floor(Date.now() / 1000),
+        ]);
       });
       tx();
     }
@@ -187,7 +186,9 @@ export class SqliteStore {
     const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), 'migrations');
     let files: string[];
     try {
-      files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+      files = readdirSync(migrationsDir)
+        .filter((f) => f.endsWith('.sql'))
+        .sort();
     } catch {
       return [];
     }
@@ -217,7 +218,7 @@ export class SqliteStore {
   }): void {
     this.#ensureConnected();
     const now = Math.floor(Date.now() / 1000);
-    this.#db!.run(
+    this.#db?.run(
       `INSERT INTO sessions (id, name, status, cwd, tags, config, created_at, updated_at, idle_timeout_ms)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -236,8 +237,8 @@ export class SqliteStore {
 
   getSession(sessionId: string): SessionMeta | null {
     this.#ensureConnected();
-    const row = this.#db!
-      .query('SELECT * FROM sessions WHERE id = ?')
+    const row = this.#db
+      ?.query('SELECT * FROM sessions WHERE id = ?')
       .get(sessionId) as SessionRow | null;
     return row ? this.#toSessionMeta(row) : null;
   }
@@ -246,12 +247,12 @@ export class SqliteStore {
     this.#ensureConnected();
     let rows: SessionRow[];
     if (statusFilter) {
-      rows = this.#db!
-        .query('SELECT * FROM sessions WHERE status = ? ORDER BY updated_at DESC')
+      rows = this.#db
+        ?.query('SELECT * FROM sessions WHERE status = ? ORDER BY updated_at DESC')
         .all(statusFilter) as SessionRow[];
     } else {
-      rows = this.#db!
-        .query('SELECT * FROM sessions ORDER BY updated_at DESC')
+      rows = this.#db
+        ?.query('SELECT * FROM sessions ORDER BY updated_at DESC')
         .all() as SessionRow[];
     }
     return rows.map((r) => this.#toSessionMeta(r));
@@ -298,10 +299,7 @@ export class SqliteStore {
     values.push(Math.floor(Date.now() / 1000));
     values.push(sessionId);
 
-    this.#db!.run(
-      `UPDATE sessions SET ${setClauses.join(', ')} WHERE id = ?`,
-      values as any,
-    );
+    this.#db?.run(`UPDATE sessions SET ${setClauses.join(', ')} WHERE id = ?`, values as any);
   }
 
   archiveSession(sessionId: string): void {
@@ -311,13 +309,13 @@ export class SqliteStore {
   getSessionCount(statusFilter?: SessionStatus): number {
     this.#ensureConnected();
     if (statusFilter) {
-      const row = this.#db!
-        .query('SELECT COUNT(*) as count FROM sessions WHERE status = ?')
+      const row = this.#db
+        ?.query('SELECT COUNT(*) as count FROM sessions WHERE status = ?')
         .get(statusFilter) as { count: number };
       return row.count;
     }
-    const row = this.#db!
-      .query("SELECT COUNT(*) as count FROM sessions WHERE status != 'archived'")
+    const row = this.#db
+      ?.query("SELECT COUNT(*) as count FROM sessions WHERE status != 'archived'")
       .get() as { count: number };
     return row.count;
   }
@@ -327,12 +325,12 @@ export class SqliteStore {
   addMessage(sessionId: string, message: Message): void {
     this.#ensureConnected();
     // Determine next seq for this session
-    const maxSeq = this.#db!
-      .query('SELECT COALESCE(MAX(seq), 0) as maxSeq FROM messages WHERE session_id = ?')
+    const maxSeq = this.#db
+      ?.query('SELECT COALESCE(MAX(seq), 0) as maxSeq FROM messages WHERE session_id = ?')
       .get(sessionId) as { maxSeq: number };
     const seq = maxSeq.maxSeq + 1;
 
-    this.#db!.run(
+    this.#db?.run(
       `INSERT INTO messages (id, session_id, role, content, created_at, seq)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -346,18 +344,13 @@ export class SqliteStore {
     );
   }
 
-  listMessages(
-    sessionId: string,
-    options?: { limit?: number; offset?: number },
-  ): Message[] {
+  listMessages(sessionId: string, options?: { limit?: number; offset?: number }): Message[] {
     this.#ensureConnected();
     const limit = options?.limit ?? this.maxMessagesInMemory;
     const offset = options?.offset ?? 0;
 
-    const rows = this.#db!
-      .query(
-        'SELECT * FROM messages WHERE session_id = ? ORDER BY seq ASC LIMIT ? OFFSET ?',
-      )
+    const rows = this.#db
+      ?.query('SELECT * FROM messages WHERE session_id = ? ORDER BY seq ASC LIMIT ? OFFSET ?')
       .all(sessionId, limit, offset) as MessageRow[];
 
     return rows.map((r) => this.#toMessage(r));
@@ -365,8 +358,8 @@ export class SqliteStore {
 
   getMessage(messageId: string): Message | null {
     this.#ensureConnected();
-    const row = this.#db!
-      .query('SELECT * FROM messages WHERE id = ?')
+    const row = this.#db
+      ?.query('SELECT * FROM messages WHERE id = ?')
       .get(messageId) as MessageRow | null;
     return row ? this.#toMessage(row) : null;
   }
@@ -382,7 +375,7 @@ export class SqliteStore {
   }): void {
     this.#ensureConnected();
     const now = Math.floor(Date.now() / 1000);
-    this.#db!.run(
+    this.#db?.run(
       `INSERT INTO tasks (id, session_id, description, status, assignee, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -399,16 +392,14 @@ export class SqliteStore {
 
   getTask(taskId: string): Task | null {
     this.#ensureConnected();
-    const row = this.#db!
-      .query('SELECT * FROM tasks WHERE id = ?')
-      .get(taskId) as TaskRow | null;
+    const row = this.#db?.query('SELECT * FROM tasks WHERE id = ?').get(taskId) as TaskRow | null;
     return row ? this.#toTask(row) : null;
   }
 
   listTasksBySession(sessionId: string): Task[] {
     this.#ensureConnected();
-    const rows = this.#db!
-      .query('SELECT * FROM tasks WHERE session_id = ? ORDER BY created_at ASC')
+    const rows = this.#db
+      ?.query('SELECT * FROM tasks WHERE session_id = ? ORDER BY created_at ASC')
       .all(sessionId) as TaskRow[];
     return rows.map((r) => this.#toTask(r));
   }
@@ -444,10 +435,7 @@ export class SqliteStore {
     values.push(Math.floor(Date.now() / 1000));
     values.push(taskId);
 
-    this.#db!.run(
-      `UPDATE tasks SET ${setClauses.join(', ')} WHERE id = ?`,
-      values as any,
-    );
+    this.#db?.run(`UPDATE tasks SET ${setClauses.join(', ')} WHERE id = ?`, values as any);
   }
 
   /* ======================== Favorites ======================== */
@@ -459,7 +447,7 @@ export class SqliteStore {
   }): void {
     this.#ensureConnected();
     const now = Math.floor(Date.now() / 1000);
-    this.#db!.run(
+    this.#db?.run(
       `INSERT INTO favorites (id, session_id, message_id, created_at)
        VALUES (?, ?, ?, ?)`,
       [favorite.id, favorite.sessionId ?? null, favorite.messageId ?? null, now],
@@ -468,19 +456,19 @@ export class SqliteStore {
 
   removeFavorite(favoriteId: string): void {
     this.#ensureConnected();
-    this.#db!.run('DELETE FROM favorites WHERE id = ?', [favoriteId]);
+    this.#db?.run('DELETE FROM favorites WHERE id = ?', [favoriteId]);
   }
 
   listFavorites(sessionId?: string): Favorite[] {
     this.#ensureConnected();
     let rows: FavoriteRow[];
     if (sessionId) {
-      rows = this.#db!
-        .query('SELECT * FROM favorites WHERE session_id = ? ORDER BY created_at DESC')
+      rows = this.#db
+        ?.query('SELECT * FROM favorites WHERE session_id = ? ORDER BY created_at DESC')
         .all(sessionId) as FavoriteRow[];
     } else {
-      rows = this.#db!
-        .query('SELECT * FROM favorites ORDER BY created_at DESC')
+      rows = this.#db
+        ?.query('SELECT * FROM favorites ORDER BY created_at DESC')
         .all() as FavoriteRow[];
     }
     return rows.map((r) => ({
@@ -502,7 +490,7 @@ export class SqliteStore {
   }): void {
     this.#ensureConnected();
     const now = Math.floor(Date.now() / 1000);
-    this.#db!.run(
+    this.#db?.run(
       `INSERT INTO tool_executions (id, session_id, tool_name, params, status, started_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -544,7 +532,7 @@ export class SqliteStore {
     if (setClauses.length === 0) return;
     values.push(execId);
 
-    this.#db!.run(
+    this.#db?.run(
       `UPDATE tool_executions SET ${setClauses.join(', ')} WHERE id = ?`,
       values as any,
     );
@@ -552,10 +540,8 @@ export class SqliteStore {
 
   listToolExecutions(sessionId: string): ToolExecution[] {
     this.#ensureConnected();
-    const rows = this.#db!
-      .query(
-        'SELECT * FROM tool_executions WHERE session_id = ? ORDER BY started_at DESC',
-      )
+    const rows = this.#db
+      ?.query('SELECT * FROM tool_executions WHERE session_id = ? ORDER BY started_at DESC')
       .all(sessionId) as ToolExecutionRow[];
     return rows.map((r) => this.#toToolExecution(r));
   }
@@ -569,8 +555,8 @@ export class SqliteStore {
   ): HistorySearchResult[] {
     this.#ensureConnected();
     const pattern = `%${query}%`;
-    const rows = this.#db!
-      .query(
+    const rows = this.#db
+      ?.query(
         `SELECT m.id as message_id, m.session_id, m.role, m.content, m.created_at,
                 s.name as session_name
          FROM messages m
@@ -627,8 +613,8 @@ export class SqliteStore {
   /** Legacy method. Replaces all tasks for a session. */
   replaceTasks(sessionId: string, tasks: Task[]): void {
     this.#ensureConnected();
-    const tx = this.#db!.transaction(() => {
-      this.#db!.run('DELETE FROM tasks WHERE session_id = ?', [sessionId]);
+    const tx = this.#db?.transaction(() => {
+      this.#db?.run('DELETE FROM tasks WHERE session_id = ?', [sessionId]);
       for (const task of tasks) {
         this.createTask({
           id: task.id,

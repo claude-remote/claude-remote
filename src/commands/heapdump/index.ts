@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const heapDump = {
   type: 'local',
@@ -7,6 +7,6 @@ const heapDump = {
   isHidden: true,
   supportsNonInteractive: true,
   load: () => import('./heapdump.js'),
-} satisfies Command
+} satisfies Command;
 
-export default heapDump
+export default heapDump;

@@ -10,23 +10,20 @@
  * as params.
  */
 
-import { randomUUID } from 'crypto'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type {
-  SDKControlRequest,
-  SDKControlResponse,
-} from '../entrypoints/sdk/controlTypes.js'
-import type { SDKResultSuccess } from '../entrypoints/sdk/coreTypes.js'
-import { logEvent } from '../services/analytics/index.js'
-import { EMPTY_USAGE } from '../services/api/emptyUsage.js'
-import type { Message } from '../types/message.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
-import { logForDebugging } from '../utils/debug.js'
-import { stripDisplayTagsAllowEmpty } from '../utils/displayTags.js'
-import { errorMessage } from '../utils/errors.js'
-import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
-import { jsonParse } from '../utils/slowOperations.js'
-import type { ReplBridgeTransport } from './replBridgeTransport.js'
+import { randomUUID } from 'node:crypto';
+import type { SDKMessage } from '../entrypoints/agentSdkTypes.js';
+import type { SDKControlRequest, SDKControlResponse } from '../entrypoints/sdk/controlTypes.js';
+import type { SDKResultSuccess } from '../entrypoints/sdk/coreTypes.js';
+import { logEvent } from '../services/analytics/index.js';
+import { EMPTY_USAGE } from '../services/api/emptyUsage.js';
+import type { Message } from '../types/message.js';
+import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js';
+import { logForDebugging } from '../utils/debug.js';
+import { stripDisplayTagsAllowEmpty } from '../utils/displayTags.js';
+import { errorMessage } from '../utils/errors.js';
+import type { PermissionMode } from '../utils/permissions/PermissionMode.js';
+import { jsonParse } from '../utils/slowOperations.js';
+import type { ReplBridgeTransport } from './replBridgeTransport.js';
 
 // ─── Type guards ─────────────────────────────────────────────────────────────
 
@@ -35,30 +32,23 @@ import type { ReplBridgeTransport } from './replBridgeTransport.js'
  *  sufficient for the predicate; callers narrow further via the union. */
 export function isSDKMessage(value: unknown): value is SDKMessage {
   return (
-    value !== null &&
-    typeof value === 'object' &&
-    'type' in value &&
-    typeof value.type === 'string'
-  )
+    value !== null && typeof value === 'object' && 'type' in value && typeof value.type === 'string'
+  );
 }
 
 /** Type predicate for control_response messages from the server. */
-export function isSDKControlResponse(
-  value: unknown,
-): value is SDKControlResponse {
+export function isSDKControlResponse(value: unknown): value is SDKControlResponse {
   return (
     value !== null &&
     typeof value === 'object' &&
     'type' in value &&
     value.type === 'control_response' &&
     'response' in value
-  )
+  );
 }
 
 /** Type predicate for control_request messages from the server. */
-export function isSDKControlRequest(
-  value: unknown,
-): value is SDKControlRequest {
+export function isSDKControlRequest(value: unknown): value is SDKControlRequest {
   return (
     value !== null &&
     typeof value === 'object' &&
@@ -66,7 +56,7 @@ export function isSDKControlRequest(
     value.type === 'control_request' &&
     'request_id' in value &&
     'request' in value
-  )
+  );
 }
 
 /**
@@ -78,13 +68,13 @@ export function isEligibleBridgeMessage(m: Message): boolean {
   // Virtual messages (REPL inner calls) are display-only — bridge/SDK
   // consumers see the REPL tool_use/result which summarizes the work.
   if ((m.type === 'user' || m.type === 'assistant') && m.isVirtual) {
-    return false
+    return false;
   }
   return (
     m.type === 'user' ||
     m.type === 'assistant' ||
     (m.type === 'system' && m.subtype === 'local_command')
-  )
+  );
 }
 
 /**
@@ -101,24 +91,23 @@ export function isEligibleBridgeMessage(m: Message): boolean {
  * implausible (an interrupt implies a prior prompt already flowed through).
  */
 export function extractTitleText(m: Message): string | undefined {
-  if (m.type !== 'user' || m.isMeta || m.toolUseResult || m.isCompactSummary)
-    return undefined
-  if (m.origin && m.origin.kind !== 'human') return undefined
-  const content = m.message.content
-  let raw: string | undefined
+  if (m.type !== 'user' || m.isMeta || m.toolUseResult || m.isCompactSummary) return undefined;
+  if (m.origin && m.origin.kind !== 'human') return undefined;
+  const content = m.message.content;
+  let raw: string | undefined;
   if (typeof content === 'string') {
-    raw = content
+    raw = content;
   } else {
     for (const block of content) {
       if (block.type === 'text') {
-        raw = block.text
-        break
+        raw = block.text;
+        break;
       }
     }
   }
-  if (!raw) return undefined
-  const clean = stripDisplayTagsAllowEmpty(raw)
-  return clean || undefined
+  if (!raw) return undefined;
+  const clean = stripDisplayTagsAllowEmpty(raw);
+  return clean || undefined;
 }
 
 // ─── Ingress routing ─────────────────────────────────────────────────────────
@@ -138,38 +127,31 @@ export function handleIngressMessage(
   onControlRequest?: ((request: SDKControlRequest) => void) | undefined,
 ): void {
   try {
-    const parsed: unknown = normalizeControlMessageKeys(jsonParse(data))
+    const parsed: unknown = normalizeControlMessageKeys(jsonParse(data));
 
     // control_response is not an SDKMessage — check before the type guard
     if (isSDKControlResponse(parsed)) {
-      logForDebugging('[bridge:repl] Ingress message type=control_response')
-      onPermissionResponse?.(parsed)
-      return
+      logForDebugging('[bridge:repl] Ingress message type=control_response');
+      onPermissionResponse?.(parsed);
+      return;
     }
 
     // control_request from the server (initialize, set_model, can_use_tool).
     // Must respond promptly or the server kills the WS (~10-14s timeout).
     if (isSDKControlRequest(parsed)) {
-      logForDebugging(
-        `[bridge:repl] Inbound control_request subtype=${parsed.request.subtype}`,
-      )
-      onControlRequest?.(parsed)
-      return
+      logForDebugging(`[bridge:repl] Inbound control_request subtype=${parsed.request.subtype}`);
+      onControlRequest?.(parsed);
+      return;
     }
 
-    if (!isSDKMessage(parsed)) return
+    if (!isSDKMessage(parsed)) return;
 
     // Check for UUID to detect echoes of our own messages
-    const uuid =
-      'uuid' in parsed && typeof parsed.uuid === 'string'
-        ? parsed.uuid
-        : undefined
+    const uuid = 'uuid' in parsed && typeof parsed.uuid === 'string' ? parsed.uuid : undefined;
 
     if (uuid && recentPostedUUIDs.has(uuid)) {
-      logForDebugging(
-        `[bridge:repl] Ignoring echo: type=${parsed.type} uuid=${uuid}`,
-      )
-      return
+      logForDebugging(`[bridge:repl] Ignoring echo: type=${parsed.type} uuid=${uuid}`);
+      return;
     }
 
     // Defensive dedup: drop inbound prompts we've already forwarded. The
@@ -180,38 +162,34 @@ export function handleIngressMessage(
     if (uuid && recentInboundUUIDs.has(uuid)) {
       logForDebugging(
         `[bridge:repl] Ignoring re-delivered inbound: type=${parsed.type} uuid=${uuid}`,
-      )
-      return
+      );
+      return;
     }
 
     logForDebugging(
       `[bridge:repl] Ingress message type=${parsed.type}${uuid ? ` uuid=${uuid}` : ''}`,
-    )
+    );
 
     if (parsed.type === 'user') {
-      if (uuid) recentInboundUUIDs.add(uuid)
+      if (uuid) recentInboundUUIDs.add(uuid);
       logEvent('tengu_bridge_message_received', {
         is_repl: true,
-      })
+      });
       // Fire-and-forget — handler may be async (attachment resolution).
-      void onInboundMessage?.(parsed)
+      void onInboundMessage?.(parsed);
     } else {
-      logForDebugging(
-        `[bridge:repl] Ignoring non-user inbound message: type=${parsed.type}`,
-      )
+      logForDebugging(`[bridge:repl] Ignoring non-user inbound message: type=${parsed.type}`);
     }
   } catch (err) {
-    logForDebugging(
-      `[bridge:repl] Failed to parse ingress message: ${errorMessage(err)}`,
-    )
+    logForDebugging(`[bridge:repl] Failed to parse ingress message: ${errorMessage(err)}`);
   }
 }
 
 // ─── Server-initiated control requests ───────────────────────────────────────
 
 export type ServerControlRequestHandlers = {
-  transport: ReplBridgeTransport | null
-  sessionId: string
+  transport: ReplBridgeTransport | null;
+  sessionId: string;
   /**
    * When true, all mutable requests (interrupt, set_model, set_permission_mode,
    * set_max_thinking_tokens) reply with an error instead of false-success.
@@ -219,17 +197,15 @@ export type ServerControlRequestHandlers = {
    * Used by the outbound-only bridge mode and the SDK's /bridge subpath so claude.ai sees a
    * proper error instead of "action succeeded but nothing happened locally".
    */
-  outboundOnly?: boolean
-  onInterrupt?: () => void
-  onSetModel?: (model: string | undefined) => void
-  onSetMaxThinkingTokens?: (maxTokens: number | null) => void
-  onSetPermissionMode?: (
-    mode: PermissionMode,
-  ) => { ok: true } | { ok: false; error: string }
-}
+  outboundOnly?: boolean;
+  onInterrupt?: () => void;
+  onSetModel?: (model: string | undefined) => void;
+  onSetMaxThinkingTokens?: (maxTokens: number | null) => void;
+  onSetPermissionMode?: (mode: PermissionMode) => { ok: true } | { ok: false; error: string };
+};
 
 const OUTBOUND_ONLY_ERROR =
-  'This session is outbound-only. Enable Remote Control locally to allow inbound control.'
+  'This session is outbound-only. Enable Remote Control locally to allow inbound control.';
 
 /**
  * Respond to inbound control_request messages from the server. The server
@@ -252,15 +228,13 @@ export function handleServerControlRequest(
     onSetModel,
     onSetMaxThinkingTokens,
     onSetPermissionMode,
-  } = handlers
+  } = handlers;
   if (!transport) {
-    logForDebugging(
-      '[bridge:repl] Cannot respond to control_request: transport not configured',
-    )
-    return
+    logForDebugging('[bridge:repl] Cannot respond to control_request: transport not configured');
+    return;
   }
 
-  let response: SDKControlResponse
+  let response: SDKControlResponse;
 
   // Outbound-only: reply error for mutable requests so claude.ai doesn't show
   // false success. initialize must still succeed (server kills the connection
@@ -273,13 +247,13 @@ export function handleServerControlRequest(
         request_id: request.request_id,
         error: OUTBOUND_ONLY_ERROR,
       },
-    }
-    const event = { ...response, session_id: sessionId }
-    void transport.write(event)
+    };
+    const event = { ...response, session_id: sessionId };
+    void transport.write(event);
     logForDebugging(
       `[bridge:repl] Rejected ${request.request.subtype} (outbound-only) request_id=${request.request_id}`,
-    )
-    return
+    );
+    return;
   }
 
   switch (request.request.subtype) {
@@ -300,30 +274,30 @@ export function handleServerControlRequest(
             pid: process.pid,
           },
         },
-      }
-      break
+      };
+      break;
 
     case 'set_model':
-      onSetModel?.(request.request.model)
+      onSetModel?.(request.request.model);
       response = {
         type: 'control_response',
         response: {
           subtype: 'success',
           request_id: request.request_id,
         },
-      }
-      break
+      };
+      break;
 
     case 'set_max_thinking_tokens':
-      onSetMaxThinkingTokens?.(request.request.max_thinking_tokens)
+      onSetMaxThinkingTokens?.(request.request.max_thinking_tokens);
       response = {
         type: 'control_response',
         response: {
           subtype: 'success',
           request_id: request.request_id,
         },
-      }
-      break
+      };
+      break;
 
     case 'set_permission_mode': {
       // The callback returns a policy verdict so we can send an error
@@ -337,7 +311,7 @@ export function handleServerControlRequest(
         ok: false,
         error:
           'set_permission_mode is not supported in this context (onSetPermissionMode callback not registered)',
-      }
+      };
       if (verdict.ok) {
         response = {
           type: 'control_response',
@@ -345,9 +319,9 @@ export function handleServerControlRequest(
             subtype: 'success',
             request_id: request.request_id,
           },
-        }
+        };
       } else {
-        const failedVerdict = verdict as { error?: string }
+        const failedVerdict = verdict as { error?: string };
         response = {
           type: 'control_response',
           response: {
@@ -355,21 +329,21 @@ export function handleServerControlRequest(
             request_id: request.request_id,
             error: failedVerdict.error ?? 'Unknown error',
           },
-        }
+        };
       }
-      break
+      break;
     }
 
     case 'interrupt':
-      onInterrupt?.()
+      onInterrupt?.();
       response = {
         type: 'control_response',
         response: {
           subtype: 'success',
           request_id: request.request_id,
         },
-      }
-      break
+      };
+      break;
 
     default:
       // Unknown subtype — respond with error so the server doesn't
@@ -381,14 +355,14 @@ export function handleServerControlRequest(
           request_id: request.request_id,
           error: `REPL bridge does not handle control_request subtype: ${request.request.subtype}`,
         },
-      }
+      };
   }
 
-  const event = { ...response, session_id: sessionId }
-  void transport.write(event)
+  const event = { ...response, session_id: sessionId };
+  void transport.write(event);
   logForDebugging(
     `[bridge:repl] Sent control_response for ${request.request.subtype} request_id=${request.request_id} result=${response.response.subtype}`,
-  )
+  );
 }
 
 // ─── Result message (for session archival on teardown) ───────────────────────
@@ -413,7 +387,7 @@ export function makeResultMessage(sessionId: string): SDKResultSuccess {
     permission_denials: [],
     session_id: sessionId,
     uuid: randomUUID(),
-  }
+  };
 }
 
 // ─── BoundedUUIDSet (echo-dedup ring buffer) ─────────────────────────────────
@@ -428,35 +402,35 @@ export function makeResultMessage(sessionId: string): SDKResultSuccess {
  * safety net for echo filtering and race-condition dedup.
  */
 export class BoundedUUIDSet {
-  private readonly capacity: number
-  private readonly ring: (string | undefined)[]
-  private readonly set = new Set<string>()
-  private writeIdx = 0
+  private readonly capacity: number;
+  private readonly ring: (string | undefined)[];
+  private readonly set = new Set<string>();
+  private writeIdx = 0;
 
   constructor(capacity: number) {
-    this.capacity = capacity
-    this.ring = new Array<string | undefined>(capacity)
+    this.capacity = capacity;
+    this.ring = new Array<string | undefined>(capacity);
   }
 
   add(uuid: string): void {
-    if (this.set.has(uuid)) return
+    if (this.set.has(uuid)) return;
     // Evict the entry at the current write position (if occupied)
-    const evicted = this.ring[this.writeIdx]
+    const evicted = this.ring[this.writeIdx];
     if (evicted !== undefined) {
-      this.set.delete(evicted)
+      this.set.delete(evicted);
     }
-    this.ring[this.writeIdx] = uuid
-    this.set.add(uuid)
-    this.writeIdx = (this.writeIdx + 1) % this.capacity
+    this.ring[this.writeIdx] = uuid;
+    this.set.add(uuid);
+    this.writeIdx = (this.writeIdx + 1) % this.capacity;
   }
 
   has(uuid: string): boolean {
-    return this.set.has(uuid)
+    return this.set.has(uuid);
   }
 
   clear(): void {
-    this.set.clear()
-    this.ring.fill(undefined)
-    this.writeIdx = 0
+    this.set.clear();
+    this.ring.fill(undefined);
+    this.writeIdx = 0;
   }
 }

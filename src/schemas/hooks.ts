@@ -8,10 +8,10 @@
  * Both files now import from this shared location instead of each other.
  */
 
-import { HOOK_EVENTS, type HookEvent } from 'src/entrypoints/agentSdkTypes.js'
-import { z } from 'zod/v4'
-import { lazySchema } from '../utils/lazySchema.js'
-import { SHELL_TYPES } from '../utils/shell/shellProvider.js'
+import { HOOK_EVENTS, type HookEvent } from 'src/entrypoints/agentSdkTypes.js';
+import { z } from 'zod/v4';
+import { lazySchema } from '../utils/lazySchema.js';
+import { SHELL_TYPES } from '../utils/shell/shellProvider.js';
 
 // Shared schema for the `if` condition field.
 // Uses permission rule syntax (e.g., "Bash(git *)", "Read(*.ts)") to filter hooks
@@ -24,7 +24,7 @@ const IfConditionSchema = lazySchema(() =>
       'Permission rule syntax to filter when this hook runs (e.g., "Bash(git *)"). ' +
         'Only runs if the tool call matches the pattern. Avoids spawning hooks for non-matching commands.',
     ),
-)
+);
 
 // Internal factory for individual hook schemas (shared between exported
 // discriminated union members and the HookCommandSchema factory)
@@ -48,29 +48,21 @@ function buildHookSchemas() {
       .string()
       .optional()
       .describe('Custom status message to display in spinner while hook runs'),
-    once: z
-      .boolean()
-      .optional()
-      .describe('If true, hook runs once and is removed after execution'),
-    async: z
-      .boolean()
-      .optional()
-      .describe('If true, hook runs in background without blocking'),
+    once: z.boolean().optional().describe('If true, hook runs once and is removed after execution'),
+    async: z.boolean().optional().describe('If true, hook runs in background without blocking'),
     asyncRewake: z
       .boolean()
       .optional()
       .describe(
         'If true, hook runs in background and wakes the model on exit code 2 (blocking error). Implies async.',
       ),
-  })
+  });
 
   const PromptHookSchema = z.object({
     type: z.literal('prompt').describe('LLM prompt hook type'),
     prompt: z
       .string()
-      .describe(
-        'Prompt to evaluate with LLM. Use $ARGUMENTS placeholder for hook input JSON.',
-      ),
+      .describe('Prompt to evaluate with LLM. Use $ARGUMENTS placeholder for hook input JSON.'),
     if: IfConditionSchema(),
     timeout: z
       .number()
@@ -88,11 +80,8 @@ function buildHookSchemas() {
       .string()
       .optional()
       .describe('Custom status message to display in spinner while hook runs'),
-    once: z
-      .boolean()
-      .optional()
-      .describe('If true, hook runs once and is removed after execution'),
-  })
+    once: z.boolean().optional().describe('If true, hook runs once and is removed after execution'),
+  });
 
   const HttpHookSchema = z.object({
     type: z.literal('http').describe('HTTP hook type'),
@@ -119,11 +108,8 @@ function buildHookSchemas() {
       .string()
       .optional()
       .describe('Custom status message to display in spinner while hook runs'),
-    once: z
-      .boolean()
-      .optional()
-      .describe('If true, hook runs once and is removed after execution'),
-  })
+    once: z.boolean().optional().describe('If true, hook runs once and is removed after execution'),
+  });
 
   const AgentHookSchema = z.object({
     type: z.literal('agent').describe('Agentic verifier hook type'),
@@ -156,37 +142,30 @@ function buildHookSchemas() {
       .string()
       .optional()
       .describe('Custom status message to display in spinner while hook runs'),
-    once: z
-      .boolean()
-      .optional()
-      .describe('If true, hook runs once and is removed after execution'),
-  })
+    once: z.boolean().optional().describe('If true, hook runs once and is removed after execution'),
+  });
 
   return {
     BashCommandHookSchema,
     PromptHookSchema,
     HttpHookSchema,
     AgentHookSchema,
-  }
+  };
 }
 
 /**
  * Schema for hook command (excludes function hooks - they can't be persisted)
  */
 export const HookCommandSchema = lazySchema(() => {
-  const {
-    BashCommandHookSchema,
-    PromptHookSchema,
-    AgentHookSchema,
-    HttpHookSchema,
-  } = buildHookSchemas()
+  const { BashCommandHookSchema, PromptHookSchema, AgentHookSchema, HttpHookSchema } =
+    buildHookSchemas();
   return z.discriminatedUnion('type', [
     BashCommandHookSchema,
     PromptHookSchema,
     AgentHookSchema,
     HttpHookSchema,
-  ])
-})
+  ]);
+});
 
 /**
  * Schema for matcher configuration with multiple hooks
@@ -201,7 +180,7 @@ export const HookMatcherSchema = lazySchema(() =>
       .array(HookCommandSchema())
       .describe('List of hooks to execute when the matcher matches'),
   }),
-)
+);
 
 /**
  * Schema for hooks configuration
@@ -210,13 +189,13 @@ export const HookMatcherSchema = lazySchema(() =>
  */
 export const HooksSchema = lazySchema(() =>
   z.partialRecord(z.enum(HOOK_EVENTS), z.array(HookMatcherSchema())),
-)
+);
 
 // Inferred types from schemas
-export type HookCommand = z.infer<ReturnType<typeof HookCommandSchema>>
-export type BashCommandHook = Extract<HookCommand, { type: 'command' }>
-export type PromptHook = Extract<HookCommand, { type: 'prompt' }>
-export type AgentHook = Extract<HookCommand, { type: 'agent' }>
-export type HttpHook = Extract<HookCommand, { type: 'http' }>
-export type HookMatcher = z.infer<ReturnType<typeof HookMatcherSchema>>
-export type HooksSettings = Partial<Record<HookEvent, HookMatcher[]>>
+export type HookCommand = z.infer<ReturnType<typeof HookCommandSchema>>;
+export type BashCommandHook = Extract<HookCommand, { type: 'command' }>;
+export type PromptHook = Extract<HookCommand, { type: 'prompt' }>;
+export type AgentHook = Extract<HookCommand, { type: 'agent' }>;
+export type HttpHook = Extract<HookCommand, { type: 'http' }>;
+export type HookMatcher = z.infer<ReturnType<typeof HookMatcherSchema>>;
+export type HooksSettings = Partial<Record<HookEvent, HookMatcher[]>>;

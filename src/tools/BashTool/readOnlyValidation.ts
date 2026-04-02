@@ -1,17 +1,13 @@
-import type { z } from 'zod/v4'
-import { getOriginalCwd } from '../../bootstrap/state.js'
+import type { z } from 'zod/v4';
+import { getOriginalCwd } from '../../bootstrap/state.js';
+import { extractOutputRedirections, splitCommand_DEPRECATED } from '../../utils/bash/commands.js';
+import { tryParseShellCommand } from '../../utils/bash/shellQuote.js';
+import { getCwd } from '../../utils/cwd.js';
+import { isCurrentDirectoryBareGitRepo } from '../../utils/git.js';
+import type { PermissionResult } from '../../utils/permissions/PermissionResult.js';
+import { getPlatform } from '../../utils/platform.js';
+import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
 import {
-  extractOutputRedirections,
-  splitCommand_DEPRECATED,
-} from '../../utils/bash/commands.js'
-import { tryParseShellCommand } from '../../utils/bash/shellQuote.js'
-import { getCwd } from '../../utils/cwd.js'
-import { isCurrentDirectoryBareGitRepo } from '../../utils/git.js'
-import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
-import { getPlatform } from '../../utils/platform.js'
-import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
-import {
-  containsVulnerableUncPath,
   DOCKER_READ_ONLY_COMMANDS,
   EXTERNAL_READONLY_COMMANDS,
   type FlagArgType,
@@ -19,35 +15,29 @@ import {
   GIT_READ_ONLY_COMMANDS,
   PYRIGHT_READ_ONLY_COMMANDS,
   RIPGREP_READ_ONLY_COMMANDS,
+  containsVulnerableUncPath,
   validateFlags,
-} from '../../utils/shell/readOnlyCommandValidation.js'
-import type { BashTool } from './BashTool.js'
-import { isNormalizedGitCommand } from './bashPermissions.js'
-import { bashCommandIsSafe_DEPRECATED } from './bashSecurity.js'
-import {
-  COMMAND_OPERATION_TYPE,
-  PATH_EXTRACTORS,
-  type PathCommand,
-} from './pathValidation.js'
-import { sedCommandIsAllowedByAllowlist } from './sedValidation.js'
+} from '../../utils/shell/readOnlyCommandValidation.js';
+import type { BashTool } from './BashTool.js';
+import { isNormalizedGitCommand } from './bashPermissions.js';
+import { bashCommandIsSafe_DEPRECATED } from './bashSecurity.js';
+import { COMMAND_OPERATION_TYPE, PATH_EXTRACTORS, type PathCommand } from './pathValidation.js';
+import { sedCommandIsAllowedByAllowlist } from './sedValidation.js';
 
 // Unified command validation configuration system
 type CommandConfig = {
   // A Record mapping from the command (e.g. `xargs` or `git diff`) to its safe flags and the values they accept
-  safeFlags: Record<string, FlagArgType>
+  safeFlags: Record<string, FlagArgType>;
   // An optional regex that is used for additional validation beyond flag parsing
-  regex?: RegExp
+  regex?: RegExp;
   // An optional callback for additional custom validation logic. Returns true if the command is dangerous,
   // false if it appears to be safe. Meant to be used in conjunction with the safeFlags-based validation.
-  additionalCommandIsDangerousCallback?: (
-    rawCommand: string,
-    args: string[],
-  ) => boolean
+  additionalCommandIsDangerousCallback?: (rawCommand: string, args: string[]) => boolean;
   // When false, the tool does NOT respect POSIX `--` end-of-options.
   // validateFlags will continue checking flags after `--` instead of breaking.
   // Default: true (most tools respect `--`).
-  respectsDoubleDash?: boolean
-}
+  respectsDoubleDash?: boolean;
+};
 
 // Shared safe flags for fd and fdfind (Debian/Ubuntu package name)
 // SECURITY: -x/--exec and -X/--exec-batch are deliberately excluded —
@@ -120,7 +110,7 @@ const FD_SAFE_FLAGS: Record<string, FlagArgType> = {
   '--hyperlink': 'string',
   '--and': 'string',
   '--format': 'string',
-}
+};
 
 // Central configuration for allowlist-based command validation
 // All commands and flags here should only allow reading files. They should not
@@ -239,10 +229,8 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       '--help': 'none',
       '--version': 'none',
     },
-    additionalCommandIsDangerousCallback: (
-      rawCommand: string,
-      _args: string[],
-    ) => !sedCommandIsAllowedByAllowlist(rawCommand),
+    additionalCommandIsDangerousCallback: (rawCommand: string, _args: string[]) =>
+      !sedCommandIsAllowedByAllowlist(rawCommand),
   },
   sort: {
     safeFlags: {
@@ -417,15 +405,10 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
     },
     // Block BSD-style 'e' modifier which shows environment variables
     // BSD options are letter-only tokens without a leading dash
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Check for BSD-style 'e' in letter-only tokens (not -e which is UNIX-style)
       // A BSD-style option is a token of only letters (no leading dash) containing 'e'
-      return args.some(
-        a => !a.startsWith('-') && /^[a-zA-Z]*e[a-zA-Z]*$/.test(a),
-      )
+      return args.some((a) => !a.startsWith('-') && /^[a-zA-Z]*e[a-zA-Z]*$/.test(a));
     },
   },
   base64: {
@@ -753,10 +736,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
     // -f / --file - reads dates from file (can be used to set time in batch)
     // CRITICAL: date positional args in format MMDDhhmm[[CC]YY][.ss] set system time
     // Use callback to verify positional args start with + (format strings like +"%Y-%m-%d")
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // args are already parsed tokens after "date"
       // Flags that require an argument
       const flagsWithArgs = new Set([
@@ -766,31 +746,31 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
         '--reference',
         '--iso-8601',
         '--rfc-3339',
-      ])
-      let i = 0
+      ]);
+      let i = 0;
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]!;
         // Skip flags and their arguments
         if (token.startsWith('--') && token.includes('=')) {
           // Long flag with =value, already consumed
-          i++
+          i++;
         } else if (token.startsWith('-')) {
           // Flag - check if it takes an argument
           if (flagsWithArgs.has(token)) {
-            i += 2 // Skip flag and its argument
+            i += 2; // Skip flag and its argument
           } else {
-            i++ // Just skip the flag
+            i++; // Just skip the flag
           }
         } else {
           // Positional argument - must start with + for format strings
           // Anything else (like MMDDhhmm) could set system time
           if (!token.startsWith('+')) {
-            return true // Dangerous
+            return true; // Dangerous
           }
-          i++
+          i++;
         }
       }
-      return false // Safe
+      return false; // Safe
     },
   },
   // hostname command - moved from READONLY_COMMANDS because positional args set hostname
@@ -906,7 +886,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
     // so we must catch them here. lsof accepts +m<path> (attached path, no space)
     // with both absolute (+m/tmp/evil) and relative (+mfoo, +m.evil) paths.
     additionalCommandIsDangerousCallback: (_rawCommand, args) =>
-      args.some(a => a === '+m' || a.startsWith('+m')),
+      args.some((a) => a === '+m' || a.startsWith('+m')),
   },
 
   pgrep: {
@@ -975,10 +955,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       // from safeFlags ensures validateFlags rejects it (bundled or not) before
       // the callback runs. The callback's -S check is defense-in-depth.
     },
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Capabilities that modify terminal state or could be harmful.
       // init/reset run iprog (arbitrary code from terminfo) and modify tty settings.
       // rs1/rs2/rs3/is1/is2/is3 are the individual reset/init sequences that
@@ -1012,36 +989,31 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
         'pfxl',
         'smcup',
         'rmcup',
-      ])
-      const flagsWithArgs = new Set(['-T'])
-      let i = 0
-      let afterDoubleDash = false
+      ]);
+      const flagsWithArgs = new Set(['-T']);
+      let i = 0;
+      let afterDoubleDash = false;
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]!;
         if (token === '--') {
-          afterDoubleDash = true
-          i++
+          afterDoubleDash = true;
+          i++;
         } else if (!afterDoubleDash && token.startsWith('-')) {
           // Defense-in-depth: block -S even if it somehow passes validateFlags
-          if (token === '-S') return true
+          if (token === '-S') return true;
           // Also check for -S bundled with other flags (e.g., -xS)
-          if (
-            !token.startsWith('--') &&
-            token.length > 2 &&
-            token.includes('S')
-          )
-            return true
+          if (!token.startsWith('--') && token.length > 2 && token.includes('S')) return true;
           if (flagsWithArgs.has(token)) {
-            i += 2
+            i += 2;
           } else {
-            i++
+            i++;
           }
         } else {
-          if (DANGEROUS_CAPABILITIES.has(token)) return true
-          i++
+          if (DANGEROUS_CAPABILITIES.has(token)) return true;
+          i++;
         }
       }
-      return false
+      return false;
     },
   },
 
@@ -1134,7 +1106,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
 
   ...PYRIGHT_READ_ONLY_COMMANDS,
   ...DOCKER_READ_ONLY_COMMANDS,
-}
+};
 
 // gh commands are ant-only since they make network requests, which goes against
 // the read-only validation principle of no network access
@@ -1196,22 +1168,22 @@ const ANT_ONLY_COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       '--staging': 'none',
     },
   },
-}
+};
 
 function getCommandAllowlist(): Record<string, CommandConfig> {
-  let allowlist: Record<string, CommandConfig> = COMMAND_ALLOWLIST
+  let allowlist: Record<string, CommandConfig> = COMMAND_ALLOWLIST;
   // On Windows, xargs can be used as a data-to-code bridge: if a file contains
   // a UNC path, `cat file | xargs cat` feeds that path to cat, triggering SMB
   // resolution. Since the UNC path is in file contents (not the command string),
   // regex-based detection cannot catch this.
   if (getPlatform() === 'windows') {
-    const { xargs: _, ...rest } = allowlist
-    allowlist = rest
+    const { xargs: _, ...rest } = allowlist;
+    allowlist = rest;
   }
   if (process.env.USER_TYPE === 'ant') {
-    return { ...allowlist, ...ANT_ONLY_COMMAND_ALLOWLIST }
+    return { ...allowlist, ...ANT_ONLY_COMMAND_ALLOWLIST };
   }
-  return allowlist
+  return allowlist;
 }
 
 /**
@@ -1236,7 +1208,7 @@ const SAFE_TARGET_COMMANDS_FOR_XARGS = [
   'grep', // Read-only search, no dangerous flags
   'head', // Read-only, no dangerous flags
   'tail', // Read-only (including -f follow), no dangerous flags
-]
+];
 
 /**
  * Unified command validation function that replaces individual validator functions.
@@ -1247,79 +1219,79 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
   // Parse the command to get individual tokens using shell-quote for accuracy
   // Handle glob operators by converting them to strings, they don't matter from the perspective
   // of this function
-  const parseResult = tryParseShellCommand(command, env => `$${env}`)
-  if (!parseResult.success) return false
+  const parseResult = tryParseShellCommand(command, (env) => `$${env}`);
+  if (!parseResult.success) return false;
 
-  const parsed = parseResult.tokens.map(token => {
+  const parsed = parseResult.tokens.map((token) => {
     if (typeof token !== 'string') {
-      token = token as { op: 'glob'; pattern: string }
+      token = token as { op: 'glob'; pattern: string };
       if (token.op === 'glob') {
-        return token.pattern
+        return token.pattern;
       }
     }
-    return token
-  })
+    return token;
+  });
 
   // If there are operators (pipes, redirects, etc.), it's not a simple command.
   // Breaking commands down into their constituent parts is handled upstream of
   // this function, so we reject anything with operators here.
-  const hasOperators = parsed.some(token => typeof token !== 'string')
+  const hasOperators = parsed.some((token) => typeof token !== 'string');
   if (hasOperators) {
-    return false
+    return false;
   }
 
   // Now we know all tokens are strings
-  const tokens = parsed as string[]
+  const tokens = parsed as string[];
 
   if (tokens.length === 0) {
-    return false
+    return false;
   }
 
   // Find matching command configuration
-  let commandConfig: CommandConfig | undefined
-  let commandTokens: number = 0
+  let commandConfig: CommandConfig | undefined;
+  let commandTokens = 0;
 
   // Check for multi-word commands first (e.g., "git diff", "git stash list")
-  const allowlist = getCommandAllowlist()
+  const allowlist = getCommandAllowlist();
   for (const [cmdPattern] of Object.entries(allowlist)) {
-    const cmdTokens = cmdPattern.split(' ')
+    const cmdTokens = cmdPattern.split(' ');
     if (tokens.length >= cmdTokens.length) {
-      let matches = true
+      let matches = true;
       for (let i = 0; i < cmdTokens.length; i++) {
         if (tokens[i] !== cmdTokens[i]) {
-          matches = false
-          break
+          matches = false;
+          break;
         }
       }
       if (matches) {
-        commandConfig = allowlist[cmdPattern]
-        commandTokens = cmdTokens.length
-        break
+        commandConfig = allowlist[cmdPattern];
+        commandTokens = cmdTokens.length;
+        break;
       }
     }
   }
 
   if (!commandConfig) {
-    return false // Command not in allowlist
+    return false; // Command not in allowlist
   }
 
   // Special handling for git ls-remote to reject URLs that could lead to data exfiltration
   if (tokens[0] === 'git' && tokens[1] === 'ls-remote') {
     // Check if any argument looks like a URL or remote specification
     for (let i = 2; i < tokens.length; i++) {
-      const token = tokens[i]
+      const token = tokens[i];
       if (token && !token.startsWith('-')) {
         // Reject HTTP/HTTPS URLs
         if (token.includes('://')) {
-          return false
+          return false;
         }
         // Reject SSH URLs like git@github.com:user/repo.git
         if (token.includes('@') || token.includes(':')) {
-          return false
+          return false;
         }
         // Reject variable references
         if (token.includes('$')) {
-          return false
+          return false;
         }
       }
     }
@@ -1349,11 +1321,11 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
   // determine the runtime token value, so we cannot verify read-only safety.
   // This check must run BEFORE validateFlags and BEFORE callbacks.
   for (let i = commandTokens; i < tokens.length; i++) {
-    const token = tokens[i]
-    if (!token) continue
+    const token = tokens[i];
+    if (!token) continue;
     // Reject any token containing $ (variable expansion)
     if (token.includes('$')) {
-      return false
+      return false;
     }
     // Reject tokens with BOTH `{` and `,` (brace expansion obfuscation).
     // `git diff {@'{'0},--output=/tmp/pwned}` → shell-quote strips quotes
@@ -1364,7 +1336,7 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
     // template, no `,`), `prefix-{}-suffix` (xargs, no `,`). Sequence form
     // `{1..5}` also needs checking (has `{` + `..`).
     if (token.includes('{') && (token.includes(',') || token.includes('..'))) {
-      return false
+      return false;
     }
   }
 
@@ -1373,18 +1345,17 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
     !validateFlags(tokens, commandTokens, commandConfig, {
       commandName: tokens[0],
       rawCommand: command,
-      xargsTargetCommands:
-        tokens[0] === 'xargs' ? SAFE_TARGET_COMMANDS_FOR_XARGS : undefined,
+      xargsTargetCommands: tokens[0] === 'xargs' ? SAFE_TARGET_COMMANDS_FOR_XARGS : undefined,
     })
   ) {
-    return false
+    return false;
   }
 
   if (commandConfig.regex && !commandConfig.regex.test(command)) {
-    return false
+    return false;
   }
   if (!commandConfig.regex && /`/.test(command)) {
-    return false
+    return false;
   }
   // Block newlines and carriage returns in grep/rg patterns as they can be used for injection
   if (
@@ -1392,19 +1363,13 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
     (tokens[0] === 'rg' || tokens[0] === 'grep') &&
     /[\n\r]/.test(command)
   ) {
-    return false
+    return false;
   }
-  if (
-    commandConfig.additionalCommandIsDangerousCallback &&
-    commandConfig.additionalCommandIsDangerousCallback(
-      command,
-      tokens.slice(commandTokens),
-    )
-  ) {
-    return false
+  if (commandConfig.additionalCommandIsDangerousCallback?.(command, tokens.slice(commandTokens))) {
+    return false;
   }
 
-  return true
+  return true;
 }
 
 /**
@@ -1421,7 +1386,7 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
  */
 function makeRegexForSafeCommand(command: string): RegExp {
   // Create regex pattern: /^command(?:\s|$)[^<>()$`|{}&;\n\r]*$/
-  return new RegExp(`^${command}(?:\\s|$)[^<>()$\`|{}&;\\n\\r]*$`)
+  return new RegExp(`^${command}(?:\\s|$)[^<>()$\`|{}&;\\n\\r]*$`);
 }
 
 // Simple commands that are safe for execution (converted to regex patterns using makeRegexForSafeCommand)
@@ -1500,7 +1465,7 @@ const READONLY_COMMANDS = [
   'seq', // Generate number sequences
   'tsort', // Topological sort
   'pr', // Paginate files for printing
-]
+];
 
 // Complex commands that require custom regex patterns
 // Warning: If possible, avoid adding new regexes here and prefer using COMMAND_ALLOWLIST
@@ -1567,7 +1532,7 @@ const READONLY_COMMAND_REGEXES = new Set([
   // NOTE: \\[()] must come BEFORE the character class to ensure \( is matched as an escaped paren,
   // not as backslash + paren (which would fail since paren is excluded from the character class)
   /^find(?:\s+(?:\\[()]|(?!-delete\b|-exec\b|-execdir\b|-ok\b|-okdir\b|-fprint0?\b|-fls\b|-fprintf\b)[^<>()$`|{}&;\n\r\s]|\s)+)?$/,
-])
+]);
 
 /**
  * Checks if a command contains glob characters (?, *, [, ]) or expandable `$`
@@ -1599,17 +1564,17 @@ const READONLY_COMMAND_REGEXES = new Set([
  */
 function containsUnquotedExpansion(command: string): boolean {
   // Track quote state to avoid false positives for patterns inside quoted strings
-  let inSingleQuote = false
-  let inDoubleQuote = false
-  let escaped = false
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
 
   for (let i = 0; i < command.length; i++) {
-    const currentChar = command[i]
+    const currentChar = command[i];
 
     // Handle escape sequences
     if (escaped) {
-      escaped = false
-      continue
+      escaped = false;
+      continue;
     }
 
     // SECURITY: Only treat backslash as escape OUTSIDE single quotes. In bash,
@@ -1624,48 +1589,48 @@ function containsUnquotedExpansion(command: string): boolean {
     // before this function is reached, but we fix the tracker anyway for
     // consistency with the correct implementations in bashSecurity.ts.
     if (currentChar === '\\' && !inSingleQuote) {
-      escaped = true
-      continue
+      escaped = true;
+      continue;
     }
 
     // Update quote state
     if (currentChar === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote
-      continue
+      inSingleQuote = !inSingleQuote;
+      continue;
     }
 
     if (currentChar === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote
-      continue
+      inDoubleQuote = !inDoubleQuote;
+      continue;
     }
 
     // Inside single quotes: everything is literal. Skip.
     if (inSingleQuote) {
-      continue
+      continue;
     }
 
     // Check `$` followed by variable-name or special-parameter character.
     // `$` expands inside double quotes AND unquoted (only SQ makes it literal).
     if (currentChar === '$') {
-      const next = command[i + 1]
+      const next = command[i + 1];
       if (next && /[A-Za-z_@*#?!$0-9-]/.test(next)) {
-        return true
+        return true;
       }
     }
 
     // Globs are literal inside double quotes too. Only check unquoted.
     if (inDoubleQuote) {
-      continue
+      continue;
     }
 
     // Check for glob characters outside all quotes.
     // These could expand to anything, including dangerous flags.
     if (currentChar && /[?*[\]]/.test(currentChar)) {
-      return true
+      return true;
     }
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -1679,16 +1644,16 @@ function isCommandReadOnly(command: string): boolean {
   // Handle common stderr-to-stdout redirection pattern
   // This handles both "command 2>&1" at the end of a full command
   // and "command 2>&1" as part of a pipeline component
-  let testCommand = command.trim()
+  let testCommand = command.trim();
   if (testCommand.endsWith(' 2>&1')) {
     // Remove the stderr redirection for pattern matching
-    testCommand = testCommand.slice(0, -5).trim()
+    testCommand = testCommand.slice(0, -5).trim();
   }
 
   // Check for Windows UNC paths that could be vulnerable to WebDAV attacks
   // Do this early to prevent any command with UNC paths from being marked as read-only
   if (containsVulnerableUncPath(testCommand)) {
-    return false
+    return false;
   }
 
   // Check for unquoted glob characters and expandable `$` variables that could
@@ -1704,7 +1669,7 @@ function isCommandReadOnly(command: string): boolean {
   // commands; hand-written regexes in READONLY_COMMAND_REGEXES (uniq, jq, cd)
   // have no such guard. See containsUnquotedExpansion for full analysis.
   if (containsUnquotedExpansion(testCommand)) {
-    return false
+    return false;
   }
 
   // Tools like git allow `--upload-pack=cmd` to be abbreviated as `--up=cmd`
@@ -1713,7 +1678,7 @@ function isCommandReadOnly(command: string): boolean {
   // but please look over it to ensure it didn't add any flags that allow file writes
   // code execution, or network requests.
   if (isCommandSafeViaFlagParsing(testCommand)) {
-    return true
+    return true;
   }
 
   for (const regex of READONLY_COMMAND_REGEXES) {
@@ -1724,31 +1689,25 @@ function isCommandReadOnly(command: string): boolean {
       // Check for -c preceded by whitespace and followed by whitespace or equals
       // Using regex to catch spaces, tabs, and other whitespace (not part of other flags like --cached)
       if (testCommand.includes('git') && /\s-c[\s=]/.test(testCommand)) {
-        return false
+        return false;
       }
 
       // Prevent git commands with --exec-path flag to avoid path manipulation that can lead to code execution
       // The --exec-path flag allows overriding the directory where git looks for executables
-      if (
-        testCommand.includes('git') &&
-        /\s--exec-path[\s=]/.test(testCommand)
-      ) {
-        return false
+      if (testCommand.includes('git') && /\s--exec-path[\s=]/.test(testCommand)) {
+        return false;
       }
 
       // Prevent git commands with --config-env flag to avoid config injection via environment variables
       // The --config-env flag allows setting git config values from environment variables, which can be
       // just as dangerous as -c flag (e.g., core.fsmonitor, diff.external, core.gitProxy)
-      if (
-        testCommand.includes('git') &&
-        /\s--config-env[\s=]/.test(testCommand)
-      ) {
-        return false
+      if (testCommand.includes('git') && /\s--config-env[\s=]/.test(testCommand)) {
+        return false;
       }
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 /**
@@ -1758,9 +1717,7 @@ function isCommandReadOnly(command: string): boolean {
  * @returns true if any subcommand is a git command
  */
 function commandHasAnyGit(command: string): boolean {
-  return splitCommand_DEPRECATED(command).some(subcmd =>
-    isNormalizedGitCommand(subcmd.trim()),
-  )
+  return splitCommand_DEPRECATED(command).some((subcmd) => isNormalizedGitCommand(subcmd.trim()));
 }
 
 /**
@@ -1768,24 +1725,19 @@ function commandHasAnyGit(command: string): boolean {
  * If a command creates these files and then runs git, the git command
  * could execute malicious hooks from the created files.
  */
-const GIT_INTERNAL_PATTERNS = [
-  /^HEAD$/,
-  /^objects(?:\/|$)/,
-  /^refs(?:\/|$)/,
-  /^hooks(?:\/|$)/,
-]
+const GIT_INTERNAL_PATTERNS = [/^HEAD$/, /^objects(?:\/|$)/, /^refs(?:\/|$)/, /^hooks(?:\/|$)/];
 
 /**
  * Checks if a path is a git-internal path (HEAD, objects/, refs/, hooks/).
  */
 function isGitInternalPath(path: string): boolean {
   // Normalize path by removing leading ./ or /
-  const normalized = path.replace(/^\.?\//, '')
-  return GIT_INTERNAL_PATTERNS.some(pattern => pattern.test(normalized))
+  const normalized = path.replace(/^\.?\//, '');
+  return GIT_INTERNAL_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 // Commands that only delete or modify in-place (don't create new files at new paths)
-const NON_CREATING_WRITE_COMMANDS = new Set(['rm', 'rmdir', 'sed'])
+const NON_CREATING_WRITE_COMMANDS = new Set(['rm', 'rmdir', 'sed']);
 
 /**
  * Extracts write paths from a subcommand using PATH_EXTRACTORS.
@@ -1793,33 +1745,28 @@ const NON_CREATING_WRITE_COMMANDS = new Set(['rm', 'rmdir', 'sed'])
  * (write/create operations excluding deletion and in-place modification).
  */
 function extractWritePathsFromSubcommand(subcommand: string): string[] {
-  const parseResult = tryParseShellCommand(subcommand, env => `$${env}`)
-  if (!parseResult.success) return []
+  const parseResult = tryParseShellCommand(subcommand, (env) => `$${env}`);
+  if (!parseResult.success) return [];
 
-  const tokens = parseResult.tokens.filter(
-    (t): t is string => typeof t === 'string',
-  )
-  if (tokens.length === 0) return []
+  const tokens = parseResult.tokens.filter((t): t is string => typeof t === 'string');
+  if (tokens.length === 0) return [];
 
-  const baseCmd = tokens[0]
-  if (!baseCmd) return []
+  const baseCmd = tokens[0];
+  if (!baseCmd) return [];
 
   // Only consider commands that can create files at target paths
   if (!(baseCmd in COMMAND_OPERATION_TYPE)) {
-    return []
+    return [];
   }
-  const opType = COMMAND_OPERATION_TYPE[baseCmd as PathCommand]
-  if (
-    (opType !== 'write' && opType !== 'create') ||
-    NON_CREATING_WRITE_COMMANDS.has(baseCmd)
-  ) {
-    return []
+  const opType = COMMAND_OPERATION_TYPE[baseCmd as PathCommand];
+  if ((opType !== 'write' && opType !== 'create') || NON_CREATING_WRITE_COMMANDS.has(baseCmd)) {
+    return [];
   }
 
-  const extractor = PATH_EXTRACTORS[baseCmd as PathCommand]
-  if (!extractor) return []
+  const extractor = PATH_EXTRACTORS[baseCmd as PathCommand];
+  if (!extractor) return [];
 
-  return extractor(tokens.slice(1))
+  return extractor(tokens.slice(1));
 }
 
 /**
@@ -1838,29 +1785,29 @@ function extractWritePathsFromSubcommand(subcommand: string): string[] {
  * @returns true if any subcommand writes to git-internal paths
  */
 function commandWritesToGitInternalPaths(command: string): boolean {
-  const subcommands = splitCommand_DEPRECATED(command)
+  const subcommands = splitCommand_DEPRECATED(command);
 
   for (const subcmd of subcommands) {
-    const trimmed = subcmd.trim()
+    const trimmed = subcmd.trim();
 
     // Check write paths from path-based commands (mkdir, touch, cp, mv)
-    const writePaths = extractWritePathsFromSubcommand(trimmed)
+    const writePaths = extractWritePathsFromSubcommand(trimmed);
     for (const path of writePaths) {
       if (isGitInternalPath(path)) {
-        return true
+        return true;
       }
     }
 
     // Check output redirections (e.g., echo x > hooks/pre-commit)
-    const { redirections } = extractOutputRedirections(trimmed)
+    const { redirections } = extractOutputRedirections(trimmed);
     for (const { target } of redirections) {
       if (isGitInternalPath(target)) {
-        return true
+        return true;
       }
     }
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -1877,15 +1824,15 @@ export function checkReadOnlyConstraints(
   input: z.infer<typeof BashTool.inputSchema>,
   compoundCommandHasCd: boolean,
 ): PermissionResult {
-  const { command } = input
+  const { command } = input;
 
   // Detect if the command is not parseable and return early
-  const result = tryParseShellCommand(command, env => `$${env}`)
+  const result = tryParseShellCommand(command, (env) => `$${env}`);
   if (!result.success) {
     return {
       behavior: 'passthrough',
       message: 'Command cannot be parsed, requires further permission checks',
-    }
+    };
   }
 
   // Check the original command for safety before splitting
@@ -1895,7 +1842,7 @@ export function checkReadOnlyConstraints(
     return {
       behavior: 'passthrough',
       message: 'Command is not read-only, requires further permission checks',
-    }
+    };
   }
 
   // Check for Windows UNC paths in the original command before transformation
@@ -1903,13 +1850,12 @@ export function checkReadOnlyConstraints(
   if (containsVulnerableUncPath(command)) {
     return {
       behavior: 'ask',
-      message:
-        'Command contains Windows UNC path that could be vulnerable to WebDAV attacks',
-    }
+      message: 'Command contains Windows UNC path that could be vulnerable to WebDAV attacks',
+    };
   }
 
   // Check once if any subcommand is a git command (used for multiple security checks below)
-  const hasGitCommand = commandHasAnyGit(command)
+  const hasGitCommand = commandHasAnyGit(command);
 
   // SECURITY: Block compound commands that have both cd AND git
   // This prevents sandbox escape via: cd /malicious/dir && git status
@@ -1917,9 +1863,8 @@ export function checkReadOnlyConstraints(
   if (compoundCommandHasCd && hasGitCommand) {
     return {
       behavior: 'passthrough',
-      message:
-        'Compound commands with cd and git require permission checks for enhanced security',
-    }
+      message: 'Compound commands with cd and git require permission checks for enhanced security',
+    };
   }
 
   // SECURITY: Block git commands if the current directory looks like a bare/exploited git repo
@@ -1932,7 +1877,7 @@ export function checkReadOnlyConstraints(
       behavior: 'passthrough',
       message:
         'Git commands in directories with bare repository structure require permission checks for enhanced security',
-    }
+    };
   }
 
   // SECURITY: Block compound commands that write to git-internal paths AND run git
@@ -1945,7 +1890,7 @@ export function checkReadOnlyConstraints(
       behavior: 'passthrough',
       message:
         'Compound commands that create git internal files and run git require permission checks for enhanced security',
-    }
+    };
   }
 
   // SECURITY: Only auto-allow git commands as read-only if we're in the original cwd
@@ -1953,38 +1898,32 @@ export function checkReadOnlyConstraints(
   // Race condition: a sandboxed command can create bare repo files in a subdirectory,
   // and a backgrounded git command (e.g. sleep 10 && git status) would pass the
   // isCurrentDirectoryBareGitRepo() check at evaluation time before the files exist.
-  if (
-    hasGitCommand &&
-    SandboxManager.isSandboxingEnabled() &&
-    getCwd() !== getOriginalCwd()
-  ) {
+  if (hasGitCommand && SandboxManager.isSandboxingEnabled() && getCwd() !== getOriginalCwd()) {
     return {
       behavior: 'passthrough',
       message:
         'Git commands outside the original working directory require permission checks when sandbox is enabled',
-    }
+    };
   }
 
   // Check if all subcommands are read-only
-  const allSubcommandsReadOnly = splitCommand_DEPRECATED(command).every(
-    subcmd => {
-      if (bashCommandIsSafe_DEPRECATED(subcmd).behavior !== 'passthrough') {
-        return false
-      }
-      return isCommandReadOnly(subcmd)
-    },
-  )
+  const allSubcommandsReadOnly = splitCommand_DEPRECATED(command).every((subcmd) => {
+    if (bashCommandIsSafe_DEPRECATED(subcmd).behavior !== 'passthrough') {
+      return false;
+    }
+    return isCommandReadOnly(subcmd);
+  });
 
   if (allSubcommandsReadOnly) {
     return {
       behavior: 'allow',
       updatedInput: input,
-    }
+    };
   }
 
   // If not read-only, return passthrough to let other permission checks handle it
   return {
     behavior: 'passthrough',
     message: 'Command is not read-only, requires further permission checks',
-  }
+  };
 }

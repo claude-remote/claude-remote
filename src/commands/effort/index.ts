@@ -1,5 +1,5 @@
-import type { Command } from '../../commands.js'
-import { shouldInferenceConfigCommandBeImmediate } from '../../utils/immediateCommand.js'
+import type { Command } from '../../commands.js';
+import { shouldInferenceConfigCommandBeImmediate } from '../../utils/immediateCommand.js';
 
 export default {
   type: 'local-jsx',
@@ -7,7 +7,7 @@ export default {
   description: 'Set effort level for model usage',
   argumentHint: '[low|medium|high|max|auto]',
   get immediate() {
-    return shouldInferenceConfigCommandBeImmediate()
+    return shouldInferenceConfigCommandBeImmediate();
   },
   load: () => import('./effort.js'),
-} satisfies Command
+} satisfies Command;

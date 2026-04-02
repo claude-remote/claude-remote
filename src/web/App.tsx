@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
-import { Login } from './pages/Login';
-import { Sessions } from './pages/Sessions';
-import { Chat } from './pages/Chat';
-import { Files } from './pages/Files';
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { MobileNav } from './components/MobileNav';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
+import { Chat } from './pages/Chat';
+import { Files } from './pages/Files';
+import { Login } from './pages/Login';
+import { Sessions } from './pages/Sessions';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   // Check if authenticated (cookie exists check via /api/health or local state)
@@ -35,19 +35,41 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <div
             className="fixed inset-0 z-40 bg-black/50 md:hidden"
             onClick={() => setSidebarOpen(false)}
-            onKeyDown={(e) => { if (e.key === 'Escape') setSidebarOpen(false); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setSidebarOpen(false);
+            }}
             role="button"
             tabIndex={-1}
             aria-label="Close sidebar"
           />
           <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-gray-800 bg-gray-950 p-4 md:hidden">
-            <h2 className="mb-4 text-sm font-semibold text-gray-400 uppercase tracking-wider">Navigation</h2>
+            <h2 className="mb-4 text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              Navigation
+            </h2>
             <nav className="flex flex-col gap-2">
-              <SidebarLink label="Sessions" onClick={() => { navigate('/sessions'); setSidebarOpen(false); }} />
+              <SidebarLink
+                label="Sessions"
+                onClick={() => {
+                  navigate('/sessions');
+                  setSidebarOpen(false);
+                }}
+              />
               {params.id && (
                 <>
-                  <SidebarLink label="Chat" onClick={() => { navigate(`/chat/${params.id}`); setSidebarOpen(false); }} />
-                  <SidebarLink label="Files" onClick={() => { navigate(`/files/${params.id}`); setSidebarOpen(false); }} />
+                  <SidebarLink
+                    label="Chat"
+                    onClick={() => {
+                      navigate(`/chat/${params.id}`);
+                      setSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarLink
+                    label="Files"
+                    onClick={() => {
+                      navigate(`/files/${params.id}`);
+                      setSidebarOpen(false);
+                    }}
+                  />
                 </>
               )}
             </nav>
@@ -56,9 +78,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden pb-14 md:pb-0">
-        {children}
-      </div>
+      <div className="flex flex-1 flex-col overflow-hidden pb-14 md:pb-0">{children}</div>
 
       {/* Bottom nav on mobile */}
       <MobileNav sessionId={params.id} />
@@ -86,7 +106,9 @@ export default function App() {
         path="/sessions"
         element={
           <AuthGuard>
-            <AppShell><Sessions /></AppShell>
+            <AppShell>
+              <Sessions />
+            </AppShell>
           </AuthGuard>
         }
       />
@@ -94,7 +116,9 @@ export default function App() {
         path="/chat/:id"
         element={
           <AuthGuard>
-            <AppShell><Chat /></AppShell>
+            <AppShell>
+              <Chat />
+            </AppShell>
           </AuthGuard>
         }
       />
@@ -102,7 +126,9 @@ export default function App() {
         path="/files/:id"
         element={
           <AuthGuard>
-            <AppShell><Files /></AppShell>
+            <AppShell>
+              <Files />
+            </AppShell>
           </AuthGuard>
         }
       />

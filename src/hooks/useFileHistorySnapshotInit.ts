@@ -1,25 +1,25 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react';
 import {
   type FileHistorySnapshot,
   type FileHistoryState,
   fileHistoryEnabled,
   fileHistoryRestoreStateFromLog,
-} from '../utils/fileHistory.js'
+} from '../utils/fileHistory.js';
 
 export function useFileHistorySnapshotInit(
   initialFileHistorySnapshots: FileHistorySnapshot[] | undefined,
   fileHistoryState: FileHistoryState,
   onUpdateState: (newState: FileHistoryState) => void,
 ): void {
-  const initialized = useRef(false)
+  const initialized = useRef(false);
 
   useEffect(() => {
     if (!fileHistoryEnabled() || initialized.current) {
-      return
+      return;
     }
-    initialized.current = true
+    initialized.current = true;
     if (initialFileHistorySnapshots) {
-      fileHistoryRestoreStateFromLog(initialFileHistorySnapshots, onUpdateState)
+      fileHistoryRestoreStateFromLog(initialFileHistorySnapshots, onUpdateState);
     }
-  }, [fileHistoryState, initialFileHistorySnapshots, onUpdateState])
+  }, [fileHistoryState, initialFileHistorySnapshots, onUpdateState]);
 }

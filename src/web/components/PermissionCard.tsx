@@ -5,10 +5,14 @@ import type { PermissionRequest } from '@/shared/types';
 /** Map tool names to icons (emoji-based for simplicity). */
 function toolIcon(toolName: string): string {
   const lower = toolName.toLowerCase();
-  if (lower === 'bash' || lower.includes('terminal') || lower.includes('shell')) return '\u2328\uFE0F';
-  if (lower === 'read' || lower === 'write' || lower === 'edit' || lower.includes('file')) return '\uD83D\uDCC4';
-  if (lower.includes('glob') || lower.includes('search') || lower.includes('grep')) return '\uD83D\uDD0D';
-  if (lower.includes('web') || lower.includes('fetch') || lower.includes('http')) return '\uD83C\uDF10';
+  if (lower === 'bash' || lower.includes('terminal') || lower.includes('shell'))
+    return '\u2328\uFE0F';
+  if (lower === 'read' || lower === 'write' || lower === 'edit' || lower.includes('file'))
+    return '\uD83D\uDCC4';
+  if (lower.includes('glob') || lower.includes('search') || lower.includes('grep'))
+    return '\uD83D\uDD0D';
+  if (lower.includes('web') || lower.includes('fetch') || lower.includes('http'))
+    return '\uD83C\uDF10';
   if (lower.includes('notebook')) return '\uD83D\uDCD3';
   return '\uD83D\uDD27';
 }
@@ -16,7 +20,7 @@ function toolIcon(toolName: string): string {
 /** Truncate a string with an ellipsis. */
 function truncate(value: string, maxLen: number): string {
   if (value.length <= maxLen) return value;
-  return value.slice(0, maxLen) + '\u2026';
+  return `${value.slice(0, maxLen)}\u2026`;
 }
 
 /** Format tool input params as a single-line summary. */
@@ -126,10 +130,7 @@ export function PermissionCard({ request, isWriter, onRespond }: PermissionCardP
             </button>
           </>
         ) : (
-          <span
-            className="text-xs italic text-gray-500"
-            title="Only the active writer can approve"
-          >
+          <span className="text-xs italic text-gray-500" title="Only the active writer can approve">
             Only the active writer can approve
           </span>
         )}

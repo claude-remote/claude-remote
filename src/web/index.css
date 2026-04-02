@@ -5,7 +5,8 @@
 /* Safe areas for notched phones */
 body {
   @apply bg-gray-950 text-gray-100 font-mono antialiased;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
 /* Prevent overscroll bounce */

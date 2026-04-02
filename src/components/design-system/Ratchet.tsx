@@ -1,32 +1,26 @@
-import { c as _c } from "react/compiler-runtime";
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import type React from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
-import { useTerminalViewport } from '../../ink/hooks/use-terminal-viewport.js';
 import { Box, type DOMElement, measureElement } from '../../ink.js';
+import { useTerminalViewport } from '../../ink/hooks/use-terminal-viewport.js';
 type Props = {
   children: React.ReactNode;
   lock?: 'always' | 'offscreen';
 };
 export function Ratchet(t0) {
   const $ = _c(10);
-  const {
-    children,
-    lock: t1
-  } = t0;
-  const lock = t1 === undefined ? "always" : t1;
+  const { children, lock: t1 } = t0;
+  const lock = t1 === undefined ? 'always' : t1;
   const [viewportRef, t2] = useTerminalViewport();
-  const {
-    isVisible
-  } = t2;
-  const {
-    rows
-  } = useTerminalSize();
+  const { isVisible } = t2;
+  const { rows } = useTerminalSize();
   const innerRef = useRef(null);
   const maxHeight = useRef(0);
   const [minHeight, setMinHeight] = useState(0);
   let t3;
   if ($[0] !== viewportRef) {
-    t3 = el => {
+    t3 = (el) => {
       viewportRef(el);
     };
     $[0] = viewportRef;
@@ -35,16 +29,14 @@ export function Ratchet(t0) {
     t3 = $[1];
   }
   const outerRef = t3;
-  const engaged = lock === "always" || !isVisible;
+  const engaged = lock === 'always' || !isVisible;
   let t4;
   if ($[2] !== rows) {
     t4 = () => {
       if (!innerRef.current) {
         return;
       }
-      const {
-        height
-      } = measureElement(innerRef.current);
+      const { height } = measureElement(innerRef.current);
       if (height > maxHeight.current) {
         maxHeight.current = Math.min(height, rows);
         setMinHeight(maxHeight.current);
@@ -59,7 +51,11 @@ export function Ratchet(t0) {
   const t5 = engaged ? minHeight : undefined;
   let t6;
   if ($[4] !== children) {
-    t6 = <Box ref={innerRef} flexDirection="column">{children}</Box>;
+    t6 = (
+      <Box ref={innerRef} flexDirection="column">
+        {children}
+      </Box>
+    );
     $[4] = children;
     $[5] = t6;
   } else {
@@ -67,7 +63,11 @@ export function Ratchet(t0) {
   }
   let t7;
   if ($[6] !== outerRef || $[7] !== t5 || $[8] !== t6) {
-    t7 = <Box minHeight={t5} ref={outerRef}>{t6}</Box>;
+    t7 = (
+      <Box minHeight={t5} ref={outerRef}>
+        {t6}
+      </Box>
+    );
     $[6] = outerRef;
     $[7] = t5;
     $[8] = t6;

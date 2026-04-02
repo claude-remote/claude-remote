@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SkillInfo } from '@/shared/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SkillPalette } from './SkillPalette';
 
 interface ChatInputProps {

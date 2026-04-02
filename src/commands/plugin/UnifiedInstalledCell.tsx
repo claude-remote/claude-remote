@@ -1,7 +1,7 @@
-import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
-import { Box, color, Text, useTheme } from '../../ink.js';
+import { c as _c } from 'react/compiler-runtime';
+import { Box, Text, color, useTheme } from '../../ink.js';
 import { plural } from '../../utils/stringUtils.js';
 import type { UnifiedInstalledItem } from './unifiedTypes.js';
 type Props = {
@@ -10,30 +10,27 @@ type Props = {
 };
 export function UnifiedInstalledCell(t0) {
   const $ = _c(142);
-  const {
-    item,
-    isSelected
-  } = t0;
+  const { item, isSelected } = t0;
   const [theme] = useTheme();
-  if (item.type === "plugin") {
+  if (item.type === 'plugin') {
     let statusIcon;
     let statusText;
     if (item.pendingToggle) {
       let t1;
       if ($[0] !== theme) {
-        t1 = color("suggestion", theme)(figures.arrowRight);
+        t1 = color('suggestion', theme)(figures.arrowRight);
         $[0] = theme;
         $[1] = t1;
       } else {
         t1 = $[1];
       }
       statusIcon = t1;
-      statusText = item.pendingToggle === "will-enable" ? "will enable" : "will disable";
+      statusText = item.pendingToggle === 'will-enable' ? 'will enable' : 'will disable';
     } else {
       if (item.errorCount > 0) {
         let t1;
         if ($[2] !== theme) {
-          t1 = color("error", theme)(figures.cross);
+          t1 = color('error', theme)(figures.cross);
           $[2] = theme;
           $[3] = t1;
         } else {
@@ -43,7 +40,7 @@ export function UnifiedInstalledCell(t0) {
         const t2 = item.errorCount;
         let t3;
         if ($[4] !== item.errorCount) {
-          t3 = plural(item.errorCount, "error");
+          t3 = plural(item.errorCount, 'error');
           $[4] = item.errorCount;
           $[5] = t3;
         } else {
@@ -54,30 +51,30 @@ export function UnifiedInstalledCell(t0) {
         if (!item.isEnabled) {
           let t1;
           if ($[6] !== theme) {
-            t1 = color("inactive", theme)(figures.radioOff);
+            t1 = color('inactive', theme)(figures.radioOff);
             $[6] = theme;
             $[7] = t1;
           } else {
             t1 = $[7];
           }
           statusIcon = t1;
-          statusText = "disabled";
+          statusText = 'disabled';
         } else {
           let t1;
           if ($[8] !== theme) {
-            t1 = color("success", theme)(figures.tick);
+            t1 = color('success', theme)(figures.tick);
             $[8] = theme;
             $[9] = t1;
           } else {
             t1 = $[9];
           }
           statusIcon = t1;
-          statusText = "enabled";
+          statusText = 'enabled';
         }
       }
     }
-    const t1 = isSelected ? "suggestion" : undefined;
-    const t2 = isSelected ? `${figures.pointer} ` : "  ";
+    const t1 = isSelected ? 'suggestion' : undefined;
+    const t2 = isSelected ? `${figures.pointer} ` : '  ';
     let t3;
     if ($[10] !== t1 || $[11] !== t2) {
       t3 = <Text color={t1}>{t2}</Text>;
@@ -87,7 +84,7 @@ export function UnifiedInstalledCell(t0) {
     } else {
       t3 = $[12];
     }
-    const t4 = isSelected ? "suggestion" : undefined;
+    const t4 = isSelected ? 'suggestion' : undefined;
     let t5;
     if ($[13] !== item.name || $[14] !== t4) {
       t5 = <Text color={t4}>{item.name}</Text>;
@@ -99,7 +96,7 @@ export function UnifiedInstalledCell(t0) {
     }
     const t6 = !isSelected;
     let t7;
-    if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
+    if ($[16] === Symbol.for('react.memo_cache_sentinel')) {
       t7 = <Text backgroundColor="userMessageBackground">Plugin</Text>;
       $[16] = t7;
     } else {
@@ -107,7 +104,7 @@ export function UnifiedInstalledCell(t0) {
     }
     let t8;
     if ($[17] !== t6) {
-      t8 = <Text dimColor={t6}>{" "}{t7}</Text>;
+      t8 = <Text dimColor={t6}> {t7}</Text>;
       $[17] = t6;
       $[18] = t8;
     } else {
@@ -142,8 +139,24 @@ export function UnifiedInstalledCell(t0) {
       t13 = $[26];
     }
     let t14;
-    if ($[27] !== t11 || $[28] !== t13 || $[29] !== t3 || $[30] !== t5 || $[31] !== t8 || $[32] !== t9) {
-      t14 = <Box>{t3}{t5}{t8}{t9}{t11}{t13}</Box>;
+    if (
+      $[27] !== t11 ||
+      $[28] !== t13 ||
+      $[29] !== t3 ||
+      $[30] !== t5 ||
+      $[31] !== t8 ||
+      $[32] !== t9
+    ) {
+      t14 = (
+        <Box>
+          {t3}
+          {t5}
+          {t8}
+          {t9}
+          {t11}
+          {t13}
+        </Box>
+      );
       $[27] = t11;
       $[28] = t13;
       $[29] = t3;
@@ -156,18 +169,18 @@ export function UnifiedInstalledCell(t0) {
     }
     return t14;
   }
-  if (item.type === "flagged-plugin") {
+  if (item.type === 'flagged-plugin') {
     let t1;
     if ($[34] !== theme) {
-      t1 = color("warning", theme)(figures.warning);
+      t1 = color('warning', theme)(figures.warning);
       $[34] = theme;
       $[35] = t1;
     } else {
       t1 = $[35];
     }
     const statusIcon_0 = t1;
-    const t2 = isSelected ? "suggestion" : undefined;
-    const t3 = isSelected ? `${figures.pointer} ` : "  ";
+    const t2 = isSelected ? 'suggestion' : undefined;
+    const t3 = isSelected ? `${figures.pointer} ` : '  ';
     let t4;
     if ($[36] !== t2 || $[37] !== t3) {
       t4 = <Text color={t2}>{t3}</Text>;
@@ -177,7 +190,7 @@ export function UnifiedInstalledCell(t0) {
     } else {
       t4 = $[38];
     }
-    const t5 = isSelected ? "suggestion" : undefined;
+    const t5 = isSelected ? 'suggestion' : undefined;
     let t6;
     if ($[39] !== item.name || $[40] !== t5) {
       t6 = <Text color={t5}>{item.name}</Text>;
@@ -189,7 +202,7 @@ export function UnifiedInstalledCell(t0) {
     }
     const t7 = !isSelected;
     let t8;
-    if ($[42] === Symbol.for("react.memo_cache_sentinel")) {
+    if ($[42] === Symbol.for('react.memo_cache_sentinel')) {
       t8 = <Text backgroundColor="userMessageBackground">Plugin</Text>;
       $[42] = t8;
     } else {
@@ -197,7 +210,7 @@ export function UnifiedInstalledCell(t0) {
     }
     let t9;
     if ($[43] !== t7) {
-      t9 = <Text dimColor={t7}>{" "}{t8}</Text>;
+      t9 = <Text dimColor={t7}> {t8}</Text>;
       $[43] = t7;
       $[44] = t9;
     } else {
@@ -231,8 +244,24 @@ export function UnifiedInstalledCell(t0) {
       t14 = $[51];
     }
     let t15;
-    if ($[52] !== t10 || $[53] !== t12 || $[54] !== t14 || $[55] !== t4 || $[56] !== t6 || $[57] !== t9) {
-      t15 = <Box>{t4}{t6}{t9}{t10}{t12}{t14}</Box>;
+    if (
+      $[52] !== t10 ||
+      $[53] !== t12 ||
+      $[54] !== t14 ||
+      $[55] !== t4 ||
+      $[56] !== t6 ||
+      $[57] !== t9
+    ) {
+      t15 = (
+        <Box>
+          {t4}
+          {t6}
+          {t9}
+          {t10}
+          {t12}
+          {t14}
+        </Box>
+      );
       $[52] = t10;
       $[53] = t12;
       $[54] = t14;
@@ -245,10 +274,10 @@ export function UnifiedInstalledCell(t0) {
     }
     return t15;
   }
-  if (item.type === "failed-plugin") {
+  if (item.type === 'failed-plugin') {
     let t1;
     if ($[59] !== theme) {
-      t1 = color("error", theme)(figures.cross);
+      t1 = color('error', theme)(figures.cross);
       $[59] = theme;
       $[60] = t1;
     } else {
@@ -258,15 +287,15 @@ export function UnifiedInstalledCell(t0) {
     const t2 = item.errorCount;
     let t3;
     if ($[61] !== item.errorCount) {
-      t3 = plural(item.errorCount, "error");
+      t3 = plural(item.errorCount, 'error');
       $[61] = item.errorCount;
       $[62] = t3;
     } else {
       t3 = $[62];
     }
     const statusText_0 = `failed to load · ${t2} ${t3}`;
-    const t4 = isSelected ? "suggestion" : undefined;
-    const t5 = isSelected ? `${figures.pointer} ` : "  ";
+    const t4 = isSelected ? 'suggestion' : undefined;
+    const t5 = isSelected ? `${figures.pointer} ` : '  ';
     let t6;
     if ($[63] !== t4 || $[64] !== t5) {
       t6 = <Text color={t4}>{t5}</Text>;
@@ -276,7 +305,7 @@ export function UnifiedInstalledCell(t0) {
     } else {
       t6 = $[65];
     }
-    const t7 = isSelected ? "suggestion" : undefined;
+    const t7 = isSelected ? 'suggestion' : undefined;
     let t8;
     if ($[66] !== item.name || $[67] !== t7) {
       t8 = <Text color={t7}>{item.name}</Text>;
@@ -288,7 +317,7 @@ export function UnifiedInstalledCell(t0) {
     }
     const t9 = !isSelected;
     let t10;
-    if ($[69] === Symbol.for("react.memo_cache_sentinel")) {
+    if ($[69] === Symbol.for('react.memo_cache_sentinel')) {
       t10 = <Text backgroundColor="userMessageBackground">Plugin</Text>;
       $[69] = t10;
     } else {
@@ -296,7 +325,7 @@ export function UnifiedInstalledCell(t0) {
     }
     let t11;
     if ($[70] !== t9) {
-      t11 = <Text dimColor={t9}>{" "}{t10}</Text>;
+      t11 = <Text dimColor={t9}> {t10}</Text>;
       $[70] = t9;
       $[71] = t11;
     } else {
@@ -331,8 +360,24 @@ export function UnifiedInstalledCell(t0) {
       t16 = $[79];
     }
     let t17;
-    if ($[80] !== t11 || $[81] !== t12 || $[82] !== t14 || $[83] !== t16 || $[84] !== t6 || $[85] !== t8) {
-      t17 = <Box>{t6}{t8}{t11}{t12}{t14}{t16}</Box>;
+    if (
+      $[80] !== t11 ||
+      $[81] !== t12 ||
+      $[82] !== t14 ||
+      $[83] !== t16 ||
+      $[84] !== t6 ||
+      $[85] !== t8
+    ) {
+      t17 = (
+        <Box>
+          {t6}
+          {t8}
+          {t11}
+          {t12}
+          {t14}
+          {t16}
+        </Box>
+      );
       $[80] = t11;
       $[81] = t12;
       $[82] = t14;
@@ -347,71 +392,71 @@ export function UnifiedInstalledCell(t0) {
   }
   let statusIcon_2;
   let statusText_1;
-  if (item.status === "connected") {
+  if (item.status === 'connected') {
     let t1;
     if ($[87] !== theme) {
-      t1 = color("success", theme)(figures.tick);
+      t1 = color('success', theme)(figures.tick);
       $[87] = theme;
       $[88] = t1;
     } else {
       t1 = $[88];
     }
     statusIcon_2 = t1;
-    statusText_1 = "connected";
+    statusText_1 = 'connected';
   } else {
-    if (item.status === "disabled") {
+    if (item.status === 'disabled') {
       let t1;
       if ($[89] !== theme) {
-        t1 = color("inactive", theme)(figures.radioOff);
+        t1 = color('inactive', theme)(figures.radioOff);
         $[89] = theme;
         $[90] = t1;
       } else {
         t1 = $[90];
       }
       statusIcon_2 = t1;
-      statusText_1 = "disabled";
+      statusText_1 = 'disabled';
     } else {
-      if (item.status === "pending") {
+      if (item.status === 'pending') {
         let t1;
         if ($[91] !== theme) {
-          t1 = color("inactive", theme)(figures.radioOff);
+          t1 = color('inactive', theme)(figures.radioOff);
           $[91] = theme;
           $[92] = t1;
         } else {
           t1 = $[92];
         }
         statusIcon_2 = t1;
-        statusText_1 = "connecting\u2026";
+        statusText_1 = 'connecting\u2026';
       } else {
-        if (item.status === "needs-auth") {
+        if (item.status === 'needs-auth') {
           let t1;
           if ($[93] !== theme) {
-            t1 = color("warning", theme)(figures.triangleUpOutline);
+            t1 = color('warning', theme)(figures.triangleUpOutline);
             $[93] = theme;
             $[94] = t1;
           } else {
             t1 = $[94];
           }
           statusIcon_2 = t1;
-          statusText_1 = "Enter to auth";
+          statusText_1 = 'Enter to auth';
         } else {
           let t1;
           if ($[95] !== theme) {
-            t1 = color("error", theme)(figures.cross);
+            t1 = color('error', theme)(figures.cross);
             $[95] = theme;
             $[96] = t1;
           } else {
             t1 = $[96];
           }
           statusIcon_2 = t1;
-          statusText_1 = "failed";
+          statusText_1 = 'failed';
         }
       }
     }
   }
   if (item.indented) {
-    const t1 = isSelected ? "suggestion" : undefined;
-    const t2 = isSelected ? `${figures.pointer} ` : "  ";
+    const t1 = isSelected ? 'suggestion' : undefined;
+    const t2 = isSelected ? `${figures.pointer} ` : '  ';
     let t3;
     if ($[97] !== t1 || $[98] !== t2) {
       t3 = <Text color={t1}>{t2}</Text>;
@@ -430,7 +475,7 @@ export function UnifiedInstalledCell(t0) {
     } else {
       t5 = $[101];
     }
-    const t6 = isSelected ? "suggestion" : undefined;
+    const t6 = isSelected ? 'suggestion' : undefined;
     let t7;
     if ($[102] !== item.name || $[103] !== t6) {
       t7 = <Text color={t6}>{item.name}</Text>;
@@ -442,7 +487,7 @@ export function UnifiedInstalledCell(t0) {
     }
     const t8 = !isSelected;
     let t9;
-    if ($[105] === Symbol.for("react.memo_cache_sentinel")) {
+    if ($[105] === Symbol.for('react.memo_cache_sentinel')) {
       t9 = <Text backgroundColor="userMessageBackground">MCP</Text>;
       $[105] = t9;
     } else {
@@ -450,7 +495,7 @@ export function UnifiedInstalledCell(t0) {
     }
     let t10;
     if ($[106] !== t8) {
-      t10 = <Text dimColor={t8}>{" "}{t9}</Text>;
+      t10 = <Text dimColor={t8}> {t9}</Text>;
       $[106] = t8;
       $[107] = t10;
     } else {
@@ -477,8 +522,24 @@ export function UnifiedInstalledCell(t0) {
       t14 = $[113];
     }
     let t15;
-    if ($[114] !== t10 || $[115] !== t12 || $[116] !== t14 || $[117] !== t3 || $[118] !== t5 || $[119] !== t7) {
-      t15 = <Box>{t3}{t5}{t7}{t10}{t12}{t14}</Box>;
+    if (
+      $[114] !== t10 ||
+      $[115] !== t12 ||
+      $[116] !== t14 ||
+      $[117] !== t3 ||
+      $[118] !== t5 ||
+      $[119] !== t7
+    ) {
+      t15 = (
+        <Box>
+          {t3}
+          {t5}
+          {t7}
+          {t10}
+          {t12}
+          {t14}
+        </Box>
+      );
       $[114] = t10;
       $[115] = t12;
       $[116] = t14;
@@ -491,8 +552,8 @@ export function UnifiedInstalledCell(t0) {
     }
     return t15;
   }
-  const t1 = isSelected ? "suggestion" : undefined;
-  const t2 = isSelected ? `${figures.pointer} ` : "  ";
+  const t1 = isSelected ? 'suggestion' : undefined;
+  const t2 = isSelected ? `${figures.pointer} ` : '  ';
   let t3;
   if ($[121] !== t1 || $[122] !== t2) {
     t3 = <Text color={t1}>{t2}</Text>;
@@ -502,7 +563,7 @@ export function UnifiedInstalledCell(t0) {
   } else {
     t3 = $[123];
   }
-  const t4 = isSelected ? "suggestion" : undefined;
+  const t4 = isSelected ? 'suggestion' : undefined;
   let t5;
   if ($[124] !== item.name || $[125] !== t4) {
     t5 = <Text color={t4}>{item.name}</Text>;
@@ -514,7 +575,7 @@ export function UnifiedInstalledCell(t0) {
   }
   const t6 = !isSelected;
   let t7;
-  if ($[127] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[127] === Symbol.for('react.memo_cache_sentinel')) {
     t7 = <Text backgroundColor="userMessageBackground">MCP</Text>;
     $[127] = t7;
   } else {
@@ -522,7 +583,7 @@ export function UnifiedInstalledCell(t0) {
   }
   let t8;
   if ($[128] !== t6) {
-    t8 = <Text dimColor={t6}>{" "}{t7}</Text>;
+    t8 = <Text dimColor={t6}> {t7}</Text>;
     $[128] = t6;
     $[129] = t8;
   } else {
@@ -550,7 +611,15 @@ export function UnifiedInstalledCell(t0) {
   }
   let t13;
   if ($[136] !== t10 || $[137] !== t12 || $[138] !== t3 || $[139] !== t5 || $[140] !== t8) {
-    t13 = <Box>{t3}{t5}{t8}{t10}{t12}</Box>;
+    t13 = (
+      <Box>
+        {t3}
+        {t5}
+        {t8}
+        {t10}
+        {t12}
+      </Box>
+    );
     $[136] = t10;
     $[137] = t12;
     $[138] = t3;

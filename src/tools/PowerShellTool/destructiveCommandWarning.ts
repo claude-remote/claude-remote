@@ -5,9 +5,9 @@
  */
 
 type DestructivePattern = {
-  pattern: RegExp
-  warning: string
-}
+  pattern: RegExp;
+  warning: string;
+};
 
 const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   // Remove-Item with -Recurse and/or -Force (and common aliases)
@@ -29,13 +29,11 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may recursively force-remove files',
   },
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Recurse\b/i,
     warning: 'Note: may recursively remove files',
   },
   {
-    pattern:
-      /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b/i,
+    pattern: /(?:^|[|;&\n({])\s*(Remove-Item|rm|del|rd|rmdir|ri)\b[^|;&\n}]*-Force\b/i,
     warning: 'Note: may force-remove files',
   },
 
@@ -65,8 +63,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may overwrite remote history',
   },
   {
-    pattern:
-      /\bgit\s+clean\b(?![^|;&\n]*(?:-[a-zA-Z]*n|--dry-run))[^|;&\n]*-[a-zA-Z]*f/i,
+    pattern: /\bgit\s+clean\b(?![^|;&\n]*(?:-[a-zA-Z]*n|--dry-run))[^|;&\n]*-[a-zA-Z]*f/i,
     warning: 'Note: may permanently delete untracked files',
   },
   {
@@ -93,7 +90,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     pattern: /\bClear-RecycleBin\b/i,
     warning: 'Note: permanently deletes recycled files',
   },
-]
+];
 
 /**
  * Checks if a PowerShell command matches known destructive patterns.
@@ -102,8 +99,8 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
 export function getDestructiveCommandWarning(command: string): string | null {
   for (const { pattern, warning } of DESTRUCTIVE_PATTERNS) {
     if (pattern.test(command)) {
-      return warning
+      return warning;
     }
   }
-  return null
+  return null;
 }

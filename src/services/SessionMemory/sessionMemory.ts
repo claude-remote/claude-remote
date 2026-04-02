@@ -4,49 +4,41 @@
  * without interrupting the main conversation flow.
  */
 
-import { writeFile } from 'fs/promises'
-import memoize from 'lodash-es/memoize.js'
-import { getIsRemoteMode } from '../../bootstrap/state.js'
-import { getSystemPrompt } from '../../constants/prompts.js'
-import { getSystemContext, getUserContext } from '../../context.js'
-import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
-import type { Tool, ToolUseContext } from '../../Tool.js'
-import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js'
+import { writeFile } from 'node:fs/promises';
+import memoize from 'lodash-es/memoize.js';
+import type { Tool, ToolUseContext } from '../../Tool.js';
+import { getIsRemoteMode } from '../../bootstrap/state.js';
+import { getSystemPrompt } from '../../constants/prompts.js';
+import { getSystemContext, getUserContext } from '../../context.js';
+import type { CanUseToolFn } from '../../hooks/useCanUseTool.js';
+import { FILE_EDIT_TOOL_NAME } from '../../tools/FileEditTool/constants.js';
 import {
   FileReadTool,
   type Output as FileReadToolOutput,
-} from '../../tools/FileReadTool/FileReadTool.js'
-import type { Message } from '../../types/message.js'
-import { count } from '../../utils/array.js'
+} from '../../tools/FileReadTool/FileReadTool.js';
+import type { Message } from '../../types/message.js';
+import { count } from '../../utils/array.js';
 import {
   createCacheSafeParams,
   createSubagentContext,
   runForkedAgent,
-} from '../../utils/forkedAgent.js'
-import { getFsImplementation } from '../../utils/fsOperations.js'
+} from '../../utils/forkedAgent.js';
+import { getFsImplementation } from '../../utils/fsOperations.js';
 import {
   type REPLHookContext,
   registerPostSamplingHook,
-} from '../../utils/hooks/postSamplingHooks.js'
-import {
-  createUserMessage,
-  hasToolCallsInLastAssistantTurn,
-} from '../../utils/messages.js'
-import {
-  getSessionMemoryDir,
-  getSessionMemoryPath,
-} from '../../utils/permissions/filesystem.js'
-import { sequential } from '../../utils/sequential.js'
-import { asSystemPrompt } from '../../utils/systemPromptType.js'
-import { getTokenUsage, tokenCountWithEstimation } from '../../utils/tokens.js'
-import { logEvent } from '../analytics/index.js'
-import { isAutoCompactEnabled } from '../compact/autoCompact.js'
-import {
-  buildSessionMemoryUpdatePrompt,
-  loadSessionMemoryTemplate,
-} from './prompts.js'
+} from '../../utils/hooks/postSamplingHooks.js';
+import { createUserMessage, hasToolCallsInLastAssistantTurn } from '../../utils/messages.js';
+import { getSessionMemoryDir, getSessionMemoryPath } from '../../utils/permissions/filesystem.js';
+import { sequential } from '../../utils/sequential.js';
+import { asSystemPrompt } from '../../utils/systemPromptType.js';
+import { getTokenUsage, tokenCountWithEstimation } from '../../utils/tokens.js';
+import { logEvent } from '../analytics/index.js';
+import { isAutoCompactEnabled } from '../compact/autoCompact.js';
+import { buildSessionMemoryUpdatePrompt, loadSessionMemoryTemplate } from './prompts.js';
 import {
   DEFAULT_SESSION_MEMORY_CONFIG,
+  type SessionMemoryConfig,
   getSessionMemoryConfig,
   getToolCallsBetweenUpdates,
   hasMetInitializationThreshold,
@@ -56,10 +48,9 @@ import {
   markExtractionStarted,
   markSessionMemoryInitialized,
   recordExtractionTokenCount,
-  type SessionMemoryConfig,
   setLastSummarizedMessageId,
   setSessionMemoryConfig,
-} from './sessionMemoryUtils.js'
+} from './sessionMemoryUtils.js';
 
 // ============================================================================
 // Feature Gate and Config (Cached - Non-blocking)
@@ -67,18 +58,18 @@ import {
 // These functions return cached values from disk immediately without blocking
 // on GrowthBook initialization. Values may be stale but are updated in background.
 
-import { errorMessage, getErrnoCode } from '../../utils/errors.js'
+import { errorMessage, getErrnoCode } from '../../utils/errors.js';
 import {
   getDynamicConfig_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
-} from '../analytics/growthbook.js'
+} from '../analytics/growthbook.js';
 
 /**
  * Check if session memory feature is enabled.
  * Uses cached gate value - returns immediately without blocking.
  */
 function isSessionMemoryGateEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_session_memory', false)
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_session_memory', false);
 }
 
 /**
@@ -86,76 +77,66 @@ function isSessionMemoryGateEnabled(): boolean {
  * Returns immediately without blocking - value may be stale.
  */
 function getSessionMemoryRemoteConfig(): Partial<SessionMemoryConfig> {
-  return getDynamicConfig_CACHED_MAY_BE_STALE<Partial<SessionMemoryConfig>>(
-    'tengu_sm_config',
-    {},
-  )
+  return getDynamicConfig_CACHED_MAY_BE_STALE<Partial<SessionMemoryConfig>>('tengu_sm_config', {});
 }
 
 // ============================================================================
 // Module State
 // ============================================================================
 
-let lastMemoryMessageUuid: string | undefined
+let lastMemoryMessageUuid: string | undefined;
 
 /**
  * Reset the last memory message UUID (for testing)
  */
 export function resetLastMemoryMessageUuid(): void {
-  lastMemoryMessageUuid = undefined
+  lastMemoryMessageUuid = undefined;
 }
 
-function countToolCallsSince(
-  messages: Message[],
-  sinceUuid: string | undefined,
-): number {
-  let toolCallCount = 0
-  let foundStart = sinceUuid === null || sinceUuid === undefined
+function countToolCallsSince(messages: Message[], sinceUuid: string | undefined): number {
+  let toolCallCount = 0;
+  let foundStart = sinceUuid === null || sinceUuid === undefined;
 
   for (const message of messages) {
     if (!foundStart) {
       if (message.uuid === sinceUuid) {
-        foundStart = true
+        foundStart = true;
       }
-      continue
+      continue;
     }
 
     if (message.type === 'assistant') {
-      const content = message.message.content
+      const content = message.message.content;
       if (Array.isArray(content)) {
-        toolCallCount += count(content, block => block.type === 'tool_use')
+        toolCallCount += count(content, (block) => block.type === 'tool_use');
       }
     }
   }
 
-  return toolCallCount
+  return toolCallCount;
 }
 
 export function shouldExtractMemory(messages: Message[]): boolean {
   // Check if we've met the initialization threshold
   // Uses total context window tokens (same as autocompact) for consistent behavior
-  const currentTokenCount = tokenCountWithEstimation(messages)
+  const currentTokenCount = tokenCountWithEstimation(messages);
   if (!isSessionMemoryInitialized()) {
     if (!hasMetInitializationThreshold(currentTokenCount)) {
-      return false
+      return false;
     }
-    markSessionMemoryInitialized()
+    markSessionMemoryInitialized();
   }
 
   // Check if we've met the minimum tokens between updates threshold
   // Uses context window growth since last extraction (same metric as init threshold)
-  const hasMetTokenThreshold = hasMetUpdateThreshold(currentTokenCount)
+  const hasMetTokenThreshold = hasMetUpdateThreshold(currentTokenCount);
 
   // Check if we've met the tool calls threshold
-  const toolCallsSinceLastUpdate = countToolCallsSince(
-    messages,
-    lastMemoryMessageUuid,
-  )
-  const hasMetToolCallThreshold =
-    toolCallsSinceLastUpdate >= getToolCallsBetweenUpdates()
+  const toolCallsSinceLastUpdate = countToolCallsSince(messages, lastMemoryMessageUuid);
+  const hasMetToolCallThreshold = toolCallsSinceLastUpdate >= getToolCallsBetweenUpdates();
 
   // Check if the last assistant turn has no tool calls (safe to extract)
-  const hasToolCallsInLastTurn = hasToolCallsInLastAssistantTurn(messages)
+  const hasToolCallsInLastTurn = hasToolCallsInLastAssistantTurn(messages);
 
   // Trigger extraction when:
   // 1. Both thresholds are met (tokens AND tool calls), OR
@@ -167,29 +148,29 @@ export function shouldExtractMemory(messages: Message[]): boolean {
   // token threshold is also satisfied. This prevents excessive extractions.
   const shouldExtract =
     (hasMetTokenThreshold && hasMetToolCallThreshold) ||
-    (hasMetTokenThreshold && !hasToolCallsInLastTurn)
+    (hasMetTokenThreshold && !hasToolCallsInLastTurn);
 
   if (shouldExtract) {
-    const lastMessage = messages[messages.length - 1]
+    const lastMessage = messages[messages.length - 1];
     if (lastMessage?.uuid) {
-      lastMemoryMessageUuid = lastMessage.uuid
+      lastMemoryMessageUuid = lastMessage.uuid;
     }
-    return true
+    return true;
   }
 
-  return false
+  return false;
 }
 
 async function setupSessionMemoryFile(
   toolUseContext: ToolUseContext,
 ): Promise<{ memoryPath: string; currentMemory: string }> {
-  const fs = getFsImplementation()
+  const fs = getFsImplementation();
 
   // Set up directory and file
-  const sessionMemoryDir = getSessionMemoryDir()
-  await fs.mkdir(sessionMemoryDir, { mode: 0o700 })
+  const sessionMemoryDir = getSessionMemoryDir();
+  await fs.mkdir(sessionMemoryDir, { mode: 0o700 });
 
-  const memoryPath = getSessionMemoryPath()
+  const memoryPath = getSessionMemoryPath();
 
   // Create the memory file if it doesn't exist (wx = O_CREAT|O_EXCL)
   try {
@@ -197,39 +178,36 @@ async function setupSessionMemoryFile(
       encoding: 'utf-8',
       mode: 0o600,
       flag: 'wx',
-    })
+    });
     // Only load template if file was just created
-    const template = await loadSessionMemoryTemplate()
+    const template = await loadSessionMemoryTemplate();
     await writeFile(memoryPath, template, {
       encoding: 'utf-8',
       mode: 0o600,
-    })
+    });
   } catch (e: unknown) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code !== 'EEXIST') {
-      throw e
+      throw e;
     }
   }
 
   // Drop any cached entry so FileReadTool's dedup doesn't return a
   // file_unchanged stub — we need the actual content. The Read repopulates it.
-  toolUseContext.readFileState.delete(memoryPath)
-  const result = await FileReadTool.call(
-    { file_path: memoryPath },
-    toolUseContext,
-  )
-  let currentMemory = ''
+  toolUseContext.readFileState.delete(memoryPath);
+  const result = await FileReadTool.call({ file_path: memoryPath }, toolUseContext);
+  let currentMemory = '';
 
-  const output = result.data as FileReadToolOutput
+  const output = result.data as FileReadToolOutput;
   if (output.type === 'text') {
-    currentMemory = output.file.content
+    currentMemory = output.file.content;
   }
 
   logEvent('tengu_session_memory_file_read', {
     content_length: currentMemory.length,
-  })
+  });
 
-  return { memoryPath, currentMemory }
+  return { memoryPath, currentMemory };
 }
 
 /**
@@ -239,78 +217,69 @@ async function setupSessionMemoryFile(
  */
 const initSessionMemoryConfigIfNeeded = memoize((): void => {
   // Load config from cache (non-blocking, may be stale)
-  const remoteConfig = getSessionMemoryRemoteConfig()
+  const remoteConfig = getSessionMemoryRemoteConfig();
 
   // Only use remote values if they are explicitly set (non-zero positive numbers)
   // This ensures sensible defaults aren't overridden by zero values
   const config: SessionMemoryConfig = {
     minimumMessageTokensToInit:
-      remoteConfig.minimumMessageTokensToInit &&
-      remoteConfig.minimumMessageTokensToInit > 0
+      remoteConfig.minimumMessageTokensToInit && remoteConfig.minimumMessageTokensToInit > 0
         ? remoteConfig.minimumMessageTokensToInit
         : DEFAULT_SESSION_MEMORY_CONFIG.minimumMessageTokensToInit,
     minimumTokensBetweenUpdate:
-      remoteConfig.minimumTokensBetweenUpdate &&
-      remoteConfig.minimumTokensBetweenUpdate > 0
+      remoteConfig.minimumTokensBetweenUpdate && remoteConfig.minimumTokensBetweenUpdate > 0
         ? remoteConfig.minimumTokensBetweenUpdate
         : DEFAULT_SESSION_MEMORY_CONFIG.minimumTokensBetweenUpdate,
     toolCallsBetweenUpdates:
-      remoteConfig.toolCallsBetweenUpdates &&
-      remoteConfig.toolCallsBetweenUpdates > 0
+      remoteConfig.toolCallsBetweenUpdates && remoteConfig.toolCallsBetweenUpdates > 0
         ? remoteConfig.toolCallsBetweenUpdates
         : DEFAULT_SESSION_MEMORY_CONFIG.toolCallsBetweenUpdates,
-  }
-  setSessionMemoryConfig(config)
-})
+  };
+  setSessionMemoryConfig(config);
+});
 
 /**
  * Session memory post-sampling hook that extracts and updates session notes
  */
 // Track if we've logged the gate check failure this session (to avoid spam)
-let hasLoggedGateFailure = false
+let hasLoggedGateFailure = false;
 
-const extractSessionMemory = sequential(async function (
-  context: REPLHookContext,
-): Promise<void> {
-  const { messages, toolUseContext, querySource } = context
+const extractSessionMemory = sequential(async (context: REPLHookContext): Promise<void> => {
+  const { messages, toolUseContext, querySource } = context;
 
   // Only run session memory on main REPL thread
   if (querySource !== 'repl_main_thread') {
     // Don't log this - it's expected for subagents, teammates, etc.
-    return
+    return;
   }
 
   // Check gate lazily when hook runs (cached, non-blocking)
   if (!isSessionMemoryGateEnabled()) {
     // Log gate failure once per session (ant-only)
     if (process.env.USER_TYPE === 'ant' && !hasLoggedGateFailure) {
-      hasLoggedGateFailure = true
-      logEvent('tengu_session_memory_gate_disabled', {})
+      hasLoggedGateFailure = true;
+      logEvent('tengu_session_memory_gate_disabled', {});
     }
-    return
+    return;
   }
 
   // Initialize config from remote (lazy, only once)
-  initSessionMemoryConfigIfNeeded()
+  initSessionMemoryConfigIfNeeded();
 
   if (!shouldExtractMemory(messages)) {
-    return
+    return;
   }
 
-  markExtractionStarted()
+  markExtractionStarted();
 
   // Create isolated context for setup to avoid polluting parent's cache
-  const setupContext = createSubagentContext(toolUseContext)
+  const setupContext = createSubagentContext(toolUseContext);
 
   // Set up file system and read current state with isolated context
-  const { memoryPath, currentMemory } =
-    await setupSessionMemoryFile(setupContext)
+  const { memoryPath, currentMemory } = await setupSessionMemoryFile(setupContext);
 
   // Create extraction message
-  const userPrompt = await buildSessionMemoryUpdatePrompt(
-    currentMemory,
-    memoryPath,
-  )
+  const userPrompt = await buildSessionMemoryUpdatePrompt(currentMemory, memoryPath);
 
   // Run session memory extraction using runForkedAgent for prompt caching
   // runForkedAgent creates an isolated context to prevent mutation of parent state
@@ -322,32 +291,31 @@ const extractSessionMemory = sequential(async function (
     querySource: 'session_memory',
     forkLabel: 'session_memory',
     overrides: { readFileState: setupContext.readFileState },
-  })
+  });
 
   // Log extraction event for tracking frequency
   // Use the token usage from the last message in the conversation
-  const lastMessage = messages[messages.length - 1]
-  const usage = lastMessage ? getTokenUsage(lastMessage) : undefined
-  const config = getSessionMemoryConfig()
+  const lastMessage = messages[messages.length - 1];
+  const usage = lastMessage ? getTokenUsage(lastMessage) : undefined;
+  const config = getSessionMemoryConfig();
   logEvent('tengu_session_memory_extraction', {
     input_tokens: usage?.input_tokens,
     output_tokens: usage?.output_tokens,
     cache_read_input_tokens: usage?.cache_read_input_tokens ?? undefined,
-    cache_creation_input_tokens:
-      usage?.cache_creation_input_tokens ?? undefined,
+    cache_creation_input_tokens: usage?.cache_creation_input_tokens ?? undefined,
     config_min_message_tokens_to_init: config.minimumMessageTokensToInit,
     config_min_tokens_between_update: config.minimumTokensBetweenUpdate,
     config_tool_calls_between_updates: config.toolCallsBetweenUpdates,
-  })
+  });
 
   // Record the context size at extraction for tracking minimumTokensBetweenUpdate
-  recordExtractionTokenCount(tokenCountWithEstimation(messages))
+  recordExtractionTokenCount(tokenCountWithEstimation(messages));
 
   // Update lastSummarizedMessageId after successful completion
-  updateLastSummarizedMessageIdIfSafe(messages)
+  updateLastSummarizedMessageIdIfSafe(messages);
 
-  markExtractionCompleted()
-})
+  markExtractionCompleted();
+});
 
 /**
  * Initialize session memory by registering the post-sampling hook.
@@ -355,30 +323,30 @@ const extractSessionMemory = sequential(async function (
  * The gate check and config loading happen lazily when the hook runs.
  */
 export function initSessionMemory(): void {
-  if (getIsRemoteMode()) return
+  if (getIsRemoteMode()) return;
   // Session memory is used for compaction, so respect auto-compact settings
-  const autoCompactEnabled = isAutoCompactEnabled()
+  const autoCompactEnabled = isAutoCompactEnabled();
 
   // Log initialization state (ant-only to avoid noise in external logs)
   if (process.env.USER_TYPE === 'ant') {
     logEvent('tengu_session_memory_init', {
       auto_compact_enabled: autoCompactEnabled,
-    })
+    });
   }
 
   if (!autoCompactEnabled) {
-    return
+    return;
   }
 
   // Register hook unconditionally - gate check happens lazily when hook runs
-  registerPostSamplingHook(extractSessionMemory)
+  registerPostSamplingHook(extractSessionMemory);
 }
 
 export type ManualExtractionResult = {
-  success: boolean
-  memoryPath?: string
-  error?: string
-}
+  success: boolean;
+  memoryPath?: string;
+  error?: string;
+};
 
 /**
  * Manually trigger session memory extraction, bypassing threshold checks.
@@ -389,32 +357,28 @@ export async function manuallyExtractSessionMemory(
   toolUseContext: ToolUseContext,
 ): Promise<ManualExtractionResult> {
   if (messages.length === 0) {
-    return { success: false, error: 'No messages to summarize' }
+    return { success: false, error: 'No messages to summarize' };
   }
-  markExtractionStarted()
+  markExtractionStarted();
 
   try {
     // Create isolated context for setup to avoid polluting parent's cache
-    const setupContext = createSubagentContext(toolUseContext)
+    const setupContext = createSubagentContext(toolUseContext);
 
     // Set up file system and read current state with isolated context
-    const { memoryPath, currentMemory } =
-      await setupSessionMemoryFile(setupContext)
+    const { memoryPath, currentMemory } = await setupSessionMemoryFile(setupContext);
 
     // Create extraction message
-    const userPrompt = await buildSessionMemoryUpdatePrompt(
-      currentMemory,
-      memoryPath,
-    )
+    const userPrompt = await buildSessionMemoryUpdatePrompt(currentMemory, memoryPath);
 
     // Get system prompt for cache-safe params
-    const { tools, mainLoopModel } = toolUseContext.options
+    const { tools, mainLoopModel } = toolUseContext.options;
     const [rawSystemPrompt, userContext, systemContext] = await Promise.all([
       getSystemPrompt(tools, mainLoopModel),
       getUserContext(),
       getSystemContext(),
-    ])
-    const systemPrompt = asSystemPrompt(rawSystemPrompt)
+    ]);
+    const systemPrompt = asSystemPrompt(rawSystemPrompt);
 
     // Run session memory extraction using runForkedAgent
     await runForkedAgent({
@@ -430,25 +394,25 @@ export async function manuallyExtractSessionMemory(
       querySource: 'session_memory',
       forkLabel: 'session_memory_manual',
       overrides: { readFileState: setupContext.readFileState },
-    })
+    });
 
     // Log manual extraction event
-    logEvent('tengu_session_memory_manual_extraction', {})
+    logEvent('tengu_session_memory_manual_extraction', {});
 
     // Record the context size at extraction for tracking minimumTokensBetweenUpdate
-    recordExtractionTokenCount(tokenCountWithEstimation(messages))
+    recordExtractionTokenCount(tokenCountWithEstimation(messages));
 
     // Update lastSummarizedMessageId after successful completion
-    updateLastSummarizedMessageIdIfSafe(messages)
+    updateLastSummarizedMessageIdIfSafe(messages);
 
-    return { success: true, memoryPath }
+    return { success: true, memoryPath };
   } catch (error) {
     return {
       success: false,
       error: errorMessage(error),
-    }
+    };
   } finally {
-    markExtractionCompleted()
+    markExtractionCompleted();
   }
 }
 
@@ -465,9 +429,9 @@ export function createMemoryFileCanUseTool(memoryPath: string): CanUseToolFn {
       input !== null &&
       'file_path' in input
     ) {
-      const filePath = input.file_path
+      const filePath = input.file_path;
       if (typeof filePath === 'string' && filePath === memoryPath) {
-        return { behavior: 'allow' as const, updatedInput: input }
+        return { behavior: 'allow' as const, updatedInput: input };
       }
     }
     return {
@@ -477,8 +441,8 @@ export function createMemoryFileCanUseTool(memoryPath: string): CanUseToolFn {
         type: 'other' as const,
         reason: `only ${FILE_EDIT_TOOL_NAME} on ${memoryPath} is allowed`,
       },
-    }
-  }
+    };
+  };
 }
 
 /**
@@ -487,9 +451,9 @@ export function createMemoryFileCanUseTool(memoryPath: string): CanUseToolFn {
  */
 function updateLastSummarizedMessageIdIfSafe(messages: Message[]): void {
   if (!hasToolCallsInLastAssistantTurn(messages)) {
-    const lastMessage = messages[messages.length - 1]
+    const lastMessage = messages[messages.length - 1];
     if (lastMessage?.uuid) {
-      setLastSummarizedMessageId(lastMessage.uuid)
+      setLastSummarizedMessageId(lastMessage.uuid);
     }
   }
 }

@@ -13,24 +13,21 @@
  *
  * `now` is injectable for tests.
  */
-export function formatBriefTimestamp(
-  isoString: string,
-  now: Date = new Date(),
-): string {
-  const d = new Date(isoString)
+export function formatBriefTimestamp(isoString: string, now: Date = new Date()): string {
+  const d = new Date(isoString);
   if (Number.isNaN(d.getTime())) {
-    return ''
+    return '';
   }
 
-  const locale = getLocale()
-  const dayDiff = startOfDay(now) - startOfDay(d)
-  const daysAgo = Math.round(dayDiff / 86_400_000)
+  const locale = getLocale();
+  const dayDiff = startOfDay(now) - startOfDay(d);
+  const daysAgo = Math.round(dayDiff / 86_400_000);
 
   if (daysAgo === 0) {
     return d.toLocaleTimeString(locale, {
       hour: 'numeric',
       minute: '2-digit',
-    })
+    });
   }
 
   if (daysAgo > 0 && daysAgo < 7) {
@@ -38,7 +35,7 @@ export function formatBriefTimestamp(
       weekday: 'long',
       hour: 'numeric',
       minute: '2-digit',
-    })
+    });
   }
 
   return d.toLocaleString(locale, {
@@ -47,7 +44,7 @@ export function formatBriefTimestamp(
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  })
+  });
 }
 
 /**
@@ -56,26 +53,25 @@ export function formatBriefTimestamp(
  * Converts POSIX format (en_GB.UTF-8) to BCP 47 (en-GB).
  */
 function getLocale(): string | undefined {
-  const raw =
-    process.env.LC_ALL || process.env.LC_TIME || process.env.LANG || ''
+  const raw = process.env.LC_ALL || process.env.LC_TIME || process.env.LANG || '';
   if (!raw || raw === 'C' || raw === 'POSIX') {
-    return undefined
+    return undefined;
   }
   // Strip codeset (.UTF-8) and modifier (@euro), replace _ with -
-  const base = raw.split('.')[0]!.split('@')[0]!
+  const base = raw.split('.')[0]?.split('@')[0]!;
   if (!base) {
-    return undefined
+    return undefined;
   }
-  const tag = base.replaceAll('_', '-')
+  const tag = base.replaceAll('_', '-');
   // Validate by trying to construct an Intl locale — invalid tags throw
   try {
-    new Intl.DateTimeFormat(tag)
-    return tag
+    new Intl.DateTimeFormat(tag);
+    return tag;
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
 function startOfDay(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }

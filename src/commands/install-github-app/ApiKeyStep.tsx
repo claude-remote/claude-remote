@@ -1,8 +1,8 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import TextInput from '../../components/TextInput.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
-import { Box, color, Text, useTheme } from '../../ink.js';
+import { Box, Text, color, useTheme } from '../../ink.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
 interface ApiKeyStepProps {
   existingApiKey: string | null;
@@ -25,20 +25,27 @@ export function ApiKeyStep(t0) {
     onToggleUseExistingKey,
     onCreateOAuthToken,
     selectedOption: t1,
-    onSelectOption
+    onSelectOption,
   } = t0;
-  const selectedOption = t1 === undefined ? existingApiKey ? "existing" : onCreateOAuthToken ? "oauth" : "new" : t1;
+  const selectedOption =
+    t1 === undefined ? (existingApiKey ? 'existing' : onCreateOAuthToken ? 'oauth' : 'new') : t1;
   const [cursorOffset, setCursorOffset] = useState(0);
   const terminalSize = useTerminalSize();
   const [theme] = useTheme();
   let t2;
-  if ($[0] !== existingApiKey || $[1] !== onCreateOAuthToken || $[2] !== onSelectOption || $[3] !== onToggleUseExistingKey || $[4] !== selectedOption) {
+  if (
+    $[0] !== existingApiKey ||
+    $[1] !== onCreateOAuthToken ||
+    $[2] !== onSelectOption ||
+    $[3] !== onToggleUseExistingKey ||
+    $[4] !== selectedOption
+  ) {
     t2 = () => {
-      if (selectedOption === "new" && onCreateOAuthToken) {
-        onSelectOption?.("oauth");
+      if (selectedOption === 'new' && onCreateOAuthToken) {
+        onSelectOption?.('oauth');
       } else {
-        if (selectedOption === "oauth" && existingApiKey) {
-          onSelectOption?.("existing");
+        if (selectedOption === 'oauth' && existingApiKey) {
+          onSelectOption?.('existing');
           onToggleUseExistingKey(true);
         }
       }
@@ -54,14 +61,19 @@ export function ApiKeyStep(t0) {
   }
   const handlePrevious = t2;
   let t3;
-  if ($[6] !== onCreateOAuthToken || $[7] !== onSelectOption || $[8] !== onToggleUseExistingKey || $[9] !== selectedOption) {
+  if (
+    $[6] !== onCreateOAuthToken ||
+    $[7] !== onSelectOption ||
+    $[8] !== onToggleUseExistingKey ||
+    $[9] !== selectedOption
+  ) {
     t3 = () => {
-      if (selectedOption === "existing") {
-        onSelectOption?.(onCreateOAuthToken ? "oauth" : "new");
+      if (selectedOption === 'existing') {
+        onSelectOption?.(onCreateOAuthToken ? 'oauth' : 'new');
         onToggleUseExistingKey(false);
       } else {
-        if (selectedOption === "oauth") {
-          onSelectOption?.("new");
+        if (selectedOption === 'oauth') {
+          onSelectOption?.('new');
         }
       }
     };
@@ -77,7 +89,7 @@ export function ApiKeyStep(t0) {
   let t4;
   if ($[11] !== onCreateOAuthToken || $[12] !== onSubmit || $[13] !== selectedOption) {
     t4 = () => {
-      if (selectedOption === "oauth" && onCreateOAuthToken) {
+      if (selectedOption === 'oauth' && onCreateOAuthToken) {
         onCreateOAuthToken();
       } else {
         onSubmit();
@@ -91,13 +103,13 @@ export function ApiKeyStep(t0) {
     t4 = $[14];
   }
   const handleConfirm = t4;
-  const isTextInputVisible = selectedOption === "new";
+  const isTextInputVisible = selectedOption === 'new';
   let t5;
   if ($[15] !== handleConfirm || $[16] !== handleNext || $[17] !== handlePrevious) {
     t5 = {
-      "confirm:previous": handlePrevious,
-      "confirm:next": handleNext,
-      "confirm:yes": handleConfirm
+      'confirm:previous': handlePrevious,
+      'confirm:next': handleNext,
+      'confirm:yes': handleConfirm,
     };
     $[15] = handleConfirm;
     $[16] = handleNext;
@@ -110,8 +122,8 @@ export function ApiKeyStep(t0) {
   let t7;
   if ($[19] !== t6) {
     t7 = {
-      context: "Confirmation",
-      isActive: t6
+      context: 'Confirmation',
+      isActive: t6,
     };
     $[19] = t6;
     $[20] = t7;
@@ -122,8 +134,8 @@ export function ApiKeyStep(t0) {
   let t8;
   if ($[21] !== handleNext || $[22] !== handlePrevious) {
     t8 = {
-      "confirm:previous": handlePrevious,
-      "confirm:next": handleNext
+      'confirm:previous': handlePrevious,
+      'confirm:next': handleNext,
     };
     $[21] = handleNext;
     $[22] = handlePrevious;
@@ -134,8 +146,8 @@ export function ApiKeyStep(t0) {
   let t9;
   if ($[24] !== isTextInputVisible) {
     t9 = {
-      context: "Confirmation",
-      isActive: isTextInputVisible
+      context: 'Confirmation',
+      isActive: isTextInputVisible,
     };
     $[24] = isTextInputVisible;
     $[25] = t9;
@@ -144,15 +156,27 @@ export function ApiKeyStep(t0) {
   }
   useKeybindings(t8, t9);
   let t10;
-  if ($[26] === Symbol.for("react.memo_cache_sentinel")) {
-    t10 = <Box flexDirection="column" marginBottom={1}><Text bold={true}>Install GitHub App</Text><Text dimColor={true}>Choose API key</Text></Box>;
+  if ($[26] === Symbol.for('react.memo_cache_sentinel')) {
+    t10 = (
+      <Box flexDirection="column" marginBottom={1}>
+        <Text bold={true}>Install GitHub App</Text>
+        <Text dimColor={true}>Choose API key</Text>
+      </Box>
+    );
     $[26] = t10;
   } else {
     t10 = $[26];
   }
   let t11;
   if ($[27] !== existingApiKey || $[28] !== selectedOption || $[29] !== theme) {
-    t11 = existingApiKey && <Box marginBottom={1}><Text>{selectedOption === "existing" ? color("success", theme)("> ") : "  "}Use your existing Claude Code API key</Text></Box>;
+    t11 = existingApiKey && (
+      <Box marginBottom={1}>
+        <Text>
+          {selectedOption === 'existing' ? color('success', theme)('> ') : '  '}Use your existing
+          Claude Code API key
+        </Text>
+      </Box>
+    );
     $[27] = existingApiKey;
     $[28] = selectedOption;
     $[29] = theme;
@@ -162,7 +186,14 @@ export function ApiKeyStep(t0) {
   }
   let t12;
   if ($[31] !== onCreateOAuthToken || $[32] !== selectedOption || $[33] !== theme) {
-    t12 = onCreateOAuthToken && <Box marginBottom={1}><Text>{selectedOption === "oauth" ? color("success", theme)("> ") : "  "}Create a long-lived token with your Claude subscription</Text></Box>;
+    t12 = onCreateOAuthToken && (
+      <Box marginBottom={1}>
+        <Text>
+          {selectedOption === 'oauth' ? color('success', theme)('> ') : '  '}Create a long-lived
+          token with your Claude subscription
+        </Text>
+      </Box>
+    );
     $[31] = onCreateOAuthToken;
     $[32] = selectedOption;
     $[33] = theme;
@@ -172,7 +203,7 @@ export function ApiKeyStep(t0) {
   }
   let t13;
   if ($[35] !== selectedOption || $[36] !== theme) {
-    t13 = selectedOption === "new" ? color("success", theme)("> ") : "  ";
+    t13 = selectedOption === 'new' ? color('success', theme)('> ') : '  ';
     $[35] = selectedOption;
     $[36] = theme;
     $[37] = t13;
@@ -181,15 +212,40 @@ export function ApiKeyStep(t0) {
   }
   let t14;
   if ($[38] !== t13) {
-    t14 = <Box marginBottom={1}><Text>{t13}Enter a new API key</Text></Box>;
+    t14 = (
+      <Box marginBottom={1}>
+        <Text>{t13}Enter a new API key</Text>
+      </Box>
+    );
     $[38] = t13;
     $[39] = t14;
   } else {
     t14 = $[39];
   }
   let t15;
-  if ($[40] !== apiKeyOrOAuthToken || $[41] !== cursorOffset || $[42] !== onApiKeyChange || $[43] !== onSubmit || $[44] !== selectedOption || $[45] !== terminalSize) {
-    t15 = selectedOption === "new" && <TextInput value={apiKeyOrOAuthToken} onChange={onApiKeyChange} onSubmit={onSubmit} onPaste={onApiKeyChange} focus={true} placeholder={"sk-ant\u2026 (Create a new key at https://platform.claude.com/settings/keys)"} mask="*" columns={terminalSize.columns} cursorOffset={cursorOffset} onChangeCursorOffset={setCursorOffset} showCursor={true} />;
+  if (
+    $[40] !== apiKeyOrOAuthToken ||
+    $[41] !== cursorOffset ||
+    $[42] !== onApiKeyChange ||
+    $[43] !== onSubmit ||
+    $[44] !== selectedOption ||
+    $[45] !== terminalSize
+  ) {
+    t15 = selectedOption === 'new' && (
+      <TextInput
+        value={apiKeyOrOAuthToken}
+        onChange={onApiKeyChange}
+        onSubmit={onSubmit}
+        onPaste={onApiKeyChange}
+        focus={true}
+        placeholder={'sk-ant\u2026 (Create a new key at https://platform.claude.com/settings/keys)'}
+        mask="*"
+        columns={terminalSize.columns}
+        cursorOffset={cursorOffset}
+        onChangeCursorOffset={setCursorOffset}
+        showCursor={true}
+      />
+    );
     $[40] = apiKeyOrOAuthToken;
     $[41] = cursorOffset;
     $[42] = onApiKeyChange;
@@ -202,7 +258,15 @@ export function ApiKeyStep(t0) {
   }
   let t16;
   if ($[47] !== t11 || $[48] !== t12 || $[49] !== t14 || $[50] !== t15) {
-    t16 = <Box flexDirection="column" borderStyle="round" paddingX={1}>{t10}{t11}{t12}{t14}{t15}</Box>;
+    t16 = (
+      <Box flexDirection="column" borderStyle="round" paddingX={1}>
+        {t10}
+        {t11}
+        {t12}
+        {t14}
+        {t15}
+      </Box>
+    );
     $[47] = t11;
     $[48] = t12;
     $[49] = t14;
@@ -212,15 +276,24 @@ export function ApiKeyStep(t0) {
     t16 = $[51];
   }
   let t17;
-  if ($[52] === Symbol.for("react.memo_cache_sentinel")) {
-    t17 = <Box marginLeft={3}><Text dimColor={true}>↑/↓ to select · Enter to continue</Text></Box>;
+  if ($[52] === Symbol.for('react.memo_cache_sentinel')) {
+    t17 = (
+      <Box marginLeft={3}>
+        <Text dimColor={true}>↑/↓ to select · Enter to continue</Text>
+      </Box>
+    );
     $[52] = t17;
   } else {
     t17 = $[52];
   }
   let t18;
   if ($[53] !== t16) {
-    t18 = <>{t16}{t17}</>;
+    t18 = (
+      <>
+        {t16}
+        {t17}
+      </>
+    );
     $[53] = t16;
     $[54] = t18;
   } else {

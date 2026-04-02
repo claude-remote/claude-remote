@@ -15,17 +15,17 @@ export function eagerParseCliFlag(
   argv: string[] = process.argv,
 ): string | undefined {
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
+    const arg = argv[i];
     // Handle --flag=value syntax
     if (arg?.startsWith(`${flagName}=`)) {
-      return arg.slice(flagName.length + 1)
+      return arg.slice(flagName.length + 1);
     }
     // Handle --flag value syntax
     if (arg === flagName && i + 1 < argv.length) {
-      return argv[i + 1]
+      return argv[i + 1];
     }
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -54,7 +54,7 @@ export function extractArgsAfterDoubleDash(
     return {
       command: args[0]!,
       args: args.slice(1),
-    }
+    };
   }
-  return { command: commandOrValue, args }
+  return { command: commandOrValue, args };
 }

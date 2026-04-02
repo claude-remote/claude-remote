@@ -1,36 +1,31 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { type ReactNode, useCallback, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../../../ink.js';
 import { useKeybinding } from '../../../../keybindings/useKeybinding.js';
 import { editPromptInEditor } from '../../../../utils/promptEditor.js';
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js';
+import TextInput from '../../../TextInput.js';
 import { Byline } from '../../../design-system/Byline.js';
 import { KeyboardShortcutHint } from '../../../design-system/KeyboardShortcutHint.js';
-import TextInput from '../../../TextInput.js';
-import { useWizard } from '../../../wizard/index.js';
 import { WizardDialogLayout } from '../../../wizard/WizardDialogLayout.js';
+import { useWizard } from '../../../wizard/index.js';
 import type { AgentWizardData } from '../types.js';
 export function PromptStep() {
   const $ = _c(20);
-  const {
-    goNext,
-    goBack,
-    updateWizardData,
-    wizardData
-  } = useWizard();
-  const [systemPrompt, setSystemPrompt] = useState(wizardData.systemPrompt || "");
+  const { goNext, goBack, updateWizardData, wizardData } = useWizard();
+  const [systemPrompt, setSystemPrompt] = useState(wizardData.systemPrompt || '');
   const [cursorOffset, setCursorOffset] = useState(systemPrompt.length);
   const [error, setError] = useState(null);
   let t0;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t0 = {
-      context: "Settings"
+      context: 'Settings',
     };
     $[0] = t0;
   } else {
     t0 = $[0];
   }
-  useKeybinding("confirm:no", goBack, t0);
+  useKeybinding('confirm:no', goBack, t0);
   let t1;
   if ($[1] !== systemPrompt) {
     t1 = async () => {
@@ -47,26 +42,26 @@ export function PromptStep() {
   }
   const handleExternalEditor = t1;
   let t2;
-  if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[3] === Symbol.for('react.memo_cache_sentinel')) {
     t2 = {
-      context: "Chat"
+      context: 'Chat',
     };
     $[3] = t2;
   } else {
     t2 = $[3];
   }
-  useKeybinding("chat:externalEditor", handleExternalEditor, t2);
+  useKeybinding('chat:externalEditor', handleExternalEditor, t2);
   let t3;
   if ($[4] !== goNext || $[5] !== systemPrompt || $[6] !== updateWizardData) {
     t3 = () => {
       const trimmedPrompt = systemPrompt.trim();
       if (!trimmedPrompt) {
-        setError("System prompt is required");
+        setError('System prompt is required');
         return;
       }
       setError(null);
       updateWizardData({
-        systemPrompt: trimmedPrompt
+        systemPrompt: trimmedPrompt,
       });
       goNext();
     };
@@ -79,15 +74,32 @@ export function PromptStep() {
   }
   const handleSubmit = t3;
   let t4;
-  if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = <Byline><KeyboardShortcutHint shortcut="Type" action="enter text" /><KeyboardShortcutHint shortcut="Enter" action="continue" /><ConfigurableShortcutHint action="chat:externalEditor" context="Chat" fallback="ctrl+g" description="open in editor" /><ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="go back" /></Byline>;
+  if ($[8] === Symbol.for('react.memo_cache_sentinel')) {
+    t4 = (
+      <Byline>
+        <KeyboardShortcutHint shortcut="Type" action="enter text" />
+        <KeyboardShortcutHint shortcut="Enter" action="continue" />
+        <ConfigurableShortcutHint
+          action="chat:externalEditor"
+          context="Chat"
+          fallback="ctrl+g"
+          description="open in editor"
+        />
+        <ConfigurableShortcutHint
+          action="confirm:no"
+          context="Settings"
+          fallback="Esc"
+          description="go back"
+        />
+      </Byline>
+    );
     $[8] = t4;
   } else {
     t4 = $[8];
   }
   let t5;
   let t6;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
     t5 = <Text>Enter the system prompt for your agent:</Text>;
     t6 = <Text dimColor={true}>Be comprehensive for best results</Text>;
     $[9] = t5;
@@ -98,7 +110,21 @@ export function PromptStep() {
   }
   let t7;
   if ($[11] !== cursorOffset || $[12] !== handleSubmit || $[13] !== systemPrompt) {
-    t7 = <Box marginTop={1}><TextInput value={systemPrompt} onChange={setSystemPrompt} onSubmit={handleSubmit} placeholder="You are a helpful code reviewer who..." columns={80} cursorOffset={cursorOffset} onChangeCursorOffset={setCursorOffset} focus={true} showCursor={true} /></Box>;
+    t7 = (
+      <Box marginTop={1}>
+        <TextInput
+          value={systemPrompt}
+          onChange={setSystemPrompt}
+          onSubmit={handleSubmit}
+          placeholder="You are a helpful code reviewer who..."
+          columns={80}
+          cursorOffset={cursorOffset}
+          onChangeCursorOffset={setCursorOffset}
+          focus={true}
+          showCursor={true}
+        />
+      </Box>
+    );
     $[11] = cursorOffset;
     $[12] = handleSubmit;
     $[13] = systemPrompt;
@@ -108,7 +134,11 @@ export function PromptStep() {
   }
   let t8;
   if ($[15] !== error) {
-    t8 = error && <Box marginTop={1}><Text color="error">{error}</Text></Box>;
+    t8 = error && (
+      <Box marginTop={1}>
+        <Text color="error">{error}</Text>
+      </Box>
+    );
     $[15] = error;
     $[16] = t8;
   } else {
@@ -116,7 +146,16 @@ export function PromptStep() {
   }
   let t9;
   if ($[17] !== t7 || $[18] !== t8) {
-    t9 = <WizardDialogLayout subtitle="System prompt" footerText={t4}><Box flexDirection="column">{t5}{t6}{t7}{t8}</Box></WizardDialogLayout>;
+    t9 = (
+      <WizardDialogLayout subtitle="System prompt" footerText={t4}>
+        <Box flexDirection="column">
+          {t5}
+          {t6}
+          {t7}
+          {t8}
+        </Box>
+      </WizardDialogLayout>
+    );
     $[17] = t7;
     $[18] = t8;
     $[19] = t9;

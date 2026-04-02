@@ -1,88 +1,95 @@
-const NO_VALUE = Symbol('NO_VALUE')
+const NO_VALUE = Symbol('NO_VALUE');
 
 export async function lastX<A>(as: AsyncGenerator<A>): Promise<A> {
-  let lastValue: A | typeof NO_VALUE = NO_VALUE
+  let lastValue: A | typeof NO_VALUE = NO_VALUE;
   for await (const a of as) {
-    lastValue = a
+    lastValue = a;
   }
   if (lastValue === NO_VALUE) {
-    throw new Error('No items in generator')
+    throw new Error('No items in generator');
   }
-  return lastValue
+  return lastValue;
 }
 
-export async function returnValue<A>(
-  as: AsyncGenerator<unknown, A>,
-): Promise<A> {
-  let e
+export async function returnValue<A>(as: AsyncGenerator<unknown, A>): Promise<A> {
+  let e;
   do {
-    e = await as.next()
-  } while (!e.done)
-  return e.value
+    e = await as.next();
+  } while (!e.done);
+  return e.value;
 }
 
 type QueuedGenerator<A> = {
-  done: boolean | void
-  value: A | void
-  generator: AsyncGenerator<A, void>
-  promise: Promise<QueuedGenerator<A>>
-}
+  done: boolean | undefined;
+  value: A | undefined;
+  generator: AsyncGenerator<A, void>;
+  promise: Promise<QueuedGenerator<A>>;
+};
 
 // Run all generators concurrently up to a concurrency cap, yielding values as they come in
 export async function* all<A>(
   generators: AsyncGenerator<A, void>[],
-  concurrencyCap = Infinity,
+  concurrencyCap = Number.POSITIVE_INFINITY,
 ): AsyncGenerator<A, void> {
   const next = (generator: AsyncGenerator<A, void>) => {
-    const promise: Promise<QueuedGenerator<A>> = generator
-      .next()
-      .then(({ done, value }) => ({
+    const promise: Promise<QueuedGenerator<A>> = generator.next().then(({ done, value }) => {
+      if (done) {
+        const queued: QueuedGenerator<A> = {
+          done,
+          value: undefined,
+          generator,
+          promise,
+        };
+        return queued;
+      }
+
+      const queued: QueuedGenerator<A> = {
         done,
-        value,
+        value: value as A,
         generator,
         promise,
-      }))
-    return promise
-  }
-  const waiting = [...generators]
-  const promises = new Set<Promise<QueuedGenerator<A>>>()
+      };
+      return queued;
+    });
+    return promise;
+  };
+  const waiting = [...generators];
+  const promises = new Set<Promise<QueuedGenerator<A>>>();
 
   // Start initial batch up to concurrency cap
   while (promises.size < concurrencyCap && waiting.length > 0) {
-    const gen = waiting.shift()!
-    promises.add(next(gen))
+    const gen = waiting.shift()!;
+    promises.add(next(gen));
   }
 
   while (promises.size > 0) {
-    const { done, value, generator, promise } = await Promise.race(promises)
-    promises.delete(promise)
+    const { done, value, generator, promise } = await Promise.race(promises);
+    promises.delete(promise);
 
     if (!done) {
-      promises.add(next(generator))
+      promises.add(next(generator));
       // TODO: Clean this up
       if (value !== undefined) {
-        yield value as Awaited<A>
+        yield value as Awaited<A>;
       }
     } else if (waiting.length > 0) {
       // Start a new generator when one finishes
-      const nextGen = waiting.shift()!
-      promises.add(next(nextGen))
+      const nextGen = waiting.shift()!;
+      promises.add(next(nextGen));
     }
   }
 }
 
-export async function toArray<A>(
-  generator: AsyncGenerator<A, void>,
-): Promise<A[]> {
-  const result: A[] = []
+export async function toArray<A>(generator: AsyncGenerator<A, void>): Promise<A[]> {
+  const result: A[] = [];
   for await (const a of generator) {
-    result.push(a)
+    result.push(a);
   }
-  return result
+  return result;
 }
 
 export async function* fromArray<T>(values: T[]): AsyncGenerator<T, void> {
   for (const value of values) {
-    yield value
+    yield value;
   }
 }

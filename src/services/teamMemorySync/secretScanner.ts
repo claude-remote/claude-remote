@@ -18,23 +18,23 @@
  *     Go regex are kept (JS $ matches end-of-string in default mode).
  */
 
-import { capitalize } from '../../utils/stringUtils.js'
+import { capitalize } from '../../utils/stringUtils.js';
 
 type SecretRule = {
   /** Gitleaks rule ID (kebab-case), used in labels and analytics */
-  id: string
+  id: string;
   /** Regex source, lazily compiled on first scan */
-  source: string
+  source: string;
   /** Optional JS regex flags (most rules are case-sensitive by default) */
-  flags?: string
-}
+  flags?: string;
+};
 
 export type SecretMatch = {
   /** Gitleaks rule ID that matched (e.g., "github-pat", "aws-access-token") */
-  ruleId: string
+  ruleId: string;
   /** Human-readable label derived from the rule ID */
-  label: string
-}
+  label: string;
+};
 
 // ─── Curated rules ──────────────────────────────────────────────
 // High-confidence patterns from gitleaks with distinctive prefixes.
@@ -43,7 +43,7 @@ export type SecretMatch = {
 // Anthropic API key prefix, assembled at runtime so the literal byte
 // sequence isn't present in the external bundle (excluded-strings check).
 // join() is not constant-folded by the minifier.
-const ANT_KEY_PFX = ['sk', 'ant', 'api'].join('-')
+const ANT_KEY_PFX = ['sk', 'ant', 'api'].join('-');
 
 const SECRET_RULES: SecretRule[] = [
   // — Cloud providers —
@@ -76,8 +76,7 @@ const SECRET_RULES: SecretRule[] = [
   },
   {
     id: 'anthropic-admin-api-key',
-    source:
-      '\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(sk-ant-admin01-[a-zA-Z0-9_\\-]{93}AA)(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'openai-api-key',
@@ -170,15 +169,13 @@ const SECRET_RULES: SecretRule[] = [
   {
     id: 'postman-api-token',
     // gitleaks: PMAK-(?i)[a-f0-9]{24}\-[a-f0-9]{34} → JS: use [a-fA-F0-9]
-    source:
-      '\\b(PMAK-[a-fA-F0-9]{24}-[a-fA-F0-9]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(PMAK-[a-fA-F0-9]{24}-[a-fA-F0-9]{34})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
 
   // — Observability —
   {
     id: 'grafana-api-key',
-    source:
-      '\\b(eyJrIjoi[A-Za-z0-9+/]{70,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(eyJrIjoi[A-Za-z0-9+/]{70,400}={0,3})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'grafana-cloud-api-token',
@@ -186,8 +183,7 @@ const SECRET_RULES: SecretRule[] = [
   },
   {
     id: 'grafana-service-account-token',
-    source:
-      '\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b(glsa_[A-Za-z0-9]{32}_[A-Fa-f0-9]{8})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'sentry-user-token',
@@ -202,8 +198,7 @@ const SECRET_RULES: SecretRule[] = [
   // — Payment / commerce —
   {
     id: 'stripe-access-token',
-    source:
-      '\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
+    source: '\\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\\x60\'"\\s;]|\\\\[nr]|$)',
   },
   {
     id: 'shopify-access-token',
@@ -221,19 +216,19 @@ const SECRET_RULES: SecretRule[] = [
       '-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----[\\s\\S-]{64,}?-----END[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----',
     flags: 'i',
   },
-]
+];
 
 // Lazily compiled pattern cache — compile once on first scan.
-let compiledRules: Array<{ id: string; re: RegExp }> | null = null
+let compiledRules: Array<{ id: string; re: RegExp }> | null = null;
 
 function getCompiledRules(): Array<{ id: string; re: RegExp }> {
   if (compiledRules === null) {
-    compiledRules = SECRET_RULES.map(r => ({
+    compiledRules = SECRET_RULES.map((r) => ({
       id: r.id,
       re: new RegExp(r.source, r.flags),
-    }))
+    }));
   }
-  return compiledRules
+  return compiledRules;
 }
 
 /**
@@ -260,11 +255,11 @@ function ruleIdToLabel(ruleId: string): string {
     huggingface: 'HuggingFace',
     hashicorp: 'HashiCorp',
     sendgrid: 'SendGrid',
-  }
+  };
   return ruleId
     .split('-')
-    .map(part => specialCase[part] ?? capitalize(part))
-    .join(' ')
+    .map((part) => specialCase[part] ?? capitalize(part))
+    .join(' ');
 }
 
 /**
@@ -275,23 +270,23 @@ function ruleIdToLabel(ruleId: string): string {
  * display secret values.
  */
 export function scanForSecrets(content: string): SecretMatch[] {
-  const matches: SecretMatch[] = []
-  const seen = new Set<string>()
+  const matches: SecretMatch[] = [];
+  const seen = new Set<string>();
 
   for (const rule of getCompiledRules()) {
     if (seen.has(rule.id)) {
-      continue
+      continue;
     }
     if (rule.re.test(content)) {
-      seen.add(rule.id)
+      seen.add(rule.id);
       matches.push({
         ruleId: rule.id,
         label: ruleIdToLabel(rule.id),
-      })
+      });
     }
   }
 
-  return matches
+  return matches;
 }
 
 /**
@@ -299,7 +294,7 @@ export function scanForSecrets(content: string): SecretMatch[] {
  * Falls back to kebab-to-Title conversion for unknown IDs.
  */
 export function getSecretLabel(ruleId: string): string {
-  return ruleIdToLabel(ruleId)
+  return ruleIdToLabel(ruleId);
 }
 
 /**
@@ -307,18 +302,18 @@ export function getSecretLabel(ruleId: string): string {
  * Unlike scanForSecrets, this returns the content with spans replaced
  * so the surrounding text can still be written to disk safely.
  */
-let redactRules: RegExp[] | null = null
+let redactRules: RegExp[] | null = null;
 
 export function redactSecrets(content: string): string {
   redactRules ??= SECRET_RULES.map(
-    r => new RegExp(r.source, (r.flags ?? '').replace('g', '') + 'g'),
-  )
+    (r) => new RegExp(r.source, `${(r.flags ?? '').replace('g', '')}g`),
+  );
   for (const re of redactRules) {
     // Replace only the captured group, not the full match — patterns include
     // boundary chars (space, quote, ;) outside the group that must survive.
     content = content.replace(re, (match, g1) =>
       typeof g1 === 'string' ? match.replace(g1, '[REDACTED]') : '[REDACTED]',
-    )
+    );
   }
-  return content
+  return content;
 }

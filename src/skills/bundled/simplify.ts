@@ -1,5 +1,5 @@
-import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 const SIMPLIFY_PROMPT = `# Simplify: Code Review and Cleanup
 
@@ -50,7 +50,7 @@ Review the same changes for efficiency:
 Wait for all three agents to complete. Aggregate their findings and fix each issue directly. If a finding is a false positive or not worth addressing, note it and move on — do not argue with the finding, just skip it.
 
 When done, briefly summarize what was fixed (or confirm the code was already clean).
-`
+`;
 
 export function registerSimplifySkill(): void {
   registerBundledSkill({
@@ -59,11 +59,11 @@ export function registerSimplifySkill(): void {
       'Review changed code for reuse, quality, and efficiency, then fix any issues found.',
     userInvocable: true,
     async getPromptForCommand(args) {
-      let prompt = SIMPLIFY_PROMPT
+      let prompt = SIMPLIFY_PROMPT;
       if (args) {
-        prompt += `\n\n## Additional Focus\n\n${args}`
+        prompt += `\n\n## Additional Focus\n\n${args}`;
       }
-      return [{ type: 'text', text: prompt }]
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

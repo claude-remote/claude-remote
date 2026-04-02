@@ -1,10 +1,10 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../../ink.js';
 export function CheckGitHubStep() {
   const $ = _c(1);
   let t0;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t0 = <Text>Checking GitHub CLI installation…</Text>;
     $[0] = t0;
   } else {

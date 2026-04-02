@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const sleep: CommandSpec = {
   name: 'sleep',
@@ -8,6 +8,6 @@ const sleep: CommandSpec = {
     description: 'Duration to sleep (seconds or with suffix like 5s, 2m, 1h)',
     isOptional: false,
   },
-}
+};
 
-export default sleep
+export default sleep;

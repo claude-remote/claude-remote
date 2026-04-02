@@ -11,22 +11,18 @@
  * Mutates the object in place.
  */
 export function normalizeControlMessageKeys(obj: unknown): unknown {
-  if (obj === null || typeof obj !== 'object') return obj
-  const record = obj as Record<string, unknown>
+  if (obj === null || typeof obj !== 'object') return obj;
+  const record = obj as Record<string, unknown>;
   if ('requestId' in record && !('request_id' in record)) {
-    record.request_id = record.requestId
-    delete record.requestId
+    record.request_id = record.requestId;
+    record.requestId = undefined;
   }
-  if (
-    'response' in record &&
-    record.response !== null &&
-    typeof record.response === 'object'
-  ) {
-    const response = record.response as Record<string, unknown>
+  if ('response' in record && record.response !== null && typeof record.response === 'object') {
+    const response = record.response as Record<string, unknown>;
     if ('requestId' in response && !('request_id' in response)) {
-      response.request_id = response.requestId
-      delete response.requestId
+      response.request_id = response.requestId;
+      response.requestId = undefined;
     }
   }
-  return obj
+  return obj;
 }

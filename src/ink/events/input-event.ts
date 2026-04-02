@@ -1,28 +1,28 @@
-import { nonAlphanumericKeys, type ParsedKey } from '../parse-keypress.js'
-import { Event } from './event.js'
+import { type ParsedKey, nonAlphanumericKeys } from '../parse-keypress.js';
+import { Event } from './event.js';
 
 export type Key = {
-  upArrow: boolean
-  downArrow: boolean
-  leftArrow: boolean
-  rightArrow: boolean
-  pageDown: boolean
-  pageUp: boolean
-  wheelUp: boolean
-  wheelDown: boolean
-  home: boolean
-  end: boolean
-  return: boolean
-  escape: boolean
-  ctrl: boolean
-  shift: boolean
-  fn: boolean
-  tab: boolean
-  backspace: boolean
-  delete: boolean
-  meta: boolean
-  super: boolean
-}
+  upArrow: boolean;
+  downArrow: boolean;
+  leftArrow: boolean;
+  rightArrow: boolean;
+  pageDown: boolean;
+  pageUp: boolean;
+  wheelUp: boolean;
+  wheelDown: boolean;
+  home: boolean;
+  end: boolean;
+  return: boolean;
+  escape: boolean;
+  ctrl: boolean;
+  shift: boolean;
+  fn: boolean;
+  tab: boolean;
+  backspace: boolean;
+  delete: boolean;
+  meta: boolean;
+  super: boolean;
+};
 
 function parseKey(keypress: ParsedKey): [Key, string] {
   const key: Key = {
@@ -53,13 +53,13 @@ function parseKey(keypress: ParsedKey): [Key, string] {
     // protocol CSI u sequences. Distinct from meta (Alt/Option) so
     // bindings like cmd+c can be expressed separately from opt+c.
     super: keypress.super,
-  }
+  };
 
-  let input = keypress.ctrl ? keypress.name : keypress.sequence
+  let input = keypress.ctrl ? keypress.name : keypress.sequence;
 
   // Handle undefined input case
   if (input === undefined) {
-    input = ''
+    input = '';
   }
 
   // When ctrl is set, keypress.name for space is the literal word "space".
@@ -67,7 +67,7 @@ function parseKey(keypress: ParsedKey): [Key, string] {
   // (which maps 'space' → ' '). Without this, ctrl+space leaks the literal
   // word "space" into text input.
   if (keypress.ctrl && input === 'space') {
-    input = ' '
+    input = ' ';
   }
 
   // Suppress unrecognized escape sequences that were parsed as function keys
@@ -76,7 +76,7 @@ function parseKey(keypress: ParsedKey): [Key, string] {
   // Without this, the ESC prefix is stripped below and the remainder (e.g.,
   // "[25~") leaks into the input as literal text.
   if (keypress.code && !keypress.name) {
-    input = ''
+    input = '';
   }
 
   // Suppress ESC-less SGR mouse fragments. When a heavy React commit blocks
@@ -88,19 +88,19 @@ function parseKey(keypress: ParsedKey): [Key, string] {
   // literal `[<64;74;16M`. This is the same defensive sink as the F13 guard
   // above; the underlying tokenizer-flush race is upstream of this layer.
   if (!keypress.name && /^\[<\d+;\d+;\d+[Mm]/.test(input)) {
-    input = ''
+    input = '';
   }
 
   // Strip meta if it's still remaining after `parseKeypress`
   // TODO(vadimdemedes): remove this in the next major version.
   if (input.startsWith('\u001B')) {
-    input = input.slice(1)
+    input = input.slice(1);
   }
 
   // Track whether we've already processed this as a special sequence
   // that converted input to the key name (CSI u or application keypad mode).
   // For these, we don't want to clear input with nonAlphanumericKeys check.
-  let processedAsSpecialSequence = false
+  let processedAsSpecialSequence = false;
 
   // Handle CSI u sequences (Kitty keyboard protocol): after stripping ESC,
   // we're left with "[codepoint;modifieru" (e.g., "[98;3u" for Alt+b).
@@ -113,20 +113,15 @@ function parseKey(keypress: ParsedKey): [Key, string] {
       // Unmapped Kitty functional key (Caps Lock 57358, F13–F35, KP nav,
       // bare modifiers, etc.) — keycodeToName() returned undefined. Swallow
       // so the raw "[57358u" doesn't leak into the prompt. See #38781.
-      input = ''
+      input = '';
     } else {
       // 'space' → ' '; 'escape' → '' (key.escape carries it;
       // processedAsSpecialSequence bypasses the nonAlphanumericKeys
       // clear below, so we must handle it explicitly here);
       // otherwise use key name.
-      input =
-        keypress.name === 'space'
-          ? ' '
-          : keypress.name === 'escape'
-            ? ''
-            : keypress.name
+      input = keypress.name === 'space' ? ' ' : keypress.name === 'escape' ? '' : keypress.name;
     }
-    processedAsSpecialSequence = true
+    processedAsSpecialSequence = true;
   }
 
   // Handle xterm modifyOtherKeys sequences: after stripping ESC, we're left
@@ -139,67 +134,48 @@ function parseKey(keypress: ParsedKey): [Key, string] {
       // the CSI u handler above. Practically untriggerable today (xterm
       // modifyOtherKeys only sends ASCII keycodes, all mapped), but
       // guards against future terminal behavior.
-      input = ''
+      input = '';
     } else {
-      input =
-        keypress.name === 'space'
-          ? ' '
-          : keypress.name === 'escape'
-            ? ''
-            : keypress.name
+      input = keypress.name === 'space' ? ' ' : keypress.name === 'escape' ? '' : keypress.name;
     }
-    processedAsSpecialSequence = true
+    processedAsSpecialSequence = true;
   }
 
   // Handle application keypad mode sequences: after stripping ESC,
   // we're left with "O<letter>" (e.g., "Op" for numpad 0, "Oy" for numpad 9).
   // Use the parsed key name (the digit character) for input handling.
-  if (
-    input.startsWith('O') &&
-    input.length === 2 &&
-    keypress.name &&
-    keypress.name.length === 1
-  ) {
-    input = keypress.name
-    processedAsSpecialSequence = true
+  if (input.startsWith('O') && input.length === 2 && keypress.name && keypress.name.length === 1) {
+    input = keypress.name;
+    processedAsSpecialSequence = true;
   }
 
   // Clear input for non-alphanumeric keys (arrows, function keys, etc.)
   // Skip this for CSI u and application keypad mode sequences since
   // those were already converted to their proper input characters.
-  if (
-    !processedAsSpecialSequence &&
-    keypress.name &&
-    nonAlphanumericKeys.includes(keypress.name)
-  ) {
-    input = ''
+  if (!processedAsSpecialSequence && keypress.name && nonAlphanumericKeys.includes(keypress.name)) {
+    input = '';
   }
 
   // Set shift=true for uppercase letters (A-Z)
   // Must check it's actually a letter, not just any char unchanged by toUpperCase
-  if (
-    input.length === 1 &&
-    typeof input[0] === 'string' &&
-    input[0] >= 'A' &&
-    input[0] <= 'Z'
-  ) {
-    key.shift = true
+  if (input.length === 1 && typeof input[0] === 'string' && input[0] >= 'A' && input[0] <= 'Z') {
+    key.shift = true;
   }
 
-  return [key, input]
+  return [key, input];
 }
 
 export class InputEvent extends Event {
-  readonly keypress: ParsedKey
-  readonly key: Key
-  readonly input: string
+  readonly keypress: ParsedKey;
+  readonly key: Key;
+  readonly input: string;
 
   constructor(keypress: ParsedKey) {
-    super()
-    const [key, input] = parseKey(keypress)
+    super();
+    const [key, input] = parseKey(keypress);
 
-    this.keypress = keypress
-    this.key = key
-    this.input = input
+    this.keypress = keypress;
+    this.key = key;
+    this.input = input;
   }
 }

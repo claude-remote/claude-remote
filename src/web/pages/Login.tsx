@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { CLAUDE_REMOTE_VERSION, DEFAULT_PORT } from '@/shared/constants';
 
@@ -69,9 +69,7 @@ export function Login() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-950 p-4 font-mono">
       <div className="w-full max-w-md rounded-lg border border-gray-800 bg-gray-900 p-8">
-        <p className="mb-1 text-xs text-gray-500">
-          Claude Remote v{CLAUDE_REMOTE_VERSION}
-        </p>
+        <p className="mb-1 text-xs text-gray-500">Claude Remote v{CLAUDE_REMOTE_VERSION}</p>
         <h1 className="mb-1 text-2xl font-semibold text-gray-100">Login to Hub</h1>
         <p className="mb-6 text-sm text-gray-400">Default port {DEFAULT_PORT}</p>
 
@@ -83,7 +81,6 @@ export function Login() {
             onChange={(e) => setToken(e.target.value)}
             placeholder="Enter Hub Token"
             disabled={loading}
-            autoFocus
           />
 
           <button
@@ -92,11 +89,7 @@ export function Login() {
             className="flex items-center justify-center rounded bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -117,9 +110,7 @@ export function Login() {
           </button>
         </form>
 
-        {error && (
-          <p className="mt-4 text-center text-sm text-red-400">{error}</p>
-        )}
+        {error && <p className="mt-4 text-center text-sm text-red-400">{error}</p>}
       </div>
     </main>
   );

@@ -1,27 +1,24 @@
-import indentString from 'indent-string'
-import { applyTextStyles } from './colorize.js'
-import type { DOMElement } from './dom.js'
-import getMaxWidth from './get-max-width.js'
-import type { Rectangle } from './layout/geometry.js'
-import { LayoutDisplay, LayoutEdge, type LayoutNode } from './layout/node.js'
-import { nodeCache, pendingClears } from './node-cache.js'
-import type Output from './output.js'
-import renderBorder from './render-border.js'
-import type { Screen } from './screen.js'
-import {
-  type StyledSegment,
-  squashTextNodesToSegments,
-} from './squash-text-nodes.js'
-import type { Color } from './styles.js'
-import { isXtermJs } from './terminal.js'
-import { widestLine } from './widest-line.js'
-import wrapText from './wrap-text.js'
+import indentString from 'indent-string';
+import { applyTextStyles } from './colorize.js';
+import type { DOMElement } from './dom.js';
+import getMaxWidth from './get-max-width.js';
+import type { Rectangle } from './layout/geometry.js';
+import { LayoutDisplay, LayoutEdge, type LayoutNode } from './layout/node.js';
+import { nodeCache, pendingClears } from './node-cache.js';
+import type Output from './output.js';
+import renderBorder from './render-border.js';
+import type { Screen } from './screen.js';
+import { type StyledSegment, squashTextNodesToSegments } from './squash-text-nodes.js';
+import type { Color } from './styles.js';
+import { isXtermJs } from './terminal.js';
+import { widestLine } from './widest-line.js';
+import wrapText from './wrap-text.js';
 
 // Matches detectXtermJsWheel() in ScrollKeybindingHandler.tsx — the curve
 // and drain must agree on terminal detection. TERM_PROGRAM check is the sync
 // fallback; isXtermJs() is the authoritative XTVERSION-probe result.
 function isXtermJsHost(): boolean {
-  return process.env.TERM_PROGRAM === 'vscode' || isXtermJs()
+  return process.env.TERM_PROGRAM === 'vscode' || isXtermJs();
 }
 
 // Per-frame scratch: set when any node's yoga position/size differs from
@@ -31,14 +28,14 @@ function isXtermJsHost(): boolean {
 // (spinner tick, clock tick, text append into a fixed-height box) don't
 // shift layout → narrow damage bounds → O(changed cells) diff instead of
 // O(rows×cols).
-let layoutShifted = false
+let layoutShifted = false;
 
 export function resetLayoutShifted(): void {
-  layoutShifted = false
+  layoutShifted = false;
 }
 
 export function didLayoutShift(): boolean {
-  return layoutShifted
+  return layoutShifted;
 }
 
 // DECSTBM scroll optimization hint. When a ScrollBox's scrollTop changes
@@ -46,25 +43,25 @@ export function didLayoutShift(): boolean {
 // hardware scroll (DECSTBM + SU/SD) instead of rewriting the whole
 // viewport. top/bottom are 0-indexed inclusive screen rows; delta > 0 =
 // content moved up (scrollTop increased, CSI n S).
-export type ScrollHint = { top: number; bottom: number; delta: number }
-let scrollHint: ScrollHint | null = null
+export type ScrollHint = { top: number; bottom: number; delta: number };
+let scrollHint: ScrollHint | null = null;
 
 // Rects of position:absolute nodes from the PREVIOUS frame, used by
 // ScrollBox's blit+shift third-pass repair (see usage site). Recorded at
 // three paths — full-render nodeCache.set, node-level blit early-return,
 // blitEscapingAbsoluteDescendants — so clean-overlay consecutive scrolls
 // still have the rect.
-let absoluteRectsPrev: Rectangle[] = []
-let absoluteRectsCur: Rectangle[] = []
+let absoluteRectsPrev: Rectangle[] = [];
+let absoluteRectsCur: Rectangle[] = [];
 
 export function resetScrollHint(): void {
-  scrollHint = null
-  absoluteRectsPrev = absoluteRectsCur
-  absoluteRectsCur = []
+  scrollHint = null;
+  absoluteRectsPrev = absoluteRectsCur;
+  absoluteRectsCur = [];
 }
 
 export function getScrollHint(): ScrollHint | null {
-  return scrollHint
+  return scrollHint;
 }
 
 // The ScrollBox DOM node (if any) with pendingScrollDelta left after this
@@ -72,14 +69,14 @@ export function getScrollHint(): ScrollHint | null {
 // frame's root blit check fails and we descend to continue draining.
 // Without this, after the scrollbox's dirty flag is cleared (line ~721),
 // the next frame blits root and never reaches the scrollbox — drain stalls.
-let scrollDrainNode: DOMElement | null = null
+let scrollDrainNode: DOMElement | null = null;
 
 export function resetScrollDrainNode(): void {
-  scrollDrainNode = null
+  scrollDrainNode = null;
 }
 
 export function getScrollDrainNode(): DOMElement | null {
-  return scrollDrainNode
+  return scrollDrainNode;
 }
 
 // At-bottom follow scroll event this frame. When streaming content
@@ -91,48 +88,44 @@ export function getScrollDrainNode(): DOMElement | null {
 // still holds the old content at that point — captureScrolledRows reads
 // from it before the front/back swap to preserve the text for copy.
 export type FollowScroll = {
-  delta: number
-  viewportTop: number
-  viewportBottom: number
-}
-let followScroll: FollowScroll | null = null
+  delta: number;
+  viewportTop: number;
+  viewportBottom: number;
+};
+let followScroll: FollowScroll | null = null;
 
 export function consumeFollowScroll(): FollowScroll | null {
-  const f = followScroll
-  followScroll = null
-  return f
+  const f = followScroll;
+  followScroll = null;
+  return f;
 }
 
 // ── Native terminal drain (iTerm2/Ghostty/etc. — proportional events) ──
 // Minimum rows applied per frame. Above this, drain is proportional (~3/4
 // of remaining) so big bursts catch up in log₄ frames while the tail
 // decelerates smoothly. Hard cap is innerHeight-1 so DECSTBM hint fires.
-const SCROLL_MIN_PER_FRAME = 4
+const SCROLL_MIN_PER_FRAME = 4;
 
 // ── xterm.js (VS Code) smooth drain ──
 // Low pending (≤5) drains ALL in one frame — slow wheel clicks should be
 // instant (click → visible jump → done), not micro-stutter 1-row frames.
 // Higher pending drains at a small fixed step so fast-scroll animation
 // stays smooth (no big jumps). Pending >MAX snaps excess.
-const SCROLL_INSTANT_THRESHOLD = 5 // ≤ this: drain all at once
-const SCROLL_HIGH_PENDING = 12 // threshold for HIGH step
-const SCROLL_STEP_MED = 2 // pending (INSTANT, HIGH): catch-up
-const SCROLL_STEP_HIGH = 3 // pending ≥ HIGH: fast flick
-const SCROLL_MAX_PENDING = 30 // snap excess beyond this
+const SCROLL_INSTANT_THRESHOLD = 5; // ≤ this: drain all at once
+const SCROLL_HIGH_PENDING = 12; // threshold for HIGH step
+const SCROLL_STEP_MED = 2; // pending (INSTANT, HIGH): catch-up
+const SCROLL_STEP_HIGH = 3; // pending ≥ HIGH: fast flick
+const SCROLL_MAX_PENDING = 30; // snap excess beyond this
 
 // xterm.js adaptive drain. Returns rows applied; mutates pendingScrollDelta.
-function drainAdaptive(
-  node: DOMElement,
-  pending: number,
-  innerHeight: number,
-): number {
-  const sign = pending > 0 ? 1 : -1
-  let abs = Math.abs(pending)
-  let applied = 0
+function drainAdaptive(node: DOMElement, pending: number, innerHeight: number): number {
+  const sign = pending > 0 ? 1 : -1;
+  let abs = Math.abs(pending);
+  let applied = 0;
   // Snap excess beyond animation window so big flicks don't coast.
   if (abs > SCROLL_MAX_PENDING) {
-    applied += sign * (abs - SCROLL_MAX_PENDING)
-    abs = SCROLL_MAX_PENDING
+    applied += sign * (abs - SCROLL_MAX_PENDING);
+    abs = SCROLL_MAX_PENDING;
   }
   // ≤5: drain all (slow click = instant). Above: small fixed step.
   const step =
@@ -140,49 +133,45 @@ function drainAdaptive(
       ? abs
       : abs < SCROLL_HIGH_PENDING
         ? SCROLL_STEP_MED
-        : SCROLL_STEP_HIGH
-  applied += sign * step
-  const rem = abs - step
+        : SCROLL_STEP_HIGH;
+  applied += sign * step;
+  const rem = abs - step;
   // Cap total at innerHeight-1 so DECSTBM blit+shift fast path fires
   // (matches drainProportional). Excess stays in pendingScrollDelta.
-  const cap = Math.max(1, innerHeight - 1)
-  const totalAbs = Math.abs(applied)
+  const cap = Math.max(1, innerHeight - 1);
+  const totalAbs = Math.abs(applied);
   if (totalAbs > cap) {
-    const excess = totalAbs - cap
-    node.pendingScrollDelta = sign * (rem + excess)
-    return sign * cap
+    const excess = totalAbs - cap;
+    node.pendingScrollDelta = sign * (rem + excess);
+    return sign * cap;
   }
-  node.pendingScrollDelta = rem > 0 ? sign * rem : undefined
-  return applied
+  node.pendingScrollDelta = rem > 0 ? sign * rem : undefined;
+  return applied;
 }
 
 // Native proportional drain. step = max(MIN, floor(abs*3/4)), capped at
 // innerHeight-1 so DECSTBM + blit+shift fast path fire.
-function drainProportional(
-  node: DOMElement,
-  pending: number,
-  innerHeight: number,
-): number {
-  const abs = Math.abs(pending)
-  const cap = Math.max(1, innerHeight - 1)
-  const step = Math.min(cap, Math.max(SCROLL_MIN_PER_FRAME, (abs * 3) >> 2))
+function drainProportional(node: DOMElement, pending: number, innerHeight: number): number {
+  const abs = Math.abs(pending);
+  const cap = Math.max(1, innerHeight - 1);
+  const step = Math.min(cap, Math.max(SCROLL_MIN_PER_FRAME, (abs * 3) >> 2));
   if (abs <= step) {
-    node.pendingScrollDelta = undefined
-    return pending
+    node.pendingScrollDelta = undefined;
+    return pending;
   }
-  const applied = pending > 0 ? step : -step
-  node.pendingScrollDelta = pending - applied
-  return applied
+  const applied = pending > 0 ? step : -step;
+  node.pendingScrollDelta = pending - applied;
+  return applied;
 }
 
 // OSC 8 hyperlink escape sequences. Empty params (;;) — ansi-tokenize only
 // recognizes this exact prefix. The id= param (for grouping wrapped lines)
 // is added at terminal-output time in termio/osc.ts link().
-const OSC = '\u001B]'
-const BEL = '\u0007'
+const OSC = '\u001B]';
+const BEL = '\u0007';
 
 function wrapWithOsc8Link(text: string, url: string): string {
-  return `${OSC}8;;${url}${BEL}${text}${OSC}8;;${BEL}`
+  return `${OSC}8;;${url}${BEL}${text}${OSC}8;;${BEL}`;
 }
 
 /**
@@ -190,14 +179,14 @@ function wrapWithOsc8Link(text: string, url: string): string {
  * Returns an array where charToSegment[i] is the segment index for character i.
  */
 function buildCharToSegmentMap(segments: StyledSegment[]): number[] {
-  const map: number[] = []
+  const map: number[] = [];
   for (let i = 0; i < segments.length; i++) {
-    const len = segments[i]!.text.length
+    const len = segments[i]?.text.length;
     for (let j = 0; j < len; j++) {
-      map.push(i)
+      map.push(i);
     }
   }
-  return map
+  return map;
 }
 
 /**
@@ -213,76 +202,73 @@ function applyStylesToWrappedText(
   segments: StyledSegment[],
   charToSegment: number[],
   originalPlain: string,
-  trimEnabled: boolean = false,
+  trimEnabled = false,
 ): string {
-  const lines = wrappedPlain.split('\n')
-  const resultLines: string[] = []
+  const lines = wrappedPlain.split('\n');
+  const resultLines: string[] = [];
 
-  let charIndex = 0
+  let charIndex = 0;
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-    const line = lines[lineIdx]!
+    const line = lines[lineIdx]!;
 
     // In trim mode, skip leading whitespace that was trimmed from this line.
     // Only skip if the original has whitespace but the output line doesn't start
     // with whitespace (meaning it was trimmed). If both have whitespace, the
     // whitespace was preserved and we shouldn't skip.
     if (trimEnabled && line.length > 0) {
-      const lineStartsWithWhitespace = /\s/.test(line[0]!)
+      const lineStartsWithWhitespace = /\s/.test(line[0]!);
       const originalHasWhitespace =
-        charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)
+        charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!);
 
       // Only skip if original has whitespace but line doesn't
       if (originalHasWhitespace && !lineStartsWithWhitespace) {
-        while (
-          charIndex < originalPlain.length &&
-          /\s/.test(originalPlain[charIndex]!)
-        ) {
-          charIndex++
+        while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)) {
+          charIndex++;
         }
       }
     }
 
-    let styledLine = ''
-    let runStart = 0
-    let runSegmentIndex = charToSegment[charIndex] ?? 0
+    let styledLine = '';
+    let runStart = 0;
+    let runSegmentIndex = charToSegment[charIndex] ?? 0;
 
     for (let i = 0; i < line.length; i++) {
-      const currentSegmentIndex = charToSegment[charIndex] ?? runSegmentIndex
+      const currentSegmentIndex = charToSegment[charIndex] ?? runSegmentIndex;
 
       if (currentSegmentIndex !== runSegmentIndex) {
         // Flush the current run
-        const runText = line.slice(runStart, i)
-        const segment = segments[runSegmentIndex]
+        const runText = line.slice(runStart, i);
+        const segment = segments[runSegmentIndex];
         if (segment) {
-          let styled = applyTextStyles(runText, segment.styles)
+          let styled = applyTextStyles(runText, segment.styles);
           if (segment.hyperlink) {
-            styled = wrapWithOsc8Link(styled, segment.hyperlink)
+            styled = wrapWithOsc8Link(styled, segment.hyperlink);
           }
-          styledLine += styled
+          styledLine += styled;
         } else {
-          styledLine += runText
+          styledLine += runText;
         }
-        runStart = i
-        runSegmentIndex = currentSegmentIndex
+        runStart = i;
+        runSegmentIndex = currentSegmentIndex;
       }
 
-      charIndex++
+      charIndex++;
     }
 
     // Flush the final run
-    const runText = line.slice(runStart)
-    const segment = segments[runSegmentIndex]
+    const runText = line.slice(runStart);
+    const segment = segments[runSegmentIndex];
     if (segment) {
-      let styled = applyTextStyles(runText, segment.styles)
+      let styled = applyTextStyles(runText, segment.styles);
       if (segment.hyperlink) {
-        styled = wrapWithOsc8Link(styled, segment.hyperlink)
+        styled = wrapWithOsc8Link(styled, segment.hyperlink);
       }
-      styledLine += styled
+      styledLine += styled;
     } else {
-      styledLine += runText
+      styledLine += runText;
     }
 
-    resultLines.push(styledLine)
+    resultLines.push(styledLine);
 
     // Skip newline character in original that corresponds to this line break.
     // This is needed when the original text contains actual newlines (not just
@@ -290,7 +276,7 @@ function applyStylesToWrappedText(
     // because the newline is in originalPlain/charToSegment but not in the
     // split lines.
     if (charIndex < originalPlain.length && originalPlain[charIndex] === '\n') {
-      charIndex++
+      charIndex++;
     }
 
     // In trim mode, skip whitespace that was replaced by newline when wrapping.
@@ -299,27 +285,21 @@ function applyStylesToWrappedText(
     // - "AB   \tD" wrapped to "AB\n\tD" - skip spaces until we hit the tab
     // In non-trim mode, whitespace is preserved so no skipping is needed.
     if (trimEnabled && lineIdx < lines.length - 1) {
-      const nextLine = lines[lineIdx + 1]!
-      const nextLineFirstChar = nextLine.length > 0 ? nextLine[0] : null
+      const nextLine = lines[lineIdx + 1]!;
+      const nextLineFirstChar = nextLine.length > 0 ? nextLine[0] : null;
 
       // Skip whitespace until we hit a char that matches the next line's first char
-      while (
-        charIndex < originalPlain.length &&
-        /\s/.test(originalPlain[charIndex]!)
-      ) {
+      while (charIndex < originalPlain.length && /\s/.test(originalPlain[charIndex]!)) {
         // Stop if we found the character that starts the next line
-        if (
-          nextLineFirstChar !== null &&
-          originalPlain[charIndex] === nextLineFirstChar
-        ) {
-          break
+        if (nextLineFirstChar !== null && originalPlain[charIndex] === nextLineFirstChar) {
+          break;
         }
-        charIndex++
+        charIndex++;
       }
     }
   }
 
-  return resultLines.join('\n')
+  return resultLines.join('\n');
 }
 
 /**
@@ -341,19 +321,19 @@ function wrapWithSoftWrap(
     return {
       wrapped: wrapText(plainText, maxWidth, textWrap),
       softWrap: undefined,
-    }
+    };
   }
-  const origLines = plainText.split('\n')
-  const outLines: string[] = []
-  const softWrap: boolean[] = []
+  const origLines = plainText.split('\n');
+  const outLines: string[] = [];
+  const softWrap: boolean[] = [];
   for (const orig of origLines) {
-    const pieces = wrapText(orig, maxWidth, textWrap).split('\n')
+    const pieces = wrapText(orig, maxWidth, textWrap).split('\n');
     for (let i = 0; i < pieces.length; i++) {
-      outLines.push(pieces[i]!)
-      softWrap.push(i > 0)
+      outLines.push(pieces[i]!);
+      softWrap.push(i > 0);
     }
   }
-  return { wrapped: outLines.join('\n'), softWrap }
+  return { wrapped: outLines.join('\n'), softWrap };
 }
 
 // If parent container is `<Box>`, text nodes will be treated as separate nodes in
@@ -362,25 +342,21 @@ function wrapWithSoftWrap(
 // and use it as offset for the rest of the nodes
 // Only first node is taken into account, because other text nodes can't have margin or padding,
 // so their coordinates will be relative to the first node anyway
-function applyPaddingToText(
-  node: DOMElement,
-  text: string,
-  softWrap?: boolean[],
-): string {
-  const yogaNode = node.childNodes[0]?.yogaNode
+function applyPaddingToText(node: DOMElement, text: string, softWrap?: boolean[]): string {
+  const yogaNode = node.childNodes[0]?.yogaNode;
 
   if (yogaNode) {
-    const offsetX = yogaNode.getComputedLeft()
-    const offsetY = yogaNode.getComputedTop()
-    text = '\n'.repeat(offsetY) + indentString(text, offsetX)
+    const offsetX = yogaNode.getComputedLeft();
+    const offsetY = yogaNode.getComputedTop();
+    text = '\n'.repeat(offsetY) + indentString(text, offsetX);
     if (softWrap && offsetY > 0) {
       // Prepend `false` for each padding line so indices stay aligned
       // with text.split('\n'). Mutate in place — caller owns the array.
-      softWrap.unshift(...Array<boolean>(offsetY).fill(false))
+      softWrap.unshift(...Array<boolean>(offsetY).fill(false));
     }
   }
 
-  return text
+  return text;
 }
 
 // After nodes are laid out, render each to output object, which later gets rendered to terminal
@@ -394,50 +370,50 @@ function renderNodeToOutput(
     skipSelfBlit = false,
     inheritedBackgroundColor,
   }: {
-    offsetX?: number
-    offsetY?: number
-    prevScreen: Screen | undefined
+    offsetX?: number;
+    offsetY?: number;
+    prevScreen: Screen | undefined;
     // Force this node to descend instead of blitting its own rect, while
     // still passing prevScreen to children. Used for non-opaque absolute
     // overlays over a dirty clipped region: the overlay's full rect has
     // transparent gaps (stale underlying content in prevScreen), but its
     // opaque descendants' narrower rects are safe to blit.
-    skipSelfBlit?: boolean
-    inheritedBackgroundColor?: Color
+    skipSelfBlit?: boolean;
+    inheritedBackgroundColor?: Color;
   },
 ): void {
-  const { yogaNode } = node
+  const { yogaNode } = node;
 
   if (yogaNode) {
     if (yogaNode.getDisplay() === LayoutDisplay.None) {
       // Clear old position if node was visible before becoming hidden
       if (node.dirty) {
-        const cached = nodeCache.get(node)
+        const cached = nodeCache.get(node);
         if (cached) {
           output.clear({
             x: Math.floor(cached.x),
             y: Math.floor(cached.y),
             width: Math.floor(cached.width),
             height: Math.floor(cached.height),
-          })
+          });
           // Drop descendants' cache too — hideInstance's markDirty walks UP
           // only, so descendants' .dirty stays false. Their nodeCache entries
           // survive with pre-hide rects. On unhide, if position didn't shift,
           // the blit check at line ~432 passes and copies EMPTY cells from
           // prevScreen (cleared here) → content vanishes.
-          dropSubtreeCache(node)
-          layoutShifted = true
+          dropSubtreeCache(node);
+          layoutShifted = true;
         }
       }
-      return
+      return;
     }
 
     // Left and top positions in Yoga are relative to their parent node
-    const x = offsetX + yogaNode.getComputedLeft()
-    const yogaTop = yogaNode.getComputedTop()
-    let y = offsetY + yogaTop
-    const width = yogaNode.getComputedWidth()
-    const height = yogaNode.getComputedHeight()
+    const x = offsetX + yogaNode.getComputedLeft();
+    const yogaTop = yogaNode.getComputedTop();
+    let y = offsetY + yogaTop;
+    const width = yogaNode.getComputedWidth();
+    const height = yogaNode.getComputedHeight();
 
     // Absolute-positioned overlays (e.g. autocomplete menus with bottom='100%')
     // can compute negative screen y when they extend above the viewport. Without
@@ -446,12 +422,12 @@ function renderNodeToOutput(
     // down so the top rows are visible and the bottom overflows below — the
     // opaque prop ensures it paints over whatever is underneath.
     if (y < 0 && node.style.position === 'absolute') {
-      y = 0
+      y = 0;
     }
 
     // Check if we can skip this subtree (clean node with unchanged layout).
     // Blit cells from previous screen instead of re-rendering.
-    const cached = nodeCache.get(node)
+    const cached = nodeCache.get(node);
     if (
       !node.dirty &&
       !skipSelfBlit &&
@@ -463,13 +439,13 @@ function renderNodeToOutput(
       cached.height === height &&
       prevScreen
     ) {
-      const fx = Math.floor(x)
-      const fy = Math.floor(y)
-      const fw = Math.floor(width)
-      const fh = Math.floor(height)
-      output.blit(prevScreen, fx, fy, fw, fh)
+      const fx = Math.floor(x);
+      const fy = Math.floor(y);
+      const fw = Math.floor(width);
+      const fh = Math.floor(height);
+      output.blit(prevScreen, fx, fy, fw, fh);
       if (node.style.position === 'absolute') {
-        absoluteRectsCur.push(cached)
+        absoluteRectsCur.push(cached);
       }
       // Absolute descendants can paint outside this node's layout bounds
       // (e.g. a slash menu with position='absolute' bottom='100%' floats
@@ -477,8 +453,8 @@ function renderNodeToOutput(
       // cells, the blit above only restored this node's own rect — the
       // absolute descendants' cells are lost. Re-blit them from prevScreen
       // so the overlays survive.
-      blitEscapingAbsoluteDescendants(node, output, prevScreen, fx, fy, fw, fh)
-      return
+      blitEscapingAbsoluteDescendants(node, output, prevScreen, fx, fy, fw, fh);
+      return;
     }
 
     // Clear stale content from the old position when re-rendering.
@@ -486,12 +462,9 @@ function renderNodeToOutput(
     // above changed height), old cells still on the terminal.
     const positionChanged =
       cached !== undefined &&
-      (cached.x !== x ||
-        cached.y !== y ||
-        cached.width !== width ||
-        cached.height !== height)
+      (cached.x !== x || cached.y !== y || cached.width !== width || cached.height !== height);
     if (positionChanged) {
-      layoutShifted = true
+      layoutShifted = true;
     }
     if (cached && (node.dirty || positionChanged)) {
       output.clear(
@@ -502,24 +475,24 @@ function renderNodeToOutput(
           height: Math.floor(cached.height),
         },
         node.style.position === 'absolute',
-      )
+      );
     }
 
     // Read before deleting — hasRemovedChild disables prevScreen blitting
     // for siblings to prevent stale overflow content from being restored.
-    const clears = pendingClears.get(node)
-    const hasRemovedChild = clears !== undefined
+    const clears = pendingClears.get(node);
+    const hasRemovedChild = clears !== undefined;
     if (hasRemovedChild) {
-      layoutShifted = true
+      layoutShifted = true;
       for (const rect of clears) {
         output.clear({
           x: Math.floor(rect.x),
           y: Math.floor(rect.y),
           width: Math.floor(rect.width),
           height: Math.floor(rect.height),
-        })
+        });
       }
-      pendingClears.delete(node)
+      pendingClears.delete(node);
     }
 
     // Yoga squeezed this node to zero height (overflow in a height-constrained
@@ -533,29 +506,27 @@ function renderNodeToOutput(
     // y+1, not y). HelpV2's third shortcuts column hits this — skipping
     // unconditionally drops "ctrl + z to suspend" from /help output.
     if (height === 0 && siblingSharesY(node, yogaNode)) {
-      nodeCache.set(node, { x, y, width, height, top: yogaTop })
-      node.dirty = false
-      return
+      nodeCache.set(node, { x, y, width, height, top: yogaTop });
+      node.dirty = false;
+      return;
     }
 
     if (node.nodeName === 'ink-raw-ansi') {
       // Pre-rendered ANSI content. The producer already wrapped to width and
       // emitted terminal-ready escape codes. Skip squash, measure, wrap, and
       // style re-application — output.write() parses ANSI directly into cells.
-      const text = node.attributes['rawText'] as string
+      const text = node.attributes.rawText as string;
       if (text) {
-        output.write(x, y, text)
+        output.write(x, y, text);
       }
     } else if (node.nodeName === 'ink-text') {
       const segments = squashTextNodesToSegments(
         node,
-        inheritedBackgroundColor
-          ? { backgroundColor: inheritedBackgroundColor }
-          : undefined,
-      )
+        inheritedBackgroundColor ? { backgroundColor: inheritedBackgroundColor } : undefined,
+      );
 
       // First, get plain text to check if wrapping is needed
-      const plainText = segments.map(s => s.text).join('')
+      const plainText = segments.map((s) => s.text).join('');
 
       if (plainText.length > 0) {
         // Upstream Ink uses getMaxWidth(yogaNode) unclamped here. That
@@ -565,69 +536,68 @@ function renderNodeToOutput(
         // the wrap width here keeps line count consistent with layout.
         // Without this, characters past the screen edge are dropped by
         // setCellAt's bounds check.
-        const maxWidth = Math.min(getMaxWidth(yogaNode), output.width - x)
-        const textWrap = node.style.textWrap ?? 'wrap'
+        const maxWidth = Math.min(getMaxWidth(yogaNode), output.width - x);
+        const textWrap = node.style.textWrap ?? 'wrap';
 
         // Check if wrapping is needed
-        const needsWrapping = widestLine(plainText) > maxWidth
+        const needsWrapping = widestLine(plainText) > maxWidth;
 
-        let text: string
-        let softWrap: boolean[] | undefined
+        let text: string;
+        let softWrap: boolean[] | undefined;
         if (needsWrapping && segments.length === 1) {
           // Single segment: wrap plain text first, then apply styles to each line
-          const segment = segments[0]!
-          const w = wrapWithSoftWrap(plainText, maxWidth, textWrap)
-          softWrap = w.softWrap
+          const segment = segments[0]!;
+          const w = wrapWithSoftWrap(plainText, maxWidth, textWrap);
+          softWrap = w.softWrap;
           text = w.wrapped
             .split('\n')
-            .map(line => {
-              let styled = applyTextStyles(line, segment.styles)
+            .map((line) => {
+              let styled = applyTextStyles(line, segment.styles);
               // Apply OSC 8 hyperlink per-line so each line is independently
               // clickable. output.ts splits on newlines and tokenizes each
               // line separately, so a single wrapper around the whole block
               // would only apply the hyperlink to the first line.
               if (segment.hyperlink) {
-                styled = wrapWithOsc8Link(styled, segment.hyperlink)
+                styled = wrapWithOsc8Link(styled, segment.hyperlink);
               }
-              return styled
+              return styled;
             })
-            .join('\n')
+            .join('\n');
         } else if (needsWrapping) {
           // Multiple segments with wrapping: wrap plain text first, then re-apply
           // each segment's styles based on character positions. This preserves
           // per-segment styles even when text wraps across lines.
-          const w = wrapWithSoftWrap(plainText, maxWidth, textWrap)
-          softWrap = w.softWrap
-          const charToSegment = buildCharToSegmentMap(segments)
+          const w = wrapWithSoftWrap(plainText, maxWidth, textWrap);
+          softWrap = w.softWrap;
+          const charToSegment = buildCharToSegmentMap(segments);
           text = applyStylesToWrappedText(
             w.wrapped,
             segments,
             charToSegment,
             plainText,
             textWrap === 'wrap-trim',
-          )
+          );
           // Hyperlinks are handled per-run in applyStylesToWrappedText via
           // wrapWithOsc8Link, similar to how styles are applied per-run.
         } else {
           // No wrapping needed: apply styles directly
           text = segments
-            .map(segment => {
-              let styledText = applyTextStyles(segment.text, segment.styles)
+            .map((segment) => {
+              let styledText = applyTextStyles(segment.text, segment.styles);
               if (segment.hyperlink) {
-                styledText = wrapWithOsc8Link(styledText, segment.hyperlink)
+                styledText = wrapWithOsc8Link(styledText, segment.hyperlink);
               }
-              return styledText
+              return styledText;
             })
-            .join('')
+            .join('');
         }
 
-        text = applyPaddingToText(node, text, softWrap)
+        text = applyPaddingToText(node, text, softWrap);
 
-        output.write(x, y, text, softWrap)
+        output.write(x, y, text, softWrap);
       }
     } else if (node.nodeName === 'ink-box') {
-      const boxBackgroundColor =
-        node.style.backgroundColor ?? inheritedBackgroundColor
+      const boxBackgroundColor = node.style.backgroundColor ?? inheritedBackgroundColor;
 
       // Mark this box's region as non-selectable (fullscreen text
       // selection). noSelect ops are applied AFTER blits/writes in
@@ -642,47 +612,39 @@ function renderNodeToOutput(
       // — a multi-row drag over a diff gutter shouldn't pick up the
       // `  ⎿  ` prefix on row 0 or the blank cells under it on row 1+.
       if (node.style.noSelect) {
-        const boxX = Math.floor(x)
-        const fromEdge = node.style.noSelect === 'from-left-edge'
+        const boxX = Math.floor(x);
+        const fromEdge = node.style.noSelect === 'from-left-edge';
         output.noSelect({
           x: fromEdge ? 0 : boxX,
           y: Math.floor(y),
           width: fromEdge ? boxX + Math.floor(width) : Math.floor(width),
           height: Math.floor(height),
-        })
+        });
       }
 
-      const overflowX = node.style.overflowX ?? node.style.overflow
-      const overflowY = node.style.overflowY ?? node.style.overflow
-      const clipHorizontally = overflowX === 'hidden' || overflowX === 'scroll'
-      const clipVertically = overflowY === 'hidden' || overflowY === 'scroll'
-      const isScrollY = overflowY === 'scroll'
+      const overflowX = node.style.overflowX ?? node.style.overflow;
+      const overflowY = node.style.overflowY ?? node.style.overflow;
+      const clipHorizontally = overflowX === 'hidden' || overflowX === 'scroll';
+      const clipVertically = overflowY === 'hidden' || overflowY === 'scroll';
+      const isScrollY = overflowY === 'scroll';
 
-      const needsClip = clipHorizontally || clipVertically
-      let y1: number | undefined
-      let y2: number | undefined
+      const needsClip = clipHorizontally || clipVertically;
+      let y1: number | undefined;
+      let y2: number | undefined;
       if (needsClip) {
-        const x1 = clipHorizontally
-          ? x + yogaNode.getComputedBorder(LayoutEdge.Left)
-          : undefined
+        const x1 = clipHorizontally ? x + yogaNode.getComputedBorder(LayoutEdge.Left) : undefined;
 
         const x2 = clipHorizontally
-          ? x +
-            yogaNode.getComputedWidth() -
-            yogaNode.getComputedBorder(LayoutEdge.Right)
-          : undefined
+          ? x + yogaNode.getComputedWidth() - yogaNode.getComputedBorder(LayoutEdge.Right)
+          : undefined;
 
-        y1 = clipVertically
-          ? y + yogaNode.getComputedBorder(LayoutEdge.Top)
-          : undefined
+        y1 = clipVertically ? y + yogaNode.getComputedBorder(LayoutEdge.Top) : undefined;
 
         y2 = clipVertically
-          ? y +
-            yogaNode.getComputedHeight() -
-            yogaNode.getComputedBorder(LayoutEdge.Bottom)
-          : undefined
+          ? y + yogaNode.getComputedHeight() - yogaNode.getComputedBorder(LayoutEdge.Bottom)
+          : undefined;
 
-        output.clip({ x1, x2, y1, y2 })
+        output.clip({ x1, x2, y1, y2 });
       }
 
       if (isScrollY) {
@@ -692,37 +654,34 @@ function renderNodeToOutput(
         // comes from the wrapper's intrinsic Yoga height. The wrapper is
         // rendered with its Y translated by -scrollTop; its children are
         // culled against the visible window.
-        const padTop = yogaNode.getComputedPadding(LayoutEdge.Top)
+        const padTop = yogaNode.getComputedPadding(LayoutEdge.Top);
         const innerHeight = Math.max(
           0,
-          (y2 ?? y + height) -
-            (y1 ?? y) -
-            padTop -
-            yogaNode.getComputedPadding(LayoutEdge.Bottom),
-        )
+          (y2 ?? y + height) - (y1 ?? y) - padTop - yogaNode.getComputedPadding(LayoutEdge.Bottom),
+        );
 
-        const content = node.childNodes.find(c => (c as DOMElement).yogaNode) as
+        const content = node.childNodes.find((c) => (c as DOMElement).yogaNode) as
           | DOMElement
-          | undefined
-        const contentYoga = content?.yogaNode
+          | undefined;
+        const contentYoga = content?.yogaNode;
         // scrollHeight is the intrinsic height of the content wrapper.
         // Do NOT add getComputedTop() — that's the wrapper's offset
         // within the viewport (equal to the scroll container's
         // paddingTop), and innerHeight already subtracts padding, so
         // including it double-counts padding and inflates maxScroll.
-        const scrollHeight = contentYoga?.getComputedHeight() ?? 0
+        const scrollHeight = contentYoga?.getComputedHeight() ?? 0;
         // Capture previous scroll bounds BEFORE overwriting — the at-bottom
         // follow check compares against last frame's max.
-        const prevScrollHeight = node.scrollHeight ?? scrollHeight
-        const prevInnerHeight = node.scrollViewportHeight ?? innerHeight
-        node.scrollHeight = scrollHeight
-        node.scrollViewportHeight = innerHeight
+        const prevScrollHeight = node.scrollHeight ?? scrollHeight;
+        const prevInnerHeight = node.scrollViewportHeight ?? innerHeight;
+        node.scrollHeight = scrollHeight;
+        node.scrollViewportHeight = innerHeight;
         // Absolute screen-buffer row where the scrollable area (inside
         // padding) begins. Exposed via ScrollBoxHandle.getViewportTop() so
         // drag-to-scroll can detect when the drag leaves the scroll viewport.
-        node.scrollViewportTop = (y1 ?? y) + padTop
+        node.scrollViewportTop = (y1 ?? y) + padTop;
 
-        const maxScroll = Math.max(0, scrollHeight - innerHeight)
+        const maxScroll = Math.max(0, scrollHeight - innerHeight);
         // scrollAnchor: scroll so the anchored element's top is at the
         // viewport top (plus offset). Yoga is FRESH — same calculateLayout
         // pass that just produced scrollHeight. Deterministic alternative
@@ -735,12 +694,12 @@ function renderNodeToOutput(
         // ping-ponged forever at delta=2. Smooth needs drain-end notify
         // plumbing; shipping instant first. stickyScroll overrides.
         if (node.scrollAnchor) {
-          const anchorTop = node.scrollAnchor.el.yogaNode?.getComputedTop()
+          const anchorTop = node.scrollAnchor.el.yogaNode?.getComputedTop();
           if (anchorTop != null) {
-            node.scrollTop = anchorTop + node.scrollAnchor.offset
-            node.pendingScrollDelta = undefined
+            node.scrollTop = anchorTop + node.scrollAnchor.offset;
+            node.pendingScrollDelta = undefined;
           }
-          node.scrollAnchor = undefined
+          node.scrollAnchor = undefined;
         }
         // At-bottom follow. Positional: if scrollTop was at (or past) the
         // previous max, pin to the new max. Scroll away → stop following;
@@ -753,20 +712,18 @@ function renderNodeToOutput(
         // Capture scrollTop before follow so ink.tsx can translate any
         // active text selection by the same delta (native terminal behavior:
         // view keeps scrolling, highlight walks up with the text).
-        const scrollTopBeforeFollow = node.scrollTop ?? 0
-        const sticky =
-          node.stickyScroll ?? Boolean(node.attributes['stickyScroll'])
-        const prevMaxScroll = Math.max(0, prevScrollHeight - prevInnerHeight)
+        const scrollTopBeforeFollow = node.scrollTop ?? 0;
+        const sticky = node.stickyScroll ?? Boolean(node.attributes.stickyScroll);
+        const prevMaxScroll = Math.max(0, prevScrollHeight - prevInnerHeight);
         // Positional check only valid when content grew — virtualization can
         // transiently SHRINK scrollHeight (tail unmount + stale heightCache
         // spacer) making scrollTop >= prevMaxScroll true by artifact, not
         // because the user was at bottom.
-        const grew = scrollHeight >= prevScrollHeight
-        const atBottom =
-          sticky || (grew && scrollTopBeforeFollow >= prevMaxScroll)
+        const grew = scrollHeight >= prevScrollHeight;
+        const atBottom = sticky || (grew && scrollTopBeforeFollow >= prevMaxScroll);
         if (atBottom && (node.pendingScrollDelta ?? 0) >= 0) {
-          node.scrollTop = maxScroll
-          node.pendingScrollDelta = undefined
+          node.scrollTop = maxScroll;
+          node.pendingScrollDelta = undefined;
           // Sync flag so useVirtualScroll's isSticky() agrees with positional
           // state — sticky-broken-but-at-bottom (wheel tremor, click-select
           // at max) otherwise leaves useVirtualScroll's clamp holding the
@@ -777,21 +734,18 @@ function renderNodeToOutput(
           // undefined (never set by user action) leave it alone — setting it
           // would make the sticky flag sticky-by-default and lock out
           // direct scrollTop writes (e.g. the alt-screen-perf test).
-          if (
-            node.stickyScroll === false &&
-            scrollTopBeforeFollow >= prevMaxScroll
-          ) {
-            node.stickyScroll = true
+          if (node.stickyScroll === false && scrollTopBeforeFollow >= prevMaxScroll) {
+            node.stickyScroll = true;
           }
         }
-        const followDelta = (node.scrollTop ?? 0) - scrollTopBeforeFollow
+        const followDelta = (node.scrollTop ?? 0) - scrollTopBeforeFollow;
         if (followDelta > 0) {
-          const vpTop = node.scrollViewportTop ?? 0
+          const vpTop = node.scrollViewportTop ?? 0;
           followScroll = {
             delta: followDelta,
             viewportTop: vpTop,
             viewportBottom: vpTop + innerHeight - 1,
-          }
+          };
         }
         // Drain pendingScrollDelta. Native terminals (proportional burst
         // events) use proportional drain; xterm.js (VS Code, sparse events +
@@ -800,11 +754,11 @@ function renderNodeToOutput(
         // (pendingScrollDelta is only set by wheel events, >>50ms after
         // startup) the probe has resolved — same timing guarantee the
         // wheel-accel curve relies on.
-        let cur = node.scrollTop ?? 0
-        const pending = node.pendingScrollDelta
-        const cMin = node.scrollClampMin
-        const cMax = node.scrollClampMax
-        const haveClamp = cMin !== undefined && cMax !== undefined
+        let cur = node.scrollTop ?? 0;
+        const pending = node.pendingScrollDelta;
+        const cMin = node.scrollClampMin;
+        const cMax = node.scrollClampMax;
+        const haveClamp = cMin !== undefined && cMax !== undefined;
         if (pending !== undefined && pending !== 0) {
           // Drain continues even past the clamp — the render-clamp below
           // holds the VISUAL at the mounted edge regardless. Hard-stopping
@@ -819,18 +773,17 @@ function renderNodeToOutput(
           // frame, roughly matching React's slide rate so the gap stays
           // bounded and catch-up is quick once input stops.
           const pastClamp =
-            haveClamp &&
-            ((pending < 0 && cur < cMin) || (pending > 0 && cur > cMax))
-          const eff = pastClamp ? Math.min(4, innerHeight >> 3) : innerHeight
+            haveClamp && ((pending < 0 && cur < cMin) || (pending > 0 && cur > cMax));
+          const eff = pastClamp ? Math.min(4, innerHeight >> 3) : innerHeight;
           cur += isXtermJsHost()
             ? drainAdaptive(node, pending, eff)
-            : drainProportional(node, pending, eff)
+            : drainProportional(node, pending, eff);
         } else if (pending === 0) {
           // Opposite scrollBy calls cancelled to zero — clear so we don't
           // schedule an infinite loop of no-op drain frames.
-          node.pendingScrollDelta = undefined
+          node.pendingScrollDelta = undefined;
         }
-        let scrollTop = Math.max(0, Math.min(cur, maxScroll))
+        let scrollTop = Math.max(0, Math.min(cur, maxScroll));
         // Virtual-scroll clamp: if scrollTop raced past the currently-mounted
         // range (burst PageUp before React re-renders), render at the EDGE of
         // the mounted children instead of blank spacer. Do NOT write back to
@@ -839,47 +792,45 @@ function renderNodeToOutput(
         // the right range. Not scheduling scrollDrainNode here keeps the
         // clamp passive — React's commit → resetAfterCommit → onRender will
         // paint again with fresh bounds.
-        const clamped = haveClamp
-          ? Math.max(cMin, Math.min(scrollTop, cMax))
-          : scrollTop
-        node.scrollTop = scrollTop
+        const clamped = haveClamp ? Math.max(cMin, Math.min(scrollTop, cMax)) : scrollTop;
+        node.scrollTop = scrollTop;
         // Clamp hitting top/bottom consumes any remainder. Set drainPending
         // only after clamp so a wasted no-op frame isn't scheduled.
-        if (scrollTop !== cur) node.pendingScrollDelta = undefined
-        if (node.pendingScrollDelta !== undefined) scrollDrainNode = node
-        scrollTop = clamped
+        if (scrollTop !== cur) node.pendingScrollDelta = undefined;
+        if (node.pendingScrollDelta !== undefined) scrollDrainNode = node;
+        scrollTop = clamped;
 
         if (content && contentYoga) {
           // Compute content wrapper's absolute render position with scroll
           // offset applied, then render its children with culling.
-          const contentX = x + contentYoga.getComputedLeft()
-          const contentY = y + contentYoga.getComputedTop() - scrollTop
+          const contentX = x + contentYoga.getComputedLeft();
+          const contentY = y + contentYoga.getComputedTop() - scrollTop;
           // layoutShifted detection gap: when scrollTop moves by >= viewport
           // height (batched PageUps, fast wheel), every visible child gets
           // culled (cache dropped) and every newly-visible child has no
           // cache — so the children's positionChanged check can't fire.
           // The content wrapper's cached y (which encodes -scrollTop) is
           // the only node that survives to witness the scroll.
-          const contentCached = nodeCache.get(content)
-          let hint: ScrollHint | null = null
+          const contentCached = nodeCache.get(content);
+          let hint: ScrollHint | null = null;
           if (contentCached && contentCached.y !== contentY) {
             // delta = newScrollTop - oldScrollTop (positive = scrolled down).
             // Capture a DECSTBM hint if the container itself didn't move
             // and the shift fits within the viewport — otherwise the full
             // rewrite is needed anyway, and layoutShifted stays the fallback.
-            const delta = contentCached.y - contentY
-            const regionTop = Math.floor(y + contentYoga.getComputedTop())
-            const regionBottom = regionTop + innerHeight - 1
+            const delta = contentCached.y - contentY;
+            const regionTop = Math.floor(y + contentYoga.getComputedTop());
+            const regionBottom = regionTop + innerHeight - 1;
             if (
               cached?.y === y &&
               cached.height === height &&
               innerHeight > 0 &&
               Math.abs(delta) < innerHeight
             ) {
-              hint = { top: regionTop, bottom: regionBottom, delta }
-              scrollHint = hint
+              hint = { top: regionTop, bottom: regionBottom, delta };
+              scrollHint = hint;
             } else {
-              layoutShifted = true
+              layoutShifted = true;
             }
           }
           // Fast path: scroll (hint captured) with usable prevScreen.
@@ -902,44 +853,42 @@ function renderNodeToOutput(
           // doesn't match the scroll delta — fall back to the full path so
           // removed children don't leave stale cells and shifted siblings
           // render at their new positions.
-          const scrollHeight = contentYoga.getComputedHeight()
-          const prevHeight = contentCached?.height ?? scrollHeight
-          const heightDelta = scrollHeight - prevHeight
+          const scrollHeight = contentYoga.getComputedHeight();
+          const prevHeight = contentCached?.height ?? scrollHeight;
+          const heightDelta = scrollHeight - prevHeight;
           const safeForFastPath =
-            !hint ||
-            heightDelta === 0 ||
-            (hint.delta > 0 && heightDelta === hint.delta)
+            !hint || heightDelta === 0 || (hint.delta > 0 && heightDelta === hint.delta);
           // scrollHint is set above when hint is captured. If safeForFastPath
           // is false the full path renders a next.screen that doesn't match
           // the DECSTBM shift — emitting DECSTBM leaves stale rows (seen as
           // content bleeding through during scroll-up + streaming). Clear it.
-          if (!safeForFastPath) scrollHint = null
+          if (!safeForFastPath) scrollHint = null;
           if (hint && prevScreen && safeForFastPath) {
-            const { top, bottom, delta } = hint
-            const w = Math.floor(width)
-            output.blit(prevScreen, Math.floor(x), top, w, bottom - top + 1)
-            output.shift(top, bottom, delta)
+            const { top, bottom, delta } = hint;
+            const w = Math.floor(width);
+            output.blit(prevScreen, Math.floor(x), top, w, bottom - top + 1);
+            output.shift(top, bottom, delta);
             // Edge rows: new content entering the viewport.
-            const edgeTop = delta > 0 ? bottom - delta + 1 : top
-            const edgeBottom = delta > 0 ? bottom : top - delta - 1
+            const edgeTop = delta > 0 ? bottom - delta + 1 : top;
+            const edgeBottom = delta > 0 ? bottom : top - delta - 1;
             output.clear({
               x: Math.floor(x),
               y: edgeTop,
               width: w,
               height: edgeBottom - edgeTop + 1,
-            })
+            });
             output.clip({
               x1: undefined,
               x2: undefined,
               y1: edgeTop,
               y2: edgeBottom + 1,
-            })
+            });
             // Snapshot dirty children before the first pass — the first
             // pass clears dirty flags, and edge-spanning children would be
             // missed by the second pass without this snapshot.
             const dirtyChildren = content.dirty
-              ? new Set(content.childNodes.filter(c => (c as DOMElement).dirty))
-              : null
+              ? new Set(content.childNodes.filter((c) => (c as DOMElement).dirty))
+              : null;
             renderScrolledChildren(
               content,
               output,
@@ -952,8 +901,8 @@ function renderNodeToOutput(
               edgeBottom + 1 - contentY,
               boxBackgroundColor,
               true,
-            )
-            output.unclip()
+            );
+            output.unclip();
 
             // Second pass: re-render children in stable rows whose screen
             // position doesn't match where the shift put their old pixels.
@@ -972,9 +921,9 @@ function renderNodeToOutput(
             //   the shift put them at the right place — skipped here, fast
             //   path preserved.
             if (dirtyChildren) {
-              const edgeTopLocal = edgeTop - contentY
-              const edgeBottomLocal = edgeBottom + 1 - contentY
-              const spaces = ' '.repeat(w)
+              const edgeTopLocal = edgeTop - contentY;
+              const edgeBottomLocal = edgeBottom + 1 - contentY;
+              const spaces = ' '.repeat(w);
               // Track cumulative height change of children iterated so far.
               // A clean child's yogaTop is unchanged iff this is zero (no
               // sibling above it grew/shrank/mounted). When zero, the skip
@@ -987,35 +936,30 @@ function renderNodeToOutput(
               // leaves shift non-zero → clean children after the growth
               // point fall through to yoga + the fine-grained check below,
               // preserving the ghost-box fix.
-              let cumHeightShift = 0
+              let cumHeightShift = 0;
               for (const childNode of content.childNodes) {
-                const childElem = childNode as DOMElement
-                const isDirty = dirtyChildren.has(childNode)
+                const childElem = childNode as DOMElement;
+                const isDirty = dirtyChildren.has(childNode);
                 if (!isDirty && cumHeightShift === 0) {
-                  if (nodeCache.has(childElem)) continue
+                  if (nodeCache.has(childElem)) continue;
                   // Uncached = culled last frame, now re-entering. blit
                   // never painted it → fall through to yoga + render.
                   // Height unchanged (clean), so cumHeightShift stays 0.
                 }
-                const cy = childElem.yogaNode
-                if (!cy) continue
-                const childTop = cy.getComputedTop()
-                const childH = cy.getComputedHeight()
-                const childBottom = childTop + childH
+                const cy = childElem.yogaNode;
+                if (!cy) continue;
+                const childTop = cy.getComputedTop();
+                const childH = cy.getComputedHeight();
+                const childBottom = childTop + childH;
                 if (isDirty) {
-                  const prev = nodeCache.get(childElem)
-                  cumHeightShift += childH - (prev ? prev.height : 0)
+                  const prev = nodeCache.get(childElem);
+                  cumHeightShift += childH - (prev ? prev.height : 0);
                 }
                 // Skip culled children (outside viewport)
-                if (
-                  childBottom <= scrollTop ||
-                  childTop >= scrollTop + innerHeight
-                )
-                  continue
+                if (childBottom <= scrollTop || childTop >= scrollTop + innerHeight) continue;
                 // Skip children entirely within edge rows (already rendered)
-                if (childTop >= edgeTopLocal && childBottom <= edgeBottomLocal)
-                  continue
-                const screenY = Math.floor(contentY + childTop)
+                if (childTop >= edgeTopLocal && childBottom <= edgeBottomLocal) continue;
+                const screenY = Math.floor(contentY + childTop);
                 // Clean children reaching here have cumHeightShift ≠ 0 OR
                 // no cache. Re-check precisely: cached.y − delta is where
                 // the shift left old pixels; if it equals new screenY the
@@ -1023,12 +967,9 @@ function renderNodeToOutput(
                 // yogaTop happens to net out). No cache → blit never
                 // painted it → render.
                 if (!isDirty) {
-                  const childCached = nodeCache.get(childElem)
-                  if (
-                    childCached &&
-                    Math.floor(childCached.y) - delta === screenY
-                  ) {
-                    continue
+                  const childCached = nodeCache.get(childElem);
+                  if (childCached && Math.floor(childCached.y) - delta === screenY) {
+                    continue;
                   }
                 }
                 // Wipe this child's region with spaces to overwrite stale
@@ -1037,25 +978,25 @@ function renderNodeToOutput(
                 const screenBottom = Math.min(
                   Math.floor(contentY + childBottom),
                   Math.floor((y1 ?? y) + padTop + innerHeight),
-                )
+                );
                 if (screenY < screenBottom) {
                   const fill = Array(screenBottom - screenY)
                     .fill(spaces)
-                    .join('\n')
-                  output.write(Math.floor(x), screenY, fill)
+                    .join('\n');
+                  output.write(Math.floor(x), screenY, fill);
                   output.clip({
                     x1: undefined,
                     x2: undefined,
                     y1: screenY,
                     y2: screenBottom,
-                  })
+                  });
                   renderNodeToOutput(childElem, output, {
                     offsetX: contentX,
                     offsetY: contentY,
                     prevScreen: undefined,
                     inheritedBackgroundColor: boxBackgroundColor,
-                  })
-                  output.unclip()
+                  });
+                  output.unclip();
                 }
               }
             }
@@ -1067,28 +1008,24 @@ function renderNodeToOutput(
             // pixels sit at (rect.y - delta) — neither edge render nor the
             // overlay's own re-render covers them. Wipe and re-render
             // ScrollBox content so the diff writes correct cells.
-            const spaces = absoluteRectsPrev.length ? ' '.repeat(w) : ''
+            const spaces = absoluteRectsPrev.length ? ' '.repeat(w) : '';
             for (const r of absoluteRectsPrev) {
-              if (r.y >= bottom + 1 || r.y + r.height <= top) continue
-              const shiftedTop = Math.max(top, Math.floor(r.y) - delta)
-              const shiftedBottom = Math.min(
-                bottom + 1,
-                Math.floor(r.y + r.height) - delta,
-              )
+              if (r.y >= bottom + 1 || r.y + r.height <= top) continue;
+              const shiftedTop = Math.max(top, Math.floor(r.y) - delta);
+              const shiftedBottom = Math.min(bottom + 1, Math.floor(r.y + r.height) - delta);
               // Skip if entirely within edge rows (already rendered).
-              if (shiftedTop >= edgeTop && shiftedBottom <= edgeBottom + 1)
-                continue
-              if (shiftedTop >= shiftedBottom) continue
+              if (shiftedTop >= edgeTop && shiftedBottom <= edgeBottom + 1) continue;
+              if (shiftedTop >= shiftedBottom) continue;
               const fill = Array(shiftedBottom - shiftedTop)
                 .fill(spaces)
-                .join('\n')
-              output.write(Math.floor(x), shiftedTop, fill)
+                .join('\n');
+              output.write(Math.floor(x), shiftedTop, fill);
               output.clip({
                 x1: undefined,
                 x2: undefined,
                 y1: shiftedTop,
                 y2: shiftedBottom,
-              })
+              });
               renderScrolledChildren(
                 content,
                 output,
@@ -1100,8 +1037,8 @@ function renderNodeToOutput(
                 shiftedBottom - contentY,
                 boxBackgroundColor,
                 true,
-              )
-              output.unclip()
+              );
+              output.unclip();
             }
           } else {
             // Full path. Two sub-cases:
@@ -1117,14 +1054,14 @@ function renderNodeToOutput(
             // spinner inside ScrollBox forces a full-content rewrite every
             // frame — on wide terminals over tmux (no BSU/ESU) the
             // bandwidth crosses the chunk boundary and the frame tears.
-            const scrolled = contentCached && contentCached.y !== contentY
+            const scrolled = contentCached && contentCached.y !== contentY;
             if (scrolled && y1 !== undefined && y2 !== undefined) {
               output.clear({
                 x: Math.floor(x),
                 y: Math.floor(y1),
                 width: Math.floor(width),
                 height: Math.floor(y2 - y1),
-              })
+              });
             }
             // positionChanged (ScrollBox height shrunk — pill mount) means a
             // child spanning the old bottom edge would blit its full cached
@@ -1142,15 +1079,15 @@ function renderNodeToOutput(
               scrollTop,
               scrollTop + innerHeight,
               boxBackgroundColor,
-            )
+            );
           }
           nodeCache.set(content, {
             x: contentX,
             y: contentY,
             width: contentYoga.getComputedWidth(),
             height: contentYoga.getComputedHeight(),
-          })
-          content.dirty = false
+          });
+          content.dirty = false;
         }
       } else {
         // Fill interior with background color before rendering children.
@@ -1160,21 +1097,21 @@ function renderNodeToOutput(
         // Disable prevScreen for children: the fill overwrites the entire
         // interior each render, so child blits from prevScreen would restore
         // stale cells (wrong bg if it changed) on top of the fresh fill.
-        const ownBackgroundColor = node.style.backgroundColor
+        const ownBackgroundColor = node.style.backgroundColor;
         if (ownBackgroundColor || node.style.opaque) {
-          const borderLeft = yogaNode.getComputedBorder(LayoutEdge.Left)
-          const borderRight = yogaNode.getComputedBorder(LayoutEdge.Right)
-          const borderTop = yogaNode.getComputedBorder(LayoutEdge.Top)
-          const borderBottom = yogaNode.getComputedBorder(LayoutEdge.Bottom)
-          const innerWidth = Math.floor(width) - borderLeft - borderRight
-          const innerHeight = Math.floor(height) - borderTop - borderBottom
+          const borderLeft = yogaNode.getComputedBorder(LayoutEdge.Left);
+          const borderRight = yogaNode.getComputedBorder(LayoutEdge.Right);
+          const borderTop = yogaNode.getComputedBorder(LayoutEdge.Top);
+          const borderBottom = yogaNode.getComputedBorder(LayoutEdge.Bottom);
+          const innerWidth = Math.floor(width) - borderLeft - borderRight;
+          const innerHeight = Math.floor(height) - borderTop - borderBottom;
           if (innerWidth > 0 && innerHeight > 0) {
-            const spaces = ' '.repeat(innerWidth)
+            const spaces = ' '.repeat(innerWidth);
             const fillLine = ownBackgroundColor
               ? applyTextStyles(spaces, { backgroundColor: ownBackgroundColor })
-              : spaces
-            const fill = Array(innerHeight).fill(fillLine).join('\n')
-            output.write(x + borderLeft, y + borderTop, fill)
+              : spaces;
+            const fill = Array(innerHeight).fill(fillLine).join('\n');
+            output.write(x + borderLeft, y + borderTop, fill);
           }
         }
 
@@ -1193,36 +1130,28 @@ function renderNodeToOutput(
           // on re-render → /permissions body blanked on Down arrow, #25436).
           ownBackgroundColor || node.style.opaque ? undefined : prevScreen,
           boxBackgroundColor,
-        )
+        );
       }
 
       if (needsClip) {
-        output.unclip()
+        output.unclip();
       }
 
       // Render border AFTER children to ensure it's not overwritten by child
       // clearing operations. When a child shrinks, it clears its old area,
       // which may overlap with where the parent's border now is.
-      renderBorder(x, y, node, output)
+      renderBorder(x, y, node, output);
     } else if (node.nodeName === 'ink-root') {
-      renderChildren(
-        node,
-        output,
-        x,
-        y,
-        hasRemovedChild,
-        prevScreen,
-        inheritedBackgroundColor,
-      )
+      renderChildren(node, output, x, y, hasRemovedChild, prevScreen, inheritedBackgroundColor);
     }
 
     // Cache layout bounds for dirty tracking
-    const rect = { x, y, width, height, top: yogaTop }
-    nodeCache.set(node, rect)
+    const rect = { x, y, width, height, top: yogaTop };
+    nodeCache.set(node, rect);
     if (node.style.position === 'absolute') {
-      absoluteRectsCur.push(rect)
+      absoluteRectsCur.push(rect);
     }
-    node.dirty = false
+    node.dirty = false;
   }
 }
 
@@ -1263,13 +1192,13 @@ function renderChildren(
   prevScreen: Screen | undefined,
   inheritedBackgroundColor: Color | undefined,
 ): void {
-  let seenDirtyChild = false
-  let seenDirtyClipped = false
+  let seenDirtyChild = false;
+  let seenDirtyClipped = false;
   for (const childNode of node.childNodes) {
-    const childElem = childNode as DOMElement
+    const childElem = childNode as DOMElement;
     // Capture dirty before rendering — renderNodeToOutput clears the flag
-    const wasDirty = childElem.dirty
-    const isAbsolute = childElem.style.position === 'absolute'
+    const wasDirty = childElem.dirty;
+    const isAbsolute = childElem.style.position === 'absolute';
     renderNodeToOutput(childElem, output, {
       offsetX,
       offsetY,
@@ -1282,23 +1211,21 @@ function renderChildren(
         !childElem.style.opaque &&
         childElem.style.backgroundColor === undefined,
       inheritedBackgroundColor,
-    })
+    });
     if (wasDirty && !seenDirtyChild) {
       if (!clipsBothAxes(childElem) || isAbsolute) {
-        seenDirtyChild = true
+        seenDirtyChild = true;
       } else {
-        seenDirtyClipped = true
+        seenDirtyClipped = true;
       }
     }
   }
 }
 
 function clipsBothAxes(node: DOMElement): boolean {
-  const ox = node.style.overflowX ?? node.style.overflow
-  const oy = node.style.overflowY ?? node.style.overflow
-  return (
-    (ox === 'hidden' || ox === 'scroll') && (oy === 'hidden' || oy === 'scroll')
-  )
+  const ox = node.style.overflowX ?? node.style.overflow;
+  const oy = node.style.overflowY ?? node.style.overflow;
+  return (ox === 'hidden' || ox === 'scroll') && (oy === 'hidden' || oy === 'scroll');
 }
 
 // When Yoga squeezes a box to h=0, the ghost only happens if a sibling
@@ -1307,24 +1234,24 @@ function clipsBothAxes(node: DOMElement): boolean {
 // rounding can give h=0 while still advancing the next sibling's top
 // (HelpV2's third shortcuts column), so h=0 alone isn't sufficient.
 function siblingSharesY(node: DOMElement, yogaNode: LayoutNode): boolean {
-  const parent = node.parentNode
-  if (!parent) return false
-  const myTop = yogaNode.getComputedTop()
-  const siblings = parent.childNodes
-  const idx = siblings.indexOf(node)
+  const parent = node.parentNode;
+  if (!parent) return false;
+  const myTop = yogaNode.getComputedTop();
+  const siblings = parent.childNodes;
+  const idx = siblings.indexOf(node);
   for (let i = idx + 1; i < siblings.length; i++) {
-    const sib = (siblings[i] as DOMElement).yogaNode
-    if (!sib) continue
-    return sib.getComputedTop() === myTop
+    const sib = (siblings[i] as DOMElement).yogaNode;
+    if (!sib) continue;
+    return sib.getComputedTop() === myTop;
   }
   // No next sibling with a yoga node — check previous. A run of h=0 boxes
   // at the tail would all share y with each other.
   for (let i = idx - 1; i >= 0; i--) {
-    const sib = (siblings[i] as DOMElement).yogaNode
-    if (!sib) continue
-    return sib.getComputedTop() === myTop
+    const sib = (siblings[i] as DOMElement).yogaNode;
+    if (!sib) continue;
+    return sib.getComputedTop() === myTop;
   }
-  return false
+  return false;
 }
 
 // When a node blits, its absolute-positioned descendants that paint outside
@@ -1343,28 +1270,28 @@ function blitEscapingAbsoluteDescendants(
   pw: number,
   ph: number,
 ): void {
-  const pr = px + pw
-  const pb = py + ph
+  const pr = px + pw;
+  const pb = py + ph;
   for (const child of node.childNodes) {
-    if (child.nodeName === '#text') continue
-    const elem = child as DOMElement
+    if (child.nodeName === '#text') continue;
+    const elem = child as DOMElement;
     if (elem.style.position === 'absolute') {
-      const cached = nodeCache.get(elem)
+      const cached = nodeCache.get(elem);
       if (cached) {
-        absoluteRectsCur.push(cached)
-        const cx = Math.floor(cached.x)
-        const cy = Math.floor(cached.y)
-        const cw = Math.floor(cached.width)
-        const ch = Math.floor(cached.height)
+        absoluteRectsCur.push(cached);
+        const cx = Math.floor(cached.x);
+        const cy = Math.floor(cached.y);
+        const cw = Math.floor(cached.width);
+        const ch = Math.floor(cached.height);
         // Only blit rects that extend outside the parent's layout bounds —
         // cells within the parent rect are already covered by the parent blit.
         if (cx < px || cy < py || cx + cw > pr || cy + ch > pb) {
-          output.blit(prevScreen, cx, cy, cw, ch)
+          output.blit(prevScreen, cx, cy, cw, ch);
         }
       }
     }
     // Recurse — absolute descendants can be nested arbitrarily deep
-    blitEscapingAbsoluteDescendants(elem, output, prevScreen, px, py, pw, ph)
+    blitEscapingAbsoluteDescendants(elem, output, prevScreen, px, py, pw, ph);
   }
 }
 
@@ -1389,7 +1316,7 @@ function renderScrolledChildren(
   // never read. Avoids walking O(total_children * subtree_depth) per frame.
   preserveCulledCache = false,
 ): void {
-  let seenDirtyChild = false
+  let seenDirtyChild = false;
   // Track cumulative height shift of dirty children iterated so far. When
   // zero, a clean child's yogaTop is unchanged (no sibling above it grew),
   // so cached.top is fresh and the cull check skips yoga. Bottom-append
@@ -1397,66 +1324,62 @@ function renderScrolledChildren(
   // O(dirty) not O(mounted). Middle-growth leaves shift non-zero after
   // the dirty child → subsequent children yoga-read (needed for correct
   // culling since their yogaTop shifted).
-  let cumHeightShift = 0
+  let cumHeightShift = 0;
   for (const childNode of node.childNodes) {
-    const childElem = childNode as DOMElement
-    const cy = childElem.yogaNode
+    const childElem = childNode as DOMElement;
+    const cy = childElem.yogaNode;
     if (cy) {
-      const cached = nodeCache.get(childElem)
-      let top: number
-      let height: number
-      if (
-        cached?.top !== undefined &&
-        !childElem.dirty &&
-        cumHeightShift === 0
-      ) {
-        top = cached.top
-        height = cached.height
+      const cached = nodeCache.get(childElem);
+      let top: number;
+      let height: number;
+      if (cached?.top !== undefined && !childElem.dirty && cumHeightShift === 0) {
+        top = cached.top;
+        height = cached.height;
       } else {
-        top = cy.getComputedTop()
-        height = cy.getComputedHeight()
+        top = cy.getComputedTop();
+        height = cy.getComputedHeight();
         if (childElem.dirty) {
-          cumHeightShift += height - (cached ? cached.height : 0)
+          cumHeightShift += height - (cached ? cached.height : 0);
         }
         // Refresh cached top so next frame's cumShift===0 path stays
         // correct. For culled children with preserveCulledCache=true this
         // is the ONLY refresh point — without it, a middle-growth frame
         // leaves stale tops that misfire next frame.
-        if (cached) cached.top = top
+        if (cached) cached.top = top;
       }
-      const bottom = top + height
+      const bottom = top + height;
       if (bottom <= scrollTopY || top >= scrollBottomY) {
         // Culled — outside visible window. Drop stale cache entries from
         // the subtree so when this child re-enters it doesn't fire clears
         // at positions now occupied by siblings. The viewport-clear on
         // scroll-change handles the visible-area repaint.
-        if (!preserveCulledCache) dropSubtreeCache(childElem)
-        continue
+        if (!preserveCulledCache) dropSubtreeCache(childElem);
+        continue;
       }
     }
-    const wasDirty = childElem.dirty
+    const wasDirty = childElem.dirty;
     renderNodeToOutput(childElem, output, {
       offsetX,
       offsetY,
       prevScreen: hasRemovedChild || seenDirtyChild ? undefined : prevScreen,
       inheritedBackgroundColor,
-    })
+    });
     if (wasDirty) {
-      seenDirtyChild = true
+      seenDirtyChild = true;
     }
   }
 }
 
 function dropSubtreeCache(node: DOMElement): void {
-  nodeCache.delete(node)
+  nodeCache.delete(node);
   for (const child of node.childNodes) {
     if (child.nodeName !== '#text') {
-      dropSubtreeCache(child as DOMElement)
+      dropSubtreeCache(child as DOMElement);
     }
   }
 }
 
 // Exported for testing
-export { buildCharToSegmentMap, applyStylesToWrappedText }
+export { buildCharToSegmentMap, applyStylesToWrappedText };
 
-export default renderNodeToOutput
+export default renderNodeToOutput;

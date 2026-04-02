@@ -1,55 +1,48 @@
-import * as fs from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
-import { logEvent } from '../services/analytics/index.js'
-import { CACHE_PATHS } from './cachePaths.js'
-import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import { type FsOperations, getFsImplementation } from './fsOperations.js'
-import { cleanupOldImageCaches } from './imageStore.js'
-import * as lockfile from './lockfile.js'
-import { logError } from './log.js'
-import { cleanupOldVersions } from './nativeInstaller/index.js'
-import { cleanupOldPastes } from './pasteStore.js'
-import { getProjectsDir } from './sessionStorage.js'
-import { getSettingsWithAllErrors } from './settings/allErrors.js'
-import {
-  getSettings_DEPRECATED,
-  rawSettingsContainsKey,
-} from './settings/settings.js'
-import { TOOL_RESULTS_SUBDIR } from './toolResultStorage.js'
-import { cleanupStaleAgentWorktrees } from './worktree.js'
+import * as fs from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { logEvent } from '../services/analytics/index.js';
+import { CACHE_PATHS } from './cachePaths.js';
+import { logForDebugging } from './debug.js';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { type FsOperations, getFsImplementation } from './fsOperations.js';
+import { cleanupOldImageCaches } from './imageStore.js';
+import * as lockfile from './lockfile.js';
+import { logError } from './log.js';
+import { cleanupOldVersions } from './nativeInstaller/index.js';
+import { cleanupOldPastes } from './pasteStore.js';
+import { getProjectsDir } from './sessionStorage.js';
+import { getSettingsWithAllErrors } from './settings/allErrors.js';
+import { getSettings_DEPRECATED, rawSettingsContainsKey } from './settings/settings.js';
+import { TOOL_RESULTS_SUBDIR } from './toolResultStorage.js';
+import { cleanupStaleAgentWorktrees } from './worktree.js';
 
-const DEFAULT_CLEANUP_PERIOD_DAYS = 30
+const DEFAULT_CLEANUP_PERIOD_DAYS = 30;
 
 function getCutoffDate(): Date {
-  const settings = getSettings_DEPRECATED() || {}
-  const cleanupPeriodDays =
-    settings.cleanupPeriodDays ?? DEFAULT_CLEANUP_PERIOD_DAYS
-  const cleanupPeriodMs = cleanupPeriodDays * 24 * 60 * 60 * 1000
-  return new Date(Date.now() - cleanupPeriodMs)
+  const settings = getSettings_DEPRECATED() || {};
+  const cleanupPeriodDays = settings.cleanupPeriodDays ?? DEFAULT_CLEANUP_PERIOD_DAYS;
+  const cleanupPeriodMs = cleanupPeriodDays * 24 * 60 * 60 * 1000;
+  return new Date(Date.now() - cleanupPeriodMs);
 }
 
 export type CleanupResult = {
-  messages: number
-  errors: number
-}
+  messages: number;
+  errors: number;
+};
 
-export function addCleanupResults(
-  a: CleanupResult,
-  b: CleanupResult,
-): CleanupResult {
+export function addCleanupResults(a: CleanupResult, b: CleanupResult): CleanupResult {
   return {
     messages: a.messages + b.messages,
     errors: a.errors + b.errors,
-  }
+  };
 }
 
 export function convertFileNameToDate(filename: string): Date {
   const isoStr = filename
-    .split('.')[0]!
-    .replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z')
-  return new Date(isoStr)
+    .split('.')[0]
+    ?.replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z');
+  return new Date(isoStr);
 }
 
 async function cleanupOldFilesInDirectory(
@@ -57,78 +50,76 @@ async function cleanupOldFilesInDirectory(
   cutoffDate: Date,
   isMessagePath: boolean,
 ): Promise<CleanupResult> {
-  const result: CleanupResult = { messages: 0, errors: 0 }
+  const result: CleanupResult = { messages: 0, errors: 0 };
 
   try {
-    const files = await getFsImplementation().readdir(dirPath)
+    const files = await getFsImplementation().readdir(dirPath);
 
     for (const file of files) {
       try {
         // Convert filename format where all ':.' were replaced with '-'
-        const timestamp = convertFileNameToDate(file.name)
+        const timestamp = convertFileNameToDate(file.name);
         if (timestamp < cutoffDate) {
-          await getFsImplementation().unlink(join(dirPath, file.name))
+          await getFsImplementation().unlink(join(dirPath, file.name));
           // Increment the appropriate counter
           if (isMessagePath) {
-            result.messages++
+            result.messages++;
           } else {
-            result.errors++
+            result.errors++;
           }
         }
       } catch (error) {
         // Log but continue processing other files
-        logError(error as Error)
+        logError(error as Error);
       }
     }
   } catch (error: unknown) {
     // Ignore if directory doesn't exist
     if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
-      logError(error)
+      logError(error);
     }
   }
 
-  return result
+  return result;
 }
 
 export async function cleanupOldMessageFiles(): Promise<CleanupResult> {
-  const fsImpl = getFsImplementation()
-  const cutoffDate = getCutoffDate()
-  const errorPath = CACHE_PATHS.errors()
-  const baseCachePath = CACHE_PATHS.baseLogs()
+  const fsImpl = getFsImplementation();
+  const cutoffDate = getCutoffDate();
+  const errorPath = CACHE_PATHS.errors();
+  const baseCachePath = CACHE_PATHS.baseLogs();
 
   // Clean up message and error logs
-  let result = await cleanupOldFilesInDirectory(errorPath, cutoffDate, false)
+  let result = await cleanupOldFilesInDirectory(errorPath, cutoffDate, false);
 
   // Clean up MCP logs
   try {
-    let dirents
+    let dirents;
     try {
-      dirents = await fsImpl.readdir(baseCachePath)
+      dirents = await fsImpl.readdir(baseCachePath);
     } catch {
-      return result
+      return result;
     }
 
     const mcpLogDirs = dirents
-      .filter(
-        dirent => dirent.isDirectory() && dirent.name.startsWith('mcp-logs-'),
-      )
-      .map(dirent => join(baseCachePath, dirent.name))
+      .filter((dirent) => dirent.isDirectory() && dirent.name.startsWith('mcp-logs-'))
+      .map((dirent) => join(baseCachePath, dirent.name));
 
     for (const mcpLogDir of mcpLogDirs) {
       // Clean up files in MCP log directory
       result = addCleanupResults(
         result,
         await cleanupOldFilesInDirectory(mcpLogDir, cutoffDate, true),
-      )
-      await tryRmdir(mcpLogDir, fsImpl)
+      );
+      await tryRmdir(mcpLogDir, fsImpl);
     }
   } catch (error: unknown) {
     if (error instanceof Error && 'code' in error && error.code !== 'ENOENT') {
-      logError(error)
+      logError(error);
     }
   }
 
-  return result
+  return result;
 }
 
 async function unlinkIfOld(
@@ -136,125 +127,111 @@ async function unlinkIfOld(
   cutoffDate: Date,
   fsImpl: FsOperations,
 ): Promise<boolean> {
-  const stats = await fsImpl.stat(filePath)
+  const stats = await fsImpl.stat(filePath);
   if (stats.mtime < cutoffDate) {
-    await fsImpl.unlink(filePath)
-    return true
+    await fsImpl.unlink(filePath);
+    return true;
   }
-  return false
+  return false;
 }
 
 async function tryRmdir(dirPath: string, fsImpl: FsOperations): Promise<void> {
   try {
-    await fsImpl.rmdir(dirPath)
+    await fsImpl.rmdir(dirPath);
   } catch {
     // not empty / doesn't exist
   }
 }
 
 export async function cleanupOldSessionFiles(): Promise<CleanupResult> {
-  const cutoffDate = getCutoffDate()
-  const result: CleanupResult = { messages: 0, errors: 0 }
-  const projectsDir = getProjectsDir()
-  const fsImpl = getFsImplementation()
+  const cutoffDate = getCutoffDate();
+  const result: CleanupResult = { messages: 0, errors: 0 };
+  const projectsDir = getProjectsDir();
+  const fsImpl = getFsImplementation();
 
-  let projectDirents
+  let projectDirents;
   try {
-    projectDirents = await fsImpl.readdir(projectsDir)
+    projectDirents = await fsImpl.readdir(projectsDir);
   } catch {
-    return result
+    return result;
   }
 
   for (const projectDirent of projectDirents) {
-    if (!projectDirent.isDirectory()) continue
-    const projectDir = join(projectsDir, projectDirent.name)
+    if (!projectDirent.isDirectory()) continue;
+    const projectDir = join(projectsDir, projectDirent.name);
 
     // Single readdir per project directory — partition into files and session dirs
-    let entries
+    let entries;
     try {
-      entries = await fsImpl.readdir(projectDir)
+      entries = await fsImpl.readdir(projectDir);
     } catch {
-      result.errors++
-      continue
+      result.errors++;
+      continue;
     }
 
     for (const entry of entries) {
       if (entry.isFile()) {
         if (!entry.name.endsWith('.jsonl') && !entry.name.endsWith('.cast')) {
-          continue
+          continue;
         }
         try {
-          if (
-            await unlinkIfOld(join(projectDir, entry.name), cutoffDate, fsImpl)
-          ) {
-            result.messages++
+          if (await unlinkIfOld(join(projectDir, entry.name), cutoffDate, fsImpl)) {
+            result.messages++;
           }
         } catch {
-          result.errors++
+          result.errors++;
         }
       } else if (entry.isDirectory()) {
         // Session directory — clean up tool-results/<toolDir>/* beneath it
-        const sessionDir = join(projectDir, entry.name)
-        const toolResultsDir = join(sessionDir, TOOL_RESULTS_SUBDIR)
-        let toolDirs
+        const sessionDir = join(projectDir, entry.name);
+        const toolResultsDir = join(sessionDir, TOOL_RESULTS_SUBDIR);
+        let toolDirs;
         try {
-          toolDirs = await fsImpl.readdir(toolResultsDir)
+          toolDirs = await fsImpl.readdir(toolResultsDir);
         } catch {
           // No tool-results dir — still try to remove an empty session dir
-          await tryRmdir(sessionDir, fsImpl)
-          continue
+          await tryRmdir(sessionDir, fsImpl);
+          continue;
         }
         for (const toolEntry of toolDirs) {
           if (toolEntry.isFile()) {
             try {
-              if (
-                await unlinkIfOld(
-                  join(toolResultsDir, toolEntry.name),
-                  cutoffDate,
-                  fsImpl,
-                )
-              ) {
-                result.messages++
+              if (await unlinkIfOld(join(toolResultsDir, toolEntry.name), cutoffDate, fsImpl)) {
+                result.messages++;
               }
             } catch {
-              result.errors++
+              result.errors++;
             }
           } else if (toolEntry.isDirectory()) {
-            const toolDirPath = join(toolResultsDir, toolEntry.name)
-            let toolFiles
+            const toolDirPath = join(toolResultsDir, toolEntry.name);
+            let toolFiles;
             try {
-              toolFiles = await fsImpl.readdir(toolDirPath)
+              toolFiles = await fsImpl.readdir(toolDirPath);
             } catch {
-              continue
+              continue;
             }
             for (const tf of toolFiles) {
-              if (!tf.isFile()) continue
+              if (!tf.isFile()) continue;
               try {
-                if (
-                  await unlinkIfOld(
-                    join(toolDirPath, tf.name),
-                    cutoffDate,
-                    fsImpl,
-                  )
-                ) {
-                  result.messages++
+                if (await unlinkIfOld(join(toolDirPath, tf.name), cutoffDate, fsImpl)) {
+                  result.messages++;
                 }
               } catch {
-                result.errors++
+                result.errors++;
               }
             }
-            await tryRmdir(toolDirPath, fsImpl)
+            await tryRmdir(toolDirPath, fsImpl);
           }
         }
-        await tryRmdir(toolResultsDir, fsImpl)
-        await tryRmdir(sessionDir, fsImpl)
+        await tryRmdir(toolResultsDir, fsImpl);
+        await tryRmdir(sessionDir, fsImpl);
       }
     }
 
-    await tryRmdir(projectDir, fsImpl)
+    await tryRmdir(projectDir, fsImpl);
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -266,125 +243,125 @@ export async function cleanupOldSessionFiles(): Promise<CleanupResult> {
 async function cleanupSingleDirectory(
   dirPath: string,
   extension: string,
-  removeEmptyDir: boolean = true,
+  removeEmptyDir = true,
 ): Promise<CleanupResult> {
-  const cutoffDate = getCutoffDate()
-  const result: CleanupResult = { messages: 0, errors: 0 }
-  const fsImpl = getFsImplementation()
+  const cutoffDate = getCutoffDate();
+  const result: CleanupResult = { messages: 0, errors: 0 };
+  const fsImpl = getFsImplementation();
 
-  let dirents
+  let dirents;
   try {
-    dirents = await fsImpl.readdir(dirPath)
+    dirents = await fsImpl.readdir(dirPath);
   } catch {
-    return result
+    return result;
   }
 
   for (const dirent of dirents) {
-    if (!dirent.isFile() || !dirent.name.endsWith(extension)) continue
+    if (!dirent.isFile() || !dirent.name.endsWith(extension)) continue;
     try {
       if (await unlinkIfOld(join(dirPath, dirent.name), cutoffDate, fsImpl)) {
-        result.messages++
+        result.messages++;
       }
     } catch {
-      result.errors++
+      result.errors++;
     }
   }
 
   if (removeEmptyDir) {
-    await tryRmdir(dirPath, fsImpl)
+    await tryRmdir(dirPath, fsImpl);
   }
 
-  return result
+  return result;
 }
 
 export function cleanupOldPlanFiles(): Promise<CleanupResult> {
-  const plansDir = join(getClaudeConfigHomeDir(), 'plans')
-  return cleanupSingleDirectory(plansDir, '.md')
+  const plansDir = join(getClaudeConfigHomeDir(), 'plans');
+  return cleanupSingleDirectory(plansDir, '.md');
 }
 
 export async function cleanupOldFileHistoryBackups(): Promise<CleanupResult> {
-  const cutoffDate = getCutoffDate()
-  const result: CleanupResult = { messages: 0, errors: 0 }
-  const fsImpl = getFsImplementation()
+  const cutoffDate = getCutoffDate();
+  const result: CleanupResult = { messages: 0, errors: 0 };
+  const fsImpl = getFsImplementation();
 
   try {
-    const configDir = getClaudeConfigHomeDir()
-    const fileHistoryStorageDir = join(configDir, 'file-history')
+    const configDir = getClaudeConfigHomeDir();
+    const fileHistoryStorageDir = join(configDir, 'file-history');
 
-    let dirents
+    let dirents;
     try {
-      dirents = await fsImpl.readdir(fileHistoryStorageDir)
+      dirents = await fsImpl.readdir(fileHistoryStorageDir);
     } catch {
-      return result
+      return result;
     }
 
     const fileHistorySessionsDirs = dirents
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => join(fileHistoryStorageDir, dirent.name))
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => join(fileHistoryStorageDir, dirent.name));
 
     await Promise.all(
-      fileHistorySessionsDirs.map(async fileHistorySessionDir => {
+      fileHistorySessionsDirs.map(async (fileHistorySessionDir) => {
         try {
-          const stats = await fsImpl.stat(fileHistorySessionDir)
+          const stats = await fsImpl.stat(fileHistorySessionDir);
           if (stats.mtime < cutoffDate) {
             await fsImpl.rm(fileHistorySessionDir, {
               recursive: true,
               force: true,
-            })
-            result.messages++
+            });
+            result.messages++;
           }
         } catch {
-          result.errors++
+          result.errors++;
         }
       }),
-    )
+    );
 
-    await tryRmdir(fileHistoryStorageDir, fsImpl)
+    await tryRmdir(fileHistoryStorageDir, fsImpl);
   } catch (error) {
-    logError(error as Error)
+    logError(error as Error);
   }
 
-  return result
+  return result;
 }
 
 export async function cleanupOldSessionEnvDirs(): Promise<CleanupResult> {
-  const cutoffDate = getCutoffDate()
-  const result: CleanupResult = { messages: 0, errors: 0 }
-  const fsImpl = getFsImplementation()
+  const cutoffDate = getCutoffDate();
+  const result: CleanupResult = { messages: 0, errors: 0 };
+  const fsImpl = getFsImplementation();
 
   try {
-    const configDir = getClaudeConfigHomeDir()
-    const sessionEnvBaseDir = join(configDir, 'session-env')
+    const configDir = getClaudeConfigHomeDir();
+    const sessionEnvBaseDir = join(configDir, 'session-env');
 
-    let dirents
+    let dirents;
     try {
-      dirents = await fsImpl.readdir(sessionEnvBaseDir)
+      dirents = await fsImpl.readdir(sessionEnvBaseDir);
     } catch {
-      return result
+      return result;
     }
 
     const sessionEnvDirs = dirents
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => join(sessionEnvBaseDir, dirent.name))
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => join(sessionEnvBaseDir, dirent.name));
 
     for (const sessionEnvDir of sessionEnvDirs) {
       try {
-        const stats = await fsImpl.stat(sessionEnvDir)
+        const stats = await fsImpl.stat(sessionEnvDir);
         if (stats.mtime < cutoffDate) {
-          await fsImpl.rm(sessionEnvDir, { recursive: true, force: true })
-          result.messages++
+          await fsImpl.rm(sessionEnvDir, { recursive: true, force: true });
+          result.messages++;
         }
       } catch {
-        result.errors++
+        result.errors++;
       }
     }
 
-    await tryRmdir(sessionEnvBaseDir, fsImpl)
+    await tryRmdir(sessionEnvBaseDir, fsImpl);
   } catch (error) {
-    logError(error as Error)
+    logError(error as Error);
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -394,41 +371,37 @@ export async function cleanupOldSessionEnvDirs(): Promise<CleanupResult> {
  * and accumulate indefinitely without this cleanup.
  */
 export async function cleanupOldDebugLogs(): Promise<CleanupResult> {
-  const cutoffDate = getCutoffDate()
-  const result: CleanupResult = { messages: 0, errors: 0 }
-  const fsImpl = getFsImplementation()
-  const debugDir = join(getClaudeConfigHomeDir(), 'debug')
+  const cutoffDate = getCutoffDate();
+  const result: CleanupResult = { messages: 0, errors: 0 };
+  const fsImpl = getFsImplementation();
+  const debugDir = join(getClaudeConfigHomeDir(), 'debug');
 
-  let dirents
+  let dirents;
   try {
-    dirents = await fsImpl.readdir(debugDir)
+    dirents = await fsImpl.readdir(debugDir);
   } catch {
-    return result
+    return result;
   }
 
   for (const dirent of dirents) {
     // Preserve the 'latest' symlink
-    if (
-      !dirent.isFile() ||
-      !dirent.name.endsWith('.txt') ||
-      dirent.name === 'latest'
-    ) {
-      continue
+    if (!dirent.isFile() || !dirent.name.endsWith('.txt') || dirent.name === 'latest') {
+      continue;
     }
     try {
       if (await unlinkIfOld(join(debugDir, dirent.name), cutoffDate, fsImpl)) {
-        result.messages++
+        result.messages++;
       }
     } catch {
-      result.errors++
+      result.errors++;
     }
   }
 
   // Intentionally do NOT remove debugDir even if empty — needed for future logs
-  return result
+  return result;
 }
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Clean up old npm cache entries for Anthropic packages.
@@ -436,101 +409,98 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000
  * Only runs once per day for Ant users.
  */
 export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
-  const markerPath = join(getClaudeConfigHomeDir(), '.npm-cache-cleanup')
+  const markerPath = join(getClaudeConfigHomeDir(), '.npm-cache-cleanup');
 
   try {
-    const stat = await fs.stat(markerPath)
+    const stat = await fs.stat(markerPath);
     if (Date.now() - stat.mtimeMs < ONE_DAY_MS) {
-      logForDebugging('npm cache cleanup: skipping, ran recently')
-      return
+      logForDebugging('npm cache cleanup: skipping, ran recently');
+      return;
     }
   } catch {
     // File doesn't exist, proceed with cleanup
   }
 
   try {
-    await lockfile.lock(markerPath, { retries: 0, realpath: false })
+    await lockfile.lock(markerPath, { retries: 0, realpath: false });
   } catch {
-    logForDebugging('npm cache cleanup: skipping, lock held')
-    return
+    logForDebugging('npm cache cleanup: skipping, lock held');
+    return;
   }
 
-  logForDebugging('npm cache cleanup: starting')
+  logForDebugging('npm cache cleanup: starting');
 
-  const npmCachePath = join(homedir(), '.npm', '_cacache')
+  const npmCachePath = join(homedir(), '.npm', '_cacache');
 
-  const NPM_CACHE_RETENTION_COUNT = 5
+  const NPM_CACHE_RETENTION_COUNT = 5;
 
-  const startTime = Date.now()
+  const startTime = Date.now();
   try {
-    const cacache = await import('cacache')
-    const cutoff = startTime - ONE_DAY_MS
+    const cacache = await import('cacache');
+    const cutoff = startTime - ONE_DAY_MS;
 
     // Stream index entries and collect all Anthropic package entries.
     // Previous implementation used cacache.verify() which does a full
     // integrity check + GC of the ENTIRE cache — O(all content blobs).
     // On large caches this took 60+ seconds and blocked the event loop.
-    const stream = cacache.ls.stream(npmCachePath)
-    const anthropicEntries: { key: string; time: number }[] = []
+    const stream = cacache.ls.stream(npmCachePath);
+    const anthropicEntries: { key: string; time: number }[] = [];
     for await (const entry of stream as AsyncIterable<{
-      key: string
-      time: number
+      key: string;
+      time: number;
     }>) {
       if (entry.key.includes('@anthropic-ai/claude-')) {
-        anthropicEntries.push({ key: entry.key, time: entry.time })
+        anthropicEntries.push({ key: entry.key, time: entry.time });
       }
     }
 
     // Group by package name (everything before the last @version separator)
-    const byPackage = new Map<string, { key: string; time: number }[]>()
+    const byPackage = new Map<string, { key: string; time: number }[]>();
     for (const entry of anthropicEntries) {
-      const atVersionIdx = entry.key.lastIndexOf('@')
-      const pkgName =
-        atVersionIdx > 0 ? entry.key.slice(0, atVersionIdx) : entry.key
-      const existing = byPackage.get(pkgName) ?? []
-      existing.push(entry)
-      byPackage.set(pkgName, existing)
+      const atVersionIdx = entry.key.lastIndexOf('@');
+      const pkgName = atVersionIdx > 0 ? entry.key.slice(0, atVersionIdx) : entry.key;
+      const existing = byPackage.get(pkgName) ?? [];
+      existing.push(entry);
+      byPackage.set(pkgName, existing);
     }
 
     // Remove entries older than 1 day OR beyond the top N most recent per package
-    const keysToRemove: string[] = []
+    const keysToRemove: string[] = [];
     for (const [, entries] of byPackage) {
-      entries.sort((a, b) => b.time - a.time) // newest first
+      entries.sort((a, b) => b.time - a.time); // newest first
       for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i]!
+        const entry = entries[i]!;
         if (entry.time < cutoff || i >= NPM_CACHE_RETENTION_COUNT) {
-          keysToRemove.push(entry.key)
+          keysToRemove.push(entry.key);
         }
       }
     }
 
-    await Promise.all(
-      keysToRemove.map(key => cacache.rm.entry(npmCachePath, key)),
-    )
+    await Promise.all(keysToRemove.map((key) => cacache.rm.entry(npmCachePath, key)));
 
-    await fs.writeFile(markerPath, new Date().toISOString())
+    await fs.writeFile(markerPath, new Date().toISOString());
 
-    const durationMs = Date.now() - startTime
+    const durationMs = Date.now() - startTime;
     if (keysToRemove.length > 0) {
       logForDebugging(
         `npm cache cleanup: Removed ${keysToRemove.length} old @anthropic-ai entries in ${durationMs}ms`,
-      )
+      );
     } else {
-      logForDebugging(`npm cache cleanup: completed in ${durationMs}ms`)
+      logForDebugging(`npm cache cleanup: completed in ${durationMs}ms`);
     }
     logEvent('tengu_npm_cache_cleanup', {
       success: true,
       durationMs,
       entriesRemoved: keysToRemove.length,
-    })
+    });
   } catch (error) {
-    logError(error as Error)
+    logError(error as Error);
     logEvent('tengu_npm_cache_cleanup', {
       success: false,
       durationMs: Date.now() - startTime,
-    })
+    });
   } finally {
-    await lockfile.unlock(markerPath, { realpath: false }).catch(() => {})
+    await lockfile.unlock(markerPath, { realpath: false }).catch(() => {});
   }
 }
 
@@ -541,34 +511,34 @@ export async function cleanupNpmCacheForAnthropicPackages(): Promise<void> {
  * The regular cleanupOldVersions() should still be used for installer flows.
  */
 export async function cleanupOldVersionsThrottled(): Promise<void> {
-  const markerPath = join(getClaudeConfigHomeDir(), '.version-cleanup')
+  const markerPath = join(getClaudeConfigHomeDir(), '.version-cleanup');
 
   try {
-    const stat = await fs.stat(markerPath)
+    const stat = await fs.stat(markerPath);
     if (Date.now() - stat.mtimeMs < ONE_DAY_MS) {
-      logForDebugging('version cleanup: skipping, ran recently')
-      return
+      logForDebugging('version cleanup: skipping, ran recently');
+      return;
     }
   } catch {
     // File doesn't exist, proceed with cleanup
   }
 
   try {
-    await lockfile.lock(markerPath, { retries: 0, realpath: false })
+    await lockfile.lock(markerPath, { retries: 0, realpath: false });
   } catch {
-    logForDebugging('version cleanup: skipping, lock held')
-    return
+    logForDebugging('version cleanup: skipping, lock held');
+    return;
   }
 
-  logForDebugging('version cleanup: starting (throttled)')
+  logForDebugging('version cleanup: starting (throttled)');
 
   try {
-    await cleanupOldVersions()
-    await fs.writeFile(markerPath, new Date().toISOString())
+    await cleanupOldVersions();
+    await fs.writeFile(markerPath, new Date().toISOString());
   } catch (error) {
-    logError(error as Error)
+    logError(error as Error);
   } finally {
-    await lockfile.unlock(markerPath, { realpath: false }).catch(() => {})
+    await lockfile.unlock(markerPath, { realpath: false }).catch(() => {});
   }
 }
 
@@ -576,27 +546,27 @@ export async function cleanupOldMessageFilesInBackground(): Promise<void> {
   // If settings have validation errors but the user explicitly set cleanupPeriodDays,
   // skip cleanup entirely rather than falling back to the default (30 days).
   // This prevents accidentally deleting files when the user intended a different retention period.
-  const { errors } = getSettingsWithAllErrors()
+  const { errors } = getSettingsWithAllErrors();
   if (errors.length > 0 && rawSettingsContainsKey('cleanupPeriodDays')) {
     logForDebugging(
       'Skipping cleanup: settings have validation errors but cleanupPeriodDays was explicitly set. Fix settings errors to enable cleanup.',
-    )
-    return
+    );
+    return;
   }
 
-  await cleanupOldMessageFiles()
-  await cleanupOldSessionFiles()
-  await cleanupOldPlanFiles()
-  await cleanupOldFileHistoryBackups()
-  await cleanupOldSessionEnvDirs()
-  await cleanupOldDebugLogs()
-  await cleanupOldImageCaches()
-  await cleanupOldPastes(getCutoffDate())
-  const removedWorktrees = await cleanupStaleAgentWorktrees(getCutoffDate())
+  await cleanupOldMessageFiles();
+  await cleanupOldSessionFiles();
+  await cleanupOldPlanFiles();
+  await cleanupOldFileHistoryBackups();
+  await cleanupOldSessionEnvDirs();
+  await cleanupOldDebugLogs();
+  await cleanupOldImageCaches();
+  await cleanupOldPastes(getCutoffDate());
+  const removedWorktrees = await cleanupStaleAgentWorktrees(getCutoffDate());
   if (removedWorktrees > 0) {
-    logEvent('tengu_worktree_cleanup', { removed: removedWorktrees })
+    logEvent('tengu_worktree_cleanup', { removed: removedWorktrees });
   }
   if (process.env.USER_TYPE === 'ant') {
-    await cleanupNpmCacheForAnthropicPackages()
+    await cleanupNpmCacheForAnthropicPackages();
   }
 }

@@ -7,8 +7,8 @@
  * precedence.
  */
 
-import type { AppState } from '../state/AppState.js'
-import { getTeamName } from './teammate.js'
+import type { AppState } from '../state/AppState.js';
+import { getTeamName } from './teammate.js';
 
 /**
  * Returns the standalone agent name if set and not a swarm teammate.
@@ -17,7 +17,7 @@ import { getTeamName } from './teammate.js'
 export function getStandaloneAgentName(appState: AppState): string | undefined {
   // If in a team (swarm), don't return standalone name
   if (getTeamName()) {
-    return undefined
+    return undefined;
   }
-  return appState.standaloneAgentContext?.name
+  return appState.standaloneAgentContext?.name;
 }

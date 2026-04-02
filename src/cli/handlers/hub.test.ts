@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test'
-import { formatHubStatus } from './hub.js'
+import { describe, expect, test } from 'bun:test';
+import { formatHubStatus } from './hub.js';
 
 describe('hub handler formatting', () => {
   test('formats running status output', () => {
@@ -8,9 +8,9 @@ describe('hub handler formatting', () => {
       sessionCount: 2,
       connectionCount: 1,
       socketPath: '/tmp/hub.sock',
-    })
+    });
 
-    expect(text).toContain('running')
-    expect(text).toContain('/tmp/hub.sock')
-  })
-})
+    expect(text).toContain('running');
+    expect(text).toContain('/tmp/hub.sock');
+  });
+});

@@ -1,6 +1,6 @@
-import { logForDebugging } from '../debug.js'
-import { releasePump, retainPump } from './drainRunLoop.js'
-import { requireComputerUseSwift } from './swiftLoader.js'
+import { logForDebugging } from '../debug.js';
+import { releasePump, retainPump } from './drainRunLoop.js';
+import { requireComputerUseSwift } from './swiftLoader.js';
 
 /**
  * Global Escape → abort. Mirrors Cowork's `escAbort.ts` but without Electron:
@@ -20,35 +20,35 @@ import { requireComputerUseSwift } from './swiftLoader.js'
  * doesn't eat the next user ESC.
  */
 
-let registered = false
+let registered = false;
 
 export function registerEscHotkey(onEscape: () => void): boolean {
-  if (registered) return true
-  const cu = requireComputerUseSwift()
+  if (registered) return true;
+  const cu = requireComputerUseSwift();
   if (!cu.hotkey.registerEscape(onEscape)) {
     // CGEvent.tapCreate failed — typically missing Accessibility permission.
     // CU still works, just without ESC abort. Mirrors Cowork's escAbort.ts:81.
-    logForDebugging('[cu-esc] registerEscape returned false', { level: 'warn' })
-    return false
+    logForDebugging('[cu-esc] registerEscape returned false', { level: 'warn' });
+    return false;
   }
-  retainPump()
-  registered = true
-  logForDebugging('[cu-esc] registered')
-  return true
+  retainPump();
+  registered = true;
+  logForDebugging('[cu-esc] registered');
+  return true;
 }
 
 export function unregisterEscHotkey(): void {
-  if (!registered) return
+  if (!registered) return;
   try {
-    requireComputerUseSwift().hotkey.unregister()
+    requireComputerUseSwift().hotkey.unregister();
   } finally {
-    releasePump()
-    registered = false
-    logForDebugging('[cu-esc] unregistered')
+    releasePump();
+    registered = false;
+    logForDebugging('[cu-esc] unregistered');
   }
 }
 
 export function notifyExpectedEscape(): void {
-  if (!registered) return
-  requireComputerUseSwift().hotkey.notifyExpectedEscape()
+  if (!registered) return;
+  requireComputerUseSwift().hotkey.notifyExpectedEscape();
 }

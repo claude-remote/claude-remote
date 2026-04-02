@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../../ink.js';
 import type { Theme } from '../../utils/theme.js';
 type Props = {
@@ -11,13 +11,7 @@ type Props = {
 };
 export function ShimmerChar(t0) {
   const $ = _c(3);
-  const {
-    char,
-    index,
-    glimmerIndex,
-    messageColor,
-    shimmerColor
-  } = t0;
+  const { char, index, glimmerIndex, messageColor, shimmerColor } = t0;
   const isHighlighted = index === glimmerIndex;
   const isNearHighlight = Math.abs(index - glimmerIndex) === 1;
   const shouldUseShimmer = isHighlighted || isNearHighlight;

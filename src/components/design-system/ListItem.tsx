@@ -1,9 +1,9 @@
-import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import type { ReactNode } from 'react';
 import React from 'react';
-import { useDeclaredCursor } from '../../ink/hooks/use-declared-cursor.js';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../ink.js';
+import { useDeclaredCursor } from '../../ink/hooks/use-declared-cursor.js';
 type ListItemProps = {
   /**
    * Whether this item is currently focused (keyboard selection).
@@ -112,7 +112,7 @@ export function ListItem(t0) {
     showScrollUp,
     styled: t2,
     disabled: t3,
-    declareCursor
+    declareCursor,
   } = t0;
   const isSelected = t1 === undefined ? false : t1;
   const styled = t2 === undefined ? true : t2;
@@ -147,16 +147,16 @@ export function ListItem(t0) {
   if ($[5] !== disabled || $[6] !== isFocused || $[7] !== isSelected || $[8] !== styled) {
     const getTextColor = function getTextColor() {
       if (disabled) {
-        return "inactive";
+        return 'inactive';
       }
       if (!styled) {
         return;
       }
       if (isSelected) {
-        return "success";
+        return 'success';
       }
       if (isFocused) {
-        return "suggestion";
+        return 'suggestion';
       }
     };
     t5 = getTextColor();
@@ -175,7 +175,7 @@ export function ListItem(t0) {
     t7 = {
       line: 0,
       column: 0,
-      active: t6
+      active: t6,
     };
     $[10] = t6;
     $[11] = t7;
@@ -193,7 +193,13 @@ export function ListItem(t0) {
   }
   let t9;
   if ($[14] !== children || $[15] !== disabled || $[16] !== styled || $[17] !== textColor) {
-    t9 = styled ? <Text color={textColor} dimColor={disabled}>{children}</Text> : children;
+    t9 = styled ? (
+      <Text color={textColor} dimColor={disabled}>
+        {children}
+      </Text>
+    ) : (
+      children
+    );
     $[14] = children;
     $[15] = disabled;
     $[16] = styled;
@@ -213,7 +219,13 @@ export function ListItem(t0) {
   }
   let t11;
   if ($[22] !== t10 || $[23] !== t8 || $[24] !== t9) {
-    t11 = <Box flexDirection="row" gap={1}>{t8}{t9}{t10}</Box>;
+    t11 = (
+      <Box flexDirection="row" gap={1}>
+        {t8}
+        {t9}
+        {t10}
+      </Box>
+    );
     $[22] = t10;
     $[23] = t8;
     $[24] = t9;
@@ -223,7 +235,11 @@ export function ListItem(t0) {
   }
   let t12;
   if ($[26] !== description) {
-    t12 = description && <Box paddingLeft={2}><Text color="inactive">{description}</Text></Box>;
+    t12 = description && (
+      <Box paddingLeft={2}>
+        <Text color="inactive">{description}</Text>
+      </Box>
+    );
     $[26] = description;
     $[27] = t12;
   } else {
@@ -231,7 +247,12 @@ export function ListItem(t0) {
   }
   let t13;
   if ($[28] !== cursorRef || $[29] !== t11 || $[30] !== t12) {
-    t13 = <Box ref={cursorRef} flexDirection="column">{t11}{t12}</Box>;
+    t13 = (
+      <Box ref={cursorRef} flexDirection="column">
+        {t11}
+        {t12}
+      </Box>
+    );
     $[28] = cursorRef;
     $[29] = t11;
     $[30] = t12;

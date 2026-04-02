@@ -27,58 +27,58 @@
  * - query_end: End of query
  */
 
-import { logForDebugging } from './debug.js'
-import { isEnvTruthy } from './envUtils.js'
-import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js'
+import { logForDebugging } from './debug.js';
+import { isEnvTruthy } from './envUtils.js';
+import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js';
 
 // Module-level state - initialized once when the module loads
 // eslint-disable-next-line custom-rules/no-process-env-top-level
-const ENABLED = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_QUERY)
+const ENABLED = isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_QUERY);
 
 // Track memory snapshots separately (perf_hooks doesn't track memory)
-const memorySnapshots = new Map<string, NodeJS.MemoryUsage>()
+const memorySnapshots = new Map<string, NodeJS.MemoryUsage>();
 
 // Track query count for reporting
-let queryCount = 0
+let queryCount = 0;
 
 // Track first token received time separately for summary
-let firstTokenTime: number | null = null
+let firstTokenTime: number | null = null;
 
 /**
  * Start profiling a new query session
  */
 export function startQueryProfile(): void {
-  if (!ENABLED) return
+  if (!ENABLED) return;
 
-  const perf = getPerformance()
+  const perf = getPerformance();
 
   // Clear previous marks and memory snapshots
-  perf.clearMarks()
-  memorySnapshots.clear()
-  firstTokenTime = null
+  perf.clearMarks();
+  memorySnapshots.clear();
+  firstTokenTime = null;
 
-  queryCount++
+  queryCount++;
 
   // Record the start checkpoint
-  queryCheckpoint('query_user_input_received')
+  queryCheckpoint('query_user_input_received');
 }
 
 /**
  * Record a checkpoint with the given name
  */
 export function queryCheckpoint(name: string): void {
-  if (!ENABLED) return
+  if (!ENABLED) return;
 
-  const perf = getPerformance()
-  perf.mark(name)
-  memorySnapshots.set(name, process.memoryUsage())
+  const perf = getPerformance();
+  perf.mark(name);
+  memorySnapshots.set(name, process.memoryUsage());
 
   // Track first token specially
   if (name === 'query_first_chunk_received' && firstTokenTime === null) {
-    const marks = perf.getEntriesByType('mark')
+    const marks = perf.getEntriesByType('mark');
     if (marks.length > 0) {
-      const lastMark = marks[marks.length - 1]
-      firstTokenTime = lastMark?.startTime ?? 0
+      const lastMark = marks[marks.length - 1];
+      firstTokenTime = lastMark?.startTime ?? 0;
     }
   }
 }
@@ -87,9 +87,9 @@ export function queryCheckpoint(name: string): void {
  * End the current query profiling session
  */
 export function endQueryProfile(): void {
-  if (!ENABLED) return
+  if (!ENABLED) return;
 
-  queryCheckpoint('query_profile_end')
+  queryCheckpoint('query_profile_end');
 }
 
 /**
@@ -99,28 +99,28 @@ function getSlowWarning(deltaMs: number, name: string): string {
   // Don't flag the first checkpoint as slow - it measures time from process start,
   // not actual processing overhead
   if (name === 'query_user_input_received') {
-    return ''
+    return '';
   }
 
   if (deltaMs > 1000) {
-    return ` ⚠️  VERY SLOW`
+    return ' ⚠️  VERY SLOW';
   }
   if (deltaMs > 100) {
-    return ` ⚠️  SLOW`
+    return ' ⚠️  SLOW';
   }
 
   // Specific warnings for known bottlenecks
   if (name.includes('git_status') && deltaMs > 50) {
-    return ' ⚠️  git status'
+    return ' ⚠️  git status';
   }
   if (name.includes('tool_schema') && deltaMs > 50) {
-    return ' ⚠️  tool schemas'
+    return ' ⚠️  tool schemas';
   }
   if (name.includes('client_creation') && deltaMs > 50) {
-    return ' ⚠️  client creation'
+    return ' ⚠️  client creation';
   }
 
-  return ''
+  return '';
 }
 
 /**
@@ -128,30 +128,30 @@ function getSlowWarning(deltaMs: number, name: string): string {
  */
 function getQueryProfileReport(): string {
   if (!ENABLED) {
-    return 'Query profiling not enabled (set CLAUDE_CODE_PROFILE_QUERY=1)'
+    return 'Query profiling not enabled (set CLAUDE_CODE_PROFILE_QUERY=1)';
   }
 
-  const perf = getPerformance()
-  const marks = perf.getEntriesByType('mark')
+  const perf = getPerformance();
+  const marks = perf.getEntriesByType('mark');
   if (marks.length === 0) {
-    return 'No query profiling checkpoints recorded'
+    return 'No query profiling checkpoints recorded';
   }
 
-  const lines: string[] = []
-  lines.push('='.repeat(80))
-  lines.push(`QUERY PROFILING REPORT - Query #${queryCount}`)
-  lines.push('='.repeat(80))
-  lines.push('')
+  const lines: string[] = [];
+  lines.push('='.repeat(80));
+  lines.push(`QUERY PROFILING REPORT - Query #${queryCount}`);
+  lines.push('='.repeat(80));
+  lines.push('');
 
   // Use first mark as baseline (query start time) to show relative times
-  const baselineTime = marks[0]?.startTime ?? 0
-  let prevTime = baselineTime
-  let apiRequestSentTime = 0
-  let firstChunkTime = 0
+  const baselineTime = marks[0]?.startTime ?? 0;
+  let prevTime = baselineTime;
+  let apiRequestSentTime = 0;
+  let firstChunkTime = 0;
 
   for (const mark of marks) {
-    const relativeTime = mark.startTime - baselineTime
-    const deltaMs = mark.startTime - prevTime
+    const relativeTime = mark.startTime - baselineTime;
+    const deltaMs = mark.startTime - prevTime;
     lines.push(
       formatTimelineLine(
         relativeTime,
@@ -162,52 +162,47 @@ function getQueryProfileReport(): string {
         9,
         getSlowWarning(deltaMs, mark.name),
       ),
-    )
+    );
 
     // Track key milestones for summary (use relative times)
     if (mark.name === 'query_api_request_sent') {
-      apiRequestSentTime = relativeTime
+      apiRequestSentTime = relativeTime;
     }
     if (mark.name === 'query_first_chunk_received') {
-      firstChunkTime = relativeTime
+      firstChunkTime = relativeTime;
     }
 
-    prevTime = mark.startTime
+    prevTime = mark.startTime;
   }
 
   // Calculate summary statistics (relative to baseline)
-  const lastMark = marks[marks.length - 1]
-  const totalTime = lastMark ? lastMark.startTime - baselineTime : 0
+  const lastMark = marks[marks.length - 1];
+  const totalTime = lastMark ? lastMark.startTime - baselineTime : 0;
 
-  lines.push('')
-  lines.push('-'.repeat(80))
+  lines.push('');
+  lines.push('-'.repeat(80));
 
   if (firstChunkTime > 0) {
-    const preRequestOverhead = apiRequestSentTime
-    const networkLatency = firstChunkTime - apiRequestSentTime
-    const preRequestPercent = (
-      (preRequestOverhead / firstChunkTime) *
-      100
-    ).toFixed(1)
-    const networkPercent = ((networkLatency / firstChunkTime) * 100).toFixed(1)
+    const preRequestOverhead = apiRequestSentTime;
+    const networkLatency = firstChunkTime - apiRequestSentTime;
+    const preRequestPercent = ((preRequestOverhead / firstChunkTime) * 100).toFixed(1);
+    const networkPercent = ((networkLatency / firstChunkTime) * 100).toFixed(1);
 
-    lines.push(`Total TTFT: ${formatMs(firstChunkTime)}ms`)
+    lines.push(`Total TTFT: ${formatMs(firstChunkTime)}ms`);
     lines.push(
       `  - Pre-request overhead: ${formatMs(preRequestOverhead)}ms (${preRequestPercent}%)`,
-    )
-    lines.push(
-      `  - Network latency: ${formatMs(networkLatency)}ms (${networkPercent}%)`,
-    )
+    );
+    lines.push(`  - Network latency: ${formatMs(networkLatency)}ms (${networkPercent}%)`);
   } else {
-    lines.push(`Total time: ${formatMs(totalTime)}ms`)
+    lines.push(`Total time: ${formatMs(totalTime)}ms`);
   }
 
   // Add phase summary
-  lines.push(getPhaseSummary(marks, baselineTime))
+  lines.push(getPhaseSummary(marks, baselineTime));
 
-  lines.push('='.repeat(80))
+  lines.push('='.repeat(80));
 
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
 /**
@@ -259,43 +254,41 @@ function getPhaseSummary(
       start: 'query_tool_execution_start',
       end: 'query_tool_execution_end',
     },
-  ]
+  ];
 
-  const markMap = new Map(marks.map(m => [m.name, m.startTime - baselineTime]))
+  const markMap = new Map(marks.map((m) => [m.name, m.startTime - baselineTime]));
 
-  const lines: string[] = []
-  lines.push('')
-  lines.push('PHASE BREAKDOWN:')
+  const lines: string[] = [];
+  lines.push('');
+  lines.push('PHASE BREAKDOWN:');
 
   for (const phase of phases) {
-    const startTime = markMap.get(phase.start)
-    const endTime = markMap.get(phase.end)
+    const startTime = markMap.get(phase.start);
+    const endTime = markMap.get(phase.end);
 
     if (startTime !== undefined && endTime !== undefined) {
-      const duration = endTime - startTime
-      const bar = '█'.repeat(Math.min(Math.ceil(duration / 10), 50)) // 1 block per 10ms, max 50
-      lines.push(
-        `  ${phase.name.padEnd(22)} ${formatMs(duration).padStart(10)}ms ${bar}`,
-      )
+      const duration = endTime - startTime;
+      const bar = '█'.repeat(Math.min(Math.ceil(duration / 10), 50)); // 1 block per 10ms, max 50
+      lines.push(`  ${phase.name.padEnd(22)} ${formatMs(duration).padStart(10)}ms ${bar}`);
     }
   }
 
   // Calculate pre-API overhead (everything before api_request_sent)
-  const apiRequestSent = markMap.get('query_api_request_sent')
+  const apiRequestSent = markMap.get('query_api_request_sent');
   if (apiRequestSent !== undefined) {
-    lines.push('')
+    lines.push('');
     lines.push(
       `  ${'Total pre-API overhead'.padEnd(22)} ${formatMs(apiRequestSent).padStart(10)}ms`,
-    )
+    );
   }
 
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
 /**
  * Log the query profile report to debug output
  */
 export function logQueryProfileReport(): void {
-  if (!ENABLED) return
-  logForDebugging(getQueryProfileReport())
+  if (!ENABLED) return;
+  logForDebugging(getQueryProfileReport());
 }

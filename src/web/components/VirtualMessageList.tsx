@@ -132,22 +132,19 @@ export function VirtualMessageList({
   }, [calculateVisibleRange]);
 
   /** Observe/unobserve item elements */
-  const setItemRef = useCallback(
-    (index: number, el: HTMLDivElement | null) => {
-      const observer = resizeObserverRef.current;
-      const prev = itemRefs.current.get(index);
-      if (prev && observer) {
-        observer.unobserve(prev);
-      }
-      if (el) {
-        itemRefs.current.set(index, el);
-        if (observer) observer.observe(el);
-      } else {
-        itemRefs.current.delete(index);
-      }
-    },
-    [],
-  );
+  const setItemRef = useCallback((index: number, el: HTMLDivElement | null) => {
+    const observer = resizeObserverRef.current;
+    const prev = itemRefs.current.get(index);
+    if (prev && observer) {
+      observer.unobserve(prev);
+    }
+    if (el) {
+      itemRefs.current.set(index, el);
+      if (observer) observer.observe(el);
+    } else {
+      itemRefs.current.delete(index);
+    }
+  }, []);
 
   /** Handle scroll events */
   const handleScroll = useCallback(() => {
@@ -155,8 +152,7 @@ export function VirtualMessageList({
     if (!container) return;
 
     // Check if near bottom
-    const distFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     wasNearBottomRef.current = distFromBottom < autoScrollThreshold;
 
     // Detect scroll to top
@@ -185,30 +181,19 @@ export function VirtualMessageList({
 
   const totalHeight = getTotalHeight();
   const topSpacerHeight = getItemOffset(visibleRange.start);
-  const bottomSpacerHeight = Math.max(
-    0,
-    totalHeight - getItemOffset(visibleRange.end),
-  );
+  const bottomSpacerHeight = Math.max(0, totalHeight - getItemOffset(visibleRange.end));
 
   const items: React.ReactNode[] = [];
   for (let i = visibleRange.start; i < visibleRange.end && i < itemCount; i++) {
     items.push(
-      <div
-        key={i}
-        data-virtual-index={i}
-        ref={(el) => setItemRef(i, el)}
-      >
+      <div key={i} data-virtual-index={i} ref={(el) => setItemRef(i, el)}>
         {renderItem(i)}
       </div>,
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className={`overflow-y-auto ${className}`}
-    >
+    <div ref={containerRef} onScroll={handleScroll} className={`overflow-y-auto ${className}`}>
       {/* Top spacer for items above visible range */}
       <div style={{ height: topSpacerHeight }} />
       {items}

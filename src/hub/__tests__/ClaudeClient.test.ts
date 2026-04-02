@@ -18,11 +18,7 @@ function makeConfig(overrides?: Partial<SessionConfig>): SessionConfig {
   };
 }
 
-function makeMessage(
-  role: 'user' | 'assistant',
-  text: string,
-  id?: string,
-): Message {
+function makeMessage(role: 'user' | 'assistant', text: string, id?: string): Message {
   return {
     id: id ?? `msg-${Date.now()}`,
     role,
@@ -40,9 +36,7 @@ function buildSSEStream(
   events: Array<{ event: string; data: Record<string, unknown> }>,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  const chunks = events.map(
-    (e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`,
-  );
+  const chunks = events.map((e) => `event: ${e.event}\ndata: ${JSON.stringify(e.data)}\n\n`);
   return new ReadableStream({
     start(controller) {
       for (const chunk of chunks) {
@@ -91,7 +85,11 @@ function simpleTextSSE(text = 'Hello, world!') {
     },
     {
       event: 'message_delta',
-      data: { type: 'message_delta', delta: { stop_reason: 'end_turn' }, usage: { output_tokens: 5 } },
+      data: {
+        type: 'message_delta',
+        delta: { stop_reason: 'end_turn' },
+        usage: { output_tokens: 5 },
+      },
     },
     {
       event: 'message_stop',
@@ -190,9 +188,7 @@ describe('ClaudeClient', () => {
       collected.push(e);
     });
 
-    globalThis.fetch = mock(() =>
-      Promise.resolve(buildFetchResponse(simpleTextSSE())),
-    ) as any;
+    globalThis.fetch = mock(() => Promise.resolve(buildFetchResponse(simpleTextSSE()))) as any;
 
     const handle = await client.sendMessage({
       sessionId: 'sess-1',
@@ -208,9 +204,7 @@ describe('ClaudeClient', () => {
     expect(sdkMessages.length).toBeGreaterThanOrEqual(4);
 
     // Should also have context:updated and cost:updated
-    const contextEvents = collected.filter(
-      (e) => e.type === 'hub:context:updated',
-    );
+    const contextEvents = collected.filter((e) => e.type === 'hub:context:updated');
     const costEvents = collected.filter((e) => e.type === 'hub:cost:updated');
     expect(contextEvents.length).toBe(1);
     expect(costEvents.length).toBe(1);
@@ -258,9 +252,7 @@ describe('ClaudeClient', () => {
   // -----------------------------------------------------------------------
 
   it('tracks token usage after response', async () => {
-    globalThis.fetch = mock(() =>
-      Promise.resolve(buildFetchResponse(simpleTextSSE())),
-    ) as any;
+    globalThis.fetch = mock(() => Promise.resolve(buildFetchResponse(simpleTextSSE()))) as any;
 
     await client.sendMessage({
       sessionId: 'sess-usage',
@@ -287,30 +279,18 @@ describe('ClaudeClient', () => {
 
   it('estimates cost for known models', () => {
     // Sonnet: $3/M input, $15/M output
-    const cost = client.estimateCost(
-      'claude-sonnet-4-20250514',
-      1_000_000,
-      1_000_000,
-    );
+    const cost = client.estimateCost('claude-sonnet-4-20250514', 1_000_000, 1_000_000);
     expect(cost).toBe(18); // 3 + 15
   });
 
   it('estimates cost for Opus model', () => {
     // Opus: $15/M input, $75/M output
-    const cost = client.estimateCost(
-      'claude-opus-4-20250514',
-      1_000_000,
-      500_000,
-    );
+    const cost = client.estimateCost('claude-opus-4-20250514', 1_000_000, 500_000);
     expect(cost).toBe(15 + 37.5);
   });
 
   it('falls back to default pricing for unknown models', () => {
-    const cost = client.estimateCost(
-      'claude-unknown-9000',
-      1_000_000,
-      1_000_000,
-    );
+    const cost = client.estimateCost('claude-unknown-9000', 1_000_000, 1_000_000);
     // Default: $3/M input, $15/M output
     expect(cost).toBe(18);
   });
@@ -320,9 +300,7 @@ describe('ClaudeClient', () => {
   // -----------------------------------------------------------------------
 
   it('summarizeCost returns formatted cost for session', async () => {
-    globalThis.fetch = mock(() =>
-      Promise.resolve(buildFetchResponse(simpleTextSSE())),
-    ) as any;
+    globalThis.fetch = mock(() => Promise.resolve(buildFetchResponse(simpleTextSSE()))) as any;
 
     await client.sendMessage({
       sessionId: 'sess-cost',
@@ -410,9 +388,7 @@ describe('ClaudeClient', () => {
   // -----------------------------------------------------------------------
 
   it('supports concurrent chats in different sessions', async () => {
-    globalThis.fetch = mock(() =>
-      Promise.resolve(buildFetchResponse(simpleTextSSE())),
-    ) as any;
+    globalThis.fetch = mock(() => Promise.resolve(buildFetchResponse(simpleTextSSE()))) as any;
 
     const events1: HubEvent[] = [];
     const events2: HubEvent[] = [];
@@ -455,9 +431,7 @@ describe('ClaudeClient', () => {
 
   it('publishes error event on API failure', async () => {
     globalThis.fetch = mock(() =>
-      Promise.resolve(
-        new Response('Internal Server Error', { status: 500 }),
-      ),
+      Promise.resolve(new Response('Internal Server Error', { status: 500 })),
     ) as any;
 
     const collected: HubEvent[] = [];
@@ -474,9 +448,7 @@ describe('ClaudeClient', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     const errorEvents = collected.filter(
-      (e) =>
-        e.type === 'sdk:message' &&
-        (e.payload as Record<string, unknown>).type === 'error',
+      (e) => e.type === 'sdk:message' && (e.payload as Record<string, unknown>).type === 'error',
     );
     expect(errorEvents.length).toBe(1);
   });

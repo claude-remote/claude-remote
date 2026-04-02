@@ -1,9 +1,4 @@
-export type LspServerState =
-  | 'stopped'
-  | 'starting'
-  | 'running'
-  | 'stopping'
-  | 'error';
+export type LspServerState = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
 
 export type LspServerConfig = {
   command: string;

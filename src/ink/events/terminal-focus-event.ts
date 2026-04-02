@@ -1,6 +1,6 @@
-import { Event } from './event.js'
+import { Event } from './event.js';
 
-export type TerminalFocusEventType = 'terminalfocus' | 'terminalblur'
+export type TerminalFocusEventType = 'terminalfocus' | 'terminalblur';
 
 /**
  * Event fired when the terminal window gains or loses focus.
@@ -10,10 +10,10 @@ export type TerminalFocusEventType = 'terminalfocus' | 'terminalblur'
  * - CSI O (\x1b[O) when the terminal loses focus
  */
 export class TerminalFocusEvent extends Event {
-  readonly type: TerminalFocusEventType
+  readonly type: TerminalFocusEventType;
 
   constructor(type: TerminalFocusEventType) {
-    super()
-    this.type = type
+    super();
+    this.type = type;
   }
 }

@@ -8,68 +8,53 @@
 
 /** PublicApiAuth contains authentication context automatically injected by the API */
 export interface PublicApiAuth {
-  account_id?: number | undefined
-  organization_uuid?: string | undefined
-  account_uuid?: string | undefined
+  account_id?: number | undefined;
+  organization_uuid?: string | undefined;
+  account_uuid?: string | undefined;
 }
 
 function createBasePublicApiAuth(): PublicApiAuth {
-  return { account_id: 0, organization_uuid: '', account_uuid: '' }
+  return { account_id: 0, organization_uuid: '', account_uuid: '' };
 }
 
 export const PublicApiAuth: MessageFns<PublicApiAuth> = {
   fromJSON(object: any): PublicApiAuth {
     return {
-      account_id: isSet(object.account_id)
-        ? globalThis.Number(object.account_id)
-        : 0,
+      account_id: isSet(object.account_id) ? globalThis.Number(object.account_id) : 0,
       organization_uuid: isSet(object.organization_uuid)
         ? globalThis.String(object.organization_uuid)
         : '',
-      account_uuid: isSet(object.account_uuid)
-        ? globalThis.String(object.account_uuid)
-        : '',
-    }
+      account_uuid: isSet(object.account_uuid) ? globalThis.String(object.account_uuid) : '',
+    };
   },
 
   toJSON(message: PublicApiAuth): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.account_id !== undefined) {
-      obj.account_id = Math.round(message.account_id)
+      obj.account_id = Math.round(message.account_id);
     }
     if (message.organization_uuid !== undefined) {
-      obj.organization_uuid = message.organization_uuid
+      obj.organization_uuid = message.organization_uuid;
     }
     if (message.account_uuid !== undefined) {
-      obj.account_uuid = message.account_uuid
+      obj.account_uuid = message.account_uuid;
     }
-    return obj
+    return obj;
   },
 
-  create<I extends Exact<DeepPartial<PublicApiAuth>, I>>(
-    base?: I,
-  ): PublicApiAuth {
-    return PublicApiAuth.fromPartial(base ?? ({} as any))
+  create<I extends Exact<DeepPartial<PublicApiAuth>, I>>(base?: I): PublicApiAuth {
+    return PublicApiAuth.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<PublicApiAuth>, I>>(
-    object: I,
-  ): PublicApiAuth {
-    const message = createBasePublicApiAuth()
-    message.account_id = object.account_id ?? 0
-    message.organization_uuid = object.organization_uuid ?? ''
-    message.account_uuid = object.account_uuid ?? ''
-    return message
+  fromPartial<I extends Exact<DeepPartial<PublicApiAuth>, I>>(object: I): PublicApiAuth {
+    const message = createBasePublicApiAuth();
+    message.account_id = object.account_id ?? 0;
+    message.organization_uuid = object.organization_uuid ?? '';
+    message.account_uuid = object.account_uuid ?? '';
+    return message;
   },
-}
+};
 
-type Builtin =
-  | Date
-  | Function
-  | Uint8Array
-  | string
-  | number
-  | boolean
-  | undefined
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 type DeepPartial<T> = T extends Builtin
   ? T
@@ -79,22 +64,22 @@ type DeepPartial<T> = T extends Builtin
       ? ReadonlyArray<DeepPartial<U>>
       : T extends {}
         ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>
+        : Partial<T>;
 
-type KeysOfUnion<T> = T extends T ? keyof T : never
+type KeysOfUnion<T> = T extends T ? keyof T : never;
 type Exact<P, I extends P> = P extends Builtin
   ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & {
-      [K in Exclude<keyof I, KeysOfUnion<P>>]: never
-    }
+      [K in Exclude<keyof I, KeysOfUnion<P>>]: never;
+    };
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined
+  return value !== null && value !== undefined;
 }
 
 interface MessageFns<T> {
-  fromJSON(object: any): T
-  toJSON(message: T): unknown
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T
+  fromJSON(object: any): T;
+  toJSON(message: T): unknown;
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }

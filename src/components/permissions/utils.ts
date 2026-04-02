@@ -1,6 +1,6 @@
-import { getHostPlatformForAnalytics } from '../../utils/env.js'
-import { type CompletionType, logUnaryEvent } from '../../utils/unaryLogging.js'
-import type { ToolUseConfirm } from './PermissionRequest.js'
+import { getHostPlatformForAnalytics } from '../../utils/env.js';
+import { type CompletionType, logUnaryEvent } from '../../utils/unaryLogging.js';
+import type { ToolUseConfirm } from './PermissionRequest.js';
 
 export function logUnaryPermissionEvent(
   completion_type: CompletionType,
@@ -21,5 +21,5 @@ export function logUnaryPermissionEvent(
       platform: getHostPlatformForAnalytics(),
       hasFeedback: hasFeedback ?? false,
     },
-  })
+  });
 }

@@ -1,35 +1,35 @@
-import { useCallback, useReducer } from 'react'
+import { useCallback, useReducer } from 'react';
 
-export type AnswerValue = string
+export type AnswerValue = string;
 
 export type QuestionState = {
-  selectedValue?: string | string[]
-  textInputValue: string
-}
+  selectedValue?: string | string[];
+  textInputValue: string;
+};
 
 type State = {
-  currentQuestionIndex: number
-  answers: Record<string, AnswerValue>
-  questionStates: Record<string, QuestionState>
-  isInTextInput: boolean
-}
+  currentQuestionIndex: number;
+  answers: Record<string, AnswerValue>;
+  questionStates: Record<string, QuestionState>;
+  isInTextInput: boolean;
+};
 
 type Action =
   | { type: 'next-question' }
   | { type: 'prev-question' }
   | {
-      type: 'update-question-state'
-      questionText: string
-      updates: Partial<QuestionState>
-      isMultiSelect: boolean
+      type: 'update-question-state';
+      questionText: string;
+      updates: Partial<QuestionState>;
+      isMultiSelect: boolean;
     }
   | {
-      type: 'set-answer'
-      questionText: string
-      answer: string
-      shouldAdvance: boolean
+      type: 'set-answer';
+      questionText: string;
+      answer: string;
+      shouldAdvance: boolean;
     }
-  | { type: 'set-text-input-mode'; isInInput: boolean }
+  | { type: 'set-text-input-mode'; isInInput: boolean };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -38,25 +38,24 @@ function reducer(state: State, action: Action): State {
         ...state,
         currentQuestionIndex: state.currentQuestionIndex + 1,
         isInTextInput: false,
-      }
+      };
 
     case 'prev-question':
       return {
         ...state,
         currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1),
         isInTextInput: false,
-      }
+      };
 
     case 'update-question-state': {
-      const existing = state.questionStates[action.questionText]
+      const existing = state.questionStates[action.questionText];
       const newState: QuestionState = {
         selectedValue:
           action.updates.selectedValue ??
           existing?.selectedValue ??
           (action.isMultiSelect ? [] : undefined),
-        textInputValue:
-          action.updates.textInputValue ?? existing?.textInputValue ?? '',
-      }
+        textInputValue: action.updates.textInputValue ?? existing?.textInputValue ?? '',
+      };
 
       return {
         ...state,
@@ -64,7 +63,7 @@ function reducer(state: State, action: Action): State {
           ...state.questionStates,
           [action.questionText]: newState,
         },
-      }
+      };
     }
 
     case 'set-answer': {
@@ -74,24 +73,24 @@ function reducer(state: State, action: Action): State {
           ...state.answers,
           [action.questionText]: action.answer,
         },
-      }
+      };
 
       if (action.shouldAdvance) {
         return {
           ...newState,
           currentQuestionIndex: newState.currentQuestionIndex + 1,
           isInTextInput: false,
-        }
+        };
       }
 
-      return newState
+      return newState;
     }
 
     case 'set-text-input-mode':
       return {
         ...state,
         isInTextInput: action.isInInput,
-      }
+      };
   }
 }
 
@@ -100,70 +99,59 @@ const INITIAL_STATE: State = {
   answers: {},
   questionStates: {},
   isInTextInput: false,
-}
+};
 
 export type MultipleChoiceState = {
-  currentQuestionIndex: number
-  answers: Record<string, AnswerValue>
-  questionStates: Record<string, QuestionState>
-  isInTextInput: boolean
-  nextQuestion: () => void
-  prevQuestion: () => void
+  currentQuestionIndex: number;
+  answers: Record<string, AnswerValue>;
+  questionStates: Record<string, QuestionState>;
+  isInTextInput: boolean;
+  nextQuestion: () => void;
+  prevQuestion: () => void;
   updateQuestionState: (
     questionText: string,
     updates: Partial<QuestionState>,
     isMultiSelect: boolean,
-  ) => void
-  setAnswer: (
-    questionText: string,
-    answer: string,
-    shouldAdvance?: boolean,
-  ) => void
-  setTextInputMode: (isInInput: boolean) => void
-}
+  ) => void;
+  setAnswer: (questionText: string, answer: string, shouldAdvance?: boolean) => void;
+  setTextInputMode: (isInInput: boolean) => void;
+};
 
 export function useMultipleChoiceState(): MultipleChoiceState {
-  const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
 
   const nextQuestion = useCallback(() => {
-    dispatch({ type: 'next-question' })
-  }, [])
+    dispatch({ type: 'next-question' });
+  }, []);
 
   const prevQuestion = useCallback(() => {
-    dispatch({ type: 'prev-question' })
-  }, [])
+    dispatch({ type: 'prev-question' });
+  }, []);
 
   const updateQuestionState = useCallback(
-    (
-      questionText: string,
-      updates: Partial<QuestionState>,
-      isMultiSelect: boolean,
-    ) => {
+    (questionText: string, updates: Partial<QuestionState>, isMultiSelect: boolean) => {
       dispatch({
         type: 'update-question-state',
         questionText,
         updates,
         isMultiSelect,
-      })
+      });
     },
     [],
-  )
+  );
 
-  const setAnswer = useCallback(
-    (questionText: string, answer: string, shouldAdvance: boolean = true) => {
-      dispatch({
-        type: 'set-answer',
-        questionText,
-        answer,
-        shouldAdvance,
-      })
-    },
-    [],
-  )
+  const setAnswer = useCallback((questionText: string, answer: string, shouldAdvance = true) => {
+    dispatch({
+      type: 'set-answer',
+      questionText,
+      answer,
+      shouldAdvance,
+    });
+  }, []);
 
   const setTextInputMode = useCallback((isInInput: boolean) => {
-    dispatch({ type: 'set-text-input-mode', isInInput })
-  }, [])
+    dispatch({ type: 'set-text-input-mode', isInInput });
+  }, []);
 
   return {
     currentQuestionIndex: state.currentQuestionIndex,
@@ -175,5 +163,5 @@ export function useMultipleChoiceState(): MultipleChoiceState {
     updateQuestionState,
     setAnswer,
     setTextInputMode,
-  }
+  };
 }

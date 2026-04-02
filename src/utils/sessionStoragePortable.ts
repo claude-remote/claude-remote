@@ -6,26 +6,25 @@
  * extension (packages/claude-vscode/src/common-host/sessionStorage.ts).
  */
 
-import type { UUID } from 'crypto'
-import { open as fsOpen, readdir, realpath, stat } from 'fs/promises'
-import { join } from 'path'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import { getWorktreePathsPortable } from './getWorktreePathsPortable.js'
-import { djb2Hash } from './hash.js'
+import type { UUID } from 'node:crypto';
+import { open as fsOpen, readdir, realpath, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { getWorktreePathsPortable } from './getWorktreePathsPortable.js';
+import { djb2Hash } from './hash.js';
 
 /** Size of the head/tail buffer for lite metadata reads. */
-export const LITE_READ_BUF_SIZE = 65536
+export const LITE_READ_BUF_SIZE = 65536;
 
 // ---------------------------------------------------------------------------
 // UUID validation
 // ---------------------------------------------------------------------------
 
-const uuidRegex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function validateUuid(maybeUuid: unknown): UUID | null {
-  if (typeof maybeUuid !== 'string') return null
-  return uuidRegex.test(maybeUuid) ? (maybeUuid as UUID) : null
+  if (typeof maybeUuid !== 'string') return null;
+  return uuidRegex.test(maybeUuid) ? (maybeUuid as UUID) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,11 +36,11 @@ export function validateUuid(maybeUuid: unknown): UUID | null {
  * Only allocates a new string when escape sequences are present.
  */
 export function unescapeJsonString(raw: string): string {
-  if (!raw.includes('\\')) return raw
+  if (!raw.includes('\\')) return raw;
   try {
-    return JSON.parse(`"${raw}"`)
+    return JSON.parse(`"${raw}"`);
   } catch {
-    return raw
+    return raw;
   }
 }
 
@@ -50,64 +49,58 @@ export function unescapeJsonString(raw: string): string {
  * Looks for `"key":"value"` or `"key": "value"` patterns.
  * Returns the first match, or undefined if not found.
  */
-export function extractJsonStringField(
-  text: string,
-  key: string,
-): string | undefined {
-  const patterns = [`"${key}":"`, `"${key}": "`]
+export function extractJsonStringField(text: string, key: string): string | undefined {
+  const patterns = [`"${key}":"`, `"${key}": "`];
   for (const pattern of patterns) {
-    const idx = text.indexOf(pattern)
-    if (idx < 0) continue
+    const idx = text.indexOf(pattern);
+    if (idx < 0) continue;
 
-    const valueStart = idx + pattern.length
-    let i = valueStart
+    const valueStart = idx + pattern.length;
+    let i = valueStart;
     while (i < text.length) {
       if (text[i] === '\\') {
-        i += 2
-        continue
+        i += 2;
+        continue;
       }
       if (text[i] === '"') {
-        return unescapeJsonString(text.slice(valueStart, i))
+        return unescapeJsonString(text.slice(valueStart, i));
       }
-      i++
+      i++;
     }
   }
-  return undefined
+  return undefined;
 }
 
 /**
  * Like extractJsonStringField but finds the LAST occurrence.
  * Useful for fields that are appended (customTitle, tag, etc.).
  */
-export function extractLastJsonStringField(
-  text: string,
-  key: string,
-): string | undefined {
-  const patterns = [`"${key}":"`, `"${key}": "`]
-  let lastValue: string | undefined
+export function extractLastJsonStringField(text: string, key: string): string | undefined {
+  const patterns = [`"${key}":"`, `"${key}": "`];
+  let lastValue: string | undefined;
   for (const pattern of patterns) {
-    let searchFrom = 0
+    let searchFrom = 0;
     while (true) {
-      const idx = text.indexOf(pattern, searchFrom)
-      if (idx < 0) break
+      const idx = text.indexOf(pattern, searchFrom);
+      if (idx < 0) break;
 
-      const valueStart = idx + pattern.length
-      let i = valueStart
+      const valueStart = idx + pattern.length;
+      let i = valueStart;
       while (i < text.length) {
         if (text[i] === '\\') {
-          i += 2
-          continue
+          i += 2;
+          continue;
         }
         if (text[i] === '"') {
-          lastValue = unescapeJsonString(text.slice(valueStart, i))
-          break
+          lastValue = unescapeJsonString(text.slice(valueStart, i));
+          break;
         }
-        i++
+        i++;
       }
-      searchFrom = i + 1
+      searchFrom = i + 1;
     }
   }
-  return lastValue
+  return lastValue;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,10 +113,9 @@ export function extractLastJsonStringField(
  * starts with a lowercase XML-like tag (IDE context, hook output, task
  * notifications, channel messages, etc.) or a synthetic interrupt marker.
  */
-const SKIP_FIRST_PROMPT_PATTERN =
-  /^(?:\s*<[a-z][\w-]*[\s>]|\[Request interrupted by user[^\]]*\])/
+const SKIP_FIRST_PROMPT_PATTERN = /^(?:\s*<[a-z][\w-]*[\s>]|\[Request interrupted by user[^\]]*\])/;
 
-const COMMAND_NAME_RE = /<command-name>(.*?)<\/command-name>/
+const COMMAND_NAME_RE = /<command-name>(.*?)<\/command-name>/;
 
 /**
  * Extracts the first meaningful user prompt from a JSONL head chunk.
@@ -133,72 +125,64 @@ const COMMAND_NAME_RE = /<command-name>(.*?)<\/command-name>/
  * Truncates to 200 chars.
  */
 export function extractFirstPromptFromHead(head: string): string {
-  let start = 0
-  let commandFallback = ''
+  let start = 0;
+  let commandFallback = '';
   while (start < head.length) {
-    const newlineIdx = head.indexOf('\n', start)
-    const line =
-      newlineIdx >= 0 ? head.slice(start, newlineIdx) : head.slice(start)
-    start = newlineIdx >= 0 ? newlineIdx + 1 : head.length
+    const newlineIdx = head.indexOf('\n', start);
+    const line = newlineIdx >= 0 ? head.slice(start, newlineIdx) : head.slice(start);
+    start = newlineIdx >= 0 ? newlineIdx + 1 : head.length;
 
-    if (!line.includes('"type":"user"') && !line.includes('"type": "user"'))
-      continue
-    if (line.includes('"tool_result"')) continue
-    if (line.includes('"isMeta":true') || line.includes('"isMeta": true'))
-      continue
-    if (
-      line.includes('"isCompactSummary":true') ||
-      line.includes('"isCompactSummary": true')
-    )
-      continue
+    if (!line.includes('"type":"user"') && !line.includes('"type": "user"')) continue;
+    if (line.includes('"tool_result"')) continue;
+    if (line.includes('"isMeta":true') || line.includes('"isMeta": true')) continue;
+    if (line.includes('"isCompactSummary":true') || line.includes('"isCompactSummary": true'))
+      continue;
 
     try {
-      const entry = JSON.parse(line) as Record<string, unknown>
-      if (entry.type !== 'user') continue
+      const entry = JSON.parse(line) as Record<string, unknown>;
+      if (entry.type !== 'user') continue;
 
-      const message = entry.message as Record<string, unknown> | undefined
-      if (!message) continue
+      const message = entry.message as Record<string, unknown> | undefined;
+      if (!message) continue;
 
-      const content = message.content
-      const texts: string[] = []
+      const content = message.content;
+      const texts: string[] = [];
       if (typeof content === 'string') {
-        texts.push(content)
+        texts.push(content);
       } else if (Array.isArray(content)) {
         for (const block of content as Record<string, unknown>[]) {
           if (block.type === 'text' && typeof block.text === 'string') {
-            texts.push(block.text as string)
+            texts.push(block.text as string);
           }
         }
       }
 
       for (const raw of texts) {
-        let result = raw.replace(/\n/g, ' ').trim()
-        if (!result) continue
+        let result = raw.replace(/\n/g, ' ').trim();
+        if (!result) continue;
 
         // Skip slash-command messages but remember first as fallback
-        const cmdMatch = COMMAND_NAME_RE.exec(result)
+        const cmdMatch = COMMAND_NAME_RE.exec(result);
         if (cmdMatch) {
-          if (!commandFallback) commandFallback = cmdMatch[1]!
-          continue
+          if (!commandFallback) commandFallback = cmdMatch[1]!;
+          continue;
         }
 
         // Format bash input with ! prefix before the generic XML skip
-        const bashMatch = /<bash-input>([\s\S]*?)<\/bash-input>/.exec(result)
-        if (bashMatch) return `! ${bashMatch[1]!.trim()}`
+        const bashMatch = /<bash-input>([\s\S]*?)<\/bash-input>/.exec(result);
+        if (bashMatch) return `! ${bashMatch[1]?.trim()}`;
 
-        if (SKIP_FIRST_PROMPT_PATTERN.test(result)) continue
+        if (SKIP_FIRST_PROMPT_PATTERN.test(result)) continue;
 
         if (result.length > 200) {
-          result = result.slice(0, 200).trim() + '\u2026'
+          result = `${result.slice(0, 200).trim()}\u2026`;
         }
-        return result
+        return result;
       }
-    } catch {
-      continue
-    }
+    } catch {}
   }
-  if (commandFallback) return commandFallback
-  return ''
+  if (commandFallback) return commandFallback;
+  return '';
 }
 
 // ---------------------------------------------------------------------------
@@ -218,66 +202,64 @@ export async function readHeadAndTail(
   buf: Buffer,
 ): Promise<{ head: string; tail: string }> {
   try {
-    const fh = await fsOpen(filePath, 'r')
+    const fh = await fsOpen(filePath, 'r');
     try {
-      const headResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, 0)
-      if (headResult.bytesRead === 0) return { head: '', tail: '' }
+      const headResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, 0);
+      if (headResult.bytesRead === 0) return { head: '', tail: '' };
 
-      const head = buf.toString('utf8', 0, headResult.bytesRead)
+      const head = buf.toString('utf8', 0, headResult.bytesRead);
 
-      const tailOffset = Math.max(0, fileSize - LITE_READ_BUF_SIZE)
-      let tail = head
+      const tailOffset = Math.max(0, fileSize - LITE_READ_BUF_SIZE);
+      let tail = head;
       if (tailOffset > 0) {
-        const tailResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, tailOffset)
-        tail = buf.toString('utf8', 0, tailResult.bytesRead)
+        const tailResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, tailOffset);
+        tail = buf.toString('utf8', 0, tailResult.bytesRead);
       }
 
-      return { head, tail }
+      return { head, tail };
     } finally {
-      await fh.close()
+      await fh.close();
     }
   } catch {
-    return { head: '', tail: '' }
+    return { head: '', tail: '' };
   }
 }
 
 export type LiteSessionFile = {
-  mtime: number
-  size: number
-  head: string
-  tail: string
-}
+  mtime: number;
+  size: number;
+  head: string;
+  tail: string;
+};
 
 /**
  * Opens a single session file, stats it, and reads head + tail in one fd.
  * Allocates its own buffer — safe for concurrent use with Promise.all.
  * Returns null on any error.
  */
-export async function readSessionLite(
-  filePath: string,
-): Promise<LiteSessionFile | null> {
+export async function readSessionLite(filePath: string): Promise<LiteSessionFile | null> {
   try {
-    const fh = await fsOpen(filePath, 'r')
+    const fh = await fsOpen(filePath, 'r');
     try {
-      const stat = await fh.stat()
-      const buf = Buffer.allocUnsafe(LITE_READ_BUF_SIZE)
-      const headResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, 0)
-      if (headResult.bytesRead === 0) return null
+      const stat = await fh.stat();
+      const buf = Buffer.allocUnsafe(LITE_READ_BUF_SIZE);
+      const headResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, 0);
+      if (headResult.bytesRead === 0) return null;
 
-      const head = buf.toString('utf8', 0, headResult.bytesRead)
-      const tailOffset = Math.max(0, stat.size - LITE_READ_BUF_SIZE)
-      let tail = head
+      const head = buf.toString('utf8', 0, headResult.bytesRead);
+      const tailOffset = Math.max(0, stat.size - LITE_READ_BUF_SIZE);
+      let tail = head;
       if (tailOffset > 0) {
-        const tailResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, tailOffset)
-        tail = buf.toString('utf8', 0, tailResult.bytesRead)
+        const tailResult = await fh.read(buf, 0, LITE_READ_BUF_SIZE, tailOffset);
+        tail = buf.toString('utf8', 0, tailResult.bytesRead);
       }
 
-      return { mtime: stat.mtime.getTime(), size: stat.size, head, tail }
+      return { mtime: stat.mtime.getTime(), size: stat.size, head, tail };
     } finally {
-      await fh.close()
+      await fh.close();
     }
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -290,10 +272,10 @@ export async function readSessionLite(
  * Most filesystems (ext4, APFS, NTFS) limit individual components to 255 bytes.
  * We use 200 to leave room for the hash suffix and separator.
  */
-export const MAX_SANITIZED_LENGTH = 200
+export const MAX_SANITIZED_LENGTH = 200;
 
 function simpleHash(str: string): string {
-  return Math.abs(djb2Hash(str)).toString(36)
+  return Math.abs(djb2Hash(str)).toString(36);
 }
 
 /**
@@ -309,13 +291,12 @@ function simpleHash(str: string): string {
  * @returns A safe name (e.g., '-Users-foo-my-project' or 'plugin-name-server')
  */
 export function sanitizePath(name: string): string {
-  const sanitized = name.replace(/[^a-zA-Z0-9]/g, '-')
+  const sanitized = name.replace(/[^a-zA-Z0-9]/g, '-');
   if (sanitized.length <= MAX_SANITIZED_LENGTH) {
-    return sanitized
+    return sanitized;
   }
-  const hash =
-    typeof Bun !== 'undefined' ? Bun.hash(name).toString(36) : simpleHash(name)
-  return `${sanitized.slice(0, MAX_SANITIZED_LENGTH)}-${hash}`
+  const hash = typeof Bun !== 'undefined' ? Bun.hash(name).toString(36) : simpleHash(name);
+  return `${sanitized.slice(0, MAX_SANITIZED_LENGTH)}-${hash}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -323,11 +304,11 @@ export function sanitizePath(name: string): string {
 // ---------------------------------------------------------------------------
 
 export function getProjectsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'projects')
+  return join(getClaudeConfigHomeDir(), 'projects');
 }
 
 export function getProjectDir(projectDir: string): string {
-  return join(getProjectsDir(), sanitizePath(projectDir))
+  return join(getProjectsDir(), sanitizePath(projectDir));
 }
 
 /**
@@ -338,9 +319,9 @@ export function getProjectDir(projectDir: string): string {
  */
 export async function canonicalizePath(dir: string): Promise<string> {
   try {
-    return (await realpath(dir)).normalize('NFC')
+    return (await realpath(dir)).normalize('NFC');
   } catch {
-    return dir.normalize('NFC')
+    return dir.normalize('NFC');
   }
 }
 
@@ -351,30 +332,26 @@ export async function canonicalizePath(dir: string): Promise<string> {
  * these produce different directory suffixes. This function falls back to
  * prefix-based scanning when the exact match doesn't exist.
  */
-export async function findProjectDir(
-  projectPath: string,
-): Promise<string | undefined> {
-  const exact = getProjectDir(projectPath)
+export async function findProjectDir(projectPath: string): Promise<string | undefined> {
+  const exact = getProjectDir(projectPath);
   try {
-    await readdir(exact)
-    return exact
+    await readdir(exact);
+    return exact;
   } catch {
     // Exact match failed — for short paths this means no sessions exist.
     // For long paths, try prefix matching to handle hash mismatches.
-    const sanitized = sanitizePath(projectPath)
+    const sanitized = sanitizePath(projectPath);
     if (sanitized.length <= MAX_SANITIZED_LENGTH) {
-      return undefined
+      return undefined;
     }
-    const prefix = sanitized.slice(0, MAX_SANITIZED_LENGTH)
-    const projectsDir = getProjectsDir()
+    const prefix = sanitized.slice(0, MAX_SANITIZED_LENGTH);
+    const projectsDir = getProjectsDir();
     try {
-      const dirents = await readdir(projectsDir, { withFileTypes: true })
-      const match = dirents.find(
-        d => d.isDirectory() && d.name.startsWith(prefix + '-'),
-      )
-      return match ? join(projectsDir, match.name) : undefined
+      const dirents = await readdir(projectsDir, { withFileTypes: true });
+      const match = dirents.find((d) => d.isDirectory() && d.name.startsWith(`${prefix}-`));
+      return match ? join(projectsDir, match.name) : undefined;
     } catch {
-      return undefined
+      return undefined;
     }
   }
 }
@@ -403,66 +380,61 @@ export async function findProjectDir(
 export async function resolveSessionFilePath(
   sessionId: string,
   dir?: string,
-): Promise<
-  | { filePath: string; projectPath: string | undefined; fileSize: number }
-  | undefined
-> {
-  const fileName = `${sessionId}.jsonl`
+): Promise<{ filePath: string; projectPath: string | undefined; fileSize: number } | undefined> {
+  const fileName = `${sessionId}.jsonl`;
 
   if (dir) {
-    const canonical = await canonicalizePath(dir)
-    const projectDir = await findProjectDir(canonical)
+    const canonical = await canonicalizePath(dir);
+    const projectDir = await findProjectDir(canonical);
     if (projectDir) {
-      const filePath = join(projectDir, fileName)
+      const filePath = join(projectDir, fileName);
       try {
-        const s = await stat(filePath)
-        if (s.size > 0)
-          return { filePath, projectPath: canonical, fileSize: s.size }
+        const s = await stat(filePath);
+        if (s.size > 0) return { filePath, projectPath: canonical, fileSize: s.size };
       } catch {
         // ENOENT/EACCES — keep searching
       }
     }
     // Worktree fallback — sessions may live under a different worktree root
-    let worktreePaths: string[]
+    let worktreePaths: string[];
     try {
-      worktreePaths = await getWorktreePathsPortable(canonical)
+      worktreePaths = await getWorktreePathsPortable(canonical);
     } catch {
-      worktreePaths = []
+      worktreePaths = [];
     }
     for (const wt of worktreePaths) {
-      if (wt === canonical) continue
-      const wtProjectDir = await findProjectDir(wt)
-      if (!wtProjectDir) continue
-      const filePath = join(wtProjectDir, fileName)
+      if (wt === canonical) continue;
+      const wtProjectDir = await findProjectDir(wt);
+      if (!wtProjectDir) continue;
+      const filePath = join(wtProjectDir, fileName);
       try {
-        const s = await stat(filePath)
-        if (s.size > 0) return { filePath, projectPath: wt, fileSize: s.size }
+        const s = await stat(filePath);
+        if (s.size > 0) return { filePath, projectPath: wt, fileSize: s.size };
       } catch {
         // ENOENT/EACCES — keep searching
       }
     }
-    return undefined
+    return undefined;
   }
 
   // No dir — scan all project directories
-  const projectsDir = getProjectsDir()
-  let dirents: string[]
+  const projectsDir = getProjectsDir();
+  let dirents: string[];
   try {
-    dirents = await readdir(projectsDir)
+    dirents = await readdir(projectsDir);
   } catch {
-    return undefined
+    return undefined;
   }
   for (const name of dirents) {
-    const filePath = join(projectsDir, name, fileName)
+    const filePath = join(projectsDir, name, fileName);
     try {
-      const s = await stat(filePath)
-      if (s.size > 0)
-        return { filePath, projectPath: undefined, fileSize: s.size }
+      const s = await stat(filePath);
+      if (s.size > 0) return { filePath, projectPath: undefined, fileSize: s.size };
     } catch {
       // ENOENT/ENOTDIR — not in this project, keep scanning
     }
   }
-  return undefined
+  return undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -470,43 +442,41 @@ export async function resolveSessionFilePath(
 // ---------------------------------------------------------------------------
 
 /** Chunk size for the forward transcript reader. 1 MB balances I/O calls vs buffer growth. */
-const TRANSCRIPT_READ_CHUNK_SIZE = 1024 * 1024
+const TRANSCRIPT_READ_CHUNK_SIZE = 1024 * 1024;
 
 /**
  * File size below which precompact filtering is skipped.
  * Large sessions (>5 MB) almost always have compact boundaries — they got big
  * because of many turns triggering auto-compact.
  */
-export const SKIP_PRECOMPACT_THRESHOLD = 5 * 1024 * 1024
+export const SKIP_PRECOMPACT_THRESHOLD = 5 * 1024 * 1024;
 
 /** Marker bytes searched for when locating the boundary. Lazy: allocated on
  * first use, not at module load. Most sessions never resume. */
-let _compactBoundaryMarker: Buffer | undefined
+let _compactBoundaryMarker: Buffer | undefined;
 function compactBoundaryMarker(): Buffer {
-  return (_compactBoundaryMarker ??= Buffer.from('"compact_boundary"'))
+  return (_compactBoundaryMarker ??= Buffer.from('"compact_boundary"'));
 }
 
 /**
  * Confirm a byte-matched line is a real compact_boundary (marker can appear
  * inside user content) and check for preservedSegment.
  */
-function parseBoundaryLine(
-  line: string,
-): { hasPreservedSegment: boolean } | null {
+function parseBoundaryLine(line: string): { hasPreservedSegment: boolean } | null {
   try {
     const parsed = JSON.parse(line) as {
-      type?: string
-      subtype?: string
-      compactMetadata?: { preservedSegment?: unknown }
-    }
+      type?: string;
+      subtype?: string;
+      compactMetadata?: { preservedSegment?: unknown };
+    };
     if (parsed.type !== 'system' || parsed.subtype !== 'compact_boundary') {
-      return null
+      return null;
     }
     return {
       hasPreservedSegment: Boolean(parsed.compactMetadata?.preservedSegment),
-    }
+    };
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -520,94 +490,81 @@ function parseBoundaryLine(
  * doesn't matter.
  */
 
-type Sink = { buf: Buffer; len: number; cap: number }
+type Sink = { buf: Buffer; len: number; cap: number };
 
 function sinkWrite(s: Sink, src: Buffer, start: number, end: number): void {
-  const n = end - start
-  if (n <= 0) return
+  const n = end - start;
+  if (n <= 0) return;
   if (s.len + n > s.buf.length) {
-    const grown = Buffer.allocUnsafe(
-      Math.min(Math.max(s.buf.length * 2, s.len + n), s.cap),
-    )
-    s.buf.copy(grown, 0, 0, s.len)
-    s.buf = grown
+    const grown = Buffer.allocUnsafe(Math.min(Math.max(s.buf.length * 2, s.len + n), s.cap));
+    s.buf.copy(grown, 0, 0, s.len);
+    s.buf = grown;
   }
-  src.copy(s.buf, s.len, start, end)
-  s.len += n
+  src.copy(s.buf, s.len, start, end);
+  s.len += n;
 }
 
-function hasPrefix(
-  src: Buffer,
-  prefix: Buffer,
-  at: number,
-  end: number,
-): boolean {
+function hasPrefix(src: Buffer, prefix: Buffer, at: number, end: number): boolean {
   return (
-    end - at >= prefix.length &&
-    src.compare(prefix, 0, prefix.length, at, at + prefix.length) === 0
-  )
+    end - at >= prefix.length && src.compare(prefix, 0, prefix.length, at, at + prefix.length) === 0
+  );
 }
 
-const ATTR_SNAP_PREFIX = Buffer.from('{"type":"attribution-snapshot"')
-const SYSTEM_PREFIX = Buffer.from('{"type":"system"')
-const LF = 0x0a
-const LF_BYTE = Buffer.from([LF])
-const BOUNDARY_SEARCH_BOUND = 256 // marker sits ~28 bytes in; 256 is slack
+const ATTR_SNAP_PREFIX = Buffer.from('{"type":"attribution-snapshot"');
+const SYSTEM_PREFIX = Buffer.from('{"type":"system"');
+const LF = 0x0a;
+const LF_BYTE = Buffer.from([LF]);
+const BOUNDARY_SEARCH_BOUND = 256; // marker sits ~28 bytes in; 256 is slack
 
 type LoadState = {
-  out: Sink
-  boundaryStartOffset: number
-  hasPreservedSegment: boolean
-  lastSnapSrc: Buffer | null // most-recent attr-snap, appended at EOF
-  lastSnapLen: number
-  lastSnapBuf: Buffer | undefined
-  bufFileOff: number // file offset of buf[0]
-  carryLen: number
-  carryBuf: Buffer | undefined
-  straddleSnapCarryLen: number // per-chunk; reset by processStraddle
-  straddleSnapTailEnd: number
-}
+  out: Sink;
+  boundaryStartOffset: number;
+  hasPreservedSegment: boolean;
+  lastSnapSrc: Buffer | null; // most-recent attr-snap, appended at EOF
+  lastSnapLen: number;
+  lastSnapBuf: Buffer | undefined;
+  bufFileOff: number; // file offset of buf[0]
+  carryLen: number;
+  carryBuf: Buffer | undefined;
+  straddleSnapCarryLen: number; // per-chunk; reset by processStraddle
+  straddleSnapTailEnd: number;
+};
 
 // Line spanning the chunk seam. 0 = fall through to concat.
-function processStraddle(
-  s: LoadState,
-  chunk: Buffer,
-  bytesRead: number,
-): number {
-  s.straddleSnapCarryLen = 0
-  s.straddleSnapTailEnd = 0
-  if (s.carryLen === 0) return 0
-  const cb = s.carryBuf!
-  const firstNl = chunk.indexOf(LF)
-  if (firstNl === -1 || firstNl >= bytesRead) return 0
-  const tailEnd = firstNl + 1
+function processStraddle(s: LoadState, chunk: Buffer, bytesRead: number): number {
+  s.straddleSnapCarryLen = 0;
+  s.straddleSnapTailEnd = 0;
+  if (s.carryLen === 0) return 0;
+  const cb = s.carryBuf!;
+  const firstNl = chunk.indexOf(LF);
+  if (firstNl === -1 || firstNl >= bytesRead) return 0;
+  const tailEnd = firstNl + 1;
   if (hasPrefix(cb, ATTR_SNAP_PREFIX, 0, s.carryLen)) {
-    s.straddleSnapCarryLen = s.carryLen
-    s.straddleSnapTailEnd = tailEnd
-    s.lastSnapSrc = null
+    s.straddleSnapCarryLen = s.carryLen;
+    s.straddleSnapTailEnd = tailEnd;
+    s.lastSnapSrc = null;
   } else if (s.carryLen < ATTR_SNAP_PREFIX.length) {
-    return 0 // too short to rule out attr-snap
+    return 0; // too short to rule out attr-snap
   } else {
     if (hasPrefix(cb, SYSTEM_PREFIX, 0, s.carryLen)) {
       const hit = parseBoundaryLine(
-        cb.toString('utf-8', 0, s.carryLen) +
-          chunk.toString('utf-8', 0, firstNl),
-      )
+        cb.toString('utf-8', 0, s.carryLen) + chunk.toString('utf-8', 0, firstNl),
+      );
       if (hit?.hasPreservedSegment) {
-        s.hasPreservedSegment = true
+        s.hasPreservedSegment = true;
       } else if (hit) {
-        s.out.len = 0
-        s.boundaryStartOffset = s.bufFileOff
-        s.hasPreservedSegment = false
-        s.lastSnapSrc = null
+        s.out.len = 0;
+        s.boundaryStartOffset = s.bufFileOff;
+        s.hasPreservedSegment = false;
+        s.lastSnapSrc = null;
       }
     }
-    sinkWrite(s.out, cb, 0, s.carryLen)
-    sinkWrite(s.out, chunk, 0, tailEnd)
+    sinkWrite(s.out, cb, 0, s.carryLen);
+    sinkWrite(s.out, chunk, 0, tailEnd);
   }
-  s.bufFileOff += s.carryLen + tailEnd
-  s.carryLen = 0
-  return tailEnd
+  s.bufFileOff += s.carryLen + tailEnd;
+  s.carryLen = 0;
+  return tailEnd;
 }
 
 // Strip attr-snaps, truncate on boundaries. Kept lines write as runs.
@@ -616,48 +573,45 @@ function scanChunkLines(
   buf: Buffer,
   boundaryMarker: Buffer,
 ): { lastSnapStart: number; lastSnapEnd: number; trailStart: number } {
-  let boundaryAt = buf.indexOf(boundaryMarker)
-  let runStart = 0
-  let lineStart = 0
-  let lastSnapStart = -1
-  let lastSnapEnd = -1
-  let nl = buf.indexOf(LF)
+  let boundaryAt = buf.indexOf(boundaryMarker);
+  let runStart = 0;
+  let lineStart = 0;
+  let lastSnapStart = -1;
+  let lastSnapEnd = -1;
+  let nl = buf.indexOf(LF);
   while (nl !== -1) {
-    const lineEnd = nl + 1
+    const lineEnd = nl + 1;
     if (boundaryAt !== -1 && boundaryAt < lineStart) {
-      boundaryAt = buf.indexOf(boundaryMarker, lineStart)
+      boundaryAt = buf.indexOf(boundaryMarker, lineStart);
     }
     if (hasPrefix(buf, ATTR_SNAP_PREFIX, lineStart, lineEnd)) {
-      sinkWrite(s.out, buf, runStart, lineStart)
-      lastSnapStart = lineStart
-      lastSnapEnd = lineEnd
-      runStart = lineEnd
+      sinkWrite(s.out, buf, runStart, lineStart);
+      lastSnapStart = lineStart;
+      lastSnapEnd = lineEnd;
+      runStart = lineEnd;
     } else if (
       boundaryAt >= lineStart &&
       boundaryAt < Math.min(lineStart + BOUNDARY_SEARCH_BOUND, lineEnd)
     ) {
-      const hit = parseBoundaryLine(buf.toString('utf-8', lineStart, nl))
+      const hit = parseBoundaryLine(buf.toString('utf-8', lineStart, nl));
       if (hit?.hasPreservedSegment) {
-        s.hasPreservedSegment = true // don't truncate; preserved msgs already in output
+        s.hasPreservedSegment = true; // don't truncate; preserved msgs already in output
       } else if (hit) {
-        s.out.len = 0
-        s.boundaryStartOffset = s.bufFileOff + lineStart
-        s.hasPreservedSegment = false
-        s.lastSnapSrc = null
-        lastSnapStart = -1
-        s.straddleSnapCarryLen = 0
-        runStart = lineStart
+        s.out.len = 0;
+        s.boundaryStartOffset = s.bufFileOff + lineStart;
+        s.hasPreservedSegment = false;
+        s.lastSnapSrc = null;
+        lastSnapStart = -1;
+        s.straddleSnapCarryLen = 0;
+        runStart = lineStart;
       }
-      boundaryAt = buf.indexOf(
-        boundaryMarker,
-        boundaryAt + boundaryMarker.length,
-      )
+      boundaryAt = buf.indexOf(boundaryMarker, boundaryAt + boundaryMarker.length);
     }
-    lineStart = lineEnd
-    nl = buf.indexOf(LF, lineStart)
+    lineStart = lineEnd;
+    nl = buf.indexOf(LF, lineStart);
   }
-  sinkWrite(s.out, buf, runStart, lineStart)
-  return { lastSnapStart, lastSnapEnd, trailStart: lineStart }
+  sinkWrite(s.out, buf, runStart, lineStart);
+  return { lastSnapStart, lastSnapEnd, trailStart: lineStart };
 }
 
 // In-buf snap wins over straddle (later in file). carryBuf still valid here.
@@ -669,48 +623,48 @@ function captureSnap(
   lastSnapEnd: number,
 ): void {
   if (lastSnapStart !== -1) {
-    s.lastSnapLen = lastSnapEnd - lastSnapStart
+    s.lastSnapLen = lastSnapEnd - lastSnapStart;
     if (s.lastSnapBuf === undefined || s.lastSnapLen > s.lastSnapBuf.length) {
-      s.lastSnapBuf = Buffer.allocUnsafe(s.lastSnapLen)
+      s.lastSnapBuf = Buffer.allocUnsafe(s.lastSnapLen);
     }
-    buf.copy(s.lastSnapBuf, 0, lastSnapStart, lastSnapEnd)
-    s.lastSnapSrc = s.lastSnapBuf
+    buf.copy(s.lastSnapBuf, 0, lastSnapStart, lastSnapEnd);
+    s.lastSnapSrc = s.lastSnapBuf;
   } else if (s.straddleSnapCarryLen > 0) {
-    s.lastSnapLen = s.straddleSnapCarryLen + s.straddleSnapTailEnd
+    s.lastSnapLen = s.straddleSnapCarryLen + s.straddleSnapTailEnd;
     if (s.lastSnapBuf === undefined || s.lastSnapLen > s.lastSnapBuf.length) {
-      s.lastSnapBuf = Buffer.allocUnsafe(s.lastSnapLen)
+      s.lastSnapBuf = Buffer.allocUnsafe(s.lastSnapLen);
     }
-    s.carryBuf!.copy(s.lastSnapBuf, 0, 0, s.straddleSnapCarryLen)
-    chunk.copy(s.lastSnapBuf, s.straddleSnapCarryLen, 0, s.straddleSnapTailEnd)
-    s.lastSnapSrc = s.lastSnapBuf
+    s.carryBuf?.copy(s.lastSnapBuf, 0, 0, s.straddleSnapCarryLen);
+    chunk.copy(s.lastSnapBuf, s.straddleSnapCarryLen, 0, s.straddleSnapTailEnd);
+    s.lastSnapSrc = s.lastSnapBuf;
   }
 }
 
 function captureCarry(s: LoadState, buf: Buffer, trailStart: number): void {
-  s.carryLen = buf.length - trailStart
+  s.carryLen = buf.length - trailStart;
   if (s.carryLen > 0) {
     if (s.carryBuf === undefined || s.carryLen > s.carryBuf.length) {
-      s.carryBuf = Buffer.allocUnsafe(s.carryLen)
+      s.carryBuf = Buffer.allocUnsafe(s.carryLen);
     }
-    buf.copy(s.carryBuf, 0, trailStart, buf.length)
+    buf.copy(s.carryBuf, 0, trailStart, buf.length);
   }
 }
 
 function finalizeOutput(s: LoadState): void {
   if (s.carryLen > 0) {
-    const cb = s.carryBuf!
+    const cb = s.carryBuf!;
     if (hasPrefix(cb, ATTR_SNAP_PREFIX, 0, s.carryLen)) {
-      s.lastSnapSrc = cb
-      s.lastSnapLen = s.carryLen
+      s.lastSnapSrc = cb;
+      s.lastSnapLen = s.carryLen;
     } else {
-      sinkWrite(s.out, cb, 0, s.carryLen)
+      sinkWrite(s.out, cb, 0, s.carryLen);
     }
   }
   if (s.lastSnapSrc) {
     if (s.out.len > 0 && s.out.buf[s.out.len - 1] !== LF) {
-      sinkWrite(s.out, LF_BYTE, 0, 1)
+      sinkWrite(s.out, LF_BYTE, 0, 1);
     }
-    sinkWrite(s.out, s.lastSnapSrc, 0, s.lastSnapLen)
+    sinkWrite(s.out, s.lastSnapSrc, 0, s.lastSnapLen);
   }
 }
 
@@ -718,12 +672,12 @@ export async function readTranscriptForLoad(
   filePath: string,
   fileSize: number,
 ): Promise<{
-  boundaryStartOffset: number
-  postBoundaryBuf: Buffer
-  hasPreservedSegment: boolean
+  boundaryStartOffset: number;
+  postBoundaryBuf: Buffer;
+  hasPreservedSegment: boolean;
 }> {
-  const boundaryMarker = compactBoundaryMarker()
-  const CHUNK_SIZE = TRANSCRIPT_READ_CHUNK_SIZE
+  const boundaryMarker = compactBoundaryMarker();
+  const CHUNK_SIZE = TRANSCRIPT_READ_CHUNK_SIZE;
 
   const s: LoadState = {
     out: {
@@ -747,47 +701,47 @@ export async function readTranscriptForLoad(
     carryBuf: undefined,
     straddleSnapCarryLen: 0,
     straddleSnapTailEnd: 0,
-  }
+  };
 
-  const chunk = Buffer.allocUnsafe(CHUNK_SIZE)
-  const fd = await fsOpen(filePath, 'r')
+  const chunk = Buffer.allocUnsafe(CHUNK_SIZE);
+  const fd = await fsOpen(filePath, 'r');
   try {
-    let filePos = 0
+    let filePos = 0;
     while (filePos < fileSize) {
       const { bytesRead } = await fd.read(
         chunk,
         0,
         Math.min(CHUNK_SIZE, fileSize - filePos),
         filePos,
-      )
-      if (bytesRead === 0) break
-      filePos += bytesRead
+      );
+      if (bytesRead === 0) break;
+      filePos += bytesRead;
 
-      const chunkOff = processStraddle(s, chunk, bytesRead)
+      const chunkOff = processStraddle(s, chunk, bytesRead);
 
-      let buf: Buffer
+      let buf: Buffer;
       if (s.carryLen > 0) {
-        const bufLen = s.carryLen + (bytesRead - chunkOff)
-        buf = Buffer.allocUnsafe(bufLen)
-        s.carryBuf!.copy(buf, 0, 0, s.carryLen)
-        chunk.copy(buf, s.carryLen, chunkOff, bytesRead)
+        const bufLen = s.carryLen + (bytesRead - chunkOff);
+        buf = Buffer.allocUnsafe(bufLen);
+        s.carryBuf?.copy(buf, 0, 0, s.carryLen);
+        chunk.copy(buf, s.carryLen, chunkOff, bytesRead);
       } else {
-        buf = chunk.subarray(chunkOff, bytesRead)
+        buf = chunk.subarray(chunkOff, bytesRead);
       }
 
-      const r = scanChunkLines(s, buf, boundaryMarker)
-      captureSnap(s, buf, chunk, r.lastSnapStart, r.lastSnapEnd)
-      captureCarry(s, buf, r.trailStart)
-      s.bufFileOff += r.trailStart
+      const r = scanChunkLines(s, buf, boundaryMarker);
+      captureSnap(s, buf, chunk, r.lastSnapStart, r.lastSnapEnd);
+      captureCarry(s, buf, r.trailStart);
+      s.bufFileOff += r.trailStart;
     }
-    finalizeOutput(s)
+    finalizeOutput(s);
   } finally {
-    await fd.close()
+    await fd.close();
   }
 
   return {
     boundaryStartOffset: s.boundaryStartOffset,
     postBoundaryBuf: s.out.buf.subarray(0, s.out.len),
     hasPreservedSegment: s.hasPreservedSegment,
-  }
+  };
 }

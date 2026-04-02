@@ -1,19 +1,19 @@
-import { randomUUID } from 'crypto'
-import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
-import { queryModelWithoutStreaming } from '../../services/api/claude.js'
-import type { ToolUseContext } from '../../Tool.js'
-import type { Message } from '../../types/message.js'
-import { createAttachmentMessage } from '../attachments.js'
-import { createCombinedAbortSignal } from '../combinedAbortSignal.js'
-import { logForDebugging } from '../debug.js'
-import { errorMessage } from '../errors.js'
-import type { HookResult } from '../hooks.js'
-import { safeParseJSON } from '../json.js'
-import { createUserMessage, extractTextContent } from '../messages.js'
-import { getSmallFastModel } from '../model/model.js'
-import type { PromptHook } from '../settings/types.js'
-import { asSystemPrompt } from '../systemPromptType.js'
-import { addArgumentsToPrompt, hookResponseSchema } from './hookHelpers.js'
+import { randomUUID } from 'node:crypto';
+import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js';
+import type { ToolUseContext } from '../../Tool.js';
+import { queryModelWithoutStreaming } from '../../services/api/claude.js';
+import type { Message } from '../../types/message.js';
+import { createAttachmentMessage } from '../attachments.js';
+import { createCombinedAbortSignal } from '../combinedAbortSignal.js';
+import { logForDebugging } from '../debug.js';
+import { errorMessage } from '../errors.js';
+import type { HookResult } from '../hooks.js';
+import { safeParseJSON } from '../json.js';
+import { createUserMessage, extractTextContent } from '../messages.js';
+import { getSmallFastModel } from '../model/model.js';
+import type { PromptHook } from '../settings/types.js';
+import { asSystemPrompt } from '../systemPromptType.js';
+import { addArgumentsToPrompt, hookResponseSchema } from './hookHelpers.js';
 
 /**
  * Execute a prompt-based hook using an LLM
@@ -29,34 +29,29 @@ export async function execPromptHook(
   toolUseID?: string,
 ): Promise<HookResult> {
   // Use provided toolUseID or generate a new one
-  const effectiveToolUseID = toolUseID || `hook-${randomUUID()}`
+  const effectiveToolUseID = toolUseID || `hook-${randomUUID()}`;
   try {
     // Replace $ARGUMENTS with the JSON input
-    const processedPrompt = addArgumentsToPrompt(hook.prompt, jsonInput)
-    logForDebugging(
-      `Hooks: Processing prompt hook with prompt: ${processedPrompt}`,
-    )
+    const processedPrompt = addArgumentsToPrompt(hook.prompt, jsonInput);
+    logForDebugging(`Hooks: Processing prompt hook with prompt: ${processedPrompt}`);
 
     // Create user message directly - no need for processUserInput which would
     // trigger UserPromptSubmit hooks and cause infinite recursion
-    const userMessage = createUserMessage({ content: processedPrompt })
+    const userMessage = createUserMessage({ content: processedPrompt });
 
     // Prepend conversation history if provided
     const messagesToQuery =
-      messages && messages.length > 0
-        ? [...messages, userMessage]
-        : [userMessage]
+      messages && messages.length > 0 ? [...messages, userMessage] : [userMessage];
 
-    logForDebugging(
-      `Hooks: Querying model with ${messagesToQuery.length} messages`,
-    )
+    logForDebugging(`Hooks: Querying model with ${messagesToQuery.length} messages`);
 
     // Query the model with Haiku
-    const hookTimeoutMs = hook.timeout ? hook.timeout * 1000 : 30000
+    const hookTimeoutMs = hook.timeout ? hook.timeout * 1000 : 30000;
 
     // Combined signal: aborts if either the hook signal or timeout triggers
-    const { signal: combinedSignal, cleanup: cleanupSignal } =
-      createCombinedAbortSignal(signal, { timeoutMs: hookTimeoutMs })
+    const { signal: combinedSignal, cleanup: cleanupSignal } = createCombinedAbortSignal(signal, {
+      timeoutMs: hookTimeoutMs,
+    });
 
     try {
       const response = await queryModelWithoutStreaming({
@@ -73,8 +68,8 @@ Your response must be a JSON object matching one of the following schemas:
         signal: combinedSignal,
         options: {
           async getToolPermissionContext() {
-            const appState = toolUseContext.getAppState()
-            return appState.toolPermissionContext
+            const appState = toolUseContext.getAppState();
+            return appState.toolPermissionContext;
           },
           model: hook.model ?? getSmallFastModel(),
           toolChoice: undefined,
@@ -97,24 +92,22 @@ Your response must be a JSON object matching one of the following schemas:
             },
           },
         },
-      })
+      });
 
-      cleanupSignal()
+      cleanupSignal();
 
       // Extract text content from response
-      const content = extractTextContent(response.message.content)
+      const content = extractTextContent(response.message.content);
 
       // Update response length for spinner display
-      toolUseContext.setResponseLength(length => length + content.length)
+      toolUseContext.setResponseLength((length) => length + content.length);
 
-      const fullResponse = content.trim()
-      logForDebugging(`Hooks: Model response: ${fullResponse}`)
+      const fullResponse = content.trim();
+      logForDebugging(`Hooks: Model response: ${fullResponse}`);
 
-      const json = safeParseJSON(fullResponse)
+      const json = safeParseJSON(fullResponse);
       if (!json) {
-        logForDebugging(
-          `Hooks: error parsing response as JSON: ${fullResponse}`,
-        )
+        logForDebugging(`Hooks: error parsing response as JSON: ${fullResponse}`);
         return {
           hook,
           outcome: 'non_blocking_error',
@@ -127,14 +120,14 @@ Your response must be a JSON object matching one of the following schemas:
             stdout: fullResponse,
             exitCode: 1,
           }),
-        }
+        };
       }
 
-      const parsed = hookResponseSchema().safeParse(json)
+      const parsed = hookResponseSchema().safeParse(json);
       if (!parsed.success) {
         logForDebugging(
           `Hooks: model response does not conform to expected schema: ${parsed.error.message}`,
-        )
+        );
         return {
           hook,
           outcome: 'non_blocking_error',
@@ -147,14 +140,12 @@ Your response must be a JSON object matching one of the following schemas:
             stdout: fullResponse,
             exitCode: 1,
           }),
-        }
+        };
       }
 
       // Failed to meet condition
       if (!parsed.data.ok) {
-        logForDebugging(
-          `Hooks: Prompt hook condition was not met: ${parsed.data.reason}`,
-        )
+        logForDebugging(`Hooks: Prompt hook condition was not met: ${parsed.data.reason}`);
         return {
           hook,
           outcome: 'blocking',
@@ -164,11 +155,11 @@ Your response must be a JSON object matching one of the following schemas:
           },
           preventContinuation: true,
           stopReason: parsed.data.reason,
-        }
+        };
       }
 
       // Condition was met
-      logForDebugging(`Hooks: Prompt hook condition was met`)
+      logForDebugging('Hooks: Prompt hook condition was met');
       return {
         hook,
         outcome: 'success',
@@ -179,21 +170,21 @@ Your response must be a JSON object matching one of the following schemas:
           hookEvent,
           content: '',
         }),
-      }
+      };
     } catch (error) {
-      cleanupSignal()
+      cleanupSignal();
 
       if (combinedSignal.aborted) {
         return {
           hook,
           outcome: 'cancelled',
-        }
+        };
       }
-      throw error
+      throw error;
     }
   } catch (error) {
-    const errorMsg = errorMessage(error)
-    logForDebugging(`Hooks: Prompt hook error: ${errorMsg}`)
+    const errorMsg = errorMessage(error);
+    logForDebugging(`Hooks: Prompt hook error: ${errorMsg}`);
     return {
       hook,
       outcome: 'non_blocking_error',
@@ -206,6 +197,6 @@ Your response must be a JSON object matching one of the following schemas:
         stdout: '',
         exitCode: 1,
       }),
-    }
+    };
   }
 }

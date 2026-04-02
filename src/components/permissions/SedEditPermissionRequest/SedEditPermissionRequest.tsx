@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
-import { basename, relative } from 'path';
+import { basename, relative } from 'node:path';
 import React, { Suspense, use, useMemo } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js';
 import { getCwd } from 'src/utils/cwd.js';
 import { isENOENT } from 'src/utils/errors.js';
@@ -8,7 +8,7 @@ import { detectEncodingForResolvedPath } from 'src/utils/fileRead.js';
 import { getFsImplementation } from 'src/utils/fsOperations.js';
 import { Text } from '../../../ink.js';
 import { BashTool } from '../../../tools/BashTool/BashTool.js';
-import { applySedSubstitution, type SedEditInfo } from '../../../tools/BashTool/sedEditParser.js';
+import { type SedEditInfo, applySedSubstitution } from '../../../tools/BashTool/sedEditParser.js';
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js';
 import type { PermissionRequestProps } from '../PermissionRequest.js';
 type SedEditPermissionRequestProps = PermissionRequestProps & {
@@ -23,10 +23,7 @@ export function SedEditPermissionRequest(t0) {
   let props;
   let sedInfo;
   if ($[0] !== t0) {
-    ({
-      sedInfo,
-      ...props
-    } = t0);
+    ({ sedInfo, ...props } = t0);
     $[0] = t0;
     $[1] = props;
     $[2] = sedInfo;
@@ -34,19 +31,17 @@ export function SedEditPermissionRequest(t0) {
     props = $[1];
     sedInfo = $[2];
   }
-  const {
-    filePath
-  } = sedInfo;
+  const { filePath } = sedInfo;
   let t1;
   if ($[3] !== filePath) {
     t1 = (async () => {
       const encoding = detectEncodingForResolvedPath(filePath);
       const raw = await getFsImplementation().readFile(filePath, {
-        encoding
+        encoding,
       });
       return {
-        oldContent: raw.replaceAll("\r\n", "\n"),
-        fileExists: true
+        oldContent: raw.replaceAll('\r\n', '\n'),
+        fileExists: true,
       };
     })().catch(_temp);
     $[3] = filePath;
@@ -57,7 +52,15 @@ export function SedEditPermissionRequest(t0) {
   const contentPromise = t1;
   let t2;
   if ($[5] !== contentPromise || $[6] !== props || $[7] !== sedInfo) {
-    t2 = <Suspense fallback={null}><SedEditPermissionRequestInner sedInfo={sedInfo} contentPromise={contentPromise} {...props} /></Suspense>;
+    t2 = (
+      <Suspense fallback={null}>
+        <SedEditPermissionRequestInner
+          sedInfo={sedInfo}
+          contentPromise={contentPromise}
+          {...props}
+        />
+      </Suspense>
+    );
     $[5] = contentPromise;
     $[6] = props;
     $[7] = sedInfo;
@@ -72,8 +75,8 @@ function _temp(e) {
     throw e;
   }
   return {
-    oldContent: "",
-    fileExists: false
+    oldContent: '',
+    fileExists: false,
   };
 }
 function SedEditPermissionRequestInner(t0) {
@@ -82,11 +85,7 @@ function SedEditPermissionRequestInner(t0) {
   let props;
   let sedInfo;
   if ($[0] !== t0) {
-    ({
-      sedInfo,
-      contentPromise,
-      ...props
-    } = t0);
+    ({ sedInfo, contentPromise, ...props } = t0);
     $[0] = t0;
     $[1] = contentPromise;
     $[2] = props;
@@ -96,13 +95,8 @@ function SedEditPermissionRequestInner(t0) {
     props = $[2];
     sedInfo = $[3];
   }
-  const {
-    filePath
-  } = sedInfo;
-  const {
-    oldContent,
-    fileExists
-  } = use(contentPromise) as FileReadResult;
+  const { filePath } = sedInfo;
+  const { oldContent, fileExists } = use(contentPromise) as FileReadResult;
   let t1;
   if ($[4] !== oldContent || $[5] !== sedInfo) {
     t1 = applySedSubstitution(oldContent, sedInfo);
@@ -117,7 +111,7 @@ function SedEditPermissionRequestInner(t0) {
   bb0: {
     if (oldContent === newContent) {
       let t3;
-      if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
+      if ($[7] === Symbol.for('react.memo_cache_sentinel')) {
         t3 = [];
         $[7] = t3;
       } else {
@@ -128,11 +122,13 @@ function SedEditPermissionRequestInner(t0) {
     }
     let t3;
     if ($[8] !== newContent || $[9] !== oldContent) {
-      t3 = [{
-        old_string: oldContent,
-        new_string: newContent,
-        replace_all: false
-      }];
+      t3 = [
+        {
+          old_string: oldContent,
+          new_string: newContent,
+          replace_all: false,
+        },
+      ];
       $[8] = newContent;
       $[9] = oldContent;
       $[10] = t3;
@@ -145,22 +141,22 @@ function SedEditPermissionRequestInner(t0) {
   let t3;
   bb1: {
     if (!fileExists) {
-      t3 = "File does not exist";
+      t3 = 'File does not exist';
       break bb1;
     }
-    t3 = "Pattern did not match any content";
+    t3 = 'Pattern did not match any content';
   }
   const noChangesMessage = t3;
   let t4;
   if ($[11] !== filePath || $[12] !== newContent) {
-    t4 = input => {
+    t4 = (input) => {
       const parsed = BashTool.inputSchema.parse(input);
       return {
         ...parsed,
         _simulatedSedEdit: {
           filePath,
-          newContent
-        }
+          newContent,
+        },
       };
     };
     $[11] = filePath;
@@ -192,7 +188,11 @@ function SedEditPermissionRequestInner(t0) {
   }
   let t11;
   if ($[18] !== t10) {
-    t11 = <Text>Do you want to make this edit to{" "}<Text bold={true}>{t10}</Text>?</Text>;
+    t11 = (
+      <Text>
+        Do you want to make this edit to <Text bold={true}>{t10}</Text>?
+      </Text>
+    );
     $[18] = t10;
     $[19] = t11;
   } else {
@@ -200,7 +200,12 @@ function SedEditPermissionRequestInner(t0) {
   }
   let t12;
   if ($[20] !== edits || $[21] !== filePath || $[22] !== noChangesMessage) {
-    t12 = edits.length > 0 ? <FileEditToolDiff file_path={filePath} edits={edits} /> : <Text dimColor={true}>{noChangesMessage}</Text>;
+    t12 =
+      edits.length > 0 ? (
+        <FileEditToolDiff file_path={filePath} edits={edits} />
+      ) : (
+        <Text dimColor={true}>{noChangesMessage}</Text>
+      );
     $[20] = edits;
     $[21] = filePath;
     $[22] = noChangesMessage;
@@ -209,8 +214,34 @@ function SedEditPermissionRequestInner(t0) {
     t12 = $[23];
   }
   let t13;
-  if ($[24] !== filePath || $[25] !== parseInput || $[26] !== props.onDone || $[27] !== props.onReject || $[28] !== props.toolUseConfirm || $[29] !== props.toolUseContext || $[30] !== props.workerBadge || $[31] !== t11 || $[32] !== t12 || $[33] !== t9) {
-    t13 = <FilePermissionDialog toolUseConfirm={t5} toolUseContext={t6} onDone={t7} onReject={t8} title="Edit file" subtitle={t9} question={t11} content={t12} path={filePath} completionType="str_replace_single" parseInput={parseInput} workerBadge={props.workerBadge} />;
+  if (
+    $[24] !== filePath ||
+    $[25] !== parseInput ||
+    $[26] !== props.onDone ||
+    $[27] !== props.onReject ||
+    $[28] !== props.toolUseConfirm ||
+    $[29] !== props.toolUseContext ||
+    $[30] !== props.workerBadge ||
+    $[31] !== t11 ||
+    $[32] !== t12 ||
+    $[33] !== t9
+  ) {
+    t13 = (
+      <FilePermissionDialog
+        toolUseConfirm={t5}
+        toolUseContext={t6}
+        onDone={t7}
+        onReject={t8}
+        title="Edit file"
+        subtitle={t9}
+        question={t11}
+        content={t12}
+        path={filePath}
+        completionType="str_replace_single"
+        parseInput={parseInput}
+        workerBadge={props.workerBadge}
+      />
+    );
     $[24] = filePath;
     $[25] = parseInput;
     $[26] = props.onDone;

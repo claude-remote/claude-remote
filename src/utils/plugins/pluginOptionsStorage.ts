@@ -12,24 +12,17 @@
  * import from MCP-specific code.
  */
 
-import memoize from 'lodash-es/memoize.js'
-import type { LoadedPlugin } from '../../types/plugin.js'
-import { logForDebugging } from '../debug.js'
-import { logError } from '../log.js'
-import { getSecureStorage } from '../secureStorage/index.js'
-import {
-  getSettings_DEPRECATED,
-  updateSettingsForSource,
-} from '../settings/settings.js'
-import {
-  type UserConfigSchema,
-  type UserConfigValues,
-  validateUserConfig,
-} from './mcpbHandler.js'
-import { getPluginDataDir } from './pluginDirectories.js'
+import memoize from 'lodash-es/memoize.js';
+import type { LoadedPlugin } from '../../types/plugin.js';
+import { logForDebugging } from '../debug.js';
+import { logError } from '../log.js';
+import { getSecureStorage } from '../secureStorage/index.js';
+import { getSettings_DEPRECATED, updateSettingsForSource } from '../settings/settings.js';
+import { type UserConfigSchema, type UserConfigValues, validateUserConfig } from './mcpbHandler.js';
+import { getPluginDataDir } from './pluginDirectories.js';
 
-export type PluginOptionValues = UserConfigValues
-export type PluginOptionSchema = UserConfigSchema
+export type PluginOptionValues = UserConfigValues;
+export type PluginOptionSchema = UserConfigSchema;
 
 /**
  * Canonical storage key for a plugin's options in both `settings.pluginConfigs`
@@ -42,7 +35,7 @@ export type PluginOptionSchema = UserConfigSchema
  * Exists so there's exactly one place to change if the key format ever drifts.
  */
 export function getPluginStorageId(plugin: LoadedPlugin): string {
-  return plugin.source
+  return plugin.source;
 }
 
 /**
@@ -53,31 +46,26 @@ export function getPluginStorageId(plugin: LoadedPlugin): string {
  * would otherwise do a settings read + keychain spawn. Cache cleared via
  * `clearPluginOptionsCache` when settings change or plugins reload.
  */
-export const loadPluginOptions = memoize(
-  (pluginId: string): PluginOptionValues => {
-    const settings = getSettings_DEPRECATED()
-    const nonSensitive =
-      settings.pluginConfigs?.[pluginId]?.options ?? ({} as PluginOptionValues)
+export const loadPluginOptions = memoize((pluginId: string): PluginOptionValues => {
+  const settings = getSettings_DEPRECATED();
+  const nonSensitive = settings.pluginConfigs?.[pluginId]?.options ?? ({} as PluginOptionValues);
 
-    // NOTE: storage.read() spawns `security find-generic-password` on macOS
-    // (~50-100ms, synchronous). Mitigated by the memoize above (per-pluginId,
-    // session-lifetime) + keychain's own 30s TTL cache — so one blocking spawn
-    // per session per plugin-with-options. /reload-plugins clears the memoize
-    // and the next hook/MCP-load after that eats a fresh spawn.
-    const storage = getSecureStorage()
-    const sensitive =
-      storage.read()?.pluginSecrets?.[pluginId] ??
-      ({} as Record<string, string>)
+  // NOTE: storage.read() spawns `security find-generic-password` on macOS
+  // (~50-100ms, synchronous). Mitigated by the memoize above (per-pluginId,
+  // session-lifetime) + keychain's own 30s TTL cache — so one blocking spawn
+  // per session per plugin-with-options. /reload-plugins clears the memoize
+  // and the next hook/MCP-load after that eats a fresh spawn.
+  const storage = getSecureStorage();
+  const sensitive = storage.read()?.pluginSecrets?.[pluginId] ?? ({} as Record<string, string>);
 
-    // secureStorage wins on collision — schema determines destination so
-    // collision shouldn't happen, but if a user hand-edits settings.json we
-    // trust the more secure source.
-    return { ...nonSensitive, ...sensitive }
-  },
-)
+  // secureStorage wins on collision — schema determines destination so
+  // collision shouldn't happen, but if a user hand-edits settings.json we
+  // trust the more secure source.
+  return { ...nonSensitive, ...sensitive };
+});
 
 export function clearPluginOptionsCache(): void {
-  loadPluginOptions.cache?.clear?.()
+  loadPluginOptions.cache?.clear?.();
 }
 
 /**
@@ -92,61 +80,57 @@ export function savePluginOptions(
   values: PluginOptionValues,
   schema: PluginOptionSchema,
 ): void {
-  const nonSensitive: PluginOptionValues = {}
-  const sensitive: Record<string, string> = {}
+  const nonSensitive: PluginOptionValues = {};
+  const sensitive: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(values)) {
     if (schema[key]?.sensitive === true) {
-      sensitive[key] = String(value)
+      sensitive[key] = String(value);
     } else {
-      nonSensitive[key] = value
+      nonSensitive[key] = value;
     }
   }
 
   // Scrub sets — see saveMcpServerUserConfig (mcpbHandler.ts) for the
   // rationale. Only keys in THIS save are scrubbed from the other store,
   // so partial reconfigures don't lose data.
-  const sensitiveKeysInThisSave = new Set(Object.keys(sensitive))
-  const nonSensitiveKeysInThisSave = new Set(Object.keys(nonSensitive))
+  const sensitiveKeysInThisSave = new Set(Object.keys(sensitive));
+  const nonSensitiveKeysInThisSave = new Set(Object.keys(nonSensitive));
 
   // secureStorage FIRST — if keychain fails, throw before touching
   // settings.json so old plaintext (if any) stays as fallback.
-  const storage = getSecureStorage()
-  const existingInSecureStorage =
-    storage.read()?.pluginSecrets?.[pluginId] ?? undefined
+  const storage = getSecureStorage();
+  const existingInSecureStorage = storage.read()?.pluginSecrets?.[pluginId] ?? undefined;
   const secureScrubbed = existingInSecureStorage
     ? Object.fromEntries(
-        Object.entries(existingInSecureStorage).filter(
-          ([k]) => !nonSensitiveKeysInThisSave.has(k),
-        ),
+        Object.entries(existingInSecureStorage).filter(([k]) => !nonSensitiveKeysInThisSave.has(k)),
       )
-    : undefined
+    : undefined;
   const needSecureScrub =
     secureScrubbed &&
     existingInSecureStorage &&
-    Object.keys(secureScrubbed).length !==
-      Object.keys(existingInSecureStorage).length
+    Object.keys(secureScrubbed).length !== Object.keys(existingInSecureStorage).length;
   if (Object.keys(sensitive).length > 0 || needSecureScrub) {
-    const existing = storage.read() ?? {}
+    const existing = storage.read() ?? {};
     if (!existing.pluginSecrets) {
-      existing.pluginSecrets = {}
+      existing.pluginSecrets = {};
     }
     existing.pluginSecrets[pluginId] = {
       ...secureScrubbed,
       ...sensitive,
-    }
-    const result = storage.update(existing)
+    };
+    const result = storage.update(existing);
     if (!result.success) {
       const err = new Error(
         `Failed to save sensitive plugin options for ${pluginId} to secure storage`,
-      )
-      logError(err)
-      throw err
+      );
+      logError(err);
+      throw err;
     }
     if (result.warning) {
       logForDebugging(`Plugin secrets save warning: ${result.warning}`, {
         level: 'warn',
-      })
+      });
     }
   }
 
@@ -159,38 +143,33 @@ export function savePluginOptions(
   // saveMcpServerUserConfig. Safe today since pluginConfigs is only ever
   // written here (user-scope), but will bite if we add project-scoped
   // plugin options.
-  const settings = getSettings_DEPRECATED()
-  const existingInSettings = settings.pluginConfigs?.[pluginId]?.options ?? {}
-  const keysToScrubFromSettings = Object.keys(existingInSettings).filter(k =>
+  const settings = getSettings_DEPRECATED();
+  const existingInSettings = settings.pluginConfigs?.[pluginId]?.options ?? {};
+  const keysToScrubFromSettings = Object.keys(existingInSettings).filter((k) =>
     sensitiveKeysInThisSave.has(k),
-  )
-  if (
-    Object.keys(nonSensitive).length > 0 ||
-    keysToScrubFromSettings.length > 0
-  ) {
+  );
+  if (Object.keys(nonSensitive).length > 0 || keysToScrubFromSettings.length > 0) {
     if (!settings.pluginConfigs) {
-      settings.pluginConfigs = {}
+      settings.pluginConfigs = {};
     }
     if (!settings.pluginConfigs[pluginId]) {
-      settings.pluginConfigs[pluginId] = {}
+      settings.pluginConfigs[pluginId] = {};
     }
     const scrubbed = Object.fromEntries(
-      keysToScrubFromSettings.map(k => [k, undefined]),
-    ) as Record<string, undefined>
+      keysToScrubFromSettings.map((k) => [k, undefined]),
+    ) as Record<string, undefined>;
     settings.pluginConfigs[pluginId].options = {
       ...nonSensitive,
       ...scrubbed,
-    } as PluginOptionValues
-    const result = updateSettingsForSource('userSettings', settings)
+    } as PluginOptionValues;
+    const result = updateSettingsForSource('userSettings', settings);
     if (result.error) {
-      logError(result.error)
-      throw new Error(
-        `Failed to save plugin options for ${pluginId}: ${result.error.message}`,
-      )
+      logError(result.error);
+      throw new Error(`Failed to save plugin options for ${pluginId}: ${result.error.message}`);
     }
   }
 
-  clearPluginOptionsCache()
+  clearPluginOptionsCache();
 }
 
 /**
@@ -220,21 +199,21 @@ export function deletePluginOptions(pluginId: string): void {
   // mergeWith-deletion contract is internal plumbing — it shouldn't shape
   // the Zod schema. enabledPlugins gets away with it only because its other
   // arms (string[] | boolean) are non-objects that stay distinct.
-  const settings = getSettings_DEPRECATED()
-  type PluginConfigs = NonNullable<typeof settings.pluginConfigs>
+  const settings = getSettings_DEPRECATED();
+  type PluginConfigs = NonNullable<typeof settings.pluginConfigs>;
   if (settings.pluginConfigs?.[pluginId]) {
     // Partial<Record<K,V>> = Record<K, V | undefined> — gives us the widening
     // for the undefined value, and Partial-of-X overlaps with X so the cast
     // is a narrowing TS accepts (same approach as marketplaceManager.ts:1795).
-    const pluginConfigs: Partial<PluginConfigs> = { [pluginId]: undefined }
+    const pluginConfigs: Partial<PluginConfigs> = { [pluginId]: undefined };
     const { error } = updateSettingsForSource('userSettings', {
       pluginConfigs: pluginConfigs as PluginConfigs,
-    })
+    });
     if (error) {
       logForDebugging(
         `deletePluginOptions: failed to clear settings.pluginConfigs[${pluginId}]: ${error.message}`,
         { level: 'warn' },
-      )
+      );
     }
   }
 
@@ -243,33 +222,29 @@ export function deletePluginOptions(pluginId: string): void {
   // saveMcpServerUserConfig's sensitive split). `/` prefix match is safe:
   // plugin IDs are `name@marketplace`, never contain `/`, so
   // startsWith(`${id}/`) can't false-positive on a different plugin.
-  const storage = getSecureStorage()
-  const existing = storage.read()
+  const storage = getSecureStorage();
+  const existing = storage.read();
   if (existing?.pluginSecrets) {
-    const prefix = `${pluginId}/`
+    const prefix = `${pluginId}/`;
     const survivingEntries = Object.entries(existing.pluginSecrets).filter(
       ([k]) => k !== pluginId && !k.startsWith(prefix),
-    )
-    if (
-      survivingEntries.length !== Object.keys(existing.pluginSecrets).length
-    ) {
+    );
+    if (survivingEntries.length !== Object.keys(existing.pluginSecrets).length) {
       const result = storage.update({
         ...existing,
         pluginSecrets:
-          survivingEntries.length > 0
-            ? Object.fromEntries(survivingEntries)
-            : undefined,
-      })
+          survivingEntries.length > 0 ? Object.fromEntries(survivingEntries) : undefined,
+      });
       if (!result.success) {
         logForDebugging(
           `deletePluginOptions: failed to clear pluginSecrets for ${pluginId} from keychain`,
           { level: 'warn' },
-        )
+        );
       }
     }
   }
 
-  clearPluginOptionsCache()
+  clearPluginOptionsCache();
 }
 
 /**
@@ -279,34 +254,31 @@ export function deletePluginOptions(pluginId: string): void {
  *
  * Used by PluginOptionsFlow to decide whether to show the prompt after enable.
  */
-export function getUnconfiguredOptions(
-  plugin: LoadedPlugin,
-): PluginOptionSchema {
-  const manifestSchema = plugin.manifest.userConfig
+export function getUnconfiguredOptions(plugin: LoadedPlugin): PluginOptionSchema {
+  const manifestSchema = plugin.manifest.userConfig;
   if (!manifestSchema || Object.keys(manifestSchema).length === 0) {
-    return {}
+    return {};
   }
 
-  const saved = loadPluginOptions(getPluginStorageId(plugin))
-  const validation = validateUserConfig(saved, manifestSchema)
+  const saved = loadPluginOptions(getPluginStorageId(plugin));
+  const validation = validateUserConfig(saved, manifestSchema);
   if (validation.valid) {
-    return {}
+    return {};
   }
 
   // Return only the fields that failed. validateUserConfig reports errors as
   // strings keyed by title/key — simpler to just re-check each field here than
   // parse error strings.
-  const unconfigured: PluginOptionSchema = {}
+  const unconfigured: PluginOptionSchema = {};
   for (const [key, fieldSchema] of Object.entries(manifestSchema)) {
-    const single = validateUserConfig(
-      { [key]: saved[key] } as PluginOptionValues,
-      { [key]: fieldSchema },
-    )
+    const single = validateUserConfig({ [key]: saved[key] } as PluginOptionValues, {
+      [key]: fieldSchema,
+    });
     if (!single.valid) {
-      unconfigured[key] = fieldSchema
+      unconfigured[key] = fieldSchema;
     }
   }
-  return unconfigured
+  return unconfigured;
 }
 
 /**
@@ -327,20 +299,15 @@ export function substitutePluginVariables(
   value: string,
   plugin: { path: string; source?: string },
 ): string {
-  const normalize = (p: string) =>
-    process.platform === 'win32' ? p.replace(/\\/g, '/') : p
-  let out = value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, () =>
-    normalize(plugin.path),
-  )
+  const normalize = (p: string) => (process.platform === 'win32' ? p.replace(/\\/g, '/') : p);
+  let out = value.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, () => normalize(plugin.path));
   // source can be absent (e.g. hooks where pluginRoot is a skill root without
   // a plugin context). In that case ${CLAUDE_PLUGIN_DATA} is left literal.
   if (plugin.source) {
-    const source = plugin.source
-    out = out.replace(/\$\{CLAUDE_PLUGIN_DATA\}/g, () =>
-      normalize(getPluginDataDir(source)),
-    )
+    const source = plugin.source;
+    out = out.replace(/\$\{CLAUDE_PLUGIN_DATA\}/g, () => normalize(getPluginDataDir(source)));
   }
-  return out
+  return out;
 }
 
 /**
@@ -358,15 +325,14 @@ export function substituteUserConfigVariables(
   userConfig: PluginOptionValues,
 ): string {
   return value.replace(/\$\{user_config\.([^}]+)\}/g, (_match, key) => {
-    const configValue = userConfig[key]
+    const configValue = userConfig[key];
     if (configValue === undefined) {
       throw new Error(
-        `Missing required user configuration value: ${key}. ` +
-          `This should have been validated before variable substitution.`,
-      )
+        `Missing required user configuration value: ${key}. This should have been validated before variable substitution.`,
+      );
     }
-    return String(configValue)
-  })
+    return String(configValue);
+  });
 }
 
 /**
@@ -389,12 +355,12 @@ export function substituteUserConfigInContent(
 ): string {
   return content.replace(/\$\{user_config\.([^}]+)\}/g, (match, key) => {
     if (schema[key]?.sensitive === true) {
-      return `[sensitive option '${key}' not available in skill content]`
+      return `[sensitive option '${key}' not available in skill content]`;
     }
-    const value = options[key]
+    const value = options[key];
     if (value === undefined) {
-      return match
+      return match;
     }
-    return String(value)
-  })
+    return String(value);
+  });
 }

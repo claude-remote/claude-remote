@@ -1,4 +1,3 @@
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Shared event metadata enrichment for analytics systems
  *
@@ -6,40 +5,36 @@
  * event metadata across all analytics systems (Datadog, 1P).
  */
 
-import { extname } from 'path'
-import memoize from 'lodash-es/memoize.js'
-import { env, getHostPlatformForAnalytics } from '../../utils/env.js'
-import { envDynamic } from '../../utils/envDynamic.js'
-import { getModelBetas } from '../../utils/betas.js'
-import { getMainLoopModel } from '../../utils/model/model.js'
+import { extname } from 'node:path';
+import memoize from 'lodash-es/memoize.js';
+import { feature } from 'src/utils/feature.js';
+import type { CoreUserData } from 'src/utils/user.js';
 import {
-  getSessionId,
+  getClientType,
   getIsInteractive,
   getKairosActive,
-  getClientType,
   getParentSessionId as getParentSessionIdFromState,
-} from '../../bootstrap/state.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
-import { isOfficialMcpUrl } from '../mcp/officialRegistry.js'
-import { isClaudeAISubscriber, getSubscriptionType } from '../../utils/auth.js'
-import { getRepoRemoteHash } from '../../utils/git.js'
-import {
-  getWslVersion,
-  getLinuxDistroInfo,
-  detectVcs,
-} from '../../utils/platform.js'
-import type { CoreUserData } from 'src/utils/user.js'
-import { getAgentContext } from '../../utils/agentContext.js'
-import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js'
-import type { PublicApiAuth } from '../../types/generated/events_mono/common/v1/auth.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+  getSessionId,
+} from '../../bootstrap/state.js';
+import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js';
+import type { PublicApiAuth } from '../../types/generated/events_mono/common/v1/auth.js';
+import { getAgentContext } from '../../utils/agentContext.js';
+import { getSubscriptionType, isClaudeAISubscriber } from '../../utils/auth.js';
+import { getModelBetas } from '../../utils/betas.js';
+import { env, getHostPlatformForAnalytics } from '../../utils/env.js';
+import { envDynamic } from '../../utils/envDynamic.js';
+import { isEnvTruthy } from '../../utils/envUtils.js';
+import { getRepoRemoteHash } from '../../utils/git.js';
+import { getMainLoopModel } from '../../utils/model/model.js';
+import { detectVcs, getLinuxDistroInfo, getWslVersion } from '../../utils/platform.js';
+import { jsonStringify } from '../../utils/slowOperations.js';
 import {
   getAgentId,
-  getParentSessionId as getTeammateParentSessionId,
   getTeamName,
+  getParentSessionId as getTeammateParentSessionId,
   isTeammate,
-} from '../../utils/teammate.js'
-import { feature } from 'src/utils/feature.js'
+} from '../../utils/teammate.js';
+import { isOfficialMcpUrl } from '../mcp/officialRegistry.js';
 
 /**
  * Marker type for verifying analytics metadata doesn't contain sensitive data
@@ -54,7 +49,7 @@ import { feature } from 'src/utils/feature.js'
  * The type is `never` which means it can never actually hold a value - this is
  * intentional as it's only used for type-casting to document developer intent.
  */
-export type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS = never
+export type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS = never;
 
 /**
  * Sanitizes tool names for analytics logging to avoid PII exposure.
@@ -71,9 +66,9 @@ export function sanitizeToolNameForAnalytics(
   toolName: string,
 ): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
   if (toolName.startsWith('mcp__')) {
-    return 'mcp_tool' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    return 'mcp_tool' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
   }
-  return toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  return toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
 }
 
 /**
@@ -84,7 +79,7 @@ export function sanitizeToolNameForAnalytics(
  * Enable with OTEL_LOG_TOOL_DETAILS=1
  */
 export function isToolDetailsLoggingEnabled(): boolean {
-  return isEnvTruthy(process.env.OTEL_LOG_TOOL_DETAILS)
+  return isEnvTruthy(process.env.OTEL_LOG_TOOL_DETAILS);
 }
 
 /**
@@ -104,15 +99,15 @@ export function isAnalyticsToolDetailsLoggingEnabled(
   mcpServerBaseUrl: string | undefined,
 ): boolean {
   if (process.env.CLAUDE_CODE_ENTRYPOINT === 'local-agent') {
-    return true
+    return true;
   }
   if (mcpServerType === 'claudeai-proxy') {
-    return true
+    return true;
   }
   if (mcpServerBaseUrl && isOfficialMcpUrl(mcpServerBaseUrl)) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -134,7 +129,7 @@ const BUILTIN_MCP_SERVER_NAMES: ReadonlySet<string> = new Set(
         ).COMPUTER_USE_MCP_SERVER_NAME,
       ]
     : [],
-)
+);
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
@@ -147,23 +142,23 @@ export function mcpToolDetailsForAnalytics(
   mcpServerType: string | undefined,
   mcpServerBaseUrl: string | undefined,
 ): {
-  mcpServerName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-  mcpToolName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  mcpServerName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+  mcpToolName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
 } {
-  const details = extractMcpToolDetails(toolName)
+  const details = extractMcpToolDetails(toolName);
   if (!details) {
-    return {}
+    return {};
   }
   if (
     !BUILTIN_MCP_SERVER_NAMES.has(details.serverName) &&
     !isAnalyticsToolDetailsLoggingEnabled(mcpServerType, mcpServerBaseUrl)
   ) {
-    return {}
+    return {};
   }
   return {
     mcpServerName: details.serverName,
     mcpToolName: details.mcpToolName,
-  }
+  };
 }
 
 /**
@@ -175,34 +170,32 @@ export function mcpToolDetailsForAnalytics(
  */
 export function extractMcpToolDetails(toolName: string):
   | {
-      serverName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-      mcpToolName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      serverName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+      mcpToolName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
     }
   | undefined {
   if (!toolName.startsWith('mcp__')) {
-    return undefined
+    return undefined;
   }
 
   // Format: mcp__<server>__<tool>
-  const parts = toolName.split('__')
+  const parts = toolName.split('__');
   if (parts.length < 3) {
-    return undefined
+    return undefined;
   }
 
-  const serverName = parts[1]
+  const serverName = parts[1];
   // Tool name may contain __ so rejoin remaining parts
-  const mcpToolName = parts.slice(2).join('__')
+  const mcpToolName = parts.slice(2).join('__');
 
   if (!serverName || !mcpToolName) {
-    return undefined
+    return undefined;
   }
 
   return {
-    serverName:
-      serverName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    mcpToolName:
-      mcpToolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  }
+    serverName: serverName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    mcpToolName: mcpToolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  };
 }
 
 /**
@@ -217,7 +210,7 @@ export function extractSkillName(
   input: unknown,
 ): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
   if (toolName !== 'Skill') {
-    return undefined
+    return undefined;
   }
 
   if (
@@ -227,24 +220,24 @@ export function extractSkillName(
     typeof (input as { skill: unknown }).skill === 'string'
   ) {
     return (input as { skill: string })
-      .skill as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      .skill as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
   }
 
-  return undefined
+  return undefined;
 }
 
-const TOOL_INPUT_STRING_TRUNCATE_AT = 512
-const TOOL_INPUT_STRING_TRUNCATE_TO = 128
-const TOOL_INPUT_MAX_JSON_CHARS = 4 * 1024
-const TOOL_INPUT_MAX_COLLECTION_ITEMS = 20
-const TOOL_INPUT_MAX_DEPTH = 2
+const TOOL_INPUT_STRING_TRUNCATE_AT = 512;
+const TOOL_INPUT_STRING_TRUNCATE_TO = 128;
+const TOOL_INPUT_MAX_JSON_CHARS = 4 * 1024;
+const TOOL_INPUT_MAX_COLLECTION_ITEMS = 20;
+const TOOL_INPUT_MAX_DEPTH = 2;
 
 function truncateToolInputValue(value: unknown, depth = 0): unknown {
   if (typeof value === 'string') {
     if (value.length > TOOL_INPUT_STRING_TRUNCATE_AT) {
-      return `${value.slice(0, TOOL_INPUT_STRING_TRUNCATE_TO)}…[${value.length} chars]`
+      return `${value.slice(0, TOOL_INPUT_STRING_TRUNCATE_TO)}…[${value.length} chars]`;
     }
-    return value
+    return value;
   }
   if (
     typeof value === 'number' ||
@@ -252,34 +245,34 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
     value === null ||
     value === undefined
   ) {
-    return value
+    return value;
   }
   if (depth >= TOOL_INPUT_MAX_DEPTH) {
-    return '<nested>'
+    return '<nested>';
   }
   if (Array.isArray(value)) {
     const mapped = value
       .slice(0, TOOL_INPUT_MAX_COLLECTION_ITEMS)
-      .map(v => truncateToolInputValue(v, depth + 1))
+      .map((v) => truncateToolInputValue(v, depth + 1));
     if (value.length > TOOL_INPUT_MAX_COLLECTION_ITEMS) {
-      mapped.push(`…[${value.length} items]`)
+      mapped.push(`…[${value.length} items]`);
     }
-    return mapped
+    return mapped;
   }
   if (typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>)
       // Skip internal marker keys (e.g. _simulatedSedEdit re-introduced by
       // SedEditPermissionRequest) so they don't leak into telemetry.
-      .filter(([k]) => !k.startsWith('_'))
+      .filter(([k]) => !k.startsWith('_'));
     const mapped = entries
       .slice(0, TOOL_INPUT_MAX_COLLECTION_ITEMS)
-      .map(([k, v]) => [k, truncateToolInputValue(v, depth + 1)])
+      .map(([k, v]) => [k, truncateToolInputValue(v, depth + 1)]);
     if (entries.length > TOOL_INPUT_MAX_COLLECTION_ITEMS) {
-      mapped.push(['…', `${entries.length} keys`])
+      mapped.push(['…', `${entries.length} keys`]);
     }
-    return Object.fromEntries(mapped)
+    return Object.fromEntries(mapped);
   }
-  return String(value)
+  return String(value);
 }
 
 /**
@@ -288,18 +281,16 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
  * preserving forensically useful fields like file paths, URLs, and MCP args.
  * Returns undefined when OTEL_LOG_TOOL_DETAILS is not enabled.
  */
-export function extractToolInputForTelemetry(
-  input: unknown,
-): string | undefined {
+export function extractToolInputForTelemetry(input: unknown): string | undefined {
   if (!isToolDetailsLoggingEnabled()) {
-    return undefined
+    return undefined;
   }
-  const truncated = truncateToolInputValue(input)
-  let json = jsonStringify(truncated)
+  const truncated = truncateToolInputValue(input);
+  let json = jsonStringify(truncated);
   if (json.length > TOOL_INPUT_MAX_JSON_CHARS) {
-    json = json.slice(0, TOOL_INPUT_MAX_JSON_CHARS) + '…[truncated]'
+    json = `${json.slice(0, TOOL_INPUT_MAX_JSON_CHARS)}…[truncated]`;
   }
-  return json
+  return json;
 }
 
 /**
@@ -308,7 +299,7 @@ export function extractToolInputForTelemetry(
  * (e.g., hash-based filenames like "key-hash-abcd-123-456") and
  * will be replaced with 'other'.
  */
-const MAX_FILE_EXTENSION_LENGTH = 10
+const MAX_FILE_EXTENSION_LENGTH = 10;
 
 /**
  * Extracts and sanitizes a file extension for analytics logging.
@@ -323,17 +314,17 @@ const MAX_FILE_EXTENSION_LENGTH = 10
 export function getFileExtensionForAnalytics(
   filePath: string,
 ): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
-  const ext = extname(filePath).toLowerCase()
+  const ext = extname(filePath).toLowerCase();
   if (!ext || ext === '.') {
-    return undefined
+    return undefined;
   }
 
-  const extension = ext.slice(1) // remove leading dot
+  const extension = ext.slice(1); // remove leading dot
   if (extension.length > MAX_FILE_EXTENSION_LENGTH) {
-    return 'other' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    return 'other' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
   }
 
-  return extension as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  return extension as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
 }
 
 /** Allow list of commands we extract file extensions from. */
@@ -355,13 +346,13 @@ const FILE_COMMANDS = new Set([
   'grep',
   'rg',
   'sed',
-])
+]);
 
 /** Regex to split bash commands on compound operators (&&, ||, ;, |). */
-const COMPOUND_OPERATOR_REGEX = /\s*(?:&&|\|\||[;|])\s*/
+const COMPOUND_OPERATOR_REGEX = /\s*(?:&&|\|\||[;|])\s*/;
 
 /** Regex to split on whitespace. */
-const WHITESPACE_REGEX = /\s+/
+const WHITESPACE_REGEX = /\s+/;
 
 /**
  * Extracts file extensions from a bash command for analytics.
@@ -373,200 +364,200 @@ export function getFileExtensionsFromBashCommand(
   command: string,
   simulatedSedEditFilePath?: string,
 ): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
-  if (!command.includes('.') && !simulatedSedEditFilePath) return undefined
+  if (!command.includes('.') && !simulatedSedEditFilePath) return undefined;
 
-  let result: string | undefined
-  const seen = new Set<string>()
+  let result: string | undefined;
+  const seen = new Set<string>();
 
   if (simulatedSedEditFilePath) {
-    const ext = getFileExtensionForAnalytics(simulatedSedEditFilePath)
+    const ext = getFileExtensionForAnalytics(simulatedSedEditFilePath);
     if (ext) {
-      seen.add(ext)
-      result = ext
+      seen.add(ext);
+      result = ext;
     }
   }
 
   for (const subcmd of command.split(COMPOUND_OPERATOR_REGEX)) {
-    if (!subcmd) continue
-    const tokens = subcmd.split(WHITESPACE_REGEX)
-    if (tokens.length < 2) continue
+    if (!subcmd) continue;
+    const tokens = subcmd.split(WHITESPACE_REGEX);
+    if (tokens.length < 2) continue;
 
-    const firstToken = tokens[0]!
-    const slashIdx = firstToken.lastIndexOf('/')
-    const baseCmd = slashIdx >= 0 ? firstToken.slice(slashIdx + 1) : firstToken
-    if (!FILE_COMMANDS.has(baseCmd)) continue
+    const firstToken = tokens[0]!;
+    const slashIdx = firstToken.lastIndexOf('/');
+    const baseCmd = slashIdx >= 0 ? firstToken.slice(slashIdx + 1) : firstToken;
+    if (!FILE_COMMANDS.has(baseCmd)) continue;
 
     for (let i = 1; i < tokens.length; i++) {
-      const arg = tokens[i]!
-      if (arg.charCodeAt(0) === 45 /* - */) continue
-      const ext = getFileExtensionForAnalytics(arg)
+      const arg = tokens[i]!;
+      if (arg.charCodeAt(0) === 45 /* - */) continue;
+      const ext = getFileExtensionForAnalytics(arg);
       if (ext && !seen.has(ext)) {
-        seen.add(ext)
-        result = result ? result + ',' + ext : ext
+        seen.add(ext);
+        result = result ? `${result},${ext}` : ext;
       }
     }
   }
 
-  if (!result) return undefined
-  return result as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  if (!result) return undefined;
+  return result as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
 }
 
 /**
  * Environment context metadata
  */
 export type EnvContext = {
-  platform: string
-  platformRaw: string
-  arch: string
-  nodeVersion: string
-  terminal: string | null
-  packageManagers: string
-  runtimes: string
-  isRunningWithBun: boolean
-  isCi: boolean
-  isClaubbit: boolean
-  isClaudeCodeRemote: boolean
-  isLocalAgentMode: boolean
-  isConductor: boolean
-  remoteEnvironmentType?: string
-  coworkerType?: string
-  claudeCodeContainerId?: string
-  claudeCodeRemoteSessionId?: string
-  tags?: string
-  isGithubAction: boolean
-  isClaudeCodeAction: boolean
-  isClaudeAiAuth: boolean
-  version: string
-  versionBase?: string
-  buildTime: string
-  deploymentEnvironment: string
-  githubEventName?: string
-  githubActionsRunnerEnvironment?: string
-  githubActionsRunnerOs?: string
-  githubActionRef?: string
-  wslVersion?: string
-  linuxDistroId?: string
-  linuxDistroVersion?: string
-  linuxKernel?: string
-  vcs?: string
-}
+  platform: string;
+  platformRaw: string;
+  arch: string;
+  nodeVersion: string;
+  terminal: string | null;
+  packageManagers: string;
+  runtimes: string;
+  isRunningWithBun: boolean;
+  isCi: boolean;
+  isClaubbit: boolean;
+  isClaudeCodeRemote: boolean;
+  isLocalAgentMode: boolean;
+  isConductor: boolean;
+  remoteEnvironmentType?: string;
+  coworkerType?: string;
+  claudeCodeContainerId?: string;
+  claudeCodeRemoteSessionId?: string;
+  tags?: string;
+  isGithubAction: boolean;
+  isClaudeCodeAction: boolean;
+  isClaudeAiAuth: boolean;
+  version: string;
+  versionBase?: string;
+  buildTime: string;
+  deploymentEnvironment: string;
+  githubEventName?: string;
+  githubActionsRunnerEnvironment?: string;
+  githubActionsRunnerOs?: string;
+  githubActionRef?: string;
+  wslVersion?: string;
+  linuxDistroId?: string;
+  linuxDistroVersion?: string;
+  linuxKernel?: string;
+  vcs?: string;
+};
 
 /**
  * Process metrics included with all analytics events.
  */
 export type ProcessMetrics = {
-  uptime: number
-  rss: number
-  heapTotal: number
-  heapUsed: number
-  external: number
-  arrayBuffers: number
-  constrainedMemory: number | undefined
-  cpuUsage: NodeJS.CpuUsage
-  cpuPercent: number | undefined
-}
+  uptime: number;
+  rss: number;
+  heapTotal: number;
+  heapUsed: number;
+  external: number;
+  arrayBuffers: number;
+  constrainedMemory: number | undefined;
+  cpuUsage: NodeJS.CpuUsage;
+  cpuPercent: number | undefined;
+};
 
 /**
  * Core event metadata shared across all analytics systems
  */
 export type EventMetadata = {
-  model: string
-  sessionId: string
-  userType: string
-  betas?: string
-  envContext: EnvContext
-  entrypoint?: string
-  agentSdkVersion?: string
-  isInteractive: string
-  clientType: string
-  processMetrics?: ProcessMetrics
-  sweBenchRunId: string
-  sweBenchInstanceId: string
-  sweBenchTaskId: string
+  model: string;
+  sessionId: string;
+  userType: string;
+  betas?: string;
+  envContext: EnvContext;
+  entrypoint?: string;
+  agentSdkVersion?: string;
+  isInteractive: string;
+  clientType: string;
+  processMetrics?: ProcessMetrics;
+  sweBenchRunId: string;
+  sweBenchInstanceId: string;
+  sweBenchTaskId: string;
   // Swarm/team agent identification for analytics attribution
-  agentId?: string // CLAUDE_CODE_AGENT_ID (format: agentName@teamName) or subagent UUID
-  parentSessionId?: string // CLAUDE_CODE_PARENT_SESSION_ID (team lead's session)
-  agentType?: 'teammate' | 'subagent' | 'standalone' // Distinguishes swarm teammates, Agent tool subagents, and standalone agents
-  teamName?: string // Team name for swarm agents (from env var or AsyncLocalStorage)
-  subscriptionType?: string // OAuth subscription tier (max, pro, enterprise, team)
-  rh?: string // Hashed repo remote URL (first 16 chars of SHA256), for joining with server-side data
-  kairosActive?: true // KAIROS assistant mode active (ant-only; set in main.tsx after gate check)
-  skillMode?: 'discovery' | 'coach' | 'discovery_and_coach' // Which skill surfacing mechanism(s) are gated on (ant-only; for BQ session segmentation)
-  observerMode?: 'backseat' | 'skillcoach' | 'both' // Which observer classifiers are gated on (ant-only; for BQ cohort splits on tengu_backseat_* events)
-}
+  agentId?: string; // CLAUDE_CODE_AGENT_ID (format: agentName@teamName) or subagent UUID
+  parentSessionId?: string; // CLAUDE_CODE_PARENT_SESSION_ID (team lead's session)
+  agentType?: 'teammate' | 'subagent' | 'standalone'; // Distinguishes swarm teammates, Agent tool subagents, and standalone agents
+  teamName?: string; // Team name for swarm agents (from env var or AsyncLocalStorage)
+  subscriptionType?: string; // OAuth subscription tier (max, pro, enterprise, team)
+  rh?: string; // Hashed repo remote URL (first 16 chars of SHA256), for joining with server-side data
+  kairosActive?: true; // KAIROS assistant mode active (ant-only; set in main.tsx after gate check)
+  skillMode?: 'discovery' | 'coach' | 'discovery_and_coach'; // Which skill surfacing mechanism(s) are gated on (ant-only; for BQ session segmentation)
+  observerMode?: 'backseat' | 'skillcoach' | 'both'; // Which observer classifiers are gated on (ant-only; for BQ cohort splits on tengu_backseat_* events)
+};
 
 /**
  * Options for enriching event metadata
  */
 export type EnrichMetadataOptions = {
   // Model to use, falls back to getMainLoopModel() if not provided
-  model?: unknown
+  model?: unknown;
   // Explicit betas string (already joined)
-  betas?: unknown
+  betas?: unknown;
   // Additional metadata to include (optional)
-  additionalMetadata?: Record<string, unknown>
-}
+  additionalMetadata?: Record<string, unknown>;
+};
 
 /**
  * Get agent identification for analytics.
  * Priority: AsyncLocalStorage context (subagents) > env vars (swarm teammates)
  */
 function getAgentIdentification(): {
-  agentId?: string
-  parentSessionId?: string
-  agentType?: 'teammate' | 'subagent' | 'standalone'
-  teamName?: string
+  agentId?: string;
+  parentSessionId?: string;
+  agentType?: 'teammate' | 'subagent' | 'standalone';
+  teamName?: string;
 } {
   // Check AsyncLocalStorage first (for subagents running in same process)
-  const agentContext = getAgentContext()
+  const agentContext = getAgentContext();
   if (agentContext) {
     const result: ReturnType<typeof getAgentIdentification> = {
       agentId: agentContext.agentId,
       parentSessionId: agentContext.parentSessionId,
       agentType: agentContext.agentType,
-    }
+    };
     if (agentContext.agentType === 'teammate') {
-      result.teamName = agentContext.teamName
+      result.teamName = agentContext.teamName;
     }
-    return result
+    return result;
   }
 
   // Fall back to swarm helpers (for swarm agents)
-  const agentId = getAgentId()
-  const parentSessionId = getTeammateParentSessionId()
-  const teamName = getTeamName()
-  const isSwarmAgent = isTeammate()
+  const agentId = getAgentId();
+  const parentSessionId = getTeammateParentSessionId();
+  const teamName = getTeamName();
+  const isSwarmAgent = isTeammate();
   // For standalone agents (have agent ID but not a teammate), set agentType to 'standalone'
   const agentType = isSwarmAgent
     ? ('teammate' as const)
     : agentId
       ? ('standalone' as const)
-      : undefined
+      : undefined;
   if (agentId || agentType || parentSessionId || teamName) {
     return {
       ...(agentId ? { agentId } : {}),
       ...(agentType ? { agentType } : {}),
       ...(parentSessionId ? { parentSessionId } : {}),
       ...(teamName ? { teamName } : {}),
-    }
+    };
   }
 
   // Check bootstrap state for parent session ID (e.g., plan mode -> implementation)
-  const stateParentSessionId = getParentSessionIdFromState()
+  const stateParentSessionId = getParentSessionIdFromState();
   if (stateParentSessionId) {
-    return { parentSessionId: stateParentSessionId }
+    return { parentSessionId: stateParentSessionId };
   }
 
-  return {}
+  return {};
 }
 
 /**
  * Extract base version from full version string. "2.0.36-dev.20251107.t174150.sha2709699" → "2.0.36-dev"
  */
 const getVersionBase = memoize((): string | undefined => {
-  const match = MACRO.VERSION.match(/^\d+\.\d+\.\d+(?:-[a-z]+)?/)
-  return match ? match[0] : undefined
-})
+  const match = MACRO.VERSION.match(/^\d+\.\d+\.\d+(?:-[a-z]+)?/);
+  return match ? match[0] : undefined;
+});
 
 /**
  * Builds the environment context object
@@ -577,7 +568,7 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
     env.getRuntimes(),
     getLinuxDistroInfo(),
     detectVcs(),
-  ])
+  ]);
 
   return {
     platform: getHostPlatformForAnalytics(),
@@ -625,44 +616,41 @@ const buildEnvContext = memoize(async (): Promise<EnvContext> => {
       githubEventName: process.env.GITHUB_EVENT_NAME,
       githubActionsRunnerEnvironment: process.env.RUNNER_ENVIRONMENT,
       githubActionsRunnerOs: process.env.RUNNER_OS,
-      githubActionRef: process.env.GITHUB_ACTION_PATH?.includes(
-        'claude-code-action/',
-      )
+      githubActionRef: process.env.GITHUB_ACTION_PATH?.includes('claude-code-action/')
         ? process.env.GITHUB_ACTION_PATH.split('claude-code-action/')[1]
         : undefined,
     }),
     ...(getWslVersion() && { wslVersion: getWslVersion() }),
     ...(linuxDistroInfo ?? {}),
     ...(vcs.length > 0 ? { vcs: vcs.join(',') } : {}),
-  }
-})
+  };
+});
 
 // --
 // CPU% delta tracking — inherently process-global, same pattern as logBatch/flushTimer in datadog.ts
-let prevCpuUsage: NodeJS.CpuUsage | null = null
-let prevWallTimeMs: number | null = null
+let prevCpuUsage: NodeJS.CpuUsage | null = null;
+let prevWallTimeMs: number | null = null;
 
 /**
  * Builds process metrics object for all users.
  */
 function buildProcessMetrics(): ProcessMetrics | undefined {
   try {
-    const mem = process.memoryUsage()
-    const cpu = process.cpuUsage()
-    const now = Date.now()
+    const mem = process.memoryUsage();
+    const cpu = process.cpuUsage();
+    const now = Date.now();
 
-    let cpuPercent: number | undefined
+    let cpuPercent: number | undefined;
     if (prevCpuUsage && prevWallTimeMs) {
-      const wallDeltaMs = now - prevWallTimeMs
+      const wallDeltaMs = now - prevWallTimeMs;
       if (wallDeltaMs > 0) {
-        const userDeltaUs = cpu.user - prevCpuUsage.user
-        const systemDeltaUs = cpu.system - prevCpuUsage.system
-        cpuPercent =
-          ((userDeltaUs + systemDeltaUs) / (wallDeltaMs * 1000)) * 100
+        const userDeltaUs = cpu.user - prevCpuUsage.user;
+        const systemDeltaUs = cpu.system - prevCpuUsage.system;
+        cpuPercent = ((userDeltaUs + systemDeltaUs) / (wallDeltaMs * 1000)) * 100;
       }
     }
-    prevCpuUsage = cpu
-    prevWallTimeMs = now
+    prevCpuUsage = cpu;
+    prevWallTimeMs = now;
 
     return {
       uptime: process.uptime(),
@@ -675,9 +663,9 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
       constrainedMemory: process.constrainedMemory(),
       cpuUsage: cpu,
       cpuPercent,
-    }
+    };
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -693,16 +681,10 @@ function buildProcessMetrics(): ProcessMetrics | undefined {
 export async function getEventMetadata(
   options: EnrichMetadataOptions = {},
 ): Promise<EventMetadata> {
-  const model = options.model ? String(options.model) : getMainLoopModel()
-  const betas =
-    typeof options.betas === 'string'
-      ? options.betas
-      : getModelBetas(model).join(',')
-  const [envContext, repoRemoteHash] = await Promise.all([
-    buildEnvContext(),
-    getRepoRemoteHash(),
-  ])
-  const processMetrics = buildProcessMetrics()
+  const model = options.model ? String(options.model) : getMainLoopModel();
+  const betas = typeof options.betas === 'string' ? options.betas : getModelBetas(model).join(',');
+  const [envContext, repoRemoteHash] = await Promise.all([buildEnvContext(), getRepoRemoteHash()]);
+  const processMetrics = buildProcessMetrics();
 
   const metadata: EventMetadata = {
     model,
@@ -732,56 +714,53 @@ export async function getEventMetadata(
     // Assistant mode tag — lives outside memoized buildEnvContext() because
     // setKairosActive() runs at main.tsx:~1648, after the first event may
     // have already fired and memoized the env. Read fresh per-event instead.
-    ...(feature('KAIROS') && getKairosActive()
-      ? { kairosActive: true as const }
-      : {}),
+    ...(feature('KAIROS') && getKairosActive() ? { kairosActive: true as const } : {}),
     // Repo remote hash for joining with server-side repo bundle data
     ...(repoRemoteHash && { rh: repoRemoteHash }),
-  }
+  };
 
-  return metadata
+  return metadata;
 }
-
 
 /**
  * Core event metadata for 1P event logging (snake_case format).
  */
 export type FirstPartyEventLoggingCoreMetadata = {
-  session_id: string
-  model: string
-  user_type: string
-  betas?: string
-  entrypoint?: string
-  agent_sdk_version?: string
-  is_interactive: boolean
-  client_type: string
-  swe_bench_run_id?: string
-  swe_bench_instance_id?: string
-  swe_bench_task_id?: string
+  session_id: string;
+  model: string;
+  user_type: string;
+  betas?: string;
+  entrypoint?: string;
+  agent_sdk_version?: string;
+  is_interactive: boolean;
+  client_type: string;
+  swe_bench_run_id?: string;
+  swe_bench_instance_id?: string;
+  swe_bench_task_id?: string;
   // Swarm/team agent identification
-  agent_id?: string
-  parent_session_id?: string
-  agent_type?: 'teammate' | 'subagent' | 'standalone'
-  team_name?: string
-}
+  agent_id?: string;
+  parent_session_id?: string;
+  agent_type?: 'teammate' | 'subagent' | 'standalone';
+  team_name?: string;
+};
 
 /**
  * Complete event logging metadata format for 1P events.
  */
 export type FirstPartyEventLoggingMetadata = {
-  env: EnvironmentMetadata
-  process?: string
+  env: EnvironmentMetadata;
+  process?: string;
   // auth is a top-level field on ClaudeCodeInternalEvent (proto PublicApiAuth).
   // account_id is intentionally omitted — only UUID fields are populated client-side.
-  auth?: PublicApiAuth
+  auth?: PublicApiAuth;
   // core fields correspond to the top level of ClaudeCodeInternalEvent.
   // They get directly exported to their individual columns in the BigQuery tables
-  core: FirstPartyEventLoggingCoreMetadata
+  core: FirstPartyEventLoggingCoreMetadata;
   // additional fields are populated in the additional_metadata field of the
   // ClaudeCodeInternalEvent proto. Includes but is not limited to information
   // that differs by event type.
-  additional: Record<string, unknown>
-}
+  additional: Record<string, unknown>;
+};
 
 /**
  * Convert metadata to 1P event logging format (snake_case fields).
@@ -798,15 +777,8 @@ export function to1PEventFormat(
   userMetadata: CoreUserData,
   additionalMetadata: Record<string, unknown> = {},
 ): FirstPartyEventLoggingMetadata {
-  const {
-    envContext,
-    processMetrics,
-    rh,
-    kairosActive,
-    skillMode,
-    observerMode,
-    ...coreFields
-  } = metadata
+  const { envContext, processMetrics, rh, kairosActive, skillMode, observerMode, ...coreFields } =
+    metadata;
 
   // Convert envContext to snake_case.
   // IMPORTANT: env is typed as the proto-generated EnvironmentMetadata so that
@@ -837,57 +809,56 @@ export function to1PEventFormat(
     version: envContext.version,
     build_time: envContext.buildTime,
     deployment_environment: envContext.deploymentEnvironment,
-  }
+  };
 
   // Add optional env fields
   if (envContext.remoteEnvironmentType) {
-    env.remote_environment_type = envContext.remoteEnvironmentType
+    env.remote_environment_type = envContext.remoteEnvironmentType;
   }
   if (feature('COWORKER_TYPE_TELEMETRY') && envContext.coworkerType) {
-    env.coworker_type = envContext.coworkerType
+    env.coworker_type = envContext.coworkerType;
   }
   if (envContext.claudeCodeContainerId) {
-    env.claude_code_container_id = envContext.claudeCodeContainerId
+    env.claude_code_container_id = envContext.claudeCodeContainerId;
   }
   if (envContext.claudeCodeRemoteSessionId) {
-    env.claude_code_remote_session_id = envContext.claudeCodeRemoteSessionId
+    env.claude_code_remote_session_id = envContext.claudeCodeRemoteSessionId;
   }
   if (envContext.tags) {
     env.tags = envContext.tags
       .split(',')
-      .map(t => t.trim())
-      .filter(Boolean)
+      .map((t) => t.trim())
+      .filter(Boolean);
   }
   if (envContext.githubEventName) {
-    env.github_event_name = envContext.githubEventName
+    env.github_event_name = envContext.githubEventName;
   }
   if (envContext.githubActionsRunnerEnvironment) {
-    env.github_actions_runner_environment =
-      envContext.githubActionsRunnerEnvironment
+    env.github_actions_runner_environment = envContext.githubActionsRunnerEnvironment;
   }
   if (envContext.githubActionsRunnerOs) {
-    env.github_actions_runner_os = envContext.githubActionsRunnerOs
+    env.github_actions_runner_os = envContext.githubActionsRunnerOs;
   }
   if (envContext.githubActionRef) {
-    env.github_action_ref = envContext.githubActionRef
+    env.github_action_ref = envContext.githubActionRef;
   }
   if (envContext.wslVersion) {
-    env.wsl_version = envContext.wslVersion
+    env.wsl_version = envContext.wslVersion;
   }
   if (envContext.linuxDistroId) {
-    env.linux_distro_id = envContext.linuxDistroId
+    env.linux_distro_id = envContext.linuxDistroId;
   }
   if (envContext.linuxDistroVersion) {
-    env.linux_distro_version = envContext.linuxDistroVersion
+    env.linux_distro_version = envContext.linuxDistroVersion;
   }
   if (envContext.linuxKernel) {
-    env.linux_kernel = envContext.linuxKernel
+    env.linux_kernel = envContext.linuxKernel;
   }
   if (envContext.vcs) {
-    env.vcs = envContext.vcs
+    env.vcs = envContext.vcs;
   }
   if (envContext.versionBase) {
-    env.version_base = envContext.versionBase
+    env.version_base = envContext.versionBase;
   }
 
   // Convert core fields to snake_case
@@ -897,39 +868,39 @@ export function to1PEventFormat(
     user_type: coreFields.userType,
     is_interactive: coreFields.isInteractive === 'true',
     client_type: coreFields.clientType,
-  }
+  };
 
   // Add other core fields
   if (coreFields.betas) {
-    core.betas = coreFields.betas
+    core.betas = coreFields.betas;
   }
   if (coreFields.entrypoint) {
-    core.entrypoint = coreFields.entrypoint
+    core.entrypoint = coreFields.entrypoint;
   }
   if (coreFields.agentSdkVersion) {
-    core.agent_sdk_version = coreFields.agentSdkVersion
+    core.agent_sdk_version = coreFields.agentSdkVersion;
   }
   if (coreFields.sweBenchRunId) {
-    core.swe_bench_run_id = coreFields.sweBenchRunId
+    core.swe_bench_run_id = coreFields.sweBenchRunId;
   }
   if (coreFields.sweBenchInstanceId) {
-    core.swe_bench_instance_id = coreFields.sweBenchInstanceId
+    core.swe_bench_instance_id = coreFields.sweBenchInstanceId;
   }
   if (coreFields.sweBenchTaskId) {
-    core.swe_bench_task_id = coreFields.sweBenchTaskId
+    core.swe_bench_task_id = coreFields.sweBenchTaskId;
   }
   // Swarm/team agent identification
   if (coreFields.agentId) {
-    core.agent_id = coreFields.agentId
+    core.agent_id = coreFields.agentId;
   }
   if (coreFields.parentSessionId) {
-    core.parent_session_id = coreFields.parentSessionId
+    core.parent_session_id = coreFields.parentSessionId;
   }
   if (coreFields.agentType) {
-    core.agent_type = coreFields.agentType
+    core.agent_type = coreFields.agentType;
   }
   if (coreFields.teamName) {
-    core.team_name = coreFields.teamName
+    core.team_name = coreFields.teamName;
   }
 
   // Map userMetadata to output fields.
@@ -939,20 +910,20 @@ export function to1PEventFormat(
   // Note: github_actions_metadata is placed inside env (EnvironmentMetadata)
   // rather than at the top level of ClaudeCodeInternalEvent
   if (userMetadata.githubActionsMetadata) {
-    const ghMeta = userMetadata.githubActionsMetadata
+    const ghMeta = userMetadata.githubActionsMetadata;
     env.github_actions_metadata = {
       actor_id: ghMeta.actorId,
       repository_id: ghMeta.repositoryId,
       repository_owner_id: ghMeta.repositoryOwnerId,
-    }
+    };
   }
 
-  let auth: PublicApiAuth | undefined
+  let auth: PublicApiAuth | undefined;
   if (userMetadata.accountUuid || userMetadata.organizationUuid) {
     auth = {
       account_uuid: userMetadata.accountUuid,
       organization_uuid: userMetadata.organizationUuid,
-    }
+    };
   }
 
   return {
@@ -969,5 +940,5 @@ export function to1PEventFormat(
       ...(observerMode && { observer_mode: observerMode }),
       ...additionalMetadata,
     },
-  }
+  };
 }

@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../ink.js';
 import { formatTokens } from '../utils/format.js';
 import { Select } from './CustomSelect/index.js';
@@ -12,11 +12,7 @@ type Props = {
 };
 export function IdleReturnDialog(t0) {
   const $ = _c(16);
-  const {
-    idleMinutes,
-    totalInputTokens,
-    onDone
-  } = t0;
+  const { idleMinutes, totalInputTokens, onDone } = t0;
   let t1;
   if ($[0] !== idleMinutes) {
     t1 = formatIdleDuration(idleMinutes);
@@ -38,52 +34,60 @@ export function IdleReturnDialog(t0) {
   const t3 = `You've been away ${formattedIdle} and this conversation is ${formattedTokens} tokens.`;
   let t4;
   if ($[4] !== onDone) {
-    t4 = () => onDone("dismiss");
+    t4 = () => onDone('dismiss');
     $[4] = onDone;
     $[5] = t4;
   } else {
     t4 = $[5];
   }
   let t5;
-  if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Box flexDirection="column"><Text>If this is a new task, clearing context will save usage and be faster.</Text></Box>;
+  if ($[6] === Symbol.for('react.memo_cache_sentinel')) {
+    t5 = (
+      <Box flexDirection="column">
+        <Text>If this is a new task, clearing context will save usage and be faster.</Text>
+      </Box>
+    );
     $[6] = t5;
   } else {
     t5 = $[6];
   }
   let t6;
-  if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[7] === Symbol.for('react.memo_cache_sentinel')) {
     t6 = {
-      value: "continue" as const,
-      label: "Continue this conversation"
+      value: 'continue' as const,
+      label: 'Continue this conversation',
     };
     $[7] = t6;
   } else {
     t6 = $[7];
   }
   let t7;
-  if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[8] === Symbol.for('react.memo_cache_sentinel')) {
     t7 = {
-      value: "clear" as const,
-      label: "Send message as a new conversation"
+      value: 'clear' as const,
+      label: 'Send message as a new conversation',
     };
     $[8] = t7;
   } else {
     t7 = $[8];
   }
   let t8;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = [t6, t7, {
-      value: "never" as const,
-      label: "Don't ask me again"
-    }];
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
+    t8 = [
+      t6,
+      t7,
+      {
+        value: 'never' as const,
+        label: "Don't ask me again",
+      },
+    ];
     $[9] = t8;
   } else {
     t8 = $[9];
   }
   let t9;
   if ($[10] !== onDone) {
-    t9 = <Select options={t8} onChange={value => onDone(value)} />;
+    t9 = <Select options={t8} onChange={(value) => onDone(value)} />;
     $[10] = onDone;
     $[11] = t9;
   } else {
@@ -91,7 +95,12 @@ export function IdleReturnDialog(t0) {
   }
   let t10;
   if ($[12] !== t3 || $[13] !== t4 || $[14] !== t9) {
-    t10 = <Dialog title={t3} onCancel={t4}>{t5}{t9}</Dialog>;
+    t10 = (
+      <Dialog title={t3} onCancel={t4}>
+        {t5}
+        {t9}
+      </Dialog>
+    );
     $[12] = t3;
     $[13] = t4;
     $[14] = t9;

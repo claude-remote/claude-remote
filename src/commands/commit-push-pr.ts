@@ -1,11 +1,8 @@
-import type { Command } from '../commands.js'
-import {
-  getAttributionTexts,
-  getEnhancedPRAttribution,
-} from '../utils/attribution.js'
-import { getDefaultBranch } from '../utils/git.js'
-import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js'
-import { getUndercoverInstructions, isUndercover } from '../utils/undercover.js'
+import type { Command } from '../commands.js';
+import { getAttributionTexts, getEnhancedPRAttribution } from '../utils/attribution.js';
+import { getDefaultBranch } from '../utils/git.js';
+import { executeShellCommandsInPrompt } from '../utils/promptShellExecution.js';
+import { getUndercoverInstructions, isUndercover } from '../utils/undercover.js';
 
 const ALLOWED_TOOLS = [
   'Bash(git checkout --branch:*)',
@@ -21,37 +18,33 @@ const ALLOWED_TOOLS = [
   'ToolSearch',
   'mcp__slack__send_message',
   'mcp__claude_ai_Slack__slack_send_message',
-]
+];
 
-function getPromptContent(
-  defaultBranch: string,
-  prAttribution?: string,
-): string {
-  const { commit: commitAttribution, pr: defaultPrAttribution } =
-    getAttributionTexts()
+function getPromptContent(defaultBranch: string, prAttribution?: string): string {
+  const { commit: commitAttribution, pr: defaultPrAttribution } = getAttributionTexts();
   // Use provided PR attribution or fall back to default
-  const effectivePrAttribution = prAttribution ?? defaultPrAttribution
-  const safeUser = process.env.SAFEUSER || ''
-  const username = process.env.USER || ''
+  const effectivePrAttribution = prAttribution ?? defaultPrAttribution;
+  const safeUser = process.env.SAFEUSER || '';
+  const username = process.env.USER || '';
 
-  let prefix = ''
-  let reviewerArg = ' and `--reviewer anthropics/claude-code`'
-  let addReviewerArg = ' (and add `--add-reviewer anthropics/claude-code`)'
+  let prefix = '';
+  let reviewerArg = ' and `--reviewer anthropics/claude-code`';
+  let addReviewerArg = ' (and add `--add-reviewer anthropics/claude-code`)';
   let changelogSection = `
 
 ## Changelog
 <!-- CHANGELOG:START -->
 [If this PR contains user-facing changes, add a changelog entry here. Otherwise, remove this section.]
-<!-- CHANGELOG:END -->`
+<!-- CHANGELOG:END -->`;
   let slackStep = `
 
-5. After creating/updating the PR, check if the user's CLAUDE.md mentions posting to Slack channels. If it does, use ToolSearch to search for "slack send message" tools. If ToolSearch finds a Slack tool, ask the user if they'd like you to post the PR URL to the relevant Slack channel. Only post if the user confirms. If ToolSearch returns no results or errors, skip this step silently—do not mention the failure, do not attempt workarounds, and do not try alternative approaches.`
+5. After creating/updating the PR, check if the user's CLAUDE.md mentions posting to Slack channels. If it does, use ToolSearch to search for "slack send message" tools. If ToolSearch finds a Slack tool, ask the user if they'd like you to post the PR URL to the relevant Slack channel. Only post if the user confirms. If ToolSearch returns no results or errors, skip this step silently—do not mention the failure, do not attempt workarounds, and do not try alternative approaches.`;
   if (process.env.USER_TYPE === 'ant' && isUndercover()) {
-    prefix = getUndercoverInstructions() + '\n'
-    reviewerArg = ''
-    addReviewerArg = ''
-    changelogSection = ''
-    slackStep = ''
+    prefix = `${getUndercoverInstructions()}\n`;
+    reviewerArg = '';
+    addReviewerArg = '';
+    changelogSection = '';
+    slackStep = '';
   }
 
   return `${prefix}## Context
@@ -79,7 +72,7 @@ Analyze all changes that will be included in the pull request, making sure to lo
 
 Based on the above changes:
 1. Create a new branch if on ${defaultBranch} (use SAFEUSER from context above for the branch name prefix, falling back to whoami if SAFEUSER is empty, e.g., \`username/feature-name\`)
-2. Create a single commit with an appropriate message using heredoc syntax${commitAttribution ? `, ending with the attribution text shown in the example below` : ''}:
+2. Create a single commit with an appropriate message using heredoc syntax${commitAttribution ? ', ending with the attribution text shown in the example below' : ''}:
 \`\`\`
 git commit -m "$(cat <<'EOF'
 Commit message here.${commitAttribution ? `\n\n${commitAttribution}` : ''}
@@ -102,7 +95,7 @@ EOF
 
 You have the capability to call multiple tools in a single response. You MUST do all of the above in a single message.${slackStep}
 
-Return the PR URL when you're done, so the user can see it.`
+Return the PR URL when you're done, so the user can see it.`;
 }
 
 const command = {
@@ -112,7 +105,7 @@ const command = {
   allowedTools: ALLOWED_TOOLS,
   get contentLength() {
     // Use 'main' as estimate for content length calculation
-    return getPromptContent('main').length
+    return getPromptContent('main').length;
   },
   progressMessage: 'creating commit and PR',
   source: 'builtin',
@@ -121,13 +114,13 @@ const command = {
     const [defaultBranch, prAttribution] = await Promise.all([
       getDefaultBranch(),
       getEnhancedPRAttribution(context.getAppState),
-    ])
-    let promptContent = getPromptContent(defaultBranch, prAttribution)
+    ]);
+    let promptContent = getPromptContent(defaultBranch, prAttribution);
 
     // Append user instructions if args provided
-    const trimmedArgs = args?.trim()
+    const trimmedArgs = args?.trim();
     if (trimmedArgs) {
-      promptContent += `\n\n## Additional instructions from user\n\n${trimmedArgs}`
+      promptContent += `\n\n## Additional instructions from user\n\n${trimmedArgs}`;
     }
 
     const finalContent = await executeShellCommandsInPrompt(
@@ -135,7 +128,7 @@ const command = {
       {
         ...context,
         getAppState() {
-          const appState = context.getAppState()
+          const appState = context.getAppState();
           return {
             ...appState,
             toolPermissionContext: {
@@ -145,14 +138,14 @@ const command = {
                 command: ALLOWED_TOOLS,
               },
             },
-          }
+          };
         },
       },
       '/commit-push-pr',
-    )
+    );
 
-    return [{ type: 'text', text: finalContent }]
+    return [{ type: 'text', text: finalContent }];
   },
-} satisfies Command
+} satisfies Command;
 
-export default command
+export default command;

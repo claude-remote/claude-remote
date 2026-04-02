@@ -23,8 +23,8 @@
  * See PR discussion 2956440848.
  */
 
-import { jsonStringify } from '../../utils/slowOperations.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { jsonStringify } from '../../utils/slowOperations.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js';
 
 /**
  * GrowthBook runtime gate — separate from the channels gate (tengu_harbor)
@@ -34,31 +34,24 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
  * don't apply until restart.
  */
 export function isChannelPermissionRelayEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor_permissions', false)
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor_permissions', false);
 }
 
 export type ChannelPermissionResponse = {
-  behavior: 'allow' | 'deny'
+  behavior: 'allow' | 'deny';
   /** Which channel server the reply came from (e.g., "plugin:telegram:tg"). */
-  fromServer: string
-}
+  fromServer: string;
+};
 
 export type ChannelPermissionCallbacks = {
   /** Register a resolver for a request ID. Returns unsubscribe. */
-  onResponse(
-    requestId: string,
-    handler: (response: ChannelPermissionResponse) => void,
-  ): () => void
+  onResponse(requestId: string, handler: (response: ChannelPermissionResponse) => void): () => void;
   /** Resolve a pending request from a structured channel event
    *  (notifications/claude/channel/permission). Returns true if the ID
    *  was pending — the server parsed the user's reply and emitted
    *  {request_id, behavior}; we just match against the map. */
-  resolve(
-    requestId: string,
-    behavior: 'allow' | 'deny',
-    fromServer: string,
-  ): boolean
-}
+  resolve(requestId: string, behavior: 'allow' | 'deny', fromServer: string): boolean;
+};
 
 /**
  * Reply format spec for channel servers to implement:
@@ -72,10 +65,10 @@ export type ChannelPermissionCallbacks = {
  * behavior} — CC doesn't regex-match text anymore. Exported so plugins can
  * import the exact regex rather than hand-copying it.
  */
-export const PERMISSION_REPLY_RE = /^\s*(y|yes|n|no)\s+([a-km-z]{5})\s*$/i
+export const PERMISSION_REPLY_RE = /^\s*(y|yes|n|no)\s+([a-km-z]{5})\s*$/i;
 
 // 25-letter alphabet: a-z minus 'l' (looks like 1/I). 25^5 ≈ 9.8M space.
-const ID_ALPHABET = 'abcdefghijkmnopqrstuvwxyz'
+const ID_ALPHABET = 'abcdefghijkmnopqrstuvwxyz';
 
 // Substring blocklist — 5 random letters can spell things (Kenneth, in the
 // launch thread: "this is why i bias to numbers, hard to have anything worse
@@ -107,24 +100,24 @@ const ID_AVOID_SUBSTRINGS = [
   'pee',
   'wank',
   'anus',
-]
+];
 
 function hashToId(input: string): string {
   // FNV-1a → uint32, then base-25 encode. Not crypto, just a stable
   // short letters-only ID. 32 bits / log2(25) ≈ 6.9 letters of entropy;
   // taking 5 wastes a little, plenty for this.
-  let h = 0x811c9dc5
+  let h = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
   }
-  h = h >>> 0
-  let s = ''
+  h = h >>> 0;
+  let s = '';
   for (let i = 0; i < 5; i++) {
-    s += ID_ALPHABET[h % 25]
-    h = Math.floor(h / 25)
+    s += ID_ALPHABET[h % 25];
+    h = Math.floor(h / 25);
   }
-  return s
+  return s;
 }
 
 /**
@@ -141,14 +134,14 @@ export function shortRequestId(toolUseID: string): string {
   // 7 length-3 × 3 positions × 25² + 15 length-4 × 2 × 25 + 2 length-5
   // ≈ 13,877 blocked IDs out of 9.8M — roughly 1 in 700 hits the blocklist.
   // Cap at 10 retries; (1/700)^10 is negligible.
-  let candidate = hashToId(toolUseID)
+  let candidate = hashToId(toolUseID);
   for (let salt = 0; salt < 10; salt++) {
-    if (!ID_AVOID_SUBSTRINGS.some(bad => candidate.includes(bad))) {
-      return candidate
+    if (!ID_AVOID_SUBSTRINGS.some((bad) => candidate.includes(bad))) {
+      return candidate;
     }
-    candidate = hashToId(`${toolUseID}:${salt}`)
+    candidate = hashToId(`${toolUseID}:${salt}`);
   }
-  return candidate
+  return candidate;
 }
 
 /**
@@ -159,10 +152,10 @@ export function shortRequestId(toolUseID: string): string {
  */
 export function truncateForPreview(input: unknown): string {
   try {
-    const s = jsonStringify(input)
-    return s.length > 200 ? s.slice(0, 200) + '…' : s
+    const s = jsonStringify(input);
+    return s.length > 200 ? `${s.slice(0, 200)}…` : s;
   } catch {
-    return '(unserializable)'
+    return '(unserializable)';
   }
 }
 
@@ -176,21 +169,18 @@ export function truncateForPreview(input: unknown): string {
  */
 export function filterPermissionRelayClients<
   T extends {
-    type: string
-    name: string
-    capabilities?: { experimental?: Record<string, unknown> }
+    type: string;
+    name: string;
+    capabilities?: { experimental?: Record<string, unknown> };
   },
->(
-  clients: readonly T[],
-  isInAllowlist: (name: string) => boolean,
-): (T & { type: 'connected' })[] {
+>(clients: readonly T[], isInAllowlist: (name: string) => boolean): (T & { type: 'connected' })[] {
   return clients.filter(
     (c): c is T & { type: 'connected' } =>
       c.type === 'connected' &&
       isInAllowlist(c.name) &&
       c.capabilities?.experimental?.['claude/channel'] !== undefined &&
       c.capabilities?.experimental?.['claude/channel/permission'] !== undefined,
-  )
+  );
 }
 
 /**
@@ -207,10 +197,7 @@ export function filterPermissionRelayClients<
  * general channel can't accidentally approve anything.
  */
 export function createChannelPermissionCallbacks(): ChannelPermissionCallbacks {
-  const pending = new Map<
-    string,
-    (response: ChannelPermissionResponse) => void
-  >()
+  const pending = new Map<string, (response: ChannelPermissionResponse) => void>();
 
   return {
     onResponse(requestId, handler) {
@@ -218,23 +205,23 @@ export function createChannelPermissionCallbacks(): ChannelPermissionCallbacks {
       // future caller passing a mixed-case ID would silently never match.
       // shortRequestId always emits lowercase so this is a noop today,
       // but the symmetry makes the contract explicit.
-      const key = requestId.toLowerCase()
-      pending.set(key, handler)
+      const key = requestId.toLowerCase();
+      pending.set(key, handler);
       return () => {
-        pending.delete(key)
-      }
+        pending.delete(key);
+      };
     },
 
     resolve(requestId, behavior, fromServer) {
-      const key = requestId.toLowerCase()
-      const resolver = pending.get(key)
-      if (!resolver) return false
+      const key = requestId.toLowerCase();
+      const resolver = pending.get(key);
+      if (!resolver) return false;
       // Delete BEFORE calling — if resolver throws or re-enters, the
       // entry is already gone. Also handles duplicate events (second
       // emission falls through — server bug or network dup, ignore).
-      pending.delete(key)
-      resolver({ behavior, fromServer })
-      return true
+      pending.delete(key);
+      resolver({ behavior, fromServer });
+      return true;
     },
-  }
+  };
 }

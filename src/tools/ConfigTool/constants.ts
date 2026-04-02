@@ -1,1 +1,1 @@
-export const CONFIG_TOOL_NAME = 'Config'
+export const CONFIG_TOOL_NAME = 'Config';

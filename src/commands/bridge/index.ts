@@ -1,12 +1,12 @@
-import { feature } from 'src/utils/feature.js'
-import { isBridgeEnabled } from '../../bridge/bridgeEnabled.js'
-import type { Command } from '../../commands.js'
+import { feature } from 'src/utils/feature.js';
+import { isBridgeEnabled } from '../../bridge/bridgeEnabled.js';
+import type { Command } from '../../commands.js';
 
 function isEnabled(): boolean {
   if (!feature('BRIDGE_MODE')) {
-    return false
+    return false;
   }
-  return isBridgeEnabled()
+  return isBridgeEnabled();
 }
 
 const bridge = {
@@ -17,10 +17,10 @@ const bridge = {
   argumentHint: '[name]',
   isEnabled,
   get isHidden() {
-    return !isEnabled()
+    return !isEnabled();
   },
   immediate: true,
   load: () => import('./bridge.js'),
-} satisfies Command
+} satisfies Command;
 
-export default bridge
+export default bridge;

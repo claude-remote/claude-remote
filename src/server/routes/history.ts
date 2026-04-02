@@ -1,7 +1,7 @@
 import type { Hono } from 'hono';
 
-import type { HistorySearchResult } from '@/shared/types';
 import type { Hub } from '@/hub/Hub';
+import type { HistorySearchResult } from '@/shared/types';
 
 export function registerHistoryRoutes(app: Hono, _hub: Hub): Hono {
   // GET /api/history/search?q=xxx&scope=session|all&sessionId=xxx&limit=20
@@ -9,7 +9,7 @@ export function registerHistoryRoutes(app: Hono, _hub: Hub): Hono {
     const query = context.req.query('q') ?? context.req.query('query') ?? '';
     const scope = context.req.query('scope') ?? 'session';
     const sessionId = context.req.query('sessionId');
-    const limit = parseInt(context.req.query('limit') ?? '20', 10);
+    const limit = Number.parseInt(context.req.query('limit') ?? '20', 10);
 
     if (!query.trim()) {
       return context.json({ error: 'Search query required (q parameter)' }, 400);

@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
 import type { HistorySearchResult } from '@/shared/types';
+import { useCallback, useMemo, useState } from 'react';
 
 interface FileViewerProps {
   path: string;
@@ -18,13 +18,36 @@ const LINES_PER_PAGE = 500;
 function detectLanguage(path: string): string {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
   const map: Record<string, string> = {
-    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
-    py: 'python', rs: 'rust', go: 'go', rb: 'ruby', java: 'java',
-    c: 'c', cpp: 'cpp', h: 'c', hpp: 'cpp',
-    sh: 'shell', bash: 'shell', zsh: 'shell', fish: 'shell',
-    json: 'json', yaml: 'yaml', yml: 'yaml', toml: 'toml',
-    md: 'markdown', css: 'css', html: 'html', xml: 'xml', sql: 'sql',
-    lua: 'lua', zig: 'zig', swift: 'swift', kt: 'kotlin',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    rs: 'rust',
+    go: 'go',
+    rb: 'ruby',
+    java: 'java',
+    c: 'c',
+    cpp: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
+    sh: 'shell',
+    bash: 'shell',
+    zsh: 'shell',
+    fish: 'shell',
+    json: 'json',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'toml',
+    md: 'markdown',
+    css: 'css',
+    html: 'html',
+    xml: 'xml',
+    sql: 'sql',
+    lua: 'lua',
+    zig: 'zig',
+    swift: 'swift',
+    kt: 'kotlin',
   };
   return map[ext] || 'plaintext';
 }
@@ -47,18 +70,62 @@ function highlightLine(line: string, lang: string): (string | JSX.Element)[] {
   const commentPrefix = commentPatterns[lang] || '//';
 
   const keywords = new Set([
-    'import', 'export', 'from', 'const', 'let', 'var', 'function', 'return',
-    'if', 'else', 'for', 'while', 'class', 'interface', 'type', 'enum',
-    'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'super',
-    'def', 'fn', 'pub', 'mod', 'use', 'struct', 'impl', 'trait',
-    'func', 'package', 'defer', 'go', 'select', 'case', 'switch',
-    'true', 'false', 'null', 'undefined', 'None', 'nil', 'self',
+    'import',
+    'export',
+    'from',
+    'const',
+    'let',
+    'var',
+    'function',
+    'return',
+    'if',
+    'else',
+    'for',
+    'while',
+    'class',
+    'interface',
+    'type',
+    'enum',
+    'async',
+    'await',
+    'try',
+    'catch',
+    'throw',
+    'new',
+    'this',
+    'super',
+    'def',
+    'fn',
+    'pub',
+    'mod',
+    'use',
+    'struct',
+    'impl',
+    'trait',
+    'func',
+    'package',
+    'defer',
+    'go',
+    'select',
+    'case',
+    'switch',
+    'true',
+    'false',
+    'null',
+    'undefined',
+    'None',
+    'nil',
+    'self',
   ]);
 
   // Check for full-line comment
   const trimmed = line.trimStart();
   if (trimmed.startsWith(commentPrefix) || (lang === 'html' && trimmed.startsWith('<!--'))) {
-    return [<span key="c" className="text-gray-500 italic">{line}</span>];
+    return [
+      <span key="c" className="text-gray-500 italic">
+        {line}
+      </span>,
+    ];
   }
 
   // Tokenize: strings, then words
@@ -76,15 +143,21 @@ function highlightLine(line: string, lang: string): (string | JSX.Element)[] {
     const token = match[0];
     if (token.startsWith('"') || token.startsWith("'") || token.startsWith('`')) {
       fragments.push(
-        <span key={`s${keyIdx++}`} className="text-amber-400">{token}</span>
+        <span key={`s${keyIdx++}`} className="text-amber-400">
+          {token}
+        </span>,
       );
     } else if (keywords.has(token)) {
       fragments.push(
-        <span key={`k${keyIdx++}`} className="text-purple-400 font-semibold">{token}</span>
+        <span key={`k${keyIdx++}`} className="text-purple-400 font-semibold">
+          {token}
+        </span>,
       );
     } else if (/^\d+(\.\d+)?$/.test(token)) {
       fragments.push(
-        <span key={`n${keyIdx++}`} className="text-cyan-400">{token}</span>
+        <span key={`n${keyIdx++}`} className="text-cyan-400">
+          {token}
+        </span>,
       );
     } else {
       fragments.push(token);
@@ -181,9 +254,7 @@ export function FileViewer({
             disabled={loading}
             className="rounded border border-gray-700 px-3 py-1 text-xs text-gray-400 hover:border-gray-600 hover:text-gray-200 disabled:opacity-50 transition-colors"
           >
-            {loading
-              ? 'Loading...'
-              : `Load more (showing ${displayedCount} of ${total} lines)`}
+            {loading ? 'Loading...' : `Load more (showing ${displayedCount} of ${total} lines)`}
           </button>
         </div>
       )}

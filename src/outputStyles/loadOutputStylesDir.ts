@@ -1,14 +1,14 @@
-import memoize from 'lodash-es/memoize.js'
-import { basename } from 'path'
-import type { OutputStyleConfig } from '../constants/outputStyles.js'
-import { logForDebugging } from '../utils/debug.js'
-import { coerceDescriptionToString } from '../utils/frontmatterParser.js'
-import { logError } from '../utils/log.js'
+import { basename } from 'node:path';
+import memoize from 'lodash-es/memoize.js';
+import type { OutputStyleConfig } from '../constants/outputStyles.js';
+import { logForDebugging } from '../utils/debug.js';
+import { coerceDescriptionToString } from '../utils/frontmatterParser.js';
+import { logError } from '../utils/log.js';
 import {
   extractDescriptionFromMarkdown,
   loadMarkdownFilesForSubdir,
-} from '../utils/markdownConfigLoader.js'
-import { clearPluginOutputStyleCache } from '../utils/plugins/loadPluginOutputStyles.js'
+} from '../utils/markdownConfigLoader.js';
+import { clearPluginOutputStyleCache } from '../utils/plugins/loadPluginOutputStyles.js';
 
 /**
  * Loads markdown files from .claude/output-styles directories throughout the project
@@ -26,47 +26,35 @@ import { clearPluginOutputStyleCache } from '../utils/plugins/loadPluginOutputSt
 export const getOutputStyleDirStyles = memoize(
   async (cwd: string): Promise<OutputStyleConfig[]> => {
     try {
-      const markdownFiles = await loadMarkdownFilesForSubdir(
-        'output-styles',
-        cwd,
-      )
+      const markdownFiles = await loadMarkdownFilesForSubdir('output-styles', cwd);
 
       const styles = markdownFiles
         .map(({ filePath, frontmatter, content, source }) => {
           try {
-            const fileName = basename(filePath)
-            const styleName = fileName.replace(/\.md$/, '')
+            const fileName = basename(filePath);
+            const styleName = fileName.replace(/\.md$/, '');
 
             // Get style configuration from frontmatter
-            const name = (frontmatter['name'] || styleName) as string
+            const name = (frontmatter.name || styleName) as string;
             const description =
-              coerceDescriptionToString(
-                frontmatter['description'],
-                styleName,
-              ) ??
-              extractDescriptionFromMarkdown(
-                content,
-                `Custom ${styleName} output style`,
-              )
+              coerceDescriptionToString(frontmatter.description, styleName) ??
+              extractDescriptionFromMarkdown(content, `Custom ${styleName} output style`);
 
             // Parse keep-coding-instructions flag (supports both boolean and string values)
-            const keepCodingInstructionsRaw =
-              frontmatter['keep-coding-instructions']
+            const keepCodingInstructionsRaw = frontmatter['keep-coding-instructions'];
             const keepCodingInstructions =
-              keepCodingInstructionsRaw === true ||
-              keepCodingInstructionsRaw === 'true'
+              keepCodingInstructionsRaw === true || keepCodingInstructionsRaw === 'true'
                 ? true
-                : keepCodingInstructionsRaw === false ||
-                    keepCodingInstructionsRaw === 'false'
+                : keepCodingInstructionsRaw === false || keepCodingInstructionsRaw === 'false'
                   ? false
-                  : undefined
+                  : undefined;
 
             // Warn if force-for-plugin is set on non-plugin output style
             if (frontmatter['force-for-plugin'] !== undefined) {
               logForDebugging(
                 `Output style "${name}" has force-for-plugin set, but this option only applies to plugin output styles. Ignoring.`,
                 { level: 'warn' },
-              )
+              );
             }
 
             return {
@@ -75,24 +63,24 @@ export const getOutputStyleDirStyles = memoize(
               prompt: content.trim(),
               source,
               keepCodingInstructions,
-            }
+            };
           } catch (error) {
-            logError(error)
-            return null
+            logError(error);
+            return null;
           }
         })
-        .filter(style => style !== null)
+        .filter((style) => style !== null);
 
-      return styles
+      return styles;
     } catch (error) {
-      logError(error)
-      return []
+      logError(error);
+      return [];
     }
   },
-)
+);
 
 export function clearOutputStyleCaches(): void {
-  getOutputStyleDirStyles.cache?.clear?.()
-  loadMarkdownFilesForSubdir.cache?.clear?.()
-  clearPluginOutputStyleCache()
+  getOutputStyleDirStyles.cache?.clear?.();
+  loadMarkdownFilesForSubdir.cache?.clear?.();
+  clearPluginOutputStyleCache();
 }

@@ -1,9 +1,9 @@
-import emojiRegex from 'emoji-regex'
-import { eastAsianWidth } from 'get-east-asian-width'
-import stripAnsi from 'strip-ansi'
-import { getGraphemeSegmenter } from '../utils/intl.js'
+import emojiRegex from 'emoji-regex';
+import { eastAsianWidth } from 'get-east-asian-width';
+import stripAnsi from 'strip-ansi';
+import { getGraphemeSegmenter } from '../utils/intl.js';
 
-const EMOJI_REGEX = emojiRegex()
+const EMOJI_REGEX = emojiRegex();
 
 /**
  * Fallback JavaScript implementation of stringWidth when Bun.stringWidth is not available.
@@ -19,120 +19,120 @@ const EMOJI_REGEX = emojiRegex()
  */
 function stringWidthJavaScript(str: string): number {
   if (typeof str !== 'string' || str.length === 0) {
-    return 0
+    return 0;
   }
 
   // Fast path: pure ASCII string (no ANSI codes, no wide chars)
-  let isPureAscii = true
+  let isPureAscii = true;
   for (let i = 0; i < str.length; i++) {
-    const code = str.charCodeAt(i)
+    const code = str.charCodeAt(i);
     // Check for non-ASCII or ANSI escape (0x1b)
     if (code >= 127 || code === 0x1b) {
-      isPureAscii = false
-      break
+      isPureAscii = false;
+      break;
     }
   }
   if (isPureAscii) {
     // Count printable characters (exclude control chars)
-    let width = 0
+    let width = 0;
     for (let i = 0; i < str.length; i++) {
-      const code = str.charCodeAt(i)
+      const code = str.charCodeAt(i);
       if (code > 0x1f) {
-        width++
+        width++;
       }
     }
-    return width
+    return width;
   }
 
   // Strip ANSI if escape character is present
   if (str.includes('\x1b')) {
-    str = stripAnsi(str)
+    str = stripAnsi(str);
     if (str.length === 0) {
-      return 0
+      return 0;
     }
   }
 
   // Fast path: simple Unicode (no emoji, variation selectors, or joiners)
   if (!needsSegmentation(str)) {
-    let width = 0
+    let width = 0;
     for (const char of str) {
-      const codePoint = char.codePointAt(0)!
+      const codePoint = char.codePointAt(0)!;
       if (!isZeroWidth(codePoint)) {
-        width += eastAsianWidth(codePoint, { ambiguousAsWide: false })
+        width += eastAsianWidth(codePoint, { ambiguousAsWide: false });
       }
     }
-    return width
+    return width;
   }
 
-  let width = 0
+  let width = 0;
 
   for (const { segment: grapheme } of getGraphemeSegmenter().segment(str)) {
     // Check for emoji first (most emoji sequences are width 2)
-    EMOJI_REGEX.lastIndex = 0
+    EMOJI_REGEX.lastIndex = 0;
     if (EMOJI_REGEX.test(grapheme)) {
-      width += getEmojiWidth(grapheme)
-      continue
+      width += getEmojiWidth(grapheme);
+      continue;
     }
 
     // Calculate width for non-emoji graphemes
     // For grapheme clusters (like Devanagari conjuncts with virama+ZWJ), only count
     // the first non-zero-width character's width since the cluster renders as one glyph
     for (const char of grapheme) {
-      const codePoint = char.codePointAt(0)!
+      const codePoint = char.codePointAt(0)!;
       if (!isZeroWidth(codePoint)) {
-        width += eastAsianWidth(codePoint, { ambiguousAsWide: false })
-        break
+        width += eastAsianWidth(codePoint, { ambiguousAsWide: false });
+        break;
       }
     }
   }
 
-  return width
+  return width;
 }
 
 function needsSegmentation(str: string): boolean {
   for (const char of str) {
-    const cp = char.codePointAt(0)!
+    const cp = char.codePointAt(0)!;
     // Emoji ranges
-    if (cp >= 0x1f300 && cp <= 0x1faff) return true
-    if (cp >= 0x2600 && cp <= 0x27bf) return true
-    if (cp >= 0x1f1e6 && cp <= 0x1f1ff) return true
+    if (cp >= 0x1f300 && cp <= 0x1faff) return true;
+    if (cp >= 0x2600 && cp <= 0x27bf) return true;
+    if (cp >= 0x1f1e6 && cp <= 0x1f1ff) return true;
     // Variation selectors, ZWJ
-    if (cp >= 0xfe00 && cp <= 0xfe0f) return true
-    if (cp === 0x200d) return true
+    if (cp >= 0xfe00 && cp <= 0xfe0f) return true;
+    if (cp === 0x200d) return true;
   }
-  return false
+  return false;
 }
 
 function getEmojiWidth(grapheme: string): number {
   // Regional indicators: single = 1, pair = 2
-  const first = grapheme.codePointAt(0)!
+  const first = grapheme.codePointAt(0)!;
   if (first >= 0x1f1e6 && first <= 0x1f1ff) {
-    let count = 0
-    for (const _ of grapheme) count++
-    return count === 1 ? 1 : 2
+    let count = 0;
+    for (const _ of grapheme) count++;
+    return count === 1 ? 1 : 2;
   }
 
   // Incomplete keycap: digit/symbol + VS16 without U+20E3
   if (grapheme.length === 2) {
-    const second = grapheme.codePointAt(1)
+    const second = grapheme.codePointAt(1);
     if (
       second === 0xfe0f &&
       ((first >= 0x30 && first <= 0x39) || first === 0x23 || first === 0x2a)
     ) {
-      return 1
+      return 1;
     }
   }
 
-  return 2
+  return 2;
 }
 
 function isZeroWidth(codePoint: number): boolean {
   // Fast path for common printable range
-  if (codePoint >= 0x20 && codePoint < 0x7f) return false
-  if (codePoint >= 0xa0 && codePoint < 0x0300) return codePoint === 0x00ad
+  if (codePoint >= 0x20 && codePoint < 0x7f) return false;
+  if (codePoint >= 0xa0 && codePoint < 0x0300) return codePoint === 0x00ad;
 
   // Control characters
-  if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) return true
+  if (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f)) return true;
 
   // Zero-width and invisible characters
   if (
@@ -140,7 +140,7 @@ function isZeroWidth(codePoint: number): boolean {
     codePoint === 0xfeff || // BOM
     (codePoint >= 0x2060 && codePoint <= 0x2064) // Word joiner etc.
   ) {
-    return true
+    return true;
   }
 
   // Variation selectors
@@ -148,7 +148,7 @@ function isZeroWidth(codePoint: number): boolean {
     (codePoint >= 0xfe00 && codePoint <= 0xfe0f) ||
     (codePoint >= 0xe0100 && codePoint <= 0xe01ef)
   ) {
-    return true
+    return true;
   }
 
   // Combining diacritical marks
@@ -159,17 +159,17 @@ function isZeroWidth(codePoint: number): boolean {
     (codePoint >= 0x20d0 && codePoint <= 0x20ff) ||
     (codePoint >= 0xfe20 && codePoint <= 0xfe2f)
   ) {
-    return true
+    return true;
   }
 
   // Indic script combining marks (covers Devanagari through Malayalam)
   if (codePoint >= 0x0900 && codePoint <= 0x0d4f) {
     // Signs and vowel marks at start of each script block
-    const offset = codePoint & 0x7f
-    if (offset <= 0x03) return true // Signs at block start
-    if (offset >= 0x3a && offset <= 0x4f) return true // Vowel signs, virama
-    if (offset >= 0x51 && offset <= 0x57) return true // Stress signs
-    if (offset >= 0x62 && offset <= 0x63) return true // Vowel signs
+    const offset = codePoint & 0x7f;
+    if (offset <= 0x03) return true; // Signs at block start
+    if (offset >= 0x3a && offset <= 0x4f) return true; // Vowel signs, virama
+    if (offset >= 0x51 && offset <= 0x57) return true; // Stress signs
+    if (offset >= 0x62 && offset <= 0x63) return true; // Vowel signs
   }
 
   // Thai/Lao combining marks
@@ -182,7 +182,7 @@ function isZeroWidth(codePoint: number): boolean {
     (codePoint >= 0x0eb4 && codePoint <= 0x0ebc) || // Lao vowel signs (skip U+0EB2, U+0EB3)
     (codePoint >= 0x0ec8 && codePoint <= 0x0ecd) // Lao tone marks
   ) {
-    return true
+    return true;
   }
 
   // Arabic formatting
@@ -192,14 +192,14 @@ function isZeroWidth(codePoint: number): boolean {
     codePoint === 0x070f ||
     codePoint === 0x08e2
   ) {
-    return true
+    return true;
   }
 
   // Surrogates, tag characters
-  if (codePoint >= 0xd800 && codePoint <= 0xdfff) return true
-  if (codePoint >= 0xe0000 && codePoint <= 0xe007f) return true
+  if (codePoint >= 0xd800 && codePoint <= 0xdfff) return true;
+  if (codePoint >= 0xe0000 && codePoint <= 0xe007f) return true;
 
-  return false
+  return false;
 }
 
 // Note: complex-script graphemes like Devanagari क्ष (ka+virama+ZWJ+ssa) render
@@ -211,12 +211,10 @@ function isZeroWidth(codePoint: number): boolean {
 // Bun.stringWidth is resolved once at module scope rather than checked on every
 // call — typeof guards deopt property access and this is a hot path (~100k calls/frame).
 const bunStringWidth =
-  typeof Bun !== 'undefined' && typeof Bun.stringWidth === 'function'
-    ? Bun.stringWidth
-    : null
+  typeof Bun !== 'undefined' && typeof Bun.stringWidth === 'function' ? Bun.stringWidth : null;
 
-const BUN_STRING_WIDTH_OPTS = { ambiguousIsNarrow: true } as const
+const BUN_STRING_WIDTH_OPTS = { ambiguousIsNarrow: true } as const;
 
 export const stringWidth: (str: string) => number = bunStringWidth
-  ? str => bunStringWidth(str, BUN_STRING_WIDTH_OPTS)
-  : stringWidthJavaScript
+  ? (str) => bunStringWidth(str, BUN_STRING_WIDTH_OPTS)
+  : stringWidthJavaScript;

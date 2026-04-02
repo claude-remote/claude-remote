@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
-import { feature } from 'src/utils/feature.js';
 import React, { useEffect } from 'react';
+import { c as _c } from 'react/compiler-runtime';
+import { feature } from 'src/utils/feature.js';
 import { useNotifications } from '../context/notifications.js';
 import { Text } from '../ink.js';
 import { getGlobalConfig } from '../utils/config.js';
@@ -18,16 +18,14 @@ export function isBuddyTeaserWindow(): boolean {
 export function isBuddyLive(): boolean {
   if (IS_ANT_BUILD) return true;
   const d = new Date();
-  return d.getFullYear() > 2026 || d.getFullYear() === 2026 && d.getMonth() >= 3;
+  return d.getFullYear() > 2026 || (d.getFullYear() === 2026 && d.getMonth() >= 3);
 }
 function RainbowText(t0) {
   const $ = _c(2);
-  const {
-    text
-  } = t0;
+  const { text } = t0;
   let t1;
   if ($[0] !== text) {
-    t1 = <>{[...text].map(_temp)}</>;
+    t1 = [...text].map(_temp);
     $[0] = text;
     $[1] = t1;
   } else {
@@ -39,19 +37,20 @@ function RainbowText(t0) {
 // Rainbow /buddy teaser shown on startup when no companion hatched yet.
 // Idle presence and reactions are handled by CompanionSprite directly.
 function _temp(ch, i) {
-  return <Text key={i} color={getRainbowColor(i)}>{ch}</Text>;
+  return (
+    <Text key={i} color={getRainbowColor(i)}>
+      {ch}
+    </Text>
+  );
 }
 export function useBuddyNotification() {
   const $ = _c(4);
-  const {
-    addNotification,
-    removeNotification
-  } = useNotifications();
+  const { addNotification, removeNotification } = useNotifications();
   let t0;
   let t1;
   if ($[0] !== addNotification || $[1] !== removeNotification) {
     t0 = () => {
-      if (!feature("BUDDY")) {
+      if (!feature('BUDDY')) {
         return;
       }
       const config = getGlobalConfig();
@@ -59,12 +58,12 @@ export function useBuddyNotification() {
         return;
       }
       addNotification({
-        key: "buddy-teaser",
+        key: 'buddy-teaser',
         jsx: <RainbowText text="/buddy" />,
-        priority: "immediate",
-        timeoutMs: 15000
+        priority: 'immediate',
+        timeoutMs: 15000,
       });
-      return () => removeNotification("buddy-teaser");
+      return () => removeNotification('buddy-teaser');
     };
     t1 = [addNotification, removeNotification];
     $[0] = addNotification;
@@ -91,7 +90,7 @@ export function findBuddyTriggerPositions(text: string): Array<{
   while ((m = re.exec(text)) !== null) {
     triggers.push({
       start: m.index,
-      end: m.index + m[0].length
+      end: m.index + m[0].length,
     });
   }
   return triggers;

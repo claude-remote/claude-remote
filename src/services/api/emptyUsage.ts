@@ -1,4 +1,4 @@
-import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js'
+import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js';
 
 /**
  * Zero-initialized usage object. Extracted from logging.ts so that
@@ -19,4 +19,4 @@ export const EMPTY_USAGE: Readonly<NonNullableUsage> = {
   inference_geo: '',
   iterations: [],
   speed: 'standard',
-}
+};

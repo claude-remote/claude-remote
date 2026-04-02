@@ -1,13 +1,10 @@
-import { logEvent } from '../services/analytics/index.js'
+import { logEvent } from '../services/analytics/index.js';
 import {
   getDefaultMainLoopModelSetting,
   isOpus1mMergeEnabled,
   parseUserSpecifiedModel,
-} from '../utils/model/model.js'
-import {
-  getSettingsForSource,
-  updateSettingsForSource,
-} from '../utils/settings/settings.js'
+} from '../utils/model/model.js';
+import { getSettingsForSource, updateSettingsForSource } from '../utils/settings/settings.js';
 
 /**
  * Migrate users with 'opus' pinned in their settings to 'opus[1m]' when they
@@ -23,21 +20,20 @@ import {
  */
 export function migrateOpusToOpus1m(): void {
   if (!isOpus1mMergeEnabled()) {
-    return
+    return;
   }
 
-  const model = getSettingsForSource('userSettings')?.model
+  const model = getSettingsForSource('userSettings')?.model;
   if (model !== 'opus') {
-    return
+    return;
   }
 
-  const migrated = 'opus[1m]'
+  const migrated = 'opus[1m]';
   const modelToSet =
-    parseUserSpecifiedModel(migrated) ===
-    parseUserSpecifiedModel(getDefaultMainLoopModelSetting())
+    parseUserSpecifiedModel(migrated) === parseUserSpecifiedModel(getDefaultMainLoopModelSetting())
       ? undefined
-      : migrated
-  updateSettingsForSource('userSettings', { model: modelToSet })
+      : migrated;
+  updateSettingsForSource('userSettings', { model: modelToSet });
 
-  logEvent('tengu_opus_to_opus1m_migration', {})
+  logEvent('tengu_opus_to_opus1m_migration', {});
 }

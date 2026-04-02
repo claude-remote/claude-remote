@@ -109,5 +109,5 @@ Teammates should:
 - Use TaskUpdate to mark tasks completed.
 - If you are an agent in the team, the system will automatically send idle notifications to the team lead when you stop.
 
-`.trim()
+`.trim();
 }

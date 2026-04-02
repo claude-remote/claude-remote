@@ -1,19 +1,19 @@
-import axios from 'axios'
+import axios from 'axios';
 
-import { debugBody, extractErrorDetail } from './debugUtils.js'
+import { debugBody, extractErrorDetail } from './debugUtils.js';
 import {
   BRIDGE_LOGIN_INSTRUCTION,
   type BridgeApiClient,
   type BridgeConfig,
   type PermissionResponseEvent,
   type WorkResponse,
-} from './types.js'
+} from './types.js';
 
 type BridgeApiDeps = {
-  baseUrl: string
-  getAccessToken: () => string | undefined
-  runnerVersion: string
-  onDebug?: (msg: string) => void
+  baseUrl: string;
+  getAccessToken: () => string | undefined;
+  runnerVersion: string;
+  onDebug?: (msg: string) => void;
   /**
    * Called on 401 to attempt OAuth token refresh. Returns true if refreshed,
    * in which case the request is retried once. Injected because
@@ -22,7 +22,7 @@ type BridgeApiDeps = {
    * (~1300 modules). Daemon callers using env-var tokens omit this — their
    * tokens don't refresh, so 401 goes straight to BridgeFatalError.
    */
-  onAuth401?: (staleAccessToken: string) => Promise<boolean>
+  onAuth401?: (staleAccessToken: string) => Promise<boolean>;
   /**
    * Returns the trusted device token to send as X-Trusted-Device-Token on
    * bridge API calls. Bridge sessions have SecurityTier=ELEVATED on the
@@ -32,13 +32,13 @@ type BridgeApiDeps = {
    * and the server falls through to its flag-off/no-op path. The CLI-side
    * gate is tengu_sessions_elevated_auth_enforcement (see trustedDevice.ts).
    */
-  getTrustedDeviceToken?: () => string | undefined
-}
+  getTrustedDeviceToken?: () => string | undefined;
+};
 
-const BETA_HEADER = 'environments-2025-11-01'
+const BETA_HEADER = 'environments-2025-11-01';
 
 /** Allowlist pattern for server-provided IDs used in URL path segments. */
-const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
+const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 /**
  * Validate that a server-provided ID is safe to interpolate into a URL path.
@@ -47,31 +47,31 @@ const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]+$/
  */
 export function validateBridgeId(id: string, label: string): string {
   if (!id || !SAFE_ID_PATTERN.test(id)) {
-    throw new Error(`Invalid ${label}: contains unsafe characters`)
+    throw new Error(`Invalid ${label}: contains unsafe characters`);
   }
-  return id
+  return id;
 }
 
 /** Fatal bridge errors that should not be retried (e.g. auth failures). */
 export class BridgeFatalError extends Error {
-  readonly status: number
+  readonly status: number;
   /** Server-provided error type, e.g. "environment_expired". */
-  readonly errorType: string | undefined
+  readonly errorType: string | undefined;
   constructor(message: string, status: number, errorType?: string) {
-    super(message)
-    this.name = 'BridgeFatalError'
-    this.status = status
-    this.errorType = errorType
+    super(message);
+    this.name = 'BridgeFatalError';
+    this.status = status;
+    this.errorType = errorType;
   }
 }
 
 export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
   function debug(msg: string): void {
-    deps.onDebug?.(msg)
+    deps.onDebug?.(msg);
   }
 
-  let consecutiveEmptyPolls = 0
-  const EMPTY_POLL_LOG_INTERVAL = 100
+  let consecutiveEmptyPolls = 0;
+  const EMPTY_POLL_LOG_INTERVAL = 100;
 
   function getHeaders(accessToken: string): Record<string, string> {
     const headers: Record<string, string> = {
@@ -80,20 +80,20 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       'anthropic-version': '2023-06-01',
       'anthropic-beta': BETA_HEADER,
       'x-environment-runner-version': deps.runnerVersion,
-    }
-    const deviceToken = deps.getTrustedDeviceToken?.()
+    };
+    const deviceToken = deps.getTrustedDeviceToken?.();
     if (deviceToken) {
-      headers['X-Trusted-Device-Token'] = deviceToken
+      headers['X-Trusted-Device-Token'] = deviceToken;
     }
-    return headers
+    return headers;
   }
 
   function resolveAuth(): string {
-    const accessToken = deps.getAccessToken()
+    const accessToken = deps.getAccessToken();
     if (!accessToken) {
-      throw new Error(BRIDGE_LOGIN_INSTRUCTION)
+      throw new Error(BRIDGE_LOGIN_INSTRUCTION);
     }
-    return accessToken
+    return accessToken;
   }
 
   /**
@@ -107,50 +107,48 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
     fn: (accessToken: string) => Promise<{ status: number; data: T }>,
     context: string,
   ): Promise<{ status: number; data: T }> {
-    const accessToken = resolveAuth()
-    const response = await fn(accessToken)
+    const accessToken = resolveAuth();
+    const response = await fn(accessToken);
 
     if (response.status !== 401) {
-      return response
+      return response;
     }
 
     if (!deps.onAuth401) {
-      debug(`[bridge:api] ${context}: 401 received, no refresh handler`)
-      return response
+      debug(`[bridge:api] ${context}: 401 received, no refresh handler`);
+      return response;
     }
 
     // Attempt token refresh — matches the pattern in withRetry.ts
-    debug(`[bridge:api] ${context}: 401 received, attempting token refresh`)
-    const refreshed = await deps.onAuth401(accessToken)
+    debug(`[bridge:api] ${context}: 401 received, attempting token refresh`);
+    const refreshed = await deps.onAuth401(accessToken);
     if (refreshed) {
-      debug(`[bridge:api] ${context}: Token refreshed, retrying request`)
-      const newToken = resolveAuth()
-      const retryResponse = await fn(newToken)
+      debug(`[bridge:api] ${context}: Token refreshed, retrying request`);
+      const newToken = resolveAuth();
+      const retryResponse = await fn(newToken);
       if (retryResponse.status !== 401) {
-        return retryResponse
+        return retryResponse;
       }
-      debug(`[bridge:api] ${context}: Retry after refresh also got 401`)
+      debug(`[bridge:api] ${context}: Retry after refresh also got 401`);
     } else {
-      debug(`[bridge:api] ${context}: Token refresh failed`)
+      debug(`[bridge:api] ${context}: Token refresh failed`);
     }
 
     // Refresh failed — return 401 for handleErrorStatus to throw
-    return response
+    return response;
   }
 
   return {
     async registerBridgeEnvironment(
       config: BridgeConfig,
     ): Promise<{ environment_id: string; environment_secret: string }> {
-      debug(
-        `[bridge:api] POST /v1/environments/bridge bridgeId=${config.bridgeId}`,
-      )
+      debug(`[bridge:api] POST /v1/environments/bridge bridgeId=${config.bridgeId}`);
 
       const response = await withOAuthRetry(
         (token: string) =>
           axios.post<{
-            environment_id: string
-            environment_secret: string
+            environment_id: string;
+            environment_secret: string;
           }>(
             `${deps.baseUrl}/v1/environments/bridge`,
             {
@@ -179,21 +177,21 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 15_000,
-              validateStatus: status => status < 500,
+              validateStatus: (status) => status < 500,
             },
           ),
         'Registration',
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'Registration')
+      handleErrorStatus(response.status, response.data, 'Registration');
       debug(
         `[bridge:api] POST /v1/environments/bridge -> ${response.status} environment_id=${response.data.environment_id}`,
-      )
+      );
       debug(
         `[bridge:api] >>> ${debugBody({ machine_name: config.machineName, directory: config.dir, branch: config.branch, git_repo_url: config.gitRepoUrl, max_sessions: config.maxSessions, metadata: { worker_type: config.workerType } })}`,
-      )
-      debug(`[bridge:api] <<< ${debugBody(response.data)}`)
-      return response.data
+      );
+      debug(`[bridge:api] <<< ${debugBody(response.data)}`);
+      return response.data;
     },
 
     async pollForWork(
@@ -202,12 +200,12 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       signal?: AbortSignal,
       reclaimOlderThanMs?: number,
     ): Promise<WorkResponse | null> {
-      validateBridgeId(environmentId, 'environmentId')
+      validateBridgeId(environmentId, 'environmentId');
 
       // Save and reset so errors break the "consecutive empty" streak.
       // Restored below when the response is truly empty.
-      const prevEmptyPolls = consecutiveEmptyPolls
-      consecutiveEmptyPolls = 0
+      const prevEmptyPolls = consecutiveEmptyPolls;
+      consecutiveEmptyPolls = 0;
 
       const response = await axios.get<WorkResponse | null>(
         `${deps.baseUrl}/v1/environments/${environmentId}/work/poll`,
@@ -219,31 +217,28 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
               : undefined,
           timeout: 10_000,
           signal,
-          validateStatus: status => status < 500,
+          validateStatus: (status) => status < 500,
         },
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'Poll')
+      handleErrorStatus(response.status, response.data, 'Poll');
 
       // Empty body or null = no work available
       if (!response.data) {
-        consecutiveEmptyPolls = prevEmptyPolls + 1
-        if (
-          consecutiveEmptyPolls === 1 ||
-          consecutiveEmptyPolls % EMPTY_POLL_LOG_INTERVAL === 0
-        ) {
+        consecutiveEmptyPolls = prevEmptyPolls + 1;
+        if (consecutiveEmptyPolls === 1 || consecutiveEmptyPolls % EMPTY_POLL_LOG_INTERVAL === 0) {
           debug(
             `[bridge:api] GET .../work/poll -> ${response.status} (no work, ${consecutiveEmptyPolls} consecutive empty polls)`,
-          )
+          );
         }
-        return null
+        return null;
       }
 
       debug(
         `[bridge:api] GET .../work/poll -> ${response.status} workId=${response.data.id} type=${response.data.data?.type}${response.data.data?.id ? ` sessionId=${response.data.data.id}` : ''}`,
-      )
-      debug(`[bridge:api] <<< ${debugBody(response.data)}`)
-      return response.data
+      );
+      debug(`[bridge:api] <<< ${debugBody(response.data)}`);
+      return response.data;
     },
 
     async acknowledgeWork(
@@ -251,10 +246,10 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       workId: string,
       sessionToken: string,
     ): Promise<void> {
-      validateBridgeId(environmentId, 'environmentId')
-      validateBridgeId(workId, 'workId')
+      validateBridgeId(environmentId, 'environmentId');
+      validateBridgeId(workId, 'workId');
 
-      debug(`[bridge:api] POST .../work/${workId}/ack`)
+      debug(`[bridge:api] POST .../work/${workId}/ack`);
 
       const response = await axios.post(
         `${deps.baseUrl}/v1/environments/${environmentId}/work/${workId}/ack`,
@@ -262,23 +257,19 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'Acknowledge')
-      debug(`[bridge:api] POST .../work/${workId}/ack -> ${response.status}`)
+      handleErrorStatus(response.status, response.data, 'Acknowledge');
+      debug(`[bridge:api] POST .../work/${workId}/ack -> ${response.status}`);
     },
 
-    async stopWork(
-      environmentId: string,
-      workId: string,
-      force: boolean,
-    ): Promise<void> {
-      validateBridgeId(environmentId, 'environmentId')
-      validateBridgeId(workId, 'workId')
+    async stopWork(environmentId: string, workId: string, force: boolean): Promise<void> {
+      validateBridgeId(environmentId, 'environmentId');
+      validateBridgeId(workId, 'workId');
 
-      debug(`[bridge:api] POST .../work/${workId}/stop force=${force}`)
+      debug(`[bridge:api] POST .../work/${workId}/stop force=${force}`);
 
       const response = await withOAuthRetry(
         (token: string) =>
@@ -288,44 +279,39 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'StopWork',
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'StopWork')
-      debug(`[bridge:api] POST .../work/${workId}/stop -> ${response.status}`)
+      handleErrorStatus(response.status, response.data, 'StopWork');
+      debug(`[bridge:api] POST .../work/${workId}/stop -> ${response.status}`);
     },
 
     async deregisterEnvironment(environmentId: string): Promise<void> {
-      validateBridgeId(environmentId, 'environmentId')
+      validateBridgeId(environmentId, 'environmentId');
 
-      debug(`[bridge:api] DELETE /v1/environments/bridge/${environmentId}`)
+      debug(`[bridge:api] DELETE /v1/environments/bridge/${environmentId}`);
 
       const response = await withOAuthRetry(
         (token: string) =>
-          axios.delete(
-            `${deps.baseUrl}/v1/environments/bridge/${environmentId}`,
-            {
-              headers: getHeaders(token),
-              timeout: 10_000,
-              validateStatus: s => s < 500,
-            },
-          ),
+          axios.delete(`${deps.baseUrl}/v1/environments/bridge/${environmentId}`, {
+            headers: getHeaders(token),
+            timeout: 10_000,
+            validateStatus: (s) => s < 500,
+          }),
         'Deregister',
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'Deregister')
-      debug(
-        `[bridge:api] DELETE /v1/environments/bridge/${environmentId} -> ${response.status}`,
-      )
+      handleErrorStatus(response.status, response.data, 'Deregister');
+      debug(`[bridge:api] DELETE /v1/environments/bridge/${environmentId} -> ${response.status}`);
     },
 
     async archiveSession(sessionId: string): Promise<void> {
-      validateBridgeId(sessionId, 'sessionId')
+      validateBridgeId(sessionId, 'sessionId');
 
-      debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive`)
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive`);
 
       const response = await withOAuthRetry(
         (token: string) =>
@@ -335,36 +321,29 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'ArchiveSession',
-      )
+      );
 
       // 409 = already archived (idempotent, not an error)
       if (response.status === 409) {
-        debug(
-          `[bridge:api] POST /v1/sessions/${sessionId}/archive -> 409 (already archived)`,
-        )
-        return
+        debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive -> 409 (already archived)`);
+        return;
       }
 
-      handleErrorStatus(response.status, response.data, 'ArchiveSession')
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/archive -> ${response.status}`,
-      )
+      handleErrorStatus(response.status, response.data, 'ArchiveSession');
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/archive -> ${response.status}`);
     },
 
-    async reconnectSession(
-      environmentId: string,
-      sessionId: string,
-    ): Promise<void> {
-      validateBridgeId(environmentId, 'environmentId')
-      validateBridgeId(sessionId, 'sessionId')
+    async reconnectSession(environmentId: string, sessionId: string): Promise<void> {
+      validateBridgeId(environmentId, 'environmentId');
+      validateBridgeId(sessionId, 'sessionId');
 
       debug(
         `[bridge:api] POST /v1/environments/${environmentId}/bridge/reconnect session_id=${sessionId}`,
-      )
+      );
 
       const response = await withOAuthRetry(
         (token: string) =>
@@ -374,14 +353,14 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
             {
               headers: getHeaders(token),
               timeout: 10_000,
-              validateStatus: s => s < 500,
+              validateStatus: (s) => s < 500,
             },
           ),
         'ReconnectSession',
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'ReconnectSession')
-      debug(`[bridge:api] POST .../bridge/reconnect -> ${response.status}`)
+      handleErrorStatus(response.status, response.data, 'ReconnectSession');
+      debug(`[bridge:api] POST .../bridge/reconnect -> ${response.status}`);
     },
 
     async heartbeatWork(
@@ -389,31 +368,31 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       workId: string,
       sessionToken: string,
     ): Promise<{ lease_extended: boolean; state: string }> {
-      validateBridgeId(environmentId, 'environmentId')
-      validateBridgeId(workId, 'workId')
+      validateBridgeId(environmentId, 'environmentId');
+      validateBridgeId(workId, 'workId');
 
-      debug(`[bridge:api] POST .../work/${workId}/heartbeat`)
+      debug(`[bridge:api] POST .../work/${workId}/heartbeat`);
 
       const response = await axios.post<{
-        lease_extended: boolean
-        state: string
-        last_heartbeat: string
-        ttl_seconds: number
+        lease_extended: boolean;
+        state: string;
+        last_heartbeat: string;
+        ttl_seconds: number;
       }>(
         `${deps.baseUrl}/v1/environments/${environmentId}/work/${workId}/heartbeat`,
         {},
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
-      )
+      );
 
-      handleErrorStatus(response.status, response.data, 'Heartbeat')
+      handleErrorStatus(response.status, response.data, 'Heartbeat');
       debug(
         `[bridge:api] POST .../work/${workId}/heartbeat -> ${response.status} lease_extended=${response.data.lease_extended} state=${response.data.state}`,
-      )
-      return response.data
+      );
+      return response.data;
     },
 
     async sendPermissionResponseEvent(
@@ -421,11 +400,9 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
       event: PermissionResponseEvent,
       sessionToken: string,
     ): Promise<void> {
-      validateBridgeId(sessionId, 'sessionId')
+      validateBridgeId(sessionId, 'sessionId');
 
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/events type=${event.type}`,
-      )
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/events type=${event.type}`);
 
       const response = await axios.post(
         `${deps.baseUrl}/v1/sessions/${sessionId}/events`,
@@ -433,41 +410,31 @@ export function createBridgeApiClient(deps: BridgeApiDeps): BridgeApiClient {
         {
           headers: getHeaders(sessionToken),
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
-      )
+      );
 
-      handleErrorStatus(
-        response.status,
-        response.data,
-        'SendPermissionResponseEvent',
-      )
-      debug(
-        `[bridge:api] POST /v1/sessions/${sessionId}/events -> ${response.status}`,
-      )
-      debug(`[bridge:api] >>> ${debugBody({ events: [event] })}`)
-      debug(`[bridge:api] <<< ${debugBody(response.data)}`)
+      handleErrorStatus(response.status, response.data, 'SendPermissionResponseEvent');
+      debug(`[bridge:api] POST /v1/sessions/${sessionId}/events -> ${response.status}`);
+      debug(`[bridge:api] >>> ${debugBody({ events: [event] })}`);
+      debug(`[bridge:api] <<< ${debugBody(response.data)}`);
     },
-  }
+  };
 }
 
-function handleErrorStatus(
-  status: number,
-  data: unknown,
-  context: string,
-): void {
+function handleErrorStatus(status: number, data: unknown, context: string): void {
   if (status === 200 || status === 204) {
-    return
+    return;
   }
-  const detail = extractErrorDetail(data)
-  const errorType = extractErrorTypeFromData(data)
+  const detail = extractErrorDetail(data);
+  const errorType = extractErrorTypeFromData(data);
   switch (status) {
     case 401:
       throw new BridgeFatalError(
         `${context}: Authentication failed (401)${detail ? `: ${detail}` : ''}. ${BRIDGE_LOGIN_INSTRUCTION}`,
         401,
         errorType,
-      )
+      );
     case 403:
       throw new BridgeFatalError(
         isExpiredErrorType(errorType)
@@ -475,36 +442,34 @@ function handleErrorStatus(
           : `${context}: Access denied (403)${detail ? `: ${detail}` : ''}. Check your organization permissions.`,
         403,
         errorType,
-      )
+      );
     case 404:
       throw new BridgeFatalError(
         detail ??
           `${context}: Not found (404). Remote Control may not be available for this organization.`,
         404,
         errorType,
-      )
+      );
     case 410:
       throw new BridgeFatalError(
         detail ??
           'Remote Control session has expired. Please restart with `claude remote-control` or /remote-control.',
         410,
         errorType ?? 'environment_expired',
-      )
+      );
     case 429:
-      throw new Error(`${context}: Rate limited (429). Polling too frequently.`)
+      throw new Error(`${context}: Rate limited (429). Polling too frequently.`);
     default:
-      throw new Error(
-        `${context}: Failed with status ${status}${detail ? `: ${detail}` : ''}`,
-      )
+      throw new Error(`${context}: Failed with status ${status}${detail ? `: ${detail}` : ''}`);
   }
 }
 
 /** Check whether an error type string indicates a session/environment expiry. */
 export function isExpiredErrorType(errorType: string | undefined): boolean {
   if (!errorType) {
-    return false
+    return false;
   }
-  return errorType.includes('expired') || errorType.includes('lifetime')
+  return errorType.includes('expired') || errorType.includes('lifetime');
 }
 
 /**
@@ -515,12 +480,11 @@ export function isExpiredErrorType(errorType: string | undefined): boolean {
  */
 export function isSuppressible403(err: BridgeFatalError): boolean {
   if (err.status !== 403) {
-    return false
+    return false;
   }
   return (
-    err.message.includes('external_poll_sessions') ||
-    err.message.includes('environments:manage')
-  )
+    err.message.includes('external_poll_sessions') || err.message.includes('environments:manage')
+  );
 }
 
 function extractErrorTypeFromData(data: unknown): string | undefined {
@@ -532,8 +496,8 @@ function extractErrorTypeFromData(data: unknown): string | undefined {
       'type' in data.error &&
       typeof data.error.type === 'string'
     ) {
-      return data.error.type
+      return data.error.type;
     }
   }
-  return undefined
+  return undefined;
 }

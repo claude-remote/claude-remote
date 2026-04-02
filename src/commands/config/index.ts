@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const config = {
   aliases: ['settings'],
@@ -6,6 +6,6 @@ const config = {
   name: 'config',
   description: 'Open config panel',
   load: () => import('./config.js'),
-} satisfies Command
+} satisfies Command;
 
-export default config
+export default config;

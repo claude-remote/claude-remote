@@ -9,9 +9,9 @@
  * is eliminated.
  */
 
-import { getMcpConfigsByScope } from '../../services/mcp/config.js'
-import { getSettingsWithErrors } from './settings.js'
-import type { SettingsWithErrors } from './validation.js'
+import { getMcpConfigsByScope } from '../../services/mcp/config.js';
+import { getSettingsWithErrors } from './settings.js';
+import type { SettingsWithErrors } from './validation.js';
 
 /**
  * Get merged settings with all validation errors, including MCP config errors.
@@ -21,12 +21,12 @@ import type { SettingsWithErrors } from './validation.js'
  * includes MCP errors to avoid the circular dependency.
  */
 export function getSettingsWithAllErrors(): SettingsWithErrors {
-  const result = getSettingsWithErrors()
+  const result = getSettingsWithErrors();
   // 'dynamic' scope does not have errors returned; it throws and is set on cli startup
-  const scopes = ['user', 'project', 'local'] as const
-  const mcpErrors = scopes.flatMap(scope => getMcpConfigsByScope(scope).errors)
+  const scopes = ['user', 'project', 'local'] as const;
+  const mcpErrors = scopes.flatMap((scope) => getMcpConfigsByScope(scope).errors);
   return {
     settings: result.settings,
     errors: [...result.errors, ...mcpErrors],
-  }
+  };
 }

@@ -38,7 +38,7 @@ export type CodeIndexingTool =
   | 'local-code-search'
   | 'autodev-codebase'
   // Context providers
-  | 'openctx'
+  | 'openctx';
 
 /**
  * Mapping of CLI command prefixes to code indexing tools.
@@ -64,15 +64,15 @@ const CLI_COMMAND_MAPPING: Record<string, CodeIndexingTool> = {
   // Cloud provider AI assistants
   q: 'amazon-q',
   gemini: 'gemini',
-}
+};
 
 /**
  * Mapping of MCP server name patterns to code indexing tools.
  * Patterns are matched case-insensitively against the server name.
  */
 const MCP_SERVER_PATTERNS: Array<{
-  pattern: RegExp
-  tool: CodeIndexingTool
+  pattern: RegExp;
+  tool: CodeIndexingTool;
 }> = [
   // Sourcegraph ecosystem
   { pattern: /^sourcegraph$/i, tool: 'sourcegraph' },
@@ -110,7 +110,7 @@ const MCP_SERVER_PATTERNS: Array<{
   { pattern: /^codebase$/i, tool: 'autodev-codebase' },
   { pattern: /^autodev[-_]?codebase$/i, tool: 'autodev-codebase' },
   { pattern: /^code[-_]?context$/i, tool: 'claude-context' },
-]
+];
 
 /**
  * Detects if a bash command is using a code indexing CLI tool.
@@ -123,26 +123,24 @@ const MCP_SERVER_PATTERNS: Array<{
  * detectCodeIndexingFromCommand('cody chat --message "help"') // returns 'cody'
  * detectCodeIndexingFromCommand('ls -la') // returns undefined
  */
-export function detectCodeIndexingFromCommand(
-  command: string,
-): CodeIndexingTool | undefined {
+export function detectCodeIndexingFromCommand(command: string): CodeIndexingTool | undefined {
   // Extract the first word (command name)
-  const trimmed = command.trim()
-  const firstWord = trimmed.split(/\s+/)[0]?.toLowerCase()
+  const trimmed = command.trim();
+  const firstWord = trimmed.split(/\s+/)[0]?.toLowerCase();
 
   if (!firstWord) {
-    return undefined
+    return undefined;
   }
 
   // Check for npx/bunx prefixed commands
   if (firstWord === 'npx' || firstWord === 'bunx') {
-    const secondWord = trimmed.split(/\s+/)[1]?.toLowerCase()
+    const secondWord = trimmed.split(/\s+/)[1]?.toLowerCase();
     if (secondWord && secondWord in CLI_COMMAND_MAPPING) {
-      return CLI_COMMAND_MAPPING[secondWord]
+      return CLI_COMMAND_MAPPING[secondWord];
     }
   }
 
-  return CLI_COMMAND_MAPPING[firstWord]
+  return CLI_COMMAND_MAPPING[firstWord];
 }
 
 /**
@@ -156,31 +154,29 @@ export function detectCodeIndexingFromCommand(
  * detectCodeIndexingFromMcpTool('mcp__cody__chat') // returns 'cody'
  * detectCodeIndexingFromMcpTool('mcp__filesystem__read') // returns undefined
  */
-export function detectCodeIndexingFromMcpTool(
-  toolName: string,
-): CodeIndexingTool | undefined {
+export function detectCodeIndexingFromMcpTool(toolName: string): CodeIndexingTool | undefined {
   // MCP tool names follow the format: mcp__serverName__toolName
   if (!toolName.startsWith('mcp__')) {
-    return undefined
+    return undefined;
   }
 
-  const parts = toolName.split('__')
+  const parts = toolName.split('__');
   if (parts.length < 3) {
-    return undefined
+    return undefined;
   }
 
-  const serverName = parts[1]
+  const serverName = parts[1];
   if (!serverName) {
-    return undefined
+    return undefined;
   }
 
   for (const { pattern, tool } of MCP_SERVER_PATTERNS) {
     if (pattern.test(serverName)) {
-      return tool
+      return tool;
     }
   }
 
-  return undefined
+  return undefined;
 }
 
 /**
@@ -198,9 +194,9 @@ export function detectCodeIndexingFromMcpServerName(
 ): CodeIndexingTool | undefined {
   for (const { pattern, tool } of MCP_SERVER_PATTERNS) {
     if (pattern.test(serverName)) {
-      return tool
+      return tool;
     }
   }
 
-  return undefined
+  return undefined;
 }

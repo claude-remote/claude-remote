@@ -3,12 +3,12 @@
  * when the buffer is full. Useful for maintaining a rolling window of data.
  */
 export class CircularBuffer<T> {
-  private buffer: T[]
-  private head = 0
-  private size = 0
+  private buffer: T[];
+  private head = 0;
+  private size = 0;
 
   constructor(private capacity: number) {
-    this.buffer = new Array(capacity)
+    this.buffer = new Array(capacity);
   }
 
   /**
@@ -16,10 +16,10 @@ export class CircularBuffer<T> {
    * the oldest item will be evicted.
    */
   add(item: T): void {
-    this.buffer[this.head] = item
-    this.head = (this.head + 1) % this.capacity
+    this.buffer[this.head] = item;
+    this.head = (this.head + 1) % this.capacity;
     if (this.size < this.capacity) {
-      this.size++
+      this.size++;
     }
   }
 
@@ -28,7 +28,7 @@ export class CircularBuffer<T> {
    */
   addAll(items: T[]): void {
     for (const item of items) {
-      this.add(item)
+      this.add(item);
     }
   }
 
@@ -37,48 +37,48 @@ export class CircularBuffer<T> {
    * Returns fewer items if the buffer contains less than N items.
    */
   getRecent(count: number): T[] {
-    const result: T[] = []
-    const start = this.size < this.capacity ? 0 : this.head
-    const available = Math.min(count, this.size)
+    const result: T[] = [];
+    const start = this.size < this.capacity ? 0 : this.head;
+    const available = Math.min(count, this.size);
 
     for (let i = 0; i < available; i++) {
-      const index = (start + this.size - available + i) % this.capacity
-      result.push(this.buffer[index]!)
+      const index = (start + this.size - available + i) % this.capacity;
+      result.push(this.buffer[index]!);
     }
 
-    return result
+    return result;
   }
 
   /**
    * Get all items currently in the buffer, in order from oldest to newest.
    */
   toArray(): T[] {
-    if (this.size === 0) return []
+    if (this.size === 0) return [];
 
-    const result: T[] = []
-    const start = this.size < this.capacity ? 0 : this.head
+    const result: T[] = [];
+    const start = this.size < this.capacity ? 0 : this.head;
 
     for (let i = 0; i < this.size; i++) {
-      const index = (start + i) % this.capacity
-      result.push(this.buffer[index]!)
+      const index = (start + i) % this.capacity;
+      result.push(this.buffer[index]!);
     }
 
-    return result
+    return result;
   }
 
   /**
    * Clear all items from the buffer.
    */
   clear(): void {
-    this.buffer.length = 0
-    this.head = 0
-    this.size = 0
+    this.buffer.length = 0;
+    this.head = 0;
+    this.size = 0;
   }
 
   /**
    * Get the current number of items in the buffer.
    */
   length(): number {
-    return this.size
+    return this.size;
   }
 }

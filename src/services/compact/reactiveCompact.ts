@@ -15,12 +15,7 @@ export type ReactiveCompactOutcome =
     }
   | {
       ok: false;
-      reason:
-        | 'too_few_groups'
-        | 'aborted'
-        | 'exhausted'
-        | 'error'
-        | 'media_unstrippable';
+      reason: 'too_few_groups' | 'aborted' | 'exhausted' | 'error' | 'media_unstrippable';
     };
 
 export async function reactiveCompactOnPromptTooLong(

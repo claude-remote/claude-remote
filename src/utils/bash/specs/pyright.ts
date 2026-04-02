@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 export default {
   name: 'pyright',
@@ -83,9 +83,8 @@ export default {
   ],
   args: {
     name: 'files',
-    description:
-      'Specify files or directories to analyze (overrides config file)',
+    description: 'Specify files or directories to analyze (overrides config file)',
     isVariadic: true,
     isOptional: true,
   },
-} satisfies CommandSpec
+} satisfies CommandSpec;

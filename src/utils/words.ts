@@ -3,7 +3,7 @@
  * Inspired by https://github.com/nas5w/random-word-slugs
  * with Claude-flavored words
  */
-import { randomBytes } from 'crypto'
+import { randomBytes } from 'node:crypto';
 
 // Adjectives for slug generation - whimsical and delightful
 const ADJECTIVES = [
@@ -229,7 +229,7 @@ const ADJECTIVES = [
   'validated',
   'vectorized',
   'virtual',
-] as const
+] as const;
 
 // Nouns for slug generation - whimsical creatures, nature, and fun objects
 const NOUNS = [
@@ -646,7 +646,7 @@ const NOUNS = [
   'wirth',
   'wozniak',
   'yao',
-] as const
+] as const;
 
 // Verbs for the middle word - whimsical action words
 const VERBS = [
@@ -759,23 +759,23 @@ const VERBS = [
   'wondering',
   'yawning',
   'zooming',
-] as const
+] as const;
 
 /**
  * Generate a cryptographically random integer in the range [0, max)
  */
 function randomInt(max: number): number {
   // Use crypto.randomBytes for better randomness than Math.random
-  const bytes = randomBytes(4)
-  const value = bytes.readUInt32BE(0)
-  return value % max
+  const bytes = randomBytes(4);
+  const value = bytes.readUInt32BE(0);
+  return value % max;
 }
 
 /**
  * Pick a random element from an array
  */
 function pickRandom<T>(array: readonly T[]): T {
-  return array[randomInt(array.length)]!
+  return array[randomInt(array.length)]!;
 }
 
 /**
@@ -783,10 +783,10 @@ function pickRandom<T>(array: readonly T[]): T {
  * Example: "gleaming-brewing-phoenix", "cosmic-pondering-lighthouse"
  */
 export function generateWordSlug(): string {
-  const adjective = pickRandom(ADJECTIVES)
-  const verb = pickRandom(VERBS)
-  const noun = pickRandom(NOUNS)
-  return `${adjective}-${verb}-${noun}`
+  const adjective = pickRandom(ADJECTIVES);
+  const verb = pickRandom(VERBS);
+  const noun = pickRandom(NOUNS);
+  return `${adjective}-${verb}-${noun}`;
 }
 
 /**
@@ -794,7 +794,7 @@ export function generateWordSlug(): string {
  * Example: "graceful-unicorn", "cosmic-lighthouse"
  */
 export function generateShortWordSlug(): string {
-  const adjective = pickRandom(ADJECTIVES)
-  const noun = pickRandom(NOUNS)
-  return `${adjective}-${noun}`
+  const adjective = pickRandom(ADJECTIVES);
+  const noun = pickRandom(NOUNS);
+  return `${adjective}-${noun}`;
 }

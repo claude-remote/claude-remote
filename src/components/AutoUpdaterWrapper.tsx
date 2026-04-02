@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
-import { feature } from 'src/utils/feature.js';
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
+import { feature } from 'src/utils/feature.js';
 import type { AutoUpdaterResult } from '../utils/autoUpdater.js';
 import { isAutoUpdaterDisabled } from '../utils/config.js';
 import { logForDebugging } from '../utils/debug.js';
@@ -24,23 +24,23 @@ export function AutoUpdaterWrapper(t0) {
     onAutoUpdaterResult,
     autoUpdaterResult,
     showSuccessMessage,
-    verbose
+    verbose,
   } = t0;
   const [useNativeInstaller, setUseNativeInstaller] = React.useState(null);
   const [isPackageManager, setIsPackageManager] = React.useState(null);
   let t1;
   let t2;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = () => {
       const checkInstallation = async function checkInstallation() {
-        if (feature("SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED") && isAutoUpdaterDisabled()) {
-          logForDebugging("AutoUpdaterWrapper: Skipping detection, auto-updates disabled");
+        if (feature('SKIP_DETECTION_WHEN_AUTOUPDATES_DISABLED') && isAutoUpdaterDisabled()) {
+          logForDebugging('AutoUpdaterWrapper: Skipping detection, auto-updates disabled');
           return;
         }
         const installationType = await getCurrentInstallationType();
         logForDebugging(`AutoUpdaterWrapper: Installation type: ${installationType}`);
-        setUseNativeInstaller(installationType === "native");
-        setIsPackageManager(installationType === "package-manager");
+        setUseNativeInstaller(installationType === 'native');
+        setIsPackageManager(installationType === 'package-manager');
       };
       checkInstallation();
     };
@@ -57,8 +57,24 @@ export function AutoUpdaterWrapper(t0) {
   }
   if (isPackageManager) {
     let t3;
-    if ($[2] !== autoUpdaterResult || $[3] !== isUpdating || $[4] !== onAutoUpdaterResult || $[5] !== onChangeIsUpdating || $[6] !== showSuccessMessage || $[7] !== verbose) {
-      t3 = <PackageManagerAutoUpdater verbose={verbose} onAutoUpdaterResult={onAutoUpdaterResult} autoUpdaterResult={autoUpdaterResult} isUpdating={isUpdating} onChangeIsUpdating={onChangeIsUpdating} showSuccessMessage={showSuccessMessage} />;
+    if (
+      $[2] !== autoUpdaterResult ||
+      $[3] !== isUpdating ||
+      $[4] !== onAutoUpdaterResult ||
+      $[5] !== onChangeIsUpdating ||
+      $[6] !== showSuccessMessage ||
+      $[7] !== verbose
+    ) {
+      t3 = (
+        <PackageManagerAutoUpdater
+          verbose={verbose}
+          onAutoUpdaterResult={onAutoUpdaterResult}
+          autoUpdaterResult={autoUpdaterResult}
+          isUpdating={isUpdating}
+          onChangeIsUpdating={onChangeIsUpdating}
+          showSuccessMessage={showSuccessMessage}
+        />
+      );
       $[2] = autoUpdaterResult;
       $[3] = isUpdating;
       $[4] = onAutoUpdaterResult;
@@ -73,8 +89,25 @@ export function AutoUpdaterWrapper(t0) {
   }
   const Updater = useNativeInstaller ? NativeAutoUpdater : AutoUpdater;
   let t3;
-  if ($[9] !== Updater || $[10] !== autoUpdaterResult || $[11] !== isUpdating || $[12] !== onAutoUpdaterResult || $[13] !== onChangeIsUpdating || $[14] !== showSuccessMessage || $[15] !== verbose) {
-    t3 = <Updater verbose={verbose} onAutoUpdaterResult={onAutoUpdaterResult} autoUpdaterResult={autoUpdaterResult} isUpdating={isUpdating} onChangeIsUpdating={onChangeIsUpdating} showSuccessMessage={showSuccessMessage} />;
+  if (
+    $[9] !== Updater ||
+    $[10] !== autoUpdaterResult ||
+    $[11] !== isUpdating ||
+    $[12] !== onAutoUpdaterResult ||
+    $[13] !== onChangeIsUpdating ||
+    $[14] !== showSuccessMessage ||
+    $[15] !== verbose
+  ) {
+    t3 = (
+      <Updater
+        verbose={verbose}
+        onAutoUpdaterResult={onAutoUpdaterResult}
+        autoUpdaterResult={autoUpdaterResult}
+        isUpdating={isUpdating}
+        onChangeIsUpdating={onChangeIsUpdating}
+        showSuccessMessage={showSuccessMessage}
+      />
+    );
     $[9] = Updater;
     $[10] = autoUpdaterResult;
     $[11] = isUpdating;

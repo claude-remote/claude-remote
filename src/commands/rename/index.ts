@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const rename = {
   type: 'local-jsx',
@@ -7,6 +7,6 @@ const rename = {
   immediate: true,
   argumentHint: '[name]',
   load: () => import('./rename.js'),
-} satisfies Command
+} satisfies Command;
 
-export default rename
+export default rename;

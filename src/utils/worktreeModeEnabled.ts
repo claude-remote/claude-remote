@@ -7,5 +7,5 @@
  * See https://github.com/anthropics/claude-code/issues/27044.
  */
 export function isWorktreeModeEnabled(): boolean {
-  return true
+  return true;
 }

@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
-import type { OptionWithDescription } from './select.js'
-import { useSelectNavigation } from './use-select-navigation.js'
+import { useCallback, useState } from 'react';
+import type { OptionWithDescription } from './select.js';
+import { useSelectNavigation } from './use-select-navigation.js';
 
 export type UseSelectStateProps<T> = {
   /**
@@ -8,121 +8,121 @@ export type UseSelectStateProps<T> = {
    *
    * @default 5
    */
-  visibleOptionCount?: number
+  visibleOptionCount?: number;
 
   /**
    * Options.
    */
-  options: OptionWithDescription<T>[]
+  options: OptionWithDescription<T>[];
 
   /**
    * Initially selected option's value.
    */
-  defaultValue?: T
+  defaultValue?: T;
 
   /**
    * Callback for selecting an option.
    */
-  onChange?: (value: T) => void
+  onChange?: (value: T) => void;
 
   /**
    * Callback for canceling the select.
    */
-  onCancel?: () => void
+  onCancel?: () => void;
 
   /**
    * Callback for focusing an option.
    */
-  onFocus?: (value: T) => void
+  onFocus?: (value: T) => void;
 
   /**
    * Value to focus
    */
-  focusValue?: T
-}
+  focusValue?: T;
+};
 
 export type SelectState<T> = {
   /**
    * Value of the currently focused option.
    */
-  focusedValue: T | undefined
+  focusedValue: T | undefined;
 
   /**
    * 1-based index of the focused option in the full list.
    * Returns 0 if no option is focused.
    */
-  focusedIndex: number
+  focusedIndex: number;
 
   /**
    * Index of the first visible option.
    */
-  visibleFromIndex: number
+  visibleFromIndex: number;
 
   /**
    * Index of the last visible option.
    */
-  visibleToIndex: number
+  visibleToIndex: number;
 
   /**
    * Value of the selected option.
    */
-  value: T | undefined
+  value: T | undefined;
 
   /**
    * All options.
    */
-  options: OptionWithDescription<T>[]
+  options: OptionWithDescription<T>[];
 
   /**
    * Visible options.
    */
-  visibleOptions: Array<OptionWithDescription<T> & { index: number }>
+  visibleOptions: Array<OptionWithDescription<T> & { index: number }>;
 
   /**
    * Whether the focused option is an input type.
    */
-  isInInput: boolean
+  isInInput: boolean;
 
   /**
    * Focus next option and scroll the list down, if needed.
    */
-  focusNextOption: () => void
+  focusNextOption: () => void;
 
   /**
    * Focus previous option and scroll the list up, if needed.
    */
-  focusPreviousOption: () => void
+  focusPreviousOption: () => void;
 
   /**
    * Focus next page and scroll the list down by a page.
    */
-  focusNextPage: () => void
+  focusNextPage: () => void;
 
   /**
    * Focus previous page and scroll the list up by a page.
    */
-  focusPreviousPage: () => void
+  focusPreviousPage: () => void;
 
   /**
    * Focus a specific option by value.
    */
-  focusOption: (value: T | undefined) => void
+  focusOption: (value: T | undefined) => void;
 
   /**
    * Select currently focused option.
    */
-  selectFocusedOption: () => void
+  selectFocusedOption: () => void;
 
   /**
    * Callback for selecting an option.
    */
-  onChange?: (value: T) => void
+  onChange?: (value: T) => void;
 
   /**
    * Callback for canceling the select.
    */
-  onCancel?: () => void
-}
+  onCancel?: () => void;
+};
 
 export function useSelectState<T>({
   visibleOptionCount = 5,
@@ -133,7 +133,7 @@ export function useSelectState<T>({
   onFocus,
   focusValue,
 }: UseSelectStateProps<T>): SelectState<T> {
-  const [value, setValue] = useState<T | undefined>(defaultValue)
+  const [value, setValue] = useState<T | undefined>(defaultValue);
 
   const navigation = useSelectNavigation<T>({
     visibleOptionCount,
@@ -141,11 +141,11 @@ export function useSelectState<T>({
     initialFocusValue: undefined,
     onFocus,
     focusValue,
-  })
+  });
 
   const selectFocusedOption = useCallback(() => {
-    setValue(navigation.focusedValue)
-  }, [navigation.focusedValue])
+    setValue(navigation.focusedValue);
+  }, [navigation.focusedValue]);
 
   return {
     ...navigation,
@@ -153,5 +153,5 @@ export function useSelectState<T>({
     selectFocusedOption,
     onChange,
     onCancel,
-  }
+  };
 }

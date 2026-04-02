@@ -1,5 +1,5 @@
-import React from 'react'
+import type React from 'react';
 
 export function TungstenLiveMonitor(): React.JSX.Element | null {
-  return null
+  return null;
 }

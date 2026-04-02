@@ -1,12 +1,12 @@
-import { feature } from 'src/utils/feature.js'
-import type { PartialCompactDirection } from '../../types/message.js'
+import { feature } from 'src/utils/feature.js';
+import type { PartialCompactDirection } from '../../types/message.js';
 
 // Dead code elimination: conditional import for proactive mode
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactiveModule =
   feature('PROACTIVE') || feature('KAIROS')
     ? (require('../../proactive/index.js') as typeof import('../../proactive/index.js'))
-    : null
+    : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 // Aggressive no-tools preamble. The cache-sharing fork path inherits the
@@ -23,7 +23,7 @@ const NO_TOOLS_PREAMBLE = `CRITICAL: Respond with TEXT ONLY. Do NOT call any too
 - Tool calls will be REJECTED and will waste your only turn — you will fail the task.
 - Your entire response must be plain text: an <analysis> block followed by a <summary> block.
 
-`
+`;
 
 // Two variants: BASE scopes to "the conversation", PARTIAL scopes to "the
 // recent messages". The <analysis> block is a drafting scratchpad that
@@ -41,7 +41,7 @@ const DETAILED_ANALYSIS_INSTRUCTION_BASE = `Before providing your final summary,
      - file edits
    - Errors that you ran into and how you fixed them
    - Pay special attention to specific user feedback that you received, especially if the user told you to do something differently.
-2. Double-check for technical accuracy and completeness, addressing each required element thoroughly.`
+2. Double-check for technical accuracy and completeness, addressing each required element thoroughly.`;
 
 const DETAILED_ANALYSIS_INSTRUCTION_PARTIAL = `Before providing your final summary, wrap your analysis in <analysis> tags to organize your thoughts and ensure you've covered all necessary points. In your analysis process:
 
@@ -56,7 +56,7 @@ const DETAILED_ANALYSIS_INSTRUCTION_PARTIAL = `Before providing your final summa
      - file edits
    - Errors that you ran into and how you fixed them
    - Pay special attention to specific user feedback that you received, especially if the user told you to do something differently.
-2. Double-check for technical accuracy and completeness, addressing each required element thoroughly.`
+2. Double-check for technical accuracy and completeness, addressing each required element thoroughly.`;
 
 const BASE_COMPACT_PROMPT = `Your task is to create a detailed summary of the conversation so far, paying close attention to the user's explicit requests and your previous actions.
 This summary should be thorough in capturing technical details, code patterns, and architectural decisions that would be essential for continuing development work without losing context.
@@ -140,7 +140,7 @@ When summarizing the conversation focus on typescript code changes and also reme
 # Summary instructions
 When you are using compact - please focus on test output and code changes. Include file reads verbatim.
 </example>
-`
+`;
 
 const PARTIAL_COMPACT_PROMPT = `Your task is to create a detailed summary of the RECENT portion of the conversation — the messages that follow earlier retained context. The earlier messages are being kept intact and do NOT need to be summarized. Focus your summary on what was discussed, learned, and accomplished in the recent messages only.
 
@@ -201,7 +201,7 @@ Here's an example of how your output should be structured:
 </example>
 
 Please provide your summary based on the RECENT messages only (after the retained earlier context), following this structure and ensuring precision and thoroughness in your response.
-`
+`;
 
 // 'up_to': model sees only the summarized prefix (cache hit). Summary will
 // precede kept recent messages, hence "Context for Continuing Work" section.
@@ -264,42 +264,39 @@ Here's an example of how your output should be structured:
 </example>
 
 Please provide your summary following this structure, ensuring precision and thoroughness in your response.
-`
+`;
 
 const NO_TOOLS_TRAILER =
   '\n\nREMINDER: Do NOT call any tools. Respond with plain text only — ' +
   'an <analysis> block followed by a <summary> block. ' +
-  'Tool calls will be rejected and you will fail the task.'
+  'Tool calls will be rejected and you will fail the task.';
 
 export function getPartialCompactPrompt(
   customInstructions?: string,
   direction: PartialCompactDirection = 'from',
 ): string {
-  const template =
-    direction === 'up_to'
-      ? PARTIAL_COMPACT_UP_TO_PROMPT
-      : PARTIAL_COMPACT_PROMPT
-  let prompt = NO_TOOLS_PREAMBLE + template
+  const template = direction === 'up_to' ? PARTIAL_COMPACT_UP_TO_PROMPT : PARTIAL_COMPACT_PROMPT;
+  let prompt = NO_TOOLS_PREAMBLE + template;
 
   if (customInstructions && customInstructions.trim() !== '') {
-    prompt += `\n\nAdditional Instructions:\n${customInstructions}`
+    prompt += `\n\nAdditional Instructions:\n${customInstructions}`;
   }
 
-  prompt += NO_TOOLS_TRAILER
+  prompt += NO_TOOLS_TRAILER;
 
-  return prompt
+  return prompt;
 }
 
 export function getCompactPrompt(customInstructions?: string): string {
-  let prompt = NO_TOOLS_PREAMBLE + BASE_COMPACT_PROMPT
+  let prompt = NO_TOOLS_PREAMBLE + BASE_COMPACT_PROMPT;
 
   if (customInstructions && customInstructions.trim() !== '') {
-    prompt += `\n\nAdditional Instructions:\n${customInstructions}`
+    prompt += `\n\nAdditional Instructions:\n${customInstructions}`;
   }
 
-  prompt += NO_TOOLS_TRAILER
+  prompt += NO_TOOLS_TRAILER;
 
-  return prompt
+  return prompt;
 }
 
 /**
@@ -309,29 +306,26 @@ export function getCompactPrompt(customInstructions?: string): string {
  * @returns The formatted summary with analysis stripped and summary tags replaced by headers
  */
 export function formatCompactSummary(summary: string): string {
-  let formattedSummary = summary
+  let formattedSummary = summary;
 
   // Strip analysis section — it's a drafting scratchpad that improves summary
   // quality but has no informational value once the summary is written.
-  formattedSummary = formattedSummary.replace(
-    /<analysis>[\s\S]*?<\/analysis>/,
-    '',
-  )
+  formattedSummary = formattedSummary.replace(/<analysis>[\s\S]*?<\/analysis>/, '');
 
   // Extract and format summary section
-  const summaryMatch = formattedSummary.match(/<summary>([\s\S]*?)<\/summary>/)
+  const summaryMatch = formattedSummary.match(/<summary>([\s\S]*?)<\/summary>/);
   if (summaryMatch) {
-    const content = summaryMatch[1] || ''
+    const content = summaryMatch[1] || '';
     formattedSummary = formattedSummary.replace(
       /<summary>[\s\S]*?<\/summary>/,
       `Summary:\n${content.trim()}`,
-    )
+    );
   }
 
   // Clean up extra whitespace between sections
-  formattedSummary = formattedSummary.replace(/\n\n+/g, '\n\n')
+  formattedSummary = formattedSummary.replace(/\n\n+/g, '\n\n');
 
-  return formattedSummary.trim()
+  return formattedSummary.trim();
 }
 
 export function getCompactUserSummaryMessage(
@@ -340,35 +334,32 @@ export function getCompactUserSummaryMessage(
   transcriptPath?: string,
   recentMessagesPreserved?: boolean,
 ): string {
-  const formattedSummary = formatCompactSummary(summary)
+  const formattedSummary = formatCompactSummary(summary);
 
   let baseSummary = `This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
 
-${formattedSummary}`
+${formattedSummary}`;
 
   if (transcriptPath) {
-    baseSummary += `\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: ${transcriptPath}`
+    baseSummary += `\n\nIf you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: ${transcriptPath}`;
   }
 
   if (recentMessagesPreserved) {
-    baseSummary += `\n\nRecent messages are preserved verbatim.`
+    baseSummary += '\n\nRecent messages are preserved verbatim.';
   }
 
   if (suppressFollowUpQuestions) {
     let continuation = `${baseSummary}
-Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.`
+Continue the conversation from where it left off without asking the user any further questions. Resume directly — do not acknowledge the summary, do not recap what was happening, do not preface with "I'll continue" or similar. Pick up the last task as if the break never happened.`;
 
-    if (
-      (feature('PROACTIVE') || feature('KAIROS')) &&
-      proactiveModule?.isProactiveActive()
-    ) {
+    if ((feature('PROACTIVE') || feature('KAIROS')) && proactiveModule?.isProactiveActive()) {
       continuation += `
 
-You are running in autonomous/proactive mode. This is NOT a first wake-up — you were already working autonomously before compaction. Continue your work loop: pick up where you left off based on the summary above. Do not greet the user or ask what to work on.`
+You are running in autonomous/proactive mode. This is NOT a first wake-up — you were already working autonomously before compaction. Continue your work loop: pick up where you left off based on the summary above. Do not greet the user or ask what to work on.`;
     }
 
-    return continuation
+    return continuation;
   }
 
-  return baseSummary
+  return baseSummary;
 }

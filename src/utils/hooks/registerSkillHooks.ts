@@ -1,8 +1,8 @@
-import { HOOK_EVENTS } from 'src/entrypoints/agentSdkTypes.js'
-import type { AppState } from 'src/state/AppState.js'
-import { logForDebugging } from '../debug.js'
-import type { HooksSettings } from '../settings/types.js'
-import { addSessionHook, removeSessionHook } from './sessionHooks.js'
+import { HOOK_EVENTS } from 'src/entrypoints/agentSdkTypes.js';
+import type { AppState } from 'src/state/AppState.js';
+import { logForDebugging } from '../debug.js';
+import type { HooksSettings } from '../settings/types.js';
+import { addSessionHook, removeSessionHook } from './sessionHooks.js';
 
 /**
  * Registers hooks from a skill's frontmatter as session hooks.
@@ -24,11 +24,11 @@ export function registerSkillHooks(
   skillName: string,
   skillRoot?: string,
 ): void {
-  let registeredCount = 0
+  let registeredCount = 0;
 
   for (const eventName of HOOK_EVENTS) {
-    const matchers = hooks[eventName]
-    if (!matchers) continue
+    const matchers = hooks[eventName];
+    if (!matchers) continue;
 
     for (const matcher of matchers) {
       for (const hook of matcher.hooks) {
@@ -37,10 +37,10 @@ export function registerSkillHooks(
           ? () => {
               logForDebugging(
                 `Removing one-shot hook for event ${eventName} in skill '${skillName}'`,
-              )
-              removeSessionHook(setAppState, sessionId, eventName, hook)
+              );
+              removeSessionHook(setAppState, sessionId, eventName, hook);
             }
-          : undefined
+          : undefined;
 
         addSessionHook(
           setAppState,
@@ -50,15 +50,13 @@ export function registerSkillHooks(
           hook,
           onHookSuccess,
           skillRoot,
-        )
-        registeredCount++
+        );
+        registeredCount++;
       }
     }
   }
 
   if (registeredCount > 0) {
-    logForDebugging(
-      `Registered ${registeredCount} hooks from skill '${skillName}'`,
-    )
+    logForDebugging(`Registered ${registeredCount} hooks from skill '${skillName}'`);
   }
 }

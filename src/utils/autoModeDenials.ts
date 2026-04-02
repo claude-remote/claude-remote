@@ -3,24 +3,24 @@
  * Populated from useCanUseTool.ts, read from RecentDenialsTab.tsx in /permissions.
  */
 
-import { feature } from 'src/utils/feature.js'
+import { feature } from 'src/utils/feature.js';
 
 export type AutoModeDenial = {
-  toolName: string
+  toolName: string;
   /** Human-readable description of the denied command (e.g. bash command string) */
-  display: string
-  reason: string
-  timestamp: number
-}
+  display: string;
+  reason: string;
+  timestamp: number;
+};
 
-let DENIALS: readonly AutoModeDenial[] = []
-const MAX_DENIALS = 20
+let DENIALS: readonly AutoModeDenial[] = [];
+const MAX_DENIALS = 20;
 
 export function recordAutoModeDenial(denial: AutoModeDenial): void {
-  if (!feature('TRANSCRIPT_CLASSIFIER')) return
-  DENIALS = [denial, ...DENIALS.slice(0, MAX_DENIALS - 1)]
+  if (!feature('TRANSCRIPT_CLASSIFIER')) return;
+  DENIALS = [denial, ...DENIALS.slice(0, MAX_DENIALS - 1)];
 }
 
 export function getAutoModeDenials(): readonly AutoModeDenial[] {
-  return DENIALS
+  return DENIALS;
 }

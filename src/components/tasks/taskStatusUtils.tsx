@@ -6,7 +6,7 @@ import figures from 'figures';
 import type { TaskStatus } from 'src/Task.js';
 import type { InProcessTeammateTaskState } from 'src/tasks/InProcessTeammateTask/types.js';
 import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask.js';
-import { isBackgroundTask, type TaskState } from 'src/tasks/types.js';
+import { type TaskState, isBackgroundTask } from 'src/tasks/types.js';
 import type { DeepImmutable } from 'src/types/utils.js';
 import { summarizeRecentActivities } from 'src/utils/collapseReadSearch.js';
 
@@ -20,18 +20,16 @@ export function isTerminalStatus(status: TaskStatus): boolean {
 /**
  * Returns the appropriate icon for a task based on status and state flags.
  */
-export function getTaskStatusIcon(status: TaskStatus, options?: {
-  isIdle?: boolean;
-  awaitingApproval?: boolean;
-  hasError?: boolean;
-  shutdownRequested?: boolean;
-}): string {
-  const {
-    isIdle,
-    awaitingApproval,
-    hasError,
-    shutdownRequested
-  } = options ?? {};
+export function getTaskStatusIcon(
+  status: TaskStatus,
+  options?: {
+    isIdle?: boolean;
+    awaitingApproval?: boolean;
+    hasError?: boolean;
+    shutdownRequested?: boolean;
+  },
+): string {
+  const { isIdle, awaitingApproval, hasError, shutdownRequested } = options ?? {};
   if (hasError) return figures.cross;
   if (awaitingApproval) return figures.questionMarkPrefix;
   if (shutdownRequested) return figures.warning;
@@ -47,18 +45,16 @@ export function getTaskStatusIcon(status: TaskStatus, options?: {
 /**
  * Returns the appropriate semantic color for a task based on status and state flags.
  */
-export function getTaskStatusColor(status: TaskStatus, options?: {
-  isIdle?: boolean;
-  awaitingApproval?: boolean;
-  hasError?: boolean;
-  shutdownRequested?: boolean;
-}): 'success' | 'error' | 'warning' | 'background' {
-  const {
-    isIdle,
-    awaitingApproval,
-    hasError,
-    shutdownRequested
-  } = options ?? {};
+export function getTaskStatusColor(
+  status: TaskStatus,
+  options?: {
+    isIdle?: boolean;
+    awaitingApproval?: boolean;
+    hasError?: boolean;
+    shutdownRequested?: boolean;
+  },
+): 'success' | 'error' | 'warning' | 'background' {
+  const { isIdle, awaitingApproval, hasError, shutdownRequested } = options ?? {};
   if (hasError) return 'error';
   if (awaitingApproval) return 'warning';
   if (shutdownRequested) return 'warning';
@@ -78,7 +74,11 @@ export function describeTeammateActivity(t: DeepImmutable<InProcessTeammateTaskS
   if (t.shutdownRequested) return 'stopping';
   if (t.awaitingPlanApproval) return 'awaiting approval';
   if (t.isIdle) return 'idle';
-  return (t.progress?.recentActivities && summarizeRecentActivities(t.progress.recentActivities)) ?? t.progress?.lastActivity?.activityDescription ?? 'working';
+  return (
+    (t.progress?.recentActivities && summarizeRecentActivities(t.progress.recentActivities)) ??
+    t.progress?.lastActivity?.activityDescription ??
+    'working'
+  );
 }
 
 /**
@@ -90,13 +90,16 @@ export function describeTeammateActivity(t: DeepImmutable<InProcessTeammateTaskS
  * plus exclusion of panel-managed agent tasks for ants (those are shown
  * by CoordinatorTaskPanel).
  */
-export function shouldHideTasksFooter(tasks: {
-  [taskId: string]: TaskState;
-}, showSpinnerTree: boolean): boolean {
+export function shouldHideTasksFooter(
+  tasks: {
+    [taskId: string]: TaskState;
+  },
+  showSpinnerTree: boolean,
+): boolean {
   if (!showSpinnerTree) return false;
   let hasVisibleTask = false;
   for (const t of Object.values(tasks) as TaskState[]) {
-    if (!isBackgroundTask(t) || ("external" as string) === 'ant' && isPanelAgentTask(t)) {
+    if (!isBackgroundTask(t) || (('external' as string) === 'ant' && isPanelAgentTask(t))) {
       continue;
     }
     hasVisibleTask = true;

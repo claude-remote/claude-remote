@@ -1,4 +1,4 @@
-import { c as _c } from "react/compiler-runtime";
+import { c as _c } from 'react/compiler-runtime';
 /**
  * Shared helper functions and types for plugin details views
  *
@@ -33,7 +33,11 @@ export type PluginDetailsMenuOption = {
  * Extract GitHub repo info from a plugin's source
  */
 export function extractGitHubRepo(plugin: InstallablePlugin): string | null {
-  const isGitHub = plugin.entry.source && typeof plugin.entry.source === 'object' && 'source' in plugin.entry.source && plugin.entry.source.source === 'github';
+  const isGitHub =
+    plugin.entry.source &&
+    typeof plugin.entry.source === 'object' &&
+    'source' in plugin.entry.source &&
+    plugin.entry.source.source === 'github';
   if (isGitHub && typeof plugin.entry.source === 'object' && 'repo' in plugin.entry.source) {
     return plugin.entry.source.repo;
   }
@@ -43,32 +47,39 @@ export function extractGitHubRepo(plugin: InstallablePlugin): string | null {
 /**
  * Build menu options for plugin details view with scoped installation options
  */
-export function buildPluginDetailsMenuOptions(hasHomepage: string | undefined, githubRepo: string | null): PluginDetailsMenuOption[] {
-  const options: PluginDetailsMenuOption[] = [{
-    label: 'Install for you (user scope)',
-    action: 'install-user'
-  }, {
-    label: 'Install for all collaborators on this repository (project scope)',
-    action: 'install-project'
-  }, {
-    label: 'Install for you, in this repo only (local scope)',
-    action: 'install-local'
-  }];
+export function buildPluginDetailsMenuOptions(
+  hasHomepage: string | undefined,
+  githubRepo: string | null,
+): PluginDetailsMenuOption[] {
+  const options: PluginDetailsMenuOption[] = [
+    {
+      label: 'Install for you (user scope)',
+      action: 'install-user',
+    },
+    {
+      label: 'Install for all collaborators on this repository (project scope)',
+      action: 'install-project',
+    },
+    {
+      label: 'Install for you, in this repo only (local scope)',
+      action: 'install-local',
+    },
+  ];
   if (hasHomepage) {
     options.push({
       label: 'Open homepage',
-      action: 'homepage'
+      action: 'homepage',
     });
   }
   if (githubRepo) {
     options.push({
       label: 'View on GitHub',
-      action: 'github'
+      action: 'github',
     });
   }
   options.push({
     label: 'Back to plugin list',
-    action: 'back'
+    action: 'back',
   });
   return options;
 }
@@ -78,12 +89,18 @@ export function buildPluginDetailsMenuOptions(hasHomepage: string | undefined, g
  */
 export function PluginSelectionKeyHint(t0) {
   const $ = _c(7);
-  const {
-    hasSelection
-  } = t0;
+  const { hasSelection } = t0;
   let t1;
   if ($[0] !== hasSelection) {
-    t1 = hasSelection && <ConfigurableShortcutHint action="plugin:install" context="Plugin" fallback="i" description="install" bold={true} />;
+    t1 = hasSelection && (
+      <ConfigurableShortcutHint
+        action="plugin:install"
+        context="Plugin"
+        fallback="i"
+        description="install"
+        bold={true}
+      />
+    );
     $[0] = hasSelection;
     $[1] = t1;
   } else {
@@ -92,10 +109,31 @@ export function PluginSelectionKeyHint(t0) {
   let t2;
   let t3;
   let t4;
-  if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
-    t2 = <ConfigurableShortcutHint action="plugin:toggle" context="Plugin" fallback="Space" description="toggle" />;
-    t3 = <ConfigurableShortcutHint action="select:accept" context="Select" fallback="Enter" description="details" />;
-    t4 = <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="back" />;
+  if ($[2] === Symbol.for('react.memo_cache_sentinel')) {
+    t2 = (
+      <ConfigurableShortcutHint
+        action="plugin:toggle"
+        context="Plugin"
+        fallback="Space"
+        description="toggle"
+      />
+    );
+    t3 = (
+      <ConfigurableShortcutHint
+        action="select:accept"
+        context="Select"
+        fallback="Enter"
+        description="details"
+      />
+    );
+    t4 = (
+      <ConfigurableShortcutHint
+        action="confirm:no"
+        context="Confirmation"
+        fallback="Esc"
+        description="back"
+      />
+    );
     $[2] = t2;
     $[3] = t3;
     $[4] = t4;
@@ -106,7 +144,18 @@ export function PluginSelectionKeyHint(t0) {
   }
   let t5;
   if ($[5] !== t1) {
-    t5 = <Box marginTop={1}><Text dimColor={true} italic={true}><Byline>{t1}{t2}{t3}{t4}</Byline></Text></Box>;
+    t5 = (
+      <Box marginTop={1}>
+        <Text dimColor={true} italic={true}>
+          <Byline>
+            {t1}
+            {t2}
+            {t3}
+            {t4}
+          </Byline>
+        </Text>
+      </Box>
+    );
     $[5] = t1;
     $[6] = t5;
   } else {

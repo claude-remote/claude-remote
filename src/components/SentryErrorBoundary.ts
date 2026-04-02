@@ -1,28 +1,28 @@
-import * as React from 'react'
+import * as React from 'react';
 
 interface Props {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 interface State {
-  hasError: boolean
+  hasError: boolean;
 }
 
 export class SentryErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
-    super(props)
-    this.state = { hasError: false }
+    super(props);
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(): State {
-    return { hasError: true }
+    return { hasError: true };
   }
 
   render(): React.ReactNode {
     if (this.state.hasError) {
-      return null
+      return null;
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }

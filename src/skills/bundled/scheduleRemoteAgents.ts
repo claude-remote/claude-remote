@@ -1,27 +1,24 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import type { MCPServerConnection } from '../../services/mcp/types.js'
-import { isPolicyAllowed } from '../../services/policyLimits/index.js'
-import type { ToolUseContext } from '../../Tool.js'
-import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
-import { REMOTE_TRIGGER_TOOL_NAME } from '../../tools/RemoteTriggerTool/prompt.js'
-import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
-import { checkRepoForRemoteAccess } from '../../utils/background/remote/preconditions.js'
-import { logForDebugging } from '../../utils/debug.js'
+import type { ToolUseContext } from '../../Tool.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
+import type { MCPServerConnection } from '../../services/mcp/types.js';
+import { isPolicyAllowed } from '../../services/policyLimits/index.js';
+import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js';
+import { REMOTE_TRIGGER_TOOL_NAME } from '../../tools/RemoteTriggerTool/prompt.js';
+import { getClaudeAIOAuthTokens } from '../../utils/auth.js';
+import { checkRepoForRemoteAccess } from '../../utils/background/remote/preconditions.js';
+import { logForDebugging } from '../../utils/debug.js';
+import { detectCurrentRepositoryWithHost, parseGitRemote } from '../../utils/detectRepository.js';
+import { getRemoteUrl } from '../../utils/git.js';
+import { jsonStringify } from '../../utils/slowOperations.js';
 import {
-  detectCurrentRepositoryWithHost,
-  parseGitRemote,
-} from '../../utils/detectRepository.js'
-import { getRemoteUrl } from '../../utils/git.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
-import {
-  createDefaultCloudEnvironment,
   type EnvironmentResource,
+  createDefaultCloudEnvironment,
   fetchEnvironments,
-} from '../../utils/teleport/environments.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+} from '../../utils/teleport/environments.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 // Base58 alphabet (Bitcoin-style) used by the tagged ID system
-const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
 /**
  * Decode a mcpsrv_ tagged ID to a UUID string.
@@ -33,57 +30,55 @@ const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
  * The tagged ID format is an internal implementation detail that could change.
  */
 function taggedIdToUUID(taggedId: string): string | null {
-  const prefix = 'mcpsrv_'
+  const prefix = 'mcpsrv_';
   if (!taggedId.startsWith(prefix)) {
-    return null
+    return null;
   }
-  const rest = taggedId.slice(prefix.length)
+  const rest = taggedId.slice(prefix.length);
   // Skip version prefix (2 chars, always "01")
-  const base58Data = rest.slice(2)
+  const base58Data = rest.slice(2);
 
   // Decode base58 to bigint
-  let n = 0n
+  let n = 0n;
   for (const c of base58Data) {
-    const idx = BASE58.indexOf(c)
+    const idx = BASE58.indexOf(c);
     if (idx === -1) {
-      return null
+      return null;
     }
-    n = n * 58n + BigInt(idx)
+    n = n * 58n + BigInt(idx);
   }
 
   // Convert to UUID hex string
-  const hex = n.toString(16).padStart(32, '0')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`
+  const hex = n.toString(16).padStart(32, '0');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
 type ConnectorInfo = {
-  uuid: string
-  name: string
-  url: string
-}
+  uuid: string;
+  name: string;
+  url: string;
+};
 
-function getConnectedClaudeAIConnectors(
-  mcpClients: MCPServerConnection[],
-): ConnectorInfo[] {
-  const connectors: ConnectorInfo[] = []
+function getConnectedClaudeAIConnectors(mcpClients: MCPServerConnection[]): ConnectorInfo[] {
+  const connectors: ConnectorInfo[] = [];
   for (const client of mcpClients) {
     if (client.type !== 'connected') {
-      continue
+      continue;
     }
     if (client.config.type !== 'claudeai-proxy') {
-      continue
+      continue;
     }
-    const uuid = taggedIdToUUID(client.config.id)
+    const uuid = taggedIdToUUID(client.config.id);
     if (!uuid) {
-      continue
+      continue;
     }
     connectors.push({
       uuid,
       name: client.name,
       url: client.config.url,
-    })
+    });
   }
-  return connectors
+  return connectors;
 }
 
 function sanitizeConnectorName(name: string): string {
@@ -91,24 +86,22 @@ function sanitizeConnectorName(name: string): string {
     .replace(/^claude[.\s-]ai[.\s-]/i, '')
     .replace(/[^a-zA-Z0-9_-]/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/^-|-$/g, '');
 }
 
 function formatConnectorsInfo(connectors: ConnectorInfo[]): string {
   if (connectors.length === 0) {
-    return 'No connected MCP connectors found. The user may need to connect servers at https://claude.ai/settings/connectors'
+    return 'No connected MCP connectors found. The user may need to connect servers at https://claude.ai/settings/connectors';
   }
-  const lines = ['Connected connectors (available for triggers):']
+  const lines = ['Connected connectors (available for triggers):'];
   for (const c of connectors) {
-    const safeName = sanitizeConnectorName(c.name)
-    lines.push(
-      `- ${c.name} (connector_uuid: ${c.uuid}, name: ${safeName}, url: ${c.url})`,
-    )
+    const safeName = sanitizeConnectorName(c.name);
+    lines.push(`- ${c.name} (connector_uuid: ${c.uuid}, name: ${safeName}, url: ${c.url})`);
   }
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
-const BASE_QUESTION = 'What would you like to do with scheduled remote agents?'
+const BASE_QUESTION = 'What would you like to do with scheduled remote agents?';
 
 /**
  * Formats setup notes as a bulleted Heads-up block. Shared between the
@@ -116,31 +109,31 @@ const BASE_QUESTION = 'What would you like to do with scheduled remote agents?'
  * section (args path) so notes are never silently dropped.
  */
 function formatSetupNotes(notes: string[]): string {
-  const items = notes.map(n => `- ${n}`).join('\n')
-  return `⚠ Heads-up:\n${items}`
+  const items = notes.map((n) => `- ${n}`).join('\n');
+  return `⚠ Heads-up:\n${items}`;
 }
 
 async function getCurrentRepoHttpsUrl(): Promise<string | null> {
-  const remoteUrl = await getRemoteUrl()
+  const remoteUrl = await getRemoteUrl();
   if (!remoteUrl) {
-    return null
+    return null;
   }
-  const parsed = parseGitRemote(remoteUrl)
+  const parsed = parseGitRemote(remoteUrl);
   if (!parsed) {
-    return null
+    return null;
   }
-  return `https://${parsed.host}/${parsed.owner}/${parsed.name}`
+  return `https://${parsed.host}/${parsed.owner}/${parsed.name}`;
 }
 
 function buildPrompt(opts: {
-  userTimezone: string
-  connectorsInfo: string
-  gitRepoUrl: string | null
-  environmentsInfo: string
-  createdEnvironment: EnvironmentResource | null
-  setupNotes: string[]
-  needsGitHubAccessReminder: boolean
-  userArgs: string
+  userTimezone: string;
+  connectorsInfo: string;
+  gitRepoUrl: string | null;
+  environmentsInfo: string;
+  createdEnvironment: EnvironmentResource | null;
+  setupNotes: string[];
+  needsGitHubAccessReminder: boolean;
+  userArgs: string;
 }): string {
   const {
     userTimezone,
@@ -151,25 +144,23 @@ function buildPrompt(opts: {
     setupNotes,
     needsGitHubAccessReminder,
     userArgs,
-  } = opts
+  } = opts;
   // When the user passes args, the initial AskUserQuestion dialog is skipped.
   // Setup notes must surface in the prompt body instead, otherwise they're
   // computed and silently discarded (regression vs. the old hard-block).
   const setupNotesSection =
     userArgs && setupNotes.length > 0
       ? `\n## Setup Notes\n\n${formatSetupNotes(setupNotes)}\n`
-      : ''
+      : '';
   const initialQuestion =
-    setupNotes.length > 0
-      ? `${formatSetupNotes(setupNotes)}\n\n${BASE_QUESTION}`
-      : BASE_QUESTION
+    setupNotes.length > 0 ? `${formatSetupNotes(setupNotes)}\n\n${BASE_QUESTION}` : BASE_QUESTION;
   const firstStep = userArgs
-    ? `The user has already told you what they want (see User Request at the bottom). Skip the initial question and go directly to the matching workflow.`
+    ? 'The user has already told you what they want (see User Request at the bottom). Skip the initial question and go directly to the matching workflow.'
     : `Your FIRST action must be a single ${ASK_USER_QUESTION_TOOL_NAME} tool call (no preamble). Use this EXACT string for the \`question\` field — do not paraphrase or shorten it:
 
 ${jsonStringify(initialQuestion)}
 
-Set \`header: "Action"\` and offer the four actions (create/list/update/run) as options. After the user picks, follow the matching workflow below.`
+Set \`header: "Action"\` and offer the four actions (create/list/update/run) as options. After the user picks, follow the matching workflow below.`;
 
   return `# Schedule Remote Agents
 
@@ -318,7 +309,7 @@ Minimum interval is 1 hour. \`*/30 * * * *\` will be rejected.
 - The prompt is the most important part — spend time getting it right. The remote agent starts with zero context, so the prompt must be self-contained.
 - To delete a trigger, direct users to https://claude.ai/code/scheduled
 ${needsGitHubAccessReminder ? `- If the user's request seems to require GitHub repo access (e.g. cloning a repo, opening PRs, reading code), remind them that ${getFeatureValue_CACHED_MAY_BE_STALE('tengu_cobalt_lantern', false) ? "they should run /web-setup to connect their GitHub account (or install the Claude GitHub App on the repo as an alternative) — otherwise the remote agent won't be able to access it" : "they need the Claude GitHub App installed on the repo — otherwise the remote agent won't be able to access it"}.` : ''}
-${userArgs ? `\n## User Request\n\nThe user said: "${userArgs}"\n\nStart by understanding their intent and working through the appropriate workflow above.` : ''}`
+${userArgs ? `\n## User Request\n\nThe user said: "${userArgs}"\n\nStart by understanding their intent and working through the appropriate workflow above.` : ''}`;
 }
 
 export function registerScheduleRemoteAgentsSkill(): void {
@@ -340,41 +331,39 @@ export function registerScheduleRemoteAgentsSkill(): void {
             type: 'text',
             text: 'You need to authenticate with a claude.ai account first. API accounts are not supported. Run /login, then try /schedule again.',
           },
-        ]
+        ];
       }
 
-      let environments: EnvironmentResource[]
+      let environments: EnvironmentResource[];
       try {
-        environments = await fetchEnvironments()
+        environments = await fetchEnvironments();
       } catch (err) {
         logForDebugging(`[schedule] Failed to fetch environments: ${err}`, {
           level: 'warn',
-        })
+        });
         return [
           {
             type: 'text',
             text: "We're having trouble connecting with your remote claude.ai account to set up a scheduled task. Please try /schedule again in a few minutes.",
           },
-        ]
+        ];
       }
 
-      let createdEnvironment: EnvironmentResource | null = null
+      let createdEnvironment: EnvironmentResource | null = null;
       if (environments.length === 0) {
         try {
-          createdEnvironment = await createDefaultCloudEnvironment(
-            'claude-code-default',
-          )
-          environments = [createdEnvironment]
+          createdEnvironment = await createDefaultCloudEnvironment('claude-code-default');
+          environments = [createdEnvironment];
         } catch (err) {
           logForDebugging(`[schedule] Failed to create environment: ${err}`, {
             level: 'warn',
-          })
+          });
           return [
             {
               type: 'text',
               text: 'No remote environments found, and we could not create one automatically. Visit https://claude.ai/code to set one up, then run /schedule again.',
             },
-          ]
+          ];
         }
       }
 
@@ -382,29 +371,26 @@ export function registerScheduleRemoteAgentsSkill(): void {
       // AskUserQuestion dialog. Never block — triggers don't require a git
       // source (e.g., Slack-only polls), and the trigger's sources may point
       // at a different repo than cwd anyway.
-      const setupNotes: string[] = []
-      let needsGitHubAccessReminder = false
+      const setupNotes: string[] = [];
+      let needsGitHubAccessReminder = false;
 
-      const repo = await detectCurrentRepositoryWithHost()
+      const repo = await detectCurrentRepositoryWithHost();
       if (repo === null) {
         setupNotes.push(
           `Not in a git repo — you'll need to specify a repo URL manually (or skip repos entirely).`,
-        )
+        );
       } else if (repo.host === 'github.com') {
-        const { hasAccess } = await checkRepoForRemoteAccess(
-          repo.owner,
-          repo.name,
-        )
+        const { hasAccess } = await checkRepoForRemoteAccess(repo.owner, repo.name);
         if (!hasAccess) {
-          needsGitHubAccessReminder = true
+          needsGitHubAccessReminder = true;
           const webSetupEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
             'tengu_cobalt_lantern',
             false,
-          )
+          );
           const msg = webSetupEnabled
             ? `GitHub not connected for ${repo.owner}/${repo.name} \u2014 run /web-setup to sync your GitHub credentials, or install the Claude GitHub App at https://claude.ai/code/onboarding?magic=github-app-setup.`
-            : `Claude GitHub App not installed on ${repo.owner}/${repo.name} \u2014 install at https://claude.ai/code/onboarding?magic=github-app-setup if your trigger needs this repo.`
-          setupNotes.push(msg)
+            : `Claude GitHub App not installed on ${repo.owner}/${repo.name} \u2014 install at https://claude.ai/code/onboarding?magic=github-app-setup if your trigger needs this repo.`;
+          setupNotes.push(msg);
         }
       }
       // Non-github.com hosts (GHE/GitLab/etc.): silently skip. The GitHub
@@ -412,25 +398,21 @@ export function registerScheduleRemoteAgentsSkill(): void {
       // would be factually wrong — getCurrentRepoHttpsUrl() below will
       // still populate gitRepoUrl with the GHE URL.
 
-      const connectors = getConnectedClaudeAIConnectors(
-        context.options.mcpClients,
-      )
+      const connectors = getConnectedClaudeAIConnectors(context.options.mcpClients);
       if (connectors.length === 0) {
         setupNotes.push(
-          `No MCP connectors — connect at https://claude.ai/settings/connectors if needed.`,
-        )
+          'No MCP connectors — connect at https://claude.ai/settings/connectors if needed.',
+        );
       }
 
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const connectorsInfo = formatConnectorsInfo(connectors)
-      const gitRepoUrl = await getCurrentRepoHttpsUrl()
-      const lines = ['Available environments:']
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const connectorsInfo = formatConnectorsInfo(connectors);
+      const gitRepoUrl = await getCurrentRepoHttpsUrl();
+      const lines = ['Available environments:'];
       for (const env of environments) {
-        lines.push(
-          `- ${env.name} (id: ${env.environment_id}, kind: ${env.kind})`,
-        )
+        lines.push(`- ${env.name} (id: ${env.environment_id}, kind: ${env.kind})`);
       }
-      const environmentsInfo = lines.join('\n')
+      const environmentsInfo = lines.join('\n');
       const prompt = buildPrompt({
         userTimezone,
         connectorsInfo,
@@ -440,8 +422,8 @@ export function registerScheduleRemoteAgentsSkill(): void {
         setupNotes,
         needsGitHubAccessReminder,
         userArgs: args,
-      })
-      return [{ type: 'text', text: prompt }]
+      });
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

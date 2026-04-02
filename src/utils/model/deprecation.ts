@@ -4,26 +4,26 @@
  * Contains information about deprecated models and their retirement dates.
  */
 
-import { type APIProvider, getAPIProvider } from './providers.js'
+import { type APIProvider, getAPIProvider } from './providers.js';
 
 type DeprecatedModelInfo = {
-  isDeprecated: true
-  modelName: string
-  retirementDate: string
-}
+  isDeprecated: true;
+  modelName: string;
+  retirementDate: string;
+};
 
 type NotDeprecatedInfo = {
-  isDeprecated: false
-}
+  isDeprecated: false;
+};
 
-type DeprecationInfo = DeprecatedModelInfo | NotDeprecatedInfo
+type DeprecationInfo = DeprecatedModelInfo | NotDeprecatedInfo;
 
 type DeprecationEntry = {
   /** Human-readable model name */
-  modelName: string
+  modelName: string;
   /** Retirement dates by provider (null = not deprecated for that provider) */
-  retirementDates: Record<APIProvider, string | null>
-}
+  retirementDates: Record<APIProvider, string | null>;
+};
 
 /**
  * Deprecated models and their retirement dates by provider.
@@ -58,44 +58,42 @@ const DEPRECATED_MODELS: Record<string, DeprecationEntry> = {
       foundry: null,
     },
   },
-}
+};
 
 /**
  * Check if a model is deprecated and get its deprecation info
  */
 function getDeprecatedModelInfo(modelId: string): DeprecationInfo {
-  const lowercaseModelId = modelId.toLowerCase()
-  const provider = getAPIProvider()
+  const lowercaseModelId = modelId.toLowerCase();
+  const provider = getAPIProvider();
 
   for (const [key, value] of Object.entries(DEPRECATED_MODELS)) {
-    const retirementDate = value.retirementDates[provider]
+    const retirementDate = value.retirementDates[provider];
     if (!lowercaseModelId.includes(key) || !retirementDate) {
-      continue
+      continue;
     }
     return {
       isDeprecated: true,
       modelName: value.modelName,
       retirementDate,
-    }
+    };
   }
 
-  return { isDeprecated: false }
+  return { isDeprecated: false };
 }
 
 /**
  * Get a deprecation warning message for a model, or null if not deprecated
  */
-export function getModelDeprecationWarning(
-  modelId: string | null,
-): string | null {
+export function getModelDeprecationWarning(modelId: string | null): string | null {
   if (!modelId) {
-    return null
+    return null;
   }
 
-  const info = getDeprecatedModelInfo(modelId)
+  const info = getDeprecatedModelInfo(modelId);
   if (!info.isDeprecated) {
-    return null
+    return null;
   }
 
-  return `⚠ ${info.modelName} will be retired on ${info.retirementDate}. Consider switching to a newer model.`
+  return `⚠ ${info.modelName} will be retired on ${info.retirementDate}. Consider switching to a newer model.`;
 }

@@ -1,4 +1,4 @@
-import { feature } from 'src/utils/feature.js'
+import { feature } from 'src/utils/feature.js';
 
 export const MEMORY_TYPE_VALUES = [
   'User',
@@ -7,6 +7,6 @@ export const MEMORY_TYPE_VALUES = [
   'Managed',
   'AutoMem',
   ...(feature('TEAMMEM') ? (['TeamMem'] as const) : []),
-] as const
+] as const;
 
-export type MemoryType = (typeof MEMORY_TYPE_VALUES)[number]
+export type MemoryType = (typeof MEMORY_TYPE_VALUES)[number];

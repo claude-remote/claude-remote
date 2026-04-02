@@ -1,19 +1,33 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { Suspense, use, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding } from '../../keybindings/useKeybinding.js';
 import { logEvent } from '../../services/analytics/index.js';
 import type { Message } from '../../types/message.js';
-import { generatePermissionExplanation, isPermissionExplainerEnabled, type PermissionExplanation as PermissionExplanationType, type RiskLevel } from '../../utils/permissions/permissionExplainer.js';
+import {
+  type PermissionExplanation as PermissionExplanationType,
+  type RiskLevel,
+  generatePermissionExplanation,
+  isPermissionExplainerEnabled,
+} from '../../utils/permissions/permissionExplainer.js';
 import { ShimmerChar } from '../Spinner/ShimmerChar.js';
 import { useShimmerAnimation } from '../Spinner/useShimmerAnimation.js';
 const LOADING_MESSAGE = 'Loading explanation…';
 function ShimmerLoadingText() {
   const $ = _c(7);
-  const [ref, glimmerIndex] = useShimmerAnimation("responding", LOADING_MESSAGE, false);
+  const [ref, glimmerIndex] = useShimmerAnimation('responding', LOADING_MESSAGE, false);
   let t0;
   if ($[0] !== glimmerIndex) {
-    t0 = LOADING_MESSAGE.split("").map((char, index) => <ShimmerChar key={index} char={char} index={index} glimmerIndex={glimmerIndex} messageColor="inactive" shimmerColor="text" />);
+    t0 = LOADING_MESSAGE.split('').map((char, index) => (
+      <ShimmerChar
+        key={index}
+        char={char}
+        index={index}
+        glimmerIndex={glimmerIndex}
+        messageColor="inactive"
+        shimmerColor="text"
+      />
+    ));
     $[0] = glimmerIndex;
     $[1] = t0;
   } else {
@@ -74,13 +88,15 @@ type ExplainerState = {
  * Creates an explanation promise that never rejects.
  * Errors are caught and returned as null.
  */
-function createExplanationPromise(props: PermissionExplanationProps): Promise<PermissionExplanationType | null> {
+function createExplanationPromise(
+  props: PermissionExplanationProps,
+): Promise<PermissionExplanationType | null> {
   return generatePermissionExplanation({
     toolName: props.toolName,
     toolInput: props.toolInput,
     toolDescription: props.toolDescription,
     messages: props.messages,
-    signal: new AbortController().signal // Won't abort - request is fast enough
+    signal: new AbortController().signal, // Won't abort - request is fast enough
   }).catch(() => null);
 }
 
@@ -89,12 +105,10 @@ function createExplanationPromise(props: PermissionExplanationProps): Promise<Pe
  * Creates the fetch promise lazily (only when user hits Ctrl+E)
  * to avoid consuming tokens for explanations users never view.
  */
-export function usePermissionExplainerUI(
-  props: PermissionExplanationProps,
-): ExplainerState {
+export function usePermissionExplainerUI(props: PermissionExplanationProps): ExplainerState {
   const $ = _c(9);
   let t0;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t0 = isPermissionExplainerEnabled();
     $[0] = t0;
   } else {
@@ -107,7 +121,7 @@ export function usePermissionExplainerUI(
   if ($[1] !== promise || $[2] !== props || $[3] !== visible) {
     t1 = () => {
       if (!visible) {
-        logEvent("tengu_permission_explainer_shortcut_used", {});
+        logEvent('tengu_permission_explainer_shortcut_used', {});
         if (!promise) {
           setPromise(createExplanationPromise(props));
         }
@@ -122,22 +136,22 @@ export function usePermissionExplainerUI(
     t1 = $[4];
   }
   let t2;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[5] === Symbol.for('react.memo_cache_sentinel')) {
     t2 = {
-      context: "Confirmation",
-      isActive: enabled
+      context: 'Confirmation',
+      isActive: enabled,
     };
     $[5] = t2;
   } else {
     t2 = $[5];
   }
-  useKeybinding("confirm:toggleExplanation", t1, t2);
+  useKeybinding('confirm:toggleExplanation', t1, t2);
   let t3;
   if ($[6] !== promise || $[7] !== visible) {
     t3 = {
       visible,
       enabled,
-      promise
+      promise,
     };
     $[6] = promise;
     $[7] = visible;
@@ -159,14 +173,16 @@ function ExplanationResult(t0: {
   promise: Promise<PermissionExplanationType | null>;
 }) {
   const $ = _c(21);
-  const {
-    promise
-  } = t0;
+  const { promise } = t0;
   const explanation = use(promise);
   if (!explanation) {
     let t1;
-    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-      t1 = <Box marginTop={1}><Text dimColor={true}>Explanation unavailable</Text></Box>;
+    if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
+      t1 = (
+        <Box marginTop={1}>
+          <Text dimColor={true}>Explanation unavailable</Text>
+        </Box>
+      );
       $[0] = t1;
     } else {
       t1 = $[0];
@@ -183,7 +199,11 @@ function ExplanationResult(t0: {
   }
   let t2;
   if ($[3] !== explanation.reasoning) {
-    t2 = <Box marginTop={1}><Text>{explanation.reasoning}</Text></Box>;
+    t2 = (
+      <Box marginTop={1}>
+        <Text>{explanation.reasoning}</Text>
+      </Box>
+    );
     $[3] = explanation.reasoning;
     $[4] = t2;
   } else {
@@ -224,7 +244,14 @@ function ExplanationResult(t0: {
   }
   let t7;
   if ($[14] !== t5 || $[15] !== t6) {
-    t7 = <Box marginTop={1}><Text>{t5}{t6}</Text></Box>;
+    t7 = (
+      <Box marginTop={1}>
+        <Text>
+          {t5}
+          {t6}
+        </Text>
+      </Box>
+    );
     $[14] = t5;
     $[15] = t6;
     $[16] = t7;
@@ -233,7 +260,13 @@ function ExplanationResult(t0: {
   }
   let t8;
   if ($[17] !== t1 || $[18] !== t2 || $[19] !== t7) {
-    t8 = <Box flexDirection="column" marginTop={1}>{t1}{t2}{t7}</Box>;
+    t8 = (
+      <Box flexDirection="column" marginTop={1}>
+        {t1}
+        {t2}
+        {t7}
+      </Box>
+    );
     $[17] = t1;
     $[18] = t2;
     $[19] = t7;
@@ -249,23 +282,28 @@ function ExplanationResult(t0: {
  */
 export function PermissionExplainerContent(t0) {
   const $ = _c(3);
-  const {
-    visible,
-    promise
-  } = t0;
+  const { visible, promise } = t0;
   if (!visible || !promise) {
     return null;
   }
   let t1;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = <Box marginTop={1}><ShimmerLoadingText /></Box>;
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
+    t1 = (
+      <Box marginTop={1}>
+        <ShimmerLoadingText />
+      </Box>
+    );
     $[0] = t1;
   } else {
     t1 = $[0];
   }
   let t2;
   if ($[1] !== promise) {
-    t2 = <Suspense fallback={t1}><ExplanationResult promise={promise} /></Suspense>;
+    t2 = (
+      <Suspense fallback={t1}>
+        <ExplanationResult promise={promise} />
+      </Suspense>
+    );
     $[1] = promise;
     $[2] = t2;
   } else {

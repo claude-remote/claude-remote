@@ -3,20 +3,20 @@
  * Applied only to spawned child processes (via bash provider env overrides),
  * not to the REPL process itself.
  */
-const sessionEnvVars = new Map<string, string>()
+const sessionEnvVars = new Map<string, string>();
 
 export function getSessionEnvVars(): ReadonlyMap<string, string> {
-  return sessionEnvVars
+  return sessionEnvVars;
 }
 
 export function setSessionEnvVar(name: string, value: string): void {
-  sessionEnvVars.set(name, value)
+  sessionEnvVars.set(name, value);
 }
 
 export function deleteSessionEnvVar(name: string): void {
-  sessionEnvVars.delete(name)
+  sessionEnvVars.delete(name);
 }
 
 export function clearSessionEnvVars(): void {
-  sessionEnvVars.clear()
+  sessionEnvVars.clear();
 }

@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const command = {
   name: 'vim',
@@ -6,6 +6,6 @@ const command = {
   supportsNonInteractive: false,
   type: 'local',
   load: () => import('./vim.js'),
-} satisfies Command
+} satisfies Command;
 
-export default command
+export default command;

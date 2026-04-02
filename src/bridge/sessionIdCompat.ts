@@ -12,14 +12,14 @@
  * so the shim defaults to active (matching isCseShimEnabled()'s own default).
  */
 
-let _isCseShimEnabled: (() => boolean) | undefined
+let _isCseShimEnabled: (() => boolean) | undefined;
 
 /**
  * Register the GrowthBook gate for the cse_ shim. Called from bridge
  * init code that already imports bridgeEnabled.ts.
  */
 export function setCseShimGate(gate: () => boolean): void {
-  _isCseShimEnabled = gate
+  _isCseShimEnabled = gate;
 }
 
 /**
@@ -36,9 +36,9 @@ export function setCseShimGate(gate: () => boolean): void {
  * the compat gate, so archiveSession/fetchSessionTitle need this re-tag.
  */
 export function toCompatSessionId(id: string): string {
-  if (!id.startsWith('cse_')) return id
-  if (_isCseShimEnabled && !_isCseShimEnabled()) return id
-  return 'session_' + id.slice('cse_'.length)
+  if (!id.startsWith('cse_')) return id;
+  if (_isCseShimEnabled && !_isCseShimEnabled()) return id;
+  return `session_${id.slice('cse_'.length)}`;
 }
 
 /**
@@ -52,6 +52,6 @@ export function toCompatSessionId(id: string): string {
  * not found" back. Same UUID, wrong tag. No-op for IDs that aren't `session_*`.
  */
 export function toInfraSessionId(id: string): string {
-  if (!id.startsWith('session_')) return id
-  return 'cse_' + id.slice('session_'.length)
+  if (!id.startsWith('session_')) return id;
+  return `cse_${id.slice('session_'.length)}`;
 }

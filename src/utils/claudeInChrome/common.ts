@@ -1,40 +1,40 @@
-import { readdirSync } from 'fs'
-import { stat } from 'fs/promises'
-import { homedir, platform, tmpdir, userInfo } from 'os'
-import { join } from 'path'
-import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
-import { logForDebugging } from '../debug.js'
-import { isFsInaccessible } from '../errors.js'
-import { execFileNoThrow } from '../execFileNoThrow.js'
-import { getPlatform } from '../platform.js'
-import { which } from '../which.js'
+import { readdirSync } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { homedir, platform, tmpdir, userInfo } from 'node:os';
+import { join } from 'node:path';
+import { normalizeNameForMCP } from '../../services/mcp/normalization.js';
+import { logForDebugging } from '../debug.js';
+import { isFsInaccessible } from '../errors.js';
+import { execFileNoThrow } from '../execFileNoThrow.js';
+import { getPlatform } from '../platform.js';
+import { which } from '../which.js';
 
-export const CLAUDE_IN_CHROME_MCP_SERVER_NAME = 'claude-in-chrome'
+export const CLAUDE_IN_CHROME_MCP_SERVER_NAME = 'claude-in-chrome';
 
 // Re-export ChromiumBrowser type for setup.ts
-export type { ChromiumBrowser } from './setupPortable.js'
+export type { ChromiumBrowser } from './setupPortable.js';
 
 // Import for local use
-import type { ChromiumBrowser } from './setupPortable.js'
+import type { ChromiumBrowser } from './setupPortable.js';
 
 type BrowserConfig = {
-  name: string
+  name: string;
   macos: {
-    appName: string
-    dataPath: string[]
-    nativeMessagingPath: string[]
-  }
+    appName: string;
+    dataPath: string[];
+    nativeMessagingPath: string[];
+  };
   linux: {
-    binaries: string[]
-    dataPath: string[]
-    nativeMessagingPath: string[]
-  }
+    binaries: string[];
+    dataPath: string[];
+    nativeMessagingPath: string[];
+  };
   windows: {
-    dataPath: string[]
-    registryKey: string
-    useRoaming?: boolean // Opera uses Roaming instead of Local
-  }
-}
+    dataPath: string[];
+    registryKey: string;
+    useRoaming?: boolean; // Opera uses Roaming instead of Local
+  };
+};
 
 export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
   chrome: {
@@ -64,12 +64,7 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     name: 'Brave',
     macos: {
       appName: 'Brave Browser',
-      dataPath: [
-        'Library',
-        'Application Support',
-        'BraveSoftware',
-        'Brave-Browser',
-      ],
+      dataPath: ['Library', 'Application Support', 'BraveSoftware', 'Brave-Browser'],
       nativeMessagingPath: [
         'Library',
         'Application Support',
@@ -81,17 +76,11 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     linux: {
       binaries: ['brave-browser', 'brave'],
       dataPath: ['.config', 'BraveSoftware', 'Brave-Browser'],
-      nativeMessagingPath: [
-        '.config',
-        'BraveSoftware',
-        'Brave-Browser',
-        'NativeMessagingHosts',
-      ],
+      nativeMessagingPath: ['.config', 'BraveSoftware', 'Brave-Browser', 'NativeMessagingHosts'],
     },
     windows: {
       dataPath: ['BraveSoftware', 'Brave-Browser', 'User Data'],
-      registryKey:
-        'HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts',
+      registryKey: 'HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts',
     },
   },
   arc: {
@@ -124,12 +113,7 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     macos: {
       appName: 'Chromium',
       dataPath: ['Library', 'Application Support', 'Chromium'],
-      nativeMessagingPath: [
-        'Library',
-        'Application Support',
-        'Chromium',
-        'NativeMessagingHosts',
-      ],
+      nativeMessagingPath: ['Library', 'Application Support', 'Chromium', 'NativeMessagingHosts'],
     },
     linux: {
       binaries: ['chromium', 'chromium-browser'],
@@ -156,11 +140,7 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     linux: {
       binaries: ['microsoft-edge', 'microsoft-edge-stable'],
       dataPath: ['.config', 'microsoft-edge'],
-      nativeMessagingPath: [
-        '.config',
-        'microsoft-edge',
-        'NativeMessagingHosts',
-      ],
+      nativeMessagingPath: ['.config', 'microsoft-edge', 'NativeMessagingHosts'],
     },
     windows: {
       dataPath: ['Microsoft', 'Edge', 'User Data'],
@@ -172,12 +152,7 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     macos: {
       appName: 'Vivaldi',
       dataPath: ['Library', 'Application Support', 'Vivaldi'],
-      nativeMessagingPath: [
-        'Library',
-        'Application Support',
-        'Vivaldi',
-        'NativeMessagingHosts',
-      ],
+      nativeMessagingPath: ['Library', 'Application Support', 'Vivaldi', 'NativeMessagingHosts'],
     },
     linux: {
       binaries: ['vivaldi', 'vivaldi-stable'],
@@ -208,12 +183,11 @@ export const CHROMIUM_BROWSERS: Record<ChromiumBrowser, BrowserConfig> = {
     },
     windows: {
       dataPath: ['Opera Software', 'Opera Stable'],
-      registryKey:
-        'HKCU\\Software\\Opera Software\\Opera Stable\\NativeMessagingHosts',
+      registryKey: 'HKCU\\Software\\Opera Software\\Opera Stable\\NativeMessagingHosts',
       useRoaming: true, // Opera uses Roaming AppData, not Local
     },
   },
-}
+};
 
 // Priority order for browser detection (most common first)
 export const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = [
@@ -224,42 +198,42 @@ export const BROWSER_DETECTION_ORDER: ChromiumBrowser[] = [
   'chromium',
   'vivaldi',
   'opera',
-]
+];
 
 /**
  * Get all browser data paths to check for extension installation
  */
 export function getAllBrowserDataPaths(): {
-  browser: ChromiumBrowser
-  path: string
+  browser: ChromiumBrowser;
+  path: string;
 }[] {
-  const platform = getPlatform()
-  const home = homedir()
-  const paths: { browser: ChromiumBrowser; path: string }[] = []
+  const platform = getPlatform();
+  const home = homedir();
+  const paths: { browser: ChromiumBrowser; path: string }[] = [];
 
   for (const browserId of BROWSER_DETECTION_ORDER) {
-    const config = CHROMIUM_BROWSERS[browserId]
-    let dataPath: string[] | undefined
+    const config = CHROMIUM_BROWSERS[browserId];
+    let dataPath: string[] | undefined;
 
     switch (platform) {
       case 'macos':
-        dataPath = config.macos.dataPath
-        break
+        dataPath = config.macos.dataPath;
+        break;
       case 'linux':
       case 'wsl':
-        dataPath = config.linux.dataPath
-        break
+        dataPath = config.linux.dataPath;
+        break;
       case 'windows': {
         if (config.windows.dataPath.length > 0) {
           const appDataBase = config.windows.useRoaming
             ? join(home, 'AppData', 'Roaming')
-            : join(home, 'AppData', 'Local')
+            : join(home, 'AppData', 'Local');
           paths.push({
             browser: browserId,
             path: join(appDataBase, ...config.windows.dataPath),
-          })
+          });
         }
-        continue
+        continue;
       }
     }
 
@@ -267,26 +241,26 @@ export function getAllBrowserDataPaths(): {
       paths.push({
         browser: browserId,
         path: join(home, ...dataPath),
-      })
+      });
     }
   }
 
-  return paths
+  return paths;
 }
 
 /**
  * Get native messaging host directories for all supported browsers
  */
 export function getAllNativeMessagingHostsDirs(): {
-  browser: ChromiumBrowser
-  path: string
+  browser: ChromiumBrowser;
+  path: string;
 }[] {
-  const platform = getPlatform()
-  const home = homedir()
-  const paths: { browser: ChromiumBrowser; path: string }[] = []
+  const platform = getPlatform();
+  const home = homedir();
+  const paths: { browser: ChromiumBrowser; path: string }[] = [];
 
   for (const browserId of BROWSER_DETECTION_ORDER) {
-    const config = CHROMIUM_BROWSERS[browserId]
+    const config = CHROMIUM_BROWSERS[browserId];
 
     switch (platform) {
       case 'macos':
@@ -294,48 +268,48 @@ export function getAllNativeMessagingHostsDirs(): {
           paths.push({
             browser: browserId,
             path: join(home, ...config.macos.nativeMessagingPath),
-          })
+          });
         }
-        break
+        break;
       case 'linux':
       case 'wsl':
         if (config.linux.nativeMessagingPath.length > 0) {
           paths.push({
             browser: browserId,
             path: join(home, ...config.linux.nativeMessagingPath),
-          })
+          });
         }
-        break
+        break;
       case 'windows':
         // Windows uses registry, not file paths for native messaging
         // We'll use a common location for the manifest file
-        break
+        break;
     }
   }
 
-  return paths
+  return paths;
 }
 
 /**
  * Get Windows registry keys for all supported browsers
  */
 export function getAllWindowsRegistryKeys(): {
-  browser: ChromiumBrowser
-  key: string
+  browser: ChromiumBrowser;
+  key: string;
 }[] {
-  const keys: { browser: ChromiumBrowser; key: string }[] = []
+  const keys: { browser: ChromiumBrowser; key: string }[] = [];
 
   for (const browserId of BROWSER_DETECTION_ORDER) {
-    const config = CHROMIUM_BROWSERS[browserId]
+    const config = CHROMIUM_BROWSERS[browserId];
     if (config.windows.registryKey) {
       keys.push({
         browser: browserId,
         key: config.windows.registryKey,
-      })
+      });
     }
   }
 
-  return keys
+  return keys;
 }
 
 /**
@@ -343,128 +317,118 @@ export function getAllWindowsRegistryKeys(): {
  * Returns the first available browser, or null if none found
  */
 export async function detectAvailableBrowser(): Promise<ChromiumBrowser | null> {
-  const platform = getPlatform()
+  const platform = getPlatform();
 
   for (const browserId of BROWSER_DETECTION_ORDER) {
-    const config = CHROMIUM_BROWSERS[browserId]
+    const config = CHROMIUM_BROWSERS[browserId];
 
     switch (platform) {
       case 'macos': {
         // Check if the .app bundle (a directory) exists
-        const appPath = `/Applications/${config.macos.appName}.app`
+        const appPath = `/Applications/${config.macos.appName}.app`;
         try {
-          const stats = await stat(appPath)
+          const stats = await stat(appPath);
           if (stats.isDirectory()) {
-            logForDebugging(
-              `[Claude in Chrome] Detected browser: ${config.name}`,
-            )
-            return browserId
+            logForDebugging(`[Claude in Chrome] Detected browser: ${config.name}`);
+            return browserId;
           }
         } catch (e) {
-          if (!isFsInaccessible(e)) throw e
+          if (!isFsInaccessible(e)) throw e;
           // App not found, continue checking
         }
-        break
+        break;
       }
       case 'wsl':
       case 'linux': {
         // Check if any binary exists
         for (const binary of config.linux.binaries) {
           if (await which(binary).catch(() => null)) {
-            logForDebugging(
-              `[Claude in Chrome] Detected browser: ${config.name}`,
-            )
-            return browserId
+            logForDebugging(`[Claude in Chrome] Detected browser: ${config.name}`);
+            return browserId;
           }
         }
-        break
+        break;
       }
       case 'windows': {
         // Check if data path exists (indicates browser is installed)
-        const home = homedir()
+        const home = homedir();
         if (config.windows.dataPath.length > 0) {
           const appDataBase = config.windows.useRoaming
             ? join(home, 'AppData', 'Roaming')
-            : join(home, 'AppData', 'Local')
-          const dataPath = join(appDataBase, ...config.windows.dataPath)
+            : join(home, 'AppData', 'Local');
+          const dataPath = join(appDataBase, ...config.windows.dataPath);
           try {
-            const stats = await stat(dataPath)
+            const stats = await stat(dataPath);
             if (stats.isDirectory()) {
-              logForDebugging(
-                `[Claude in Chrome] Detected browser: ${config.name}`,
-              )
-              return browserId
+              logForDebugging(`[Claude in Chrome] Detected browser: ${config.name}`);
+              return browserId;
             }
           } catch (e) {
-            if (!isFsInaccessible(e)) throw e
+            if (!isFsInaccessible(e)) throw e;
             // Browser not found, continue checking
           }
         }
-        break
+        break;
       }
     }
   }
 
-  return null
+  return null;
 }
 
 export function isClaudeInChromeMCPServer(name: string): boolean {
-  return normalizeNameForMCP(name) === CLAUDE_IN_CHROME_MCP_SERVER_NAME
+  return normalizeNameForMCP(name) === CLAUDE_IN_CHROME_MCP_SERVER_NAME;
 }
 
-const MAX_TRACKED_TABS = 200
-const trackedTabIds = new Set<number>()
+const MAX_TRACKED_TABS = 200;
+const trackedTabIds = new Set<number>();
 
 export function trackClaudeInChromeTabId(tabId: number): void {
   if (trackedTabIds.size >= MAX_TRACKED_TABS && !trackedTabIds.has(tabId)) {
-    trackedTabIds.clear()
+    trackedTabIds.clear();
   }
-  trackedTabIds.add(tabId)
+  trackedTabIds.add(tabId);
 }
 
 export function isTrackedClaudeInChromeTabId(tabId: number): boolean {
-  return trackedTabIds.has(tabId)
+  return trackedTabIds.has(tabId);
 }
 
 export async function openInChrome(url: string): Promise<boolean> {
-  const currentPlatform = getPlatform()
+  const currentPlatform = getPlatform();
 
   // Detect the best available browser
-  const browser = await detectAvailableBrowser()
+  const browser = await detectAvailableBrowser();
 
   if (!browser) {
-    logForDebugging('[Claude in Chrome] No compatible browser found')
-    return false
+    logForDebugging('[Claude in Chrome] No compatible browser found');
+    return false;
   }
 
-  const config = CHROMIUM_BROWSERS[browser]
+  const config = CHROMIUM_BROWSERS[browser];
 
   switch (currentPlatform) {
     case 'macos': {
-      const { code } = await execFileNoThrow('open', [
-        '-a',
-        config.macos.appName,
-        url,
-      ])
-      return code === 0
+      const { code } = await execFileNoThrow('open', ['-a', config.macos.appName, url]);
+      return code === 0;
     }
     case 'windows': {
       // Use rundll32 to avoid cmd.exe metacharacter issues with URLs containing & | > <
-      const { code } = await execFileNoThrow('rundll32', ['url,OpenURL', url])
-      return code === 0
+      const { code } = await execFileNoThrow('rundll32', ['url,OpenURL', url]);
+      return code === 0;
     }
     case 'wsl':
     case 'linux': {
       for (const binary of config.linux.binaries) {
-        const { code } = await execFileNoThrow(binary, [url])
+        const { code } = await execFileNoThrow(binary, [url]);
         if (code === 0) {
-          return true
+          return true;
         }
       }
-      return false
+      return false;
     }
     default:
-      return false
+      return false;
   }
 }
 
@@ -472,7 +436,7 @@ export async function openInChrome(url: string): Promise<boolean> {
  * Get the socket directory path (Unix only)
  */
 export function getSocketDir(): string {
-  return `/tmp/claude-mcp-browser-bridge-${getUsername()}`
+  return `/tmp/claude-mcp-browser-bridge-${getUsername()}`;
 }
 
 /**
@@ -480,9 +444,9 @@ export function getSocketDir(): string {
  */
 export function getSecureSocketPath(): string {
   if (platform() === 'win32') {
-    return `\\\\.\\pipe\\${getSocketName()}`
+    return `\\\\.\\pipe\\${getSocketName()}`;
   }
-  return join(getSocketDir(), `${process.pid}.sock`)
+  return join(getSocketDir(), `${process.pid}.sock`);
 }
 
 /**
@@ -492,19 +456,19 @@ export function getSecureSocketPath(): string {
 export function getAllSocketPaths(): string[] {
   // Windows uses named pipes, not Unix sockets
   if (platform() === 'win32') {
-    return [`\\\\.\\pipe\\${getSocketName()}`]
+    return [`\\\\.\\pipe\\${getSocketName()}`];
   }
 
-  const paths: string[] = []
-  const socketDir = getSocketDir()
+  const paths: string[] = [];
+  const socketDir = getSocketDir();
 
   // Scan for *.sock files in the socket directory
   try {
     // eslint-disable-next-line custom-rules/no-sync-fs -- ClaudeForChromeContext.getSocketPaths (external @ant/claude-for-chrome-mcp) requires a sync () => string[] callback
-    const files = readdirSync(socketDir)
+    const files = readdirSync(socketDir);
     for (const file of files) {
       if (file.endsWith('.sock')) {
-        paths.push(join(socketDir, file))
+        paths.push(join(socketDir, file));
       }
     }
   } catch {
@@ -512,29 +476,29 @@ export function getAllSocketPaths(): string[] {
   }
 
   // Legacy fallback paths
-  const legacyName = `claude-mcp-browser-bridge-${getUsername()}`
-  const legacyTmpdir = join(tmpdir(), legacyName)
-  const legacyTmp = `/tmp/${legacyName}`
+  const legacyName = `claude-mcp-browser-bridge-${getUsername()}`;
+  const legacyTmpdir = join(tmpdir(), legacyName);
+  const legacyTmp = `/tmp/${legacyName}`;
 
   if (!paths.includes(legacyTmpdir)) {
-    paths.push(legacyTmpdir)
+    paths.push(legacyTmpdir);
   }
   if (legacyTmpdir !== legacyTmp && !paths.includes(legacyTmp)) {
-    paths.push(legacyTmp)
+    paths.push(legacyTmp);
   }
 
-  return paths
+  return paths;
 }
 
 function getSocketName(): string {
   // NOTE: This must match the one used in the Claude in Chrome MCP
-  return `claude-mcp-browser-bridge-${getUsername()}`
+  return `claude-mcp-browser-bridge-${getUsername()}`;
 }
 
 function getUsername(): string {
   try {
-    return userInfo().username || 'default'
+    return userInfo().username || 'default';
   } catch {
-    return process.env.USER || process.env.USERNAME || 'default'
+    return process.env.USER || process.env.USERNAME || 'default';
   }
 }

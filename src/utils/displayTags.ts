@@ -12,7 +12,7 @@
  * backreferenced closing tag keeps adjacent blocks separate; unpaired angle
  * brackets ("when x < y") don't match.
  */
-const XML_TAG_BLOCK_PATTERN = /<([a-z][\w-]*)(?:\s[^>]*)?>[\s\S]*?<\/\1>\n?/g
+const XML_TAG_BLOCK_PATTERN = /<([a-z][\w-]*)(?:\s[^>]*)?>[\s\S]*?<\/\1>\n?/g;
 
 /**
  * Strip XML-like tag blocks from text for use in UI titles (/rewind, /resume,
@@ -24,8 +24,8 @@ const XML_TAG_BLOCK_PATTERN = /<([a-z][\w-]*)(?:\s[^>]*)?>[\s\S]*?<\/\1>\n?/g
  * (better to show something than nothing).
  */
 export function stripDisplayTags(text: string): string {
-  const result = text.replace(XML_TAG_BLOCK_PATTERN, '').trim()
-  return result || text
+  const result = text.replace(XML_TAG_BLOCK_PATTERN, '').trim();
+  return result || text;
 }
 
 /**
@@ -35,11 +35,10 @@ export function stripDisplayTags(text: string): string {
  * to skip pure-XML messages during bridge title derivation.
  */
 export function stripDisplayTagsAllowEmpty(text: string): string {
-  return text.replace(XML_TAG_BLOCK_PATTERN, '').trim()
+  return text.replace(XML_TAG_BLOCK_PATTERN, '').trim();
 }
 
-const IDE_CONTEXT_TAGS_PATTERN =
-  /<(ide_opened_file|ide_selection)(?:\s[^>]*)?>[\s\S]*?<\/\1>\n?/g
+const IDE_CONTEXT_TAGS_PATTERN = /<(ide_opened_file|ide_selection)(?:\s[^>]*)?>[\s\S]*?<\/\1>\n?/g;
 
 /**
  * Strip only IDE-injected context tags (ide_opened_file, ide_selection).
@@ -47,5 +46,5 @@ const IDE_CONTEXT_TAGS_PATTERN =
  * including lowercase HTML like `<code>foo</code>` while dropping IDE noise.
  */
 export function stripIdeContextTags(text: string): string {
-  return text.replace(IDE_CONTEXT_TAGS_PATTERN, '').trim()
+  return text.replace(IDE_CONTEXT_TAGS_PATTERN, '').trim();
 }

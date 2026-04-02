@@ -7,16 +7,11 @@ import type {
   SDKStatusMessage,
   SDKSystemMessage,
   SDKToolProgressMessage,
-} from '../entrypoints/agentSdkTypes.js'
-import type {
-  AssistantMessage,
-  Message,
-  StreamEvent,
-  SystemMessage,
-} from '../types/message.js'
-import { logForDebugging } from '../utils/debug.js'
-import { fromSDKCompactMetadata } from '../utils/messages/mappers.js'
-import { createUserMessage } from '../utils/messages.js'
+} from '../entrypoints/agentSdkTypes.js';
+import type { AssistantMessage, Message, StreamEvent, SystemMessage } from '../types/message.js';
+import { logForDebugging } from '../utils/debug.js';
+import { createUserMessage } from '../utils/messages.js';
+import { fromSDKCompactMetadata } from '../utils/messages/mappers.js';
 
 /**
  * Converts SDKMessage from CCR to REPL Message types.
@@ -36,7 +31,7 @@ function convertAssistantMessage(msg: SDKAssistantMessage): AssistantMessage {
     requestId: undefined,
     timestamp: new Date().toISOString(),
     error: msg.error,
-  }
+  };
 }
 
 /**
@@ -46,17 +41,17 @@ function convertStreamEvent(msg: SDKPartialAssistantMessage): StreamEvent {
   return {
     type: 'stream_event',
     event: msg.event,
-  }
+  };
 }
 
 /**
  * Convert an SDKResultMessage to a SystemMessage
  */
 function convertResultMessage(msg: SDKResultMessage): SystemMessage {
-  const isError = msg.subtype !== 'success'
+  const isError = msg.subtype !== 'success';
   const content = isError
     ? msg.errors?.join(', ') || 'Unknown error'
-    : 'Session completed successfully'
+    : 'Session completed successfully';
 
   return {
     type: 'system',
@@ -65,7 +60,7 @@ function convertResultMessage(msg: SDKResultMessage): SystemMessage {
     level: isError ? 'warning' : 'info',
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),
-  }
+  };
 }
 
 /**
@@ -79,7 +74,7 @@ function convertInitMessage(msg: SDKSystemMessage): SystemMessage {
     level: 'info',
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),
-  }
+  };
 }
 
 /**
@@ -87,20 +82,17 @@ function convertInitMessage(msg: SDKSystemMessage): SystemMessage {
  */
 function convertStatusMessage(msg: SDKStatusMessage): SystemMessage | null {
   if (!msg.status) {
-    return null
+    return null;
   }
 
   return {
     type: 'system',
     subtype: 'informational',
-    content:
-      msg.status === 'compacting'
-        ? 'Compacting conversation…'
-        : `Status: ${msg.status}`,
+    content: msg.status === 'compacting' ? 'Compacting conversation…' : `Status: ${msg.status}`,
     level: 'info',
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),
-  }
+  };
 }
 
 /**
@@ -108,9 +100,7 @@ function convertStatusMessage(msg: SDKStatusMessage): SystemMessage | null {
  * We use a system message instead of ProgressMessage since the Progress type
  * is a complex union that requires tool-specific data we don't have from CCR.
  */
-function convertToolProgressMessage(
-  msg: SDKToolProgressMessage,
-): SystemMessage {
+function convertToolProgressMessage(msg: SDKToolProgressMessage): SystemMessage {
   return {
     type: 'system',
     subtype: 'informational',
@@ -119,15 +109,13 @@ function convertToolProgressMessage(
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),
     toolUseID: msg.tool_use_id,
-  }
+  };
 }
 
 /**
  * Convert an SDKCompactBoundaryMessage to a SystemMessage
  */
-function convertCompactBoundaryMessage(
-  msg: SDKCompactBoundaryMessage,
-): SystemMessage {
+function convertCompactBoundaryMessage(msg: SDKCompactBoundaryMessage): SystemMessage {
   return {
     type: 'system',
     subtype: 'compact_boundary',
@@ -136,7 +124,7 @@ function convertCompactBoundaryMessage(
     uuid: msg.uuid,
     timestamp: new Date().toISOString(),
     compactMetadata: fromSDKCompactMetadata(msg.compact_metadata),
-  }
+  };
 }
 
 /**
@@ -145,43 +133,39 @@ function convertCompactBoundaryMessage(
 export type ConvertedMessage =
   | { type: 'message'; message: Message }
   | { type: 'stream_event'; event: StreamEvent }
-  | { type: 'ignored' }
+  | { type: 'ignored' };
 
 type ConvertOptions = {
   /** Convert user messages containing tool_result content blocks into UserMessages.
    * Used by direct connect mode where tool results come from the remote server
    * and need to be rendered locally. CCR mode ignores user messages since they
    * are handled differently. */
-  convertToolResults?: boolean
+  convertToolResults?: boolean;
   /**
    * Convert user text messages into UserMessages for display. Used when
    * converting historical events where user-typed messages need to be shown.
    * In live WS mode these are already added locally by the REPL so they're
    * ignored by default.
    */
-  convertUserTextMessages?: boolean
-}
+  convertUserTextMessages?: boolean;
+};
 
 /**
  * Convert an SDKMessage to REPL message format
  */
-export function convertSDKMessage(
-  msg: SDKMessage,
-  opts?: ConvertOptions,
-): ConvertedMessage {
+export function convertSDKMessage(msg: SDKMessage, opts?: ConvertOptions): ConvertedMessage {
   switch (msg.type) {
     case 'assistant':
-      return { type: 'message', message: convertAssistantMessage(msg) }
+      return { type: 'message', message: convertAssistantMessage(msg) };
 
     case 'user': {
-      const content = msg.message?.content
+      const content = msg.message?.content;
       // Tool result messages from the remote server need to be converted so
       // they render and collapse like local tool results. Detect via content
       // shape (tool_result blocks) — parent_tool_use_id is NOT reliable: the
       // agent-side normalizeMessage() hardcodes it to null for top-level
       // tool results, so it can't distinguish tool results from prompt echoes.
-      const isToolResult =
-        Array.isArray(content) && content.some(b => b.type === 'tool_result')
+      const isToolResult = Array.isArray(content) && content.some((b) => b.type === 'tool_result');
       if (opts?.convertToolResults && isToolResult) {
         return {
           type: 'message',
@@ -191,7 +175,7 @@ export function convertSDKMessage(
             uuid: msg.uuid,
             timestamp: msg.timestamp,
           }),
-        }
+        };
       }
       // When converting historical events, user-typed messages need to be
       // rendered (they weren't added locally by the REPL). Skip tool_results
@@ -206,64 +190,60 @@ export function convertSDKMessage(
               uuid: msg.uuid,
               timestamp: msg.timestamp,
             }),
-          }
+          };
         }
       }
       // User-typed messages (string content) are already added locally by REPL.
       // In CCR mode, all user messages are ignored (tool results handled differently).
-      return { type: 'ignored' }
+      return { type: 'ignored' };
     }
 
     case 'stream_event':
-      return { type: 'stream_event', event: convertStreamEvent(msg) }
+      return { type: 'stream_event', event: convertStreamEvent(msg) };
 
     case 'result':
       // Only show result messages for errors. Success results are noise
       // in multi-turn sessions (isLoading=false is sufficient signal).
       if (msg.subtype !== 'success') {
-        return { type: 'message', message: convertResultMessage(msg) }
+        return { type: 'message', message: convertResultMessage(msg) };
       }
-      return { type: 'ignored' }
+      return { type: 'ignored' };
 
     case 'system':
       if (msg.subtype === 'init') {
-        return { type: 'message', message: convertInitMessage(msg) }
+        return { type: 'message', message: convertInitMessage(msg) };
       }
       if (msg.subtype === 'status') {
-        const statusMsg = convertStatusMessage(msg)
-        return statusMsg
-          ? { type: 'message', message: statusMsg }
-          : { type: 'ignored' }
+        const statusMsg = convertStatusMessage(msg);
+        return statusMsg ? { type: 'message', message: statusMsg } : { type: 'ignored' };
       }
       if (msg.subtype === 'compact_boundary') {
         return {
           type: 'message',
           message: convertCompactBoundaryMessage(msg),
-        }
+        };
       }
       // hook_response and other subtypes
-      logForDebugging(
-        `[sdkMessageAdapter] Ignoring system message subtype: ${msg.subtype}`,
-      )
-      return { type: 'ignored' }
+      logForDebugging(`[sdkMessageAdapter] Ignoring system message subtype: ${msg.subtype}`);
+      return { type: 'ignored' };
 
     case 'tool_progress':
-      return { type: 'message', message: convertToolProgressMessage(msg) }
+      return { type: 'message', message: convertToolProgressMessage(msg) };
 
     case 'auth_status':
       // Auth status is handled separately, not converted to a display message
-      logForDebugging('[sdkMessageAdapter] Ignoring auth_status message')
-      return { type: 'ignored' }
+      logForDebugging('[sdkMessageAdapter] Ignoring auth_status message');
+      return { type: 'ignored' };
 
     case 'tool_use_summary':
       // Tool use summaries are SDK-only events, not displayed in REPL
-      logForDebugging('[sdkMessageAdapter] Ignoring tool_use_summary message')
-      return { type: 'ignored' }
+      logForDebugging('[sdkMessageAdapter] Ignoring tool_use_summary message');
+      return { type: 'ignored' };
 
     case 'rate_limit_event':
       // Rate limit events are SDK-only events, not displayed in REPL
-      logForDebugging('[sdkMessageAdapter] Ignoring rate_limit_event message')
-      return { type: 'ignored' }
+      logForDebugging('[sdkMessageAdapter] Ignoring rate_limit_event message');
+      return { type: 'ignored' };
 
     default: {
       // Gracefully ignore unknown message types. The backend may send new
@@ -271,8 +251,8 @@ export function convertSDKMessage(
       // without crashing or losing the session.
       logForDebugging(
         `[sdkMessageAdapter] Unknown message type: ${(msg as { type: string }).type}`,
-      )
-      return { type: 'ignored' }
+      );
+      return { type: 'ignored' };
     }
   }
 }
@@ -281,14 +261,14 @@ export function convertSDKMessage(
  * Check if an SDKMessage indicates the session has ended
  */
 export function isSessionEndMessage(msg: SDKMessage): boolean {
-  return msg.type === 'result'
+  return msg.type === 'result';
 }
 
 /**
  * Check if an SDKResultMessage indicates success
  */
 export function isSuccessResult(msg: SDKResultMessage): boolean {
-  return msg.subtype === 'success'
+  return msg.subtype === 'success';
 }
 
 /**
@@ -296,7 +276,7 @@ export function isSuccessResult(msg: SDKResultMessage): boolean {
  */
 export function getResultText(msg: SDKResultMessage): string | null {
   if (msg.subtype === 'success') {
-    return msg.result
+    return msg.result;
   }
-  return null
+  return null;
 }

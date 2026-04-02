@@ -7,52 +7,52 @@
  * Legacy name: originally AWS-only; now used by all cloud auth refresh flows.
  */
 
-import { createSignal } from './signal.js'
+import { createSignal } from './signal.js';
 
 export type AwsAuthStatus = {
-  isAuthenticating: boolean
-  output: string[]
-  error?: string
-}
+  isAuthenticating: boolean;
+  output: string[];
+  error?: string;
+};
 
 export class AwsAuthStatusManager {
-  private static instance: AwsAuthStatusManager | null = null
+  private static instance: AwsAuthStatusManager | null = null;
   private status: AwsAuthStatus = {
     isAuthenticating: false,
     output: [],
-  }
-  private changed = createSignal<[status: AwsAuthStatus]>()
+  };
+  private changed = createSignal<[status: AwsAuthStatus]>();
 
   static getInstance(): AwsAuthStatusManager {
     if (!AwsAuthStatusManager.instance) {
-      AwsAuthStatusManager.instance = new AwsAuthStatusManager()
+      AwsAuthStatusManager.instance = new AwsAuthStatusManager();
     }
-    return AwsAuthStatusManager.instance
+    return AwsAuthStatusManager.instance;
   }
 
   getStatus(): AwsAuthStatus {
     return {
       ...this.status,
       output: [...this.status.output],
-    }
+    };
   }
 
   startAuthentication(): void {
     this.status = {
       isAuthenticating: true,
       output: [],
-    }
-    this.changed.emit(this.getStatus())
+    };
+    this.changed.emit(this.getStatus());
   }
 
   addOutput(line: string): void {
-    this.status.output.push(line)
-    this.changed.emit(this.getStatus())
+    this.status.output.push(line);
+    this.changed.emit(this.getStatus());
   }
 
   setError(error: string): void {
-    this.status.error = error
-    this.changed.emit(this.getStatus())
+    this.status.error = error;
+    this.changed.emit(this.getStatus());
   }
 
   endAuthentication(success: boolean): void {
@@ -61,21 +61,21 @@ export class AwsAuthStatusManager {
       this.status = {
         isAuthenticating: false,
         output: [],
-      }
+      };
     } else {
       // Keep the output visible on failure
-      this.status.isAuthenticating = false
+      this.status.isAuthenticating = false;
     }
-    this.changed.emit(this.getStatus())
+    this.changed.emit(this.getStatus());
   }
 
-  subscribe = this.changed.subscribe
+  subscribe = this.changed.subscribe;
 
   // Clean up for testing
   static reset(): void {
     if (AwsAuthStatusManager.instance) {
-      AwsAuthStatusManager.instance.changed.clear()
-      AwsAuthStatusManager.instance = null
+      AwsAuthStatusManager.instance.changed.clear();
+      AwsAuthStatusManager.instance = null;
     }
   }
 }

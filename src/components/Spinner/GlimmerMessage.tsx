@@ -1,9 +1,9 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { stringWidth } from '../../ink/stringWidth.js';
+import { c as _c } from 'react/compiler-runtime';
 import { Text, useTheme } from '../../ink.js';
+import { stringWidth } from '../../ink/stringWidth.js';
 import { getGraphemeSegmenter } from '../../utils/intl.js';
-import { getTheme, type Theme } from '../../utils/theme.js';
+import { type Theme, getTheme } from '../../utils/theme.js';
 import type { SpinnerMode } from './types.js';
 import { interpolateColor, parseRGB, toRGBColor } from './utils.js';
 type Props = {
@@ -18,7 +18,7 @@ type Props = {
 const ERROR_RED = {
   r: 171,
   g: 43,
-  b: 63
+  b: 63,
 };
 export function GlimmerMessage(t0) {
   const $ = _c(75);
@@ -29,26 +29,32 @@ export function GlimmerMessage(t0) {
     glimmerIndex,
     flashOpacity,
     shimmerColor,
-    stalledIntensity: t1
+    stalledIntensity: t1,
   } = t0;
   const stalledIntensity = t1 === undefined ? 0 : t1;
   const [themeName] = useTheme();
   let messageWidth;
   let segments;
   let t2;
-  if ($[0] !== flashOpacity || $[1] !== message || $[2] !== messageColor || $[3] !== mode || $[4] !== shimmerColor || $[5] !== stalledIntensity || $[6] !== themeName) {
-    t2 = Symbol.for("react.early_return_sentinel");
+  if (
+    $[0] !== flashOpacity ||
+    $[1] !== message ||
+    $[2] !== messageColor ||
+    $[3] !== mode ||
+    $[4] !== shimmerColor ||
+    $[5] !== stalledIntensity ||
+    $[6] !== themeName
+  ) {
+    t2 = Symbol.for('react.early_return_sentinel');
     bb0: {
       const theme = getTheme(themeName);
       let segs;
       if ($[10] !== message) {
         segs = [];
-        for (const {
-          segment
-        } of getGraphemeSegmenter().segment(message)) {
+        for (const { segment } of getGraphemeSegmenter().segment(message)) {
           segs.push({
             segment,
-            width: stringWidth(segment)
+            width: stringWidth(segment),
           });
         }
         $[10] = message;
@@ -68,7 +74,7 @@ export function GlimmerMessage(t0) {
       if ($[14] !== segs || $[15] !== t3) {
         t4 = {
           segments: segs,
-          messageWidth: t3
+          messageWidth: t3,
         };
         $[14] = segs;
         $[15] = t3;
@@ -76,10 +82,7 @@ export function GlimmerMessage(t0) {
       } else {
         t4 = $[16];
       }
-      ({
-        segments,
-        messageWidth
-      } = t4);
+      ({ segments, messageWidth } = t4);
       if (!message) {
         t2 = null;
         break bb0;
@@ -98,10 +101,15 @@ export function GlimmerMessage(t0) {
           } else {
             t5 = $[18];
           }
-          t2 = <><Text color={color}>{message}</Text>{t5}</>;
+          t2 = (
+            <>
+              <Text color={color}>{message}</Text>
+              {t5}
+            </>
+          );
           break bb0;
         }
-        const color_0 = stalledIntensity > 0.5 ? "error" : messageColor;
+        const color_0 = stalledIntensity > 0.5 ? 'error' : messageColor;
         let t5;
         if ($[19] !== color_0 || $[20] !== message) {
           t5 = <Text color={color_0}>{message}</Text>;
@@ -121,7 +129,12 @@ export function GlimmerMessage(t0) {
         }
         let t7;
         if ($[24] !== t5 || $[25] !== t6) {
-          t7 = <>{t5}{t6}</>;
+          t7 = (
+            <>
+              {t5}
+              {t6}
+            </>
+          );
           $[24] = t5;
           $[25] = t6;
           $[26] = t7;
@@ -131,7 +144,7 @@ export function GlimmerMessage(t0) {
         t2 = t7;
         break bb0;
       }
-      if (mode === "tool-use") {
+      if (mode === 'tool-use') {
         const baseColorStr_0 = theme[messageColor];
         const shimmerColorStr = theme[shimmerColor];
         const baseRGB_0 = baseColorStr_0 ? parseRGB(baseColorStr_0) : null;
@@ -149,7 +162,12 @@ export function GlimmerMessage(t0) {
           }
           let t7;
           if ($[29] !== t5 || $[30] !== t6) {
-            t7 = <>{t5}{t6}</>;
+            t7 = (
+              <>
+                {t5}
+                {t6}
+              </>
+            );
             $[29] = t5;
             $[30] = t6;
             $[31] = t7;
@@ -179,7 +197,12 @@ export function GlimmerMessage(t0) {
         }
         let t7;
         if ($[37] !== t5 || $[38] !== t6) {
-          t7 = <>{t5}{t6}</>;
+          t7 = (
+            <>
+              {t5}
+              {t6}
+            </>
+          );
           $[37] = t5;
           $[38] = t6;
           $[39] = t7;
@@ -205,7 +228,7 @@ export function GlimmerMessage(t0) {
     segments = $[8];
     t2 = $[9];
   }
-  if (t2 !== Symbol.for("react.early_return_sentinel")) {
+  if (t2 !== Symbol.for('react.early_return_sentinel')) {
     return t2;
   }
   const shimmerStart = glimmerIndex - 1;
@@ -230,7 +253,12 @@ export function GlimmerMessage(t0) {
     }
     let t5;
     if ($[45] !== t3 || $[46] !== t4) {
-      t5 = <>{t3}{t4}</>;
+      t5 = (
+        <>
+          {t3}
+          {t4}
+        </>
+      );
       $[45] = t3;
       $[46] = t4;
       $[47] = t5;
@@ -241,14 +269,19 @@ export function GlimmerMessage(t0) {
   }
   const clampedStart = Math.max(0, shimmerStart);
   let colPos = 0;
-  let before = "";
-  let shim = "";
-  let after = "";
-  if ($[48] !== after || $[49] !== before || $[50] !== clampedStart || $[51] !== colPos || $[52] !== segments || $[53] !== shim || $[54] !== shimmerEnd) {
-    for (const {
-      segment: segment_0,
-      width
-    } of segments) {
+  let before = '';
+  let shim = '';
+  let after = '';
+  if (
+    $[48] !== after ||
+    $[49] !== before ||
+    $[50] !== clampedStart ||
+    $[51] !== colPos ||
+    $[52] !== segments ||
+    $[53] !== shim ||
+    $[54] !== shimmerEnd
+  ) {
+    for (const { segment: segment_0, width } of segments) {
       if (colPos + width <= clampedStart) {
         before = before + segment_0;
       } else {
@@ -314,7 +347,14 @@ export function GlimmerMessage(t0) {
   }
   let t7;
   if ($[70] !== t3 || $[71] !== t4 || $[72] !== t5 || $[73] !== t6) {
-    t7 = <>{t3}{t4}{t5}{t6}</>;
+    t7 = (
+      <>
+        {t3}
+        {t4}
+        {t5}
+        {t6}
+      </>
+    );
     $[70] = t3;
     $[71] = t4;
     $[72] = t5;

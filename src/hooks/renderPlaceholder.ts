@@ -1,14 +1,14 @@
-import chalk from 'chalk'
+import chalk from 'chalk';
 
 type PlaceholderRendererProps = {
-  placeholder?: string
-  value: string
-  showCursor?: boolean
-  focus?: boolean
-  terminalFocus: boolean
-  invert?: (text: string) => string
-  hidePlaceholderText?: boolean
-}
+  placeholder?: string;
+  value: string;
+  showCursor?: boolean;
+  focus?: boolean;
+  terminalFocus: boolean;
+  invert?: (text: string) => string;
+  hidePlaceholderText?: boolean;
+};
 
 export function renderPlaceholder({
   placeholder,
@@ -19,33 +19,32 @@ export function renderPlaceholder({
   invert = chalk.inverse,
   hidePlaceholderText = false,
 }: PlaceholderRendererProps): {
-  renderedPlaceholder: string | undefined
-  showPlaceholder: boolean
+  renderedPlaceholder: string | undefined;
+  showPlaceholder: boolean;
 } {
-  let renderedPlaceholder: string | undefined = undefined
+  let renderedPlaceholder: string | undefined = undefined;
 
   if (placeholder) {
     if (hidePlaceholderText) {
       // Voice recording: show only the cursor, no placeholder text
-      renderedPlaceholder =
-        showCursor && focus && terminalFocus ? invert(' ') : ''
+      renderedPlaceholder = showCursor && focus && terminalFocus ? invert(' ') : '';
     } else {
-      renderedPlaceholder = chalk.dim(placeholder)
+      renderedPlaceholder = chalk.dim(placeholder);
 
       // Show inverse cursor only when both input and terminal are focused
       if (showCursor && focus && terminalFocus) {
         renderedPlaceholder =
           placeholder.length > 0
             ? invert(placeholder[0]!) + chalk.dim(placeholder.slice(1))
-            : invert(' ')
+            : invert(' ');
       }
     }
   }
 
-  const showPlaceholder = value.length === 0 && Boolean(placeholder)
+  const showPlaceholder = value.length === 0 && Boolean(placeholder);
 
   return {
     renderedPlaceholder,
     showPlaceholder,
-  }
+  };
 }

@@ -11,7 +11,7 @@ import Yoga, {
   PositionType,
   Wrap,
   type Node as YogaNode,
-} from 'src/native-ts/yoga-layout/index.js'
+} from 'src/native-ts/yoga-layout/index.js';
 import {
   type LayoutAlign,
   LayoutDisplay,
@@ -25,7 +25,7 @@ import {
   type LayoutOverflow,
   type LayoutPositionType,
   type LayoutWrap,
-} from './node.js'
+} from './node.js';
 
 // --
 // Edge/Gutter mapping
@@ -40,47 +40,47 @@ const EDGE_MAP: Record<LayoutEdge, Edge> = {
   bottom: Edge.Bottom,
   start: Edge.Start,
   end: Edge.End,
-}
+};
 
 const GUTTER_MAP: Record<LayoutGutter, Gutter> = {
   all: Gutter.All,
   column: Gutter.Column,
   row: Gutter.Row,
-}
+};
 
 // --
 // Yoga adapter
 
 export class YogaLayoutNode implements LayoutNode {
-  readonly yoga: YogaNode
+  readonly yoga: YogaNode;
 
   constructor(yoga: YogaNode) {
-    this.yoga = yoga
+    this.yoga = yoga;
   }
 
   // Tree
 
   insertChild(child: LayoutNode, index: number): void {
-    this.yoga.insertChild((child as YogaLayoutNode).yoga, index)
+    this.yoga.insertChild((child as YogaLayoutNode).yoga, index);
   }
 
   removeChild(child: LayoutNode): void {
-    this.yoga.removeChild((child as YogaLayoutNode).yoga)
+    this.yoga.removeChild((child as YogaLayoutNode).yoga);
   }
 
   getChildCount(): number {
-    return this.yoga.getChildCount()
+    return this.yoga.getChildCount();
   }
 
   getParent(): LayoutNode | null {
-    const p = this.yoga.getParent()
-    return p ? new YogaLayoutNode(p) : null
+    const p = this.yoga.getParent();
+    return p ? new YogaLayoutNode(p) : null;
   }
 
   // Layout
 
   calculateLayout(width?: number, _height?: number): void {
-    this.yoga.calculateLayout(width, undefined, Direction.LTR)
+    this.yoga.calculateLayout(width, undefined, Direction.LTR);
   }
 
   setMeasureFunc(fn: LayoutMeasureFunc): void {
@@ -90,88 +90,88 @@ export class YogaLayoutNode implements LayoutNode {
           ? LayoutMeasureMode.Exactly
           : wMode === MeasureMode.AtMost
             ? LayoutMeasureMode.AtMost
-            : LayoutMeasureMode.Undefined
-      return fn(w, mode)
-    })
+            : LayoutMeasureMode.Undefined;
+      return fn(w, mode);
+    });
   }
 
   unsetMeasureFunc(): void {
-    this.yoga.unsetMeasureFunc()
+    this.yoga.unsetMeasureFunc();
   }
 
   markDirty(): void {
-    this.yoga.markDirty()
+    this.yoga.markDirty();
   }
 
   // Computed layout
 
   getComputedLeft(): number {
-    return this.yoga.getComputedLeft()
+    return this.yoga.getComputedLeft();
   }
 
   getComputedTop(): number {
-    return this.yoga.getComputedTop()
+    return this.yoga.getComputedTop();
   }
 
   getComputedWidth(): number {
-    return this.yoga.getComputedWidth()
+    return this.yoga.getComputedWidth();
   }
 
   getComputedHeight(): number {
-    return this.yoga.getComputedHeight()
+    return this.yoga.getComputedHeight();
   }
 
   getComputedBorder(edge: LayoutEdge): number {
-    return this.yoga.getComputedBorder(EDGE_MAP[edge]!)
+    return this.yoga.getComputedBorder(EDGE_MAP[edge]!);
   }
 
   getComputedPadding(edge: LayoutEdge): number {
-    return this.yoga.getComputedPadding(EDGE_MAP[edge]!)
+    return this.yoga.getComputedPadding(EDGE_MAP[edge]!);
   }
 
   // Style setters
 
   setWidth(value: number): void {
-    this.yoga.setWidth(value)
+    this.yoga.setWidth(value);
   }
   setWidthPercent(value: number): void {
-    this.yoga.setWidthPercent(value)
+    this.yoga.setWidthPercent(value);
   }
   setWidthAuto(): void {
-    this.yoga.setWidthAuto()
+    this.yoga.setWidthAuto();
   }
   setHeight(value: number): void {
-    this.yoga.setHeight(value)
+    this.yoga.setHeight(value);
   }
   setHeightPercent(value: number): void {
-    this.yoga.setHeightPercent(value)
+    this.yoga.setHeightPercent(value);
   }
   setHeightAuto(): void {
-    this.yoga.setHeightAuto()
+    this.yoga.setHeightAuto();
   }
   setMinWidth(value: number): void {
-    this.yoga.setMinWidth(value)
+    this.yoga.setMinWidth(value);
   }
   setMinWidthPercent(value: number): void {
-    this.yoga.setMinWidthPercent(value)
+    this.yoga.setMinWidthPercent(value);
   }
   setMinHeight(value: number): void {
-    this.yoga.setMinHeight(value)
+    this.yoga.setMinHeight(value);
   }
   setMinHeightPercent(value: number): void {
-    this.yoga.setMinHeightPercent(value)
+    this.yoga.setMinHeightPercent(value);
   }
   setMaxWidth(value: number): void {
-    this.yoga.setMaxWidth(value)
+    this.yoga.setMaxWidth(value);
   }
   setMaxWidthPercent(value: number): void {
-    this.yoga.setMaxWidthPercent(value)
+    this.yoga.setMaxWidthPercent(value);
   }
   setMaxHeight(value: number): void {
-    this.yoga.setMaxHeight(value)
+    this.yoga.setMaxHeight(value);
   }
   setMaxHeightPercent(value: number): void {
-    this.yoga.setMaxHeightPercent(value)
+    this.yoga.setMaxHeightPercent(value);
   }
 
   setFlexDirection(dir: LayoutFlexDirection): void {
@@ -180,21 +180,21 @@ export class YogaLayoutNode implements LayoutNode {
       'row-reverse': FlexDirection.RowReverse,
       column: FlexDirection.Column,
       'column-reverse': FlexDirection.ColumnReverse,
-    }
-    this.yoga.setFlexDirection(map[dir]!)
+    };
+    this.yoga.setFlexDirection(map[dir]!);
   }
 
   setFlexGrow(value: number): void {
-    this.yoga.setFlexGrow(value)
+    this.yoga.setFlexGrow(value);
   }
   setFlexShrink(value: number): void {
-    this.yoga.setFlexShrink(value)
+    this.yoga.setFlexShrink(value);
   }
   setFlexBasis(value: number): void {
-    this.yoga.setFlexBasis(value)
+    this.yoga.setFlexBasis(value);
   }
   setFlexBasisPercent(value: number): void {
-    this.yoga.setFlexBasisPercent(value)
+    this.yoga.setFlexBasisPercent(value);
   }
 
   setFlexWrap(wrap: LayoutWrap): void {
@@ -202,8 +202,8 @@ export class YogaLayoutNode implements LayoutNode {
       nowrap: Wrap.NoWrap,
       wrap: Wrap.Wrap,
       'wrap-reverse': Wrap.WrapReverse,
-    }
-    this.yoga.setFlexWrap(map[wrap]!)
+    };
+    this.yoga.setFlexWrap(map[wrap]!);
   }
 
   setAlignItems(align: LayoutAlign): void {
@@ -213,8 +213,8 @@ export class YogaLayoutNode implements LayoutNode {
       'flex-start': Align.FlexStart,
       center: Align.Center,
       'flex-end': Align.FlexEnd,
-    }
-    this.yoga.setAlignItems(map[align]!)
+    };
+    this.yoga.setAlignItems(map[align]!);
   }
 
   setAlignSelf(align: LayoutAlign): void {
@@ -224,8 +224,8 @@ export class YogaLayoutNode implements LayoutNode {
       'flex-start': Align.FlexStart,
       center: Align.Center,
       'flex-end': Align.FlexEnd,
-    }
-    this.yoga.setAlignSelf(map[align]!)
+    };
+    this.yoga.setAlignSelf(map[align]!);
   }
 
   setJustifyContent(justify: LayoutJustify): void {
@@ -236,32 +236,28 @@ export class YogaLayoutNode implements LayoutNode {
       'space-between': Justify.SpaceBetween,
       'space-around': Justify.SpaceAround,
       'space-evenly': Justify.SpaceEvenly,
-    }
-    this.yoga.setJustifyContent(map[justify]!)
+    };
+    this.yoga.setJustifyContent(map[justify]!);
   }
 
   setDisplay(display: LayoutDisplay): void {
-    this.yoga.setDisplay(display === 'flex' ? Display.Flex : Display.None)
+    this.yoga.setDisplay(display === 'flex' ? Display.Flex : Display.None);
   }
 
   getDisplay(): LayoutDisplay {
-    return this.yoga.getDisplay() === Display.None
-      ? LayoutDisplay.None
-      : LayoutDisplay.Flex
+    return this.yoga.getDisplay() === Display.None ? LayoutDisplay.None : LayoutDisplay.Flex;
   }
 
   setPositionType(type: LayoutPositionType): void {
-    this.yoga.setPositionType(
-      type === 'absolute' ? PositionType.Absolute : PositionType.Relative,
-    )
+    this.yoga.setPositionType(type === 'absolute' ? PositionType.Absolute : PositionType.Relative);
   }
 
   setPosition(edge: LayoutEdge, value: number): void {
-    this.yoga.setPosition(EDGE_MAP[edge]!, value)
+    this.yoga.setPosition(EDGE_MAP[edge]!, value);
   }
 
   setPositionPercent(edge: LayoutEdge, value: number): void {
-    this.yoga.setPositionPercent(EDGE_MAP[edge]!, value)
+    this.yoga.setPositionPercent(EDGE_MAP[edge]!, value);
   }
 
   setOverflow(overflow: LayoutOverflow): void {
@@ -269,30 +265,30 @@ export class YogaLayoutNode implements LayoutNode {
       visible: Overflow.Visible,
       hidden: Overflow.Hidden,
       scroll: Overflow.Scroll,
-    }
-    this.yoga.setOverflow(map[overflow]!)
+    };
+    this.yoga.setOverflow(map[overflow]!);
   }
 
   setMargin(edge: LayoutEdge, value: number): void {
-    this.yoga.setMargin(EDGE_MAP[edge]!, value)
+    this.yoga.setMargin(EDGE_MAP[edge]!, value);
   }
   setPadding(edge: LayoutEdge, value: number): void {
-    this.yoga.setPadding(EDGE_MAP[edge]!, value)
+    this.yoga.setPadding(EDGE_MAP[edge]!, value);
   }
   setBorder(edge: LayoutEdge, value: number): void {
-    this.yoga.setBorder(EDGE_MAP[edge]!, value)
+    this.yoga.setBorder(EDGE_MAP[edge]!, value);
   }
   setGap(gutter: LayoutGutter, value: number): void {
-    this.yoga.setGap(GUTTER_MAP[gutter]!, value)
+    this.yoga.setGap(GUTTER_MAP[gutter]!, value);
   }
 
   // Lifecycle
 
   free(): void {
-    this.yoga.free()
+    this.yoga.free();
   }
   freeRecursive(): void {
-    this.yoga.freeRecursive()
+    this.yoga.freeRecursive();
   }
 }
 
@@ -304,5 +300,5 @@ export class YogaLayoutNode implements LayoutNode {
 // just a plain JS object available at import time.
 
 export function createYogaLayoutNode(): LayoutNode {
-  return new YogaLayoutNode(Yoga.Node.create())
+  return new YogaLayoutNode(Yoga.Node.create());
 }

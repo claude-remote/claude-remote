@@ -1,1 +1,1 @@
-export const TASK_LIST_TOOL_NAME = 'TaskList'
+export const TASK_LIST_TOOL_NAME = 'TaskList';

@@ -1,30 +1,27 @@
 import {
-  buildSearchingPastContextSection,
   DIRS_EXIST_GUIDANCE,
   ENTRYPOINT_NAME,
   MAX_ENTRYPOINT_LINES,
-} from './memdir.js'
+  buildSearchingPastContextSection,
+} from './memdir.js';
 import {
   MEMORY_DRIFT_CAVEAT,
   MEMORY_FRONTMATTER_EXAMPLE,
   TRUSTING_RECALL_SECTION,
   TYPES_SECTION_COMBINED,
   WHAT_NOT_TO_SAVE_SECTION,
-} from './memoryTypes.js'
-import { getAutoMemPath } from './paths.js'
-import { getTeamMemPath } from './teamMemPaths.js'
+} from './memoryTypes.js';
+import { getAutoMemPath } from './paths.js';
+import { getTeamMemPath } from './teamMemPaths.js';
 
 /**
  * Build the combined prompt when both auto memory and team memory are enabled.
  * Closed four-type taxonomy (user / feedback / project / reference) with
  * per-type <scope> guidance embedded in XML-style <type> blocks.
  */
-export function buildCombinedMemoryPrompt(
-  extraGuidelines?: string[],
-  skipIndex = false,
-): string {
-  const autoDir = getAutoMemPath()
-  const teamDir = getTeamMemPath()
+export function buildCombinedMemoryPrompt(extraGuidelines?: string[], skipIndex = false): string {
+  const autoDir = getAutoMemPath();
+  const teamDir = getTeamMemPath();
 
   const howToSave = skipIndex
     ? [
@@ -55,7 +52,7 @@ export function buildCombinedMemoryPrompt(
         '- Organize memory semantically by topic, not chronologically',
         '- Update or remove memories that turn out to be wrong or outdated',
         '- Do not write duplicate memories. First check if there is an existing memory you can update before writing a new one.',
-      ]
+      ];
 
   const lines = [
     '# Memory',
@@ -94,7 +91,7 @@ export function buildCombinedMemoryPrompt(
     ...(extraGuidelines ?? []),
     '',
     ...buildSearchingPastContextSection(autoDir),
-  ]
+  ];
 
-  return lines.join('\n')
+  return lines.join('\n');
 }

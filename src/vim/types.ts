@@ -30,11 +30,11 @@
 // Core Types
 // ============================================================================
 
-export type Operator = 'delete' | 'change' | 'yank'
+export type Operator = 'delete' | 'change' | 'yank';
 
-export type FindType = 'f' | 'F' | 't' | 'T'
+export type FindType = 'f' | 'F' | 't' | 'T';
 
-export type TextObjScope = 'inner' | 'around'
+export type TextObjScope = 'inner' | 'around';
 
 // ============================================================================
 // State Machine Types
@@ -48,7 +48,7 @@ export type TextObjScope = 'inner' | 'around'
  */
 export type VimState =
   | { mode: 'INSERT'; insertedText: string }
-  | { mode: 'NORMAL'; command: CommandState }
+  | { mode: 'NORMAL'; command: CommandState };
 
 /**
  * Command state machine for NORMAL mode.
@@ -63,27 +63,27 @@ export type CommandState =
   | { type: 'operatorCount'; op: Operator; count: number; digits: string }
   | { type: 'operatorFind'; op: Operator; count: number; find: FindType }
   | {
-      type: 'operatorTextObj'
-      op: Operator
-      count: number
-      scope: TextObjScope
+      type: 'operatorTextObj';
+      op: Operator;
+      count: number;
+      scope: TextObjScope;
     }
   | { type: 'find'; find: FindType; count: number }
   | { type: 'g'; count: number }
   | { type: 'operatorG'; op: Operator; count: number }
   | { type: 'replace'; count: number }
-  | { type: 'indent'; dir: '>' | '<'; count: number }
+  | { type: 'indent'; dir: '>' | '<'; count: number };
 
 /**
  * Persistent state that survives across commands.
  * This is the "memory" of vim - what gets recalled for repeats and pastes.
  */
 export type PersistentState = {
-  lastChange: RecordedChange | null
-  lastFind: { type: FindType; char: string } | null
-  register: string
-  registerIsLinewise: boolean
-}
+  lastChange: RecordedChange | null;
+  lastFind: { type: FindType; char: string } | null;
+  register: string;
+  registerIsLinewise: boolean;
+};
 
 /**
  * Recorded change for dot-repeat.
@@ -92,31 +92,31 @@ export type PersistentState = {
 export type RecordedChange =
   | { type: 'insert'; text: string }
   | {
-      type: 'operator'
-      op: Operator
-      motion: string
-      count: number
+      type: 'operator';
+      op: Operator;
+      motion: string;
+      count: number;
     }
   | {
-      type: 'operatorTextObj'
-      op: Operator
-      objType: string
-      scope: TextObjScope
-      count: number
+      type: 'operatorTextObj';
+      op: Operator;
+      objType: string;
+      scope: TextObjScope;
+      count: number;
     }
   | {
-      type: 'operatorFind'
-      op: Operator
-      find: FindType
-      char: string
-      count: number
+      type: 'operatorFind';
+      op: Operator;
+      find: FindType;
+      char: string;
+      count: number;
     }
   | { type: 'replace'; char: string; count: number }
   | { type: 'x'; count: number }
   | { type: 'toggleCase'; count: number }
   | { type: 'indent'; dir: '>' | '<'; count: number }
   | { type: 'openLine'; direction: 'above' | 'below' }
-  | { type: 'join'; count: number }
+  | { type: 'join'; count: number };
 
 // ============================================================================
 // Key Groups - Named constants, no magic strings
@@ -126,10 +126,10 @@ export const OPERATORS = {
   d: 'delete',
   c: 'change',
   y: 'yank',
-} as const satisfies Record<string, Operator>
+} as const satisfies Record<string, Operator>;
 
 export function isOperatorKey(key: string): key is keyof typeof OPERATORS {
-  return key in OPERATORS
+  return key in OPERATORS;
 }
 
 export const SIMPLE_MOTIONS = new Set([
@@ -146,19 +146,17 @@ export const SIMPLE_MOTIONS = new Set([
   '0',
   '^',
   '$', // Line positions
-])
+]);
 
-export const FIND_KEYS = new Set(['f', 'F', 't', 'T'])
+export const FIND_KEYS = new Set(['f', 'F', 't', 'T']);
 
 export const TEXT_OBJ_SCOPES = {
   i: 'inner',
   a: 'around',
-} as const satisfies Record<string, TextObjScope>
+} as const satisfies Record<string, TextObjScope>;
 
-export function isTextObjScopeKey(
-  key: string,
-): key is keyof typeof TEXT_OBJ_SCOPES {
-  return key in TEXT_OBJ_SCOPES
+export function isTextObjScopeKey(key: string): key is keyof typeof TEXT_OBJ_SCOPES {
+  return key in TEXT_OBJ_SCOPES;
 }
 
 export const TEXT_OBJ_TYPES = new Set([
@@ -177,16 +175,16 @@ export const TEXT_OBJ_TYPES = new Set([
   'B', // Braces
   '<',
   '>', // Angle brackets
-])
+]);
 
-export const MAX_VIM_COUNT = 10000
+export const MAX_VIM_COUNT = 10000;
 
 // ============================================================================
 // State Factories
 // ============================================================================
 
 export function createInitialVimState(): VimState {
-  return { mode: 'INSERT', insertedText: '' }
+  return { mode: 'INSERT', insertedText: '' };
 }
 
 export function createInitialPersistentState(): PersistentState {
@@ -195,5 +193,5 @@ export function createInitialPersistentState(): PersistentState {
     lastFind: null,
     register: '',
     registerIsLinewise: false,
-  }
+  };
 }

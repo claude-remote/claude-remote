@@ -1,33 +1,20 @@
-import {
-  STATUS_TAG,
-  SUMMARY_TAG,
-  TASK_NOTIFICATION_TAG,
-} from '../constants/xml.js'
-import { BACKGROUND_BASH_SUMMARY_PREFIX } from '../tasks/LocalShellTask/LocalShellTask.js'
-import type {
-  NormalizedUserMessage,
-  RenderableMessage,
-} from '../types/message.js'
-import { isFullscreenEnvEnabled } from './fullscreen.js'
-import { extractTag } from './messages.js'
+import { STATUS_TAG, SUMMARY_TAG, TASK_NOTIFICATION_TAG } from '../constants/xml.js';
+import { BACKGROUND_BASH_SUMMARY_PREFIX } from '../tasks/LocalShellTask/LocalShellTask.js';
+import type { NormalizedUserMessage, RenderableMessage } from '../types/message.js';
+import { isFullscreenEnvEnabled } from './fullscreen.js';
+import { extractTag } from './messages.js';
 
-function isCompletedBackgroundBash(
-  msg: RenderableMessage,
-): msg is NormalizedUserMessage {
-  if (msg.type !== 'user') return false
-  const content = msg.message.content[0]
-  if (content?.type !== 'text') return false
-  if (!content.text.includes(`<${TASK_NOTIFICATION_TAG}`)) return false
+function isCompletedBackgroundBash(msg: RenderableMessage): msg is NormalizedUserMessage {
+  if (msg.type !== 'user') return false;
+  const content = msg.message.content[0];
+  if (content?.type !== 'text') return false;
+  if (!content.text.includes(`<${TASK_NOTIFICATION_TAG}`)) return false;
   // Only collapse successful completions — failed/killed stay visible individually.
-  if (extractTag(content.text, STATUS_TAG) !== 'completed') return false
+  if (extractTag(content.text, STATUS_TAG) !== 'completed') return false;
   // The prefix constant distinguishes bash-kind LocalShellTask completions from
   // agent/workflow/monitor notifications. Monitor-kind completions have their
   // own summary wording and deliberately don't collapse here.
-  return (
-    extractTag(content.text, SUMMARY_TAG)?.startsWith(
-      BACKGROUND_BASH_SUMMARY_PREFIX,
-    ) ?? false
-  )
+  return extractTag(content.text, SUMMARY_TAG)?.startsWith(BACKGROUND_BASH_SUMMARY_PREFIX) ?? false;
 }
 
 /**
@@ -42,22 +29,22 @@ export function collapseBackgroundBashNotifications(
   messages: RenderableMessage[],
   verbose: boolean,
 ): RenderableMessage[] {
-  if (!isFullscreenEnvEnabled()) return messages
-  if (verbose) return messages
+  if (!isFullscreenEnvEnabled()) return messages;
+  if (verbose) return messages;
 
-  const result: RenderableMessage[] = []
-  let i = 0
+  const result: RenderableMessage[] = [];
+  let i = 0;
 
   while (i < messages.length) {
-    const msg = messages[i]!
+    const msg = messages[i]!;
     if (isCompletedBackgroundBash(msg)) {
-      let count = 0
+      let count = 0;
       while (i < messages.length && isCompletedBackgroundBash(messages[i]!)) {
-        count++
-        i++
+        count++;
+        i++;
       }
       if (count === 1) {
-        result.push(msg)
+        result.push(msg);
       } else {
         // Synthesize a task-notification that UserAgentNotificationMessage
         // already knows how to render — no new renderer needed.
@@ -72,13 +59,13 @@ export function collapseBackgroundBashNotifications(
               },
             ],
           },
-        })
+        });
       }
     } else {
-      result.push(msg)
-      i++
+      result.push(msg);
+      i++;
     }
   }
 
-  return result
+  return result;
 }

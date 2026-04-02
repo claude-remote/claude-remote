@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { SqliteStore } from '../SqliteStore';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import type { Message, Task } from '@/shared/types';
+import { SqliteStore } from '../SqliteStore';
 
 describe('SqliteStore', () => {
   let store: SqliteStore;
@@ -43,10 +43,10 @@ describe('SqliteStore', () => {
       store.createSession({ id: 's1', name: 'Test Session', cwd: '/tmp' });
       const session = store.getSession('s1');
       expect(session).not.toBeNull();
-      expect(session!.id).toBe('s1');
-      expect(session!.name).toBe('Test Session');
-      expect(session!.cwd).toBe('/tmp');
-      expect(session!.status).toBe('active');
+      expect(session?.id).toBe('s1');
+      expect(session?.name).toBe('Test Session');
+      expect(session?.cwd).toBe('/tmp');
+      expect(session?.status).toBe('active');
     });
 
     it('should return null for non-existent session', () => {
@@ -79,15 +79,15 @@ describe('SqliteStore', () => {
       store.createSession({ id: 's1', name: 'Original', cwd: '/tmp' });
       store.updateSession('s1', { name: 'Updated', status: 'idle' });
       const session = store.getSession('s1');
-      expect(session!.name).toBe('Updated');
-      expect(session!.status).toBe('idle');
+      expect(session?.name).toBe('Updated');
+      expect(session?.status).toBe('idle');
     });
 
     it('should archive a session', () => {
       store.createSession({ id: 's1', name: 'Test', cwd: '/tmp' });
       store.archiveSession('s1');
       const session = store.getSession('s1');
-      expect(session!.status).toBe('archived');
+      expect(session?.status).toBe('archived');
     });
 
     it('should reject invalid status via CHECK constraint', () => {
@@ -158,9 +158,9 @@ describe('SqliteStore', () => {
 
       const messages = store.listMessages('s1');
       expect(messages).toHaveLength(1);
-      expect(messages[0]!.id).toBe('m1');
-      expect(messages[0]!.role).toBe('user');
-      expect(messages[0]!.content).toEqual([{ type: 'text', text: 'Hello' }]);
+      expect(messages[0]?.id).toBe('m1');
+      expect(messages[0]?.role).toBe('user');
+      expect(messages[0]?.content).toEqual([{ type: 'text', text: 'Hello' }]);
     });
 
     it('should auto-increment seq', () => {
@@ -181,8 +181,8 @@ describe('SqliteStore', () => {
 
       const messages = store.listMessages('s1');
       expect(messages).toHaveLength(2);
-      expect(messages[0]!.id).toBe('m1');
-      expect(messages[1]!.id).toBe('m2');
+      expect(messages[0]?.id).toBe('m1');
+      expect(messages[1]?.id).toBe('m2');
     });
 
     it('should support limit and offset', () => {
@@ -198,11 +198,11 @@ describe('SqliteStore', () => {
 
       const page1 = store.listMessages('s1', { limit: 3, offset: 0 });
       expect(page1).toHaveLength(3);
-      expect(page1[0]!.id).toBe('m0');
+      expect(page1[0]?.id).toBe('m0');
 
       const page2 = store.listMessages('s1', { limit: 3, offset: 3 });
       expect(page2).toHaveLength(3);
-      expect(page2[0]!.id).toBe('m3');
+      expect(page2[0]?.id).toBe('m3');
     });
 
     it('should get a single message by id', () => {
@@ -216,7 +216,7 @@ describe('SqliteStore', () => {
 
       const msg = store.getMessage('m1');
       expect(msg).not.toBeNull();
-      expect(msg!.id).toBe('m1');
+      expect(msg?.id).toBe('m1');
 
       expect(store.getMessage('nonexistent')).toBeNull();
     });
@@ -251,9 +251,9 @@ describe('SqliteStore', () => {
 
       const task = store.getTask('t1');
       expect(task).not.toBeNull();
-      expect(task!.id).toBe('t1');
-      expect(task!.description).toBe('Fix the bug');
-      expect(task!.status).toBe('pending');
+      expect(task?.id).toBe('t1');
+      expect(task?.description).toBe('Fix the bug');
+      expect(task?.status).toBe('pending');
     });
 
     it('should list tasks by session', () => {
@@ -269,7 +269,7 @@ describe('SqliteStore', () => {
       store.updateTask('t1', { status: 'in_progress' });
 
       const task = store.getTask('t1');
-      expect(task!.status).toBe('in_progress');
+      expect(task?.status).toBe('in_progress');
     });
 
     it('should reject invalid task status', () => {
@@ -310,8 +310,8 @@ describe('SqliteStore', () => {
 
       const tasks = store.listTasksBySession('s1');
       expect(tasks).toHaveLength(2);
-      expect(tasks[0]!.id).toBe('t2');
-      expect(tasks[1]!.id).toBe('t3');
+      expect(tasks[0]?.id).toBe('t2');
+      expect(tasks[1]?.id).toBe('t3');
     });
   });
 
@@ -333,9 +333,9 @@ describe('SqliteStore', () => {
       store.addFavorite({ id: 'f1', sessionId: 's1', messageId: 'm1' });
       const favorites = store.listFavorites();
       expect(favorites).toHaveLength(1);
-      expect(favorites[0]!.id).toBe('f1');
-      expect(favorites[0]!.sessionId).toBe('s1');
-      expect(favorites[0]!.messageId).toBe('m1');
+      expect(favorites[0]?.id).toBe('f1');
+      expect(favorites[0]?.sessionId).toBe('s1');
+      expect(favorites[0]?.messageId).toBe('m1');
     });
 
     it('should list favorites filtered by session', () => {
@@ -369,9 +369,9 @@ describe('SqliteStore', () => {
 
       const execs = store.listToolExecutions('s1');
       expect(execs).toHaveLength(1);
-      expect(execs[0]!.toolName).toBe('bash');
-      expect(execs[0]!.status).toBe('running');
-      expect(execs[0]!.params).toEqual({ command: 'ls' });
+      expect(execs[0]?.toolName).toBe('bash');
+      expect(execs[0]?.status).toBe('running');
+      expect(execs[0]?.params).toEqual({ command: 'ls' });
     });
 
     it('should update tool execution status', () => {
@@ -389,9 +389,9 @@ describe('SqliteStore', () => {
       });
 
       const execs = store.listToolExecutions('s1');
-      expect(execs[0]!.status).toBe('completed');
-      expect(execs[0]!.result).toBe('file1.txt\nfile2.txt');
-      expect(execs[0]!.finishedAt).toBe(now);
+      expect(execs[0]?.status).toBe('completed');
+      expect(execs[0]?.result).toBe('file1.txt\nfile2.txt');
+      expect(execs[0]?.finishedAt).toBe(now);
     });
 
     it('should reject invalid tool execution status', () => {
@@ -406,13 +406,7 @@ describe('SqliteStore', () => {
     });
 
     it('should support all valid tool execution statuses', () => {
-      const statuses = [
-        'running',
-        'completed',
-        'failed',
-        'interrupted',
-        'crashed',
-      ] as const;
+      const statuses = ['running', 'completed', 'failed', 'interrupted', 'crashed'] as const;
       for (const status of statuses) {
         store.createToolExecution({
           id: `te-${status}`,
@@ -501,8 +495,8 @@ describe('SqliteStore', () => {
     it('should find messages matching query', () => {
       const results = store.searchHistory('login bug');
       expect(results).toHaveLength(1);
-      expect(results[0]!.messageId).toBe('m1');
-      expect(results[0]!.sessionName).toBe('Test Session');
+      expect(results[0]?.messageId).toBe('m1');
+      expect(results[0]?.sessionName).toBe('Test Session');
     });
 
     it('should return empty for no matches', () => {

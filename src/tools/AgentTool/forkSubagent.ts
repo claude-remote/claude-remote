@@ -1,19 +1,13 @@
-import { feature } from 'src/utils/feature.js'
-import type { BetaToolUseBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import { randomUUID } from 'crypto'
-import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
-import {
-  FORK_BOILERPLATE_TAG,
-  FORK_DIRECTIVE_PREFIX,
-} from '../../constants/xml.js'
-import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
-import type {
-  AssistantMessage,
-  Message as MessageType,
-} from '../../types/message.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { createUserMessage } from '../../utils/messages.js'
-import type { BuiltInAgentDefinition } from './loadAgentsDir.js'
+import { randomUUID } from 'node:crypto';
+import type { BetaToolUseBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs';
+import { feature } from 'src/utils/feature.js';
+import { getIsNonInteractiveSession } from '../../bootstrap/state.js';
+import { FORK_BOILERPLATE_TAG, FORK_DIRECTIVE_PREFIX } from '../../constants/xml.js';
+import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js';
+import type { AssistantMessage, Message as MessageType } from '../../types/message.js';
+import { logForDebugging } from '../../utils/debug.js';
+import { createUserMessage } from '../../utils/messages.js';
+import type { BuiltInAgentDefinition } from './loadAgentsDir.js';
 
 /**
  * Fork subagent feature gate.
@@ -31,15 +25,15 @@ import type { BuiltInAgentDefinition } from './loadAgentsDir.js'
  */
 export function isForkSubagentEnabled(): boolean {
   if (feature('FORK_SUBAGENT')) {
-    if (isCoordinatorMode()) return false
-    if (getIsNonInteractiveSession()) return false
-    return true
+    if (isCoordinatorMode()) return false;
+    if (getIsNonInteractiveSession()) return false;
+    return true;
   }
-  return false
+  return false;
 }
 
 /** Synthetic agent type name used for analytics when the fork path fires. */
-export const FORK_SUBAGENT_TYPE = 'fork'
+export const FORK_SUBAGENT_TYPE = 'fork';
 
 /**
  * Synthetic agent definition for the fork path.
@@ -68,7 +62,7 @@ export const FORK_AGENT = {
   source: 'built-in',
   baseDir: 'built-in',
   getSystemPrompt: () => '',
-} satisfies BuiltInAgentDefinition
+} satisfies BuiltInAgentDefinition;
 
 /**
  * Guard against recursive forking. Fork children keep the Agent tool in their
@@ -76,21 +70,19 @@ export const FORK_AGENT = {
  * at call time by detecting the fork boilerplate tag in conversation history.
  */
 export function isInForkChild(messages: MessageType[]): boolean {
-  return messages.some(m => {
-    if (m.type !== 'user') return false
-    const content = m.message.content
-    if (!Array.isArray(content)) return false
+  return messages.some((m) => {
+    if (m.type !== 'user') return false;
+    const content = m.message.content;
+    if (!Array.isArray(content)) return false;
     return content.some(
-      block =>
-        block.type === 'text' &&
-        block.text.includes(`<${FORK_BOILERPLATE_TAG}>`),
-    )
-  })
+      (block) => block.type === 'text' && block.text.includes(`<${FORK_BOILERPLATE_TAG}>`),
+    );
+  });
 }
 
 /** Placeholder text used for all tool_result blocks in the fork prefix.
  * Must be identical across all fork children for prompt cache sharing. */
-const FORK_PLACEHOLDER_RESULT = 'Fork started — processing in background'
+const FORK_PLACEHOLDER_RESULT = 'Fork started — processing in background';
 
 /**
  * Build the forked conversation messages for the child agent.
@@ -117,29 +109,27 @@ export function buildForkedMessages(
       ...assistantMessage.message,
       content: [...assistantMessage.message.content],
     },
-  }
+  };
 
   // Collect all tool_use blocks from the assistant message
   const toolUseBlocks = assistantMessage.message.content.filter(
     (block): block is BetaToolUseBlock => block.type === 'tool_use',
-  )
+  );
 
   if (toolUseBlocks.length === 0) {
     logForDebugging(
       `No tool_use blocks found in assistant message for fork directive: ${directive.slice(0, 50)}...`,
       { level: 'error' },
-    )
+    );
     return [
       createUserMessage({
-        content: [
-          { type: 'text' as const, text: buildChildMessage(directive) },
-        ],
+        content: [{ type: 'text' as const, text: buildChildMessage(directive) }],
       }),
-    ]
+    ];
   }
 
   // Build tool_result blocks for every tool_use, all with identical placeholder text
-  const toolResultBlocks = toolUseBlocks.map(block => ({
+  const toolResultBlocks = toolUseBlocks.map((block) => ({
     type: 'tool_result' as const,
     tool_use_id: block.id,
     content: [
@@ -148,7 +138,7 @@ export function buildForkedMessages(
         text: FORK_PLACEHOLDER_RESULT,
       },
     ],
-  }))
+  }));
 
   // Build a single user message: all placeholder tool_results + the per-child directive
   // TODO(smoosh): this text sibling creates a [tool_result, text] pattern on the wire
@@ -163,9 +153,9 @@ export function buildForkedMessages(
         text: buildChildMessage(directive),
       },
     ],
-  })
+  });
 
-  return [fullAssistantMessage, toolResultMessage]
+  return [fullAssistantMessage, toolResultMessage];
 }
 
 export function buildChildMessage(directive: string): string {
@@ -194,7 +184,7 @@ Output format (plain text labels, not markdown headers):
   Issues: <list — include only if there are issues to flag>
 </${FORK_BOILERPLATE_TAG}>
 
-${FORK_DIRECTIVE_PREFIX}${directive}`
+${FORK_DIRECTIVE_PREFIX}${directive}`;
 }
 
 /**
@@ -202,9 +192,6 @@ ${FORK_DIRECTIVE_PREFIX}${directive}`
  * Tells the child to translate paths from the inherited context, re-read
  * potentially stale files, and that its changes are isolated.
  */
-export function buildWorktreeNotice(
-  parentCwd: string,
-  worktreeCwd: string,
-): string {
-  return `You've inherited the conversation context above from a parent agent working in ${parentCwd}. You are operating in an isolated git worktree at ${worktreeCwd} — same repository, same relative file structure, separate working copy. Paths in the inherited context refer to the parent's working directory; translate them to your worktree root. Re-read files before editing if the parent may have modified them since they appear in the context. Your changes stay in this worktree and will not affect the parent's files.`
+export function buildWorktreeNotice(parentCwd: string, worktreeCwd: string): string {
+  return `You've inherited the conversation context above from a parent agent working in ${parentCwd}. You are operating in an isolated git worktree at ${worktreeCwd} — same repository, same relative file structure, separate working copy. Paths in the inherited context refer to the parent's working directory; translate them to your worktree root. Re-read files before editing if the parent may have modified them since they appear in the context. Your changes stay in this worktree and will not affect the parent's files.`;
 }

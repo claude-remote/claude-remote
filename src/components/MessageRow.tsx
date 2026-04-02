@@ -1,16 +1,27 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
+import type { Tools } from '../Tool.js';
 import type { Command } from '../commands.js';
 import { Box } from '../ink.js';
 import type { Screen } from '../screens/REPL.js';
-import type { Tools } from '../Tool.js';
 import type { RenderableMessage } from '../types/message.js';
-import { getDisplayMessageFromCollapsed, getToolSearchOrReadInfo, getToolUseIdsFromCollapsedGroup, hasAnyToolInProgress } from '../utils/collapseReadSearch.js';
-import { type buildMessageLookups, EMPTY_STRING_SET, getProgressMessagesFromLookup, getSiblingToolUseIDsFromLookup, getToolUseID } from '../utils/messages.js';
-import { hasThinkingContent, Message } from './Message.js';
+import {
+  getDisplayMessageFromCollapsed,
+  getToolSearchOrReadInfo,
+  getToolUseIdsFromCollapsedGroup,
+  hasAnyToolInProgress,
+} from '../utils/collapseReadSearch.js';
+import {
+  EMPTY_STRING_SET,
+  type buildMessageLookups,
+  getProgressMessagesFromLookup,
+  getSiblingToolUseIDsFromLookup,
+  getToolUseID,
+} from '../utils/messages.js';
+import { Message, hasThinkingContent } from './Message.js';
 import { MessageModel } from './MessageModel.js';
-import { shouldRenderStatically } from './Messages.js';
 import { MessageTimestamp } from './MessageTimestamp.js';
+import { shouldRenderStatically } from './Messages.js';
 import { OffscreenFreeze } from './OffscreenFreeze.js';
 export type Props = {
   message: RenderableMessage;
@@ -47,7 +58,12 @@ export type Props = {
  * to each MessageRow (which React Compiler would pin in the fiber's memoCache,
  * accumulating every historical version of the array ≈ 1-2MB over a 7-turn session).
  */
-export function hasContentAfterIndex(messages: RenderableMessage[], index: number, tools: Tools, streamingToolUseIDs: Set<string>): boolean {
+export function hasContentAfterIndex(
+  messages: RenderableMessage[],
+  index: number,
+  tools: Tools,
+  streamingToolUseIDs: Set<string>,
+): boolean {
   for (let i = index + 1; i < messages.length; i++) {
     const msg = messages[i];
     if (msg?.type === 'assistant') {
@@ -108,14 +124,22 @@ function MessageRowImpl(t0) {
     latestBashOutputUUID,
     columns,
     isLoading,
-    lookups
+    lookups,
   } = t0;
-  const isTranscriptMode = screen === "transcript";
-  const isGrouped = msg.type === "grouped_tool_use";
-  const isCollapsed = msg.type === "collapsed_read_search";
+  const isTranscriptMode = screen === 'transcript';
+  const isGrouped = msg.type === 'grouped_tool_use';
+  const isCollapsed = msg.type === 'collapsed_read_search';
   let t1;
-  if ($[0] !== hasContentAfter || $[1] !== inProgressToolUseIDs || $[2] !== isCollapsed || $[3] !== isLoading || $[4] !== msg) {
-    t1 = isCollapsed && (hasAnyToolInProgress(msg, inProgressToolUseIDs) || isLoading && !hasContentAfter);
+  if (
+    $[0] !== hasContentAfter ||
+    $[1] !== inProgressToolUseIDs ||
+    $[2] !== isCollapsed ||
+    $[3] !== isLoading ||
+    $[4] !== msg
+  ) {
+    t1 =
+      isCollapsed &&
+      (hasAnyToolInProgress(msg, inProgressToolUseIDs) || (isLoading && !hasContentAfter));
     $[0] = hasContentAfter;
     $[1] = inProgressToolUseIDs;
     $[2] = isCollapsed;
@@ -150,9 +174,25 @@ function MessageRowImpl(t0) {
   }
   const progressMessagesForMessage = t3;
   let t4;
-  if ($[15] !== inProgressToolUseIDs || $[16] !== isCollapsed || $[17] !== isGrouped || $[18] !== lookups || $[19] !== msg || $[20] !== screen || $[21] !== streamingToolUseIDs) {
-    const siblingToolUseIDs = isGrouped || isCollapsed ? EMPTY_STRING_SET : getSiblingToolUseIDsFromLookup(msg, lookups);
-    t4 = shouldRenderStatically(msg, streamingToolUseIDs, inProgressToolUseIDs, siblingToolUseIDs, screen, lookups);
+  if (
+    $[15] !== inProgressToolUseIDs ||
+    $[16] !== isCollapsed ||
+    $[17] !== isGrouped ||
+    $[18] !== lookups ||
+    $[19] !== msg ||
+    $[20] !== screen ||
+    $[21] !== streamingToolUseIDs
+  ) {
+    const siblingToolUseIDs =
+      isGrouped || isCollapsed ? EMPTY_STRING_SET : getSiblingToolUseIDsFromLookup(msg, lookups);
+    t4 = shouldRenderStatically(
+      msg,
+      streamingToolUseIDs,
+      inProgressToolUseIDs,
+      siblingToolUseIDs,
+      screen,
+      lookups,
+    );
     $[15] = inProgressToolUseIDs;
     $[16] = isCollapsed;
     $[17] = isGrouped;
@@ -172,9 +212,9 @@ function MessageRowImpl(t0) {
       if ($[23] !== inProgressToolUseIDs || $[24] !== msg.messages) {
         let t6;
         if ($[26] !== inProgressToolUseIDs) {
-          t6 = m => {
+          t6 = (m) => {
             const content = m.message.content[0];
-            return content?.type === "tool_use" && inProgressToolUseIDs.has(content.id);
+            return content?.type === 'tool_use' && inProgressToolUseIDs.has(content.id);
           };
           $[26] = inProgressToolUseIDs;
           $[27] = t6;
@@ -218,7 +258,11 @@ function MessageRowImpl(t0) {
   }
   let t5;
   if ($[34] !== displayMsg || $[35] !== isTranscriptMode) {
-    t5 = isTranscriptMode && displayMsg.type === "assistant" && displayMsg.message.content.some(_temp) && (displayMsg.timestamp || displayMsg.message.model);
+    t5 =
+      isTranscriptMode &&
+      displayMsg.type === 'assistant' &&
+      displayMsg.message.content.some(_temp) &&
+      (displayMsg.timestamp || displayMsg.message.model);
     $[34] = displayMsg;
     $[35] = isTranscriptMode;
     $[36] = t5;
@@ -229,8 +273,47 @@ function MessageRowImpl(t0) {
   const t6 = !hasMetadata;
   const t7 = hasMetadata ? undefined : columns;
   let t8;
-  if ($[37] !== commands || $[38] !== inProgressToolUseIDs || $[39] !== isActiveCollapsedGroup || $[40] !== isStatic || $[41] !== isTranscriptMode || $[42] !== isUserContinuation || $[43] !== lastThinkingBlockId || $[44] !== latestBashOutputUUID || $[45] !== lookups || $[46] !== msg || $[47] !== onOpenRateLimitOptions || $[48] !== progressMessagesForMessage || $[49] !== shouldAnimate || $[50] !== t6 || $[51] !== t7 || $[52] !== tools || $[53] !== verbose) {
-    t8 = <Message message={msg} lookups={lookups} addMargin={t6} containerWidth={t7} tools={tools} commands={commands} verbose={verbose} inProgressToolUseIDs={inProgressToolUseIDs} progressMessagesForMessage={progressMessagesForMessage} shouldAnimate={shouldAnimate} shouldShowDot={true} isTranscriptMode={isTranscriptMode} isStatic={isStatic} onOpenRateLimitOptions={onOpenRateLimitOptions} isActiveCollapsedGroup={isActiveCollapsedGroup} isUserContinuation={isUserContinuation} lastThinkingBlockId={lastThinkingBlockId} latestBashOutputUUID={latestBashOutputUUID} />;
+  if (
+    $[37] !== commands ||
+    $[38] !== inProgressToolUseIDs ||
+    $[39] !== isActiveCollapsedGroup ||
+    $[40] !== isStatic ||
+    $[41] !== isTranscriptMode ||
+    $[42] !== isUserContinuation ||
+    $[43] !== lastThinkingBlockId ||
+    $[44] !== latestBashOutputUUID ||
+    $[45] !== lookups ||
+    $[46] !== msg ||
+    $[47] !== onOpenRateLimitOptions ||
+    $[48] !== progressMessagesForMessage ||
+    $[49] !== shouldAnimate ||
+    $[50] !== t6 ||
+    $[51] !== t7 ||
+    $[52] !== tools ||
+    $[53] !== verbose
+  ) {
+    t8 = (
+      <Message
+        message={msg}
+        lookups={lookups}
+        addMargin={t6}
+        containerWidth={t7}
+        tools={tools}
+        commands={commands}
+        verbose={verbose}
+        inProgressToolUseIDs={inProgressToolUseIDs}
+        progressMessagesForMessage={progressMessagesForMessage}
+        shouldAnimate={shouldAnimate}
+        shouldShowDot={true}
+        isTranscriptMode={isTranscriptMode}
+        isStatic={isStatic}
+        onOpenRateLimitOptions={onOpenRateLimitOptions}
+        isActiveCollapsedGroup={isActiveCollapsedGroup}
+        isUserContinuation={isUserContinuation}
+        lastThinkingBlockId={lastThinkingBlockId}
+        latestBashOutputUUID={latestBashOutputUUID}
+      />
+    );
     $[37] = commands;
     $[38] = inProgressToolUseIDs;
     $[39] = isActiveCollapsedGroup;
@@ -266,7 +349,12 @@ function MessageRowImpl(t0) {
   }
   let t9;
   if ($[57] !== displayMsg || $[58] !== isTranscriptMode) {
-    t9 = <Box flexDirection="row" justifyContent="flex-end" gap={1} marginTop={1}><MessageTimestamp message={displayMsg} isTranscriptMode={isTranscriptMode} /><MessageModel message={displayMsg} isTranscriptMode={isTranscriptMode} /></Box>;
+    t9 = (
+      <Box flexDirection="row" justifyContent="flex-end" gap={1} marginTop={1}>
+        <MessageTimestamp message={displayMsg} isTranscriptMode={isTranscriptMode} />
+        <MessageModel message={displayMsg} isTranscriptMode={isTranscriptMode} />
+      </Box>
+    );
     $[57] = displayMsg;
     $[58] = isTranscriptMode;
     $[59] = t9;
@@ -275,7 +363,14 @@ function MessageRowImpl(t0) {
   }
   let t10;
   if ($[60] !== columns || $[61] !== messageEl || $[62] !== t9) {
-    t10 = <OffscreenFreeze><Box width={columns} flexDirection="column">{t9}{messageEl}</Box></OffscreenFreeze>;
+    t10 = (
+      <OffscreenFreeze>
+        <Box width={columns} flexDirection="column">
+          {t9}
+          {messageEl}
+        </Box>
+      </OffscreenFreeze>
+    );
     $[60] = columns;
     $[61] = messageEl;
     $[62] = t9;
@@ -291,18 +386,21 @@ function MessageRowImpl(t0) {
  * Exported for testing.
  */
 function _temp(c) {
-  return c.type === "text";
+  return c.type === 'text';
 }
-export function isMessageStreaming(msg: RenderableMessage, streamingToolUseIDs: Set<string>): boolean {
+export function isMessageStreaming(
+  msg: RenderableMessage,
+  streamingToolUseIDs: Set<string>,
+): boolean {
   if (msg.type === 'grouped_tool_use') {
-    return msg.messages.some(m => {
+    return msg.messages.some((m) => {
       const content = m.message.content[0];
       return content?.type === 'tool_use' && streamingToolUseIDs.has(content.id);
     });
   }
   if (msg.type === 'collapsed_read_search') {
     const toolIds = getToolUseIdsFromCollapsedGroup(msg);
-    return toolIds.some(id => streamingToolUseIDs.has(id));
+    return toolIds.some((id) => streamingToolUseIDs.has(id));
   }
   const toolUseID = getToolUseID(msg);
   return !!toolUseID && streamingToolUseIDs.has(toolUseID);
@@ -314,14 +412,14 @@ export function isMessageStreaming(msg: RenderableMessage, streamingToolUseIDs: 
  */
 export function allToolsResolved(msg: RenderableMessage, resolvedToolUseIDs: Set<string>): boolean {
   if (msg.type === 'grouped_tool_use') {
-    return msg.messages.every(m => {
+    return msg.messages.every((m) => {
       const content = m.message.content[0];
       return content?.type === 'tool_use' && resolvedToolUseIDs.has(content.id);
     });
   }
   if (msg.type === 'collapsed_read_search') {
     const toolIds = getToolUseIdsFromCollapsedGroup(msg);
-    return toolIds.every(id => resolvedToolUseIDs.has(id));
+    return toolIds.every((id) => resolvedToolUseIDs.has(id));
   }
   if (msg.type === 'assistant') {
     const block = msg.message.content[0];

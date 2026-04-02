@@ -1,15 +1,15 @@
-import { tmpdir } from 'os'
-import { join } from 'path'
-import { join as posixJoin } from 'path/posix'
-import { getSessionEnvVars } from '../sessionEnvVars.js'
-import type { ShellProvider } from './shellProvider.js'
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { join as posixJoin } from 'node:path/posix';
+import { getSessionEnvVars } from '../sessionEnvVars.js';
+import type { ShellProvider } from './shellProvider.js';
 
 /**
  * PowerShell invocation flags + command. Shared by the provider's getSpawnArgs
  * and the hook spawn path in hooks.ts so the flag set stays in one place.
  */
 export function buildPowerShellArgs(cmd: string): string[] {
-  return ['-NoProfile', '-NonInteractive', '-Command', cmd]
+  return ['-NoProfile', '-NonInteractive', '-Command', cmd];
 }
 
 /**
@@ -21,11 +21,11 @@ export function buildPowerShellArgs(cmd: string): string[] {
  * quotes. Review 2964609818.
  */
 function encodePowerShellCommand(psCommand: string): string {
-  return Buffer.from(psCommand, 'utf16le').toString('base64')
+  return Buffer.from(psCommand, 'utf16le').toString('base64');
 }
 
 export function createPowerShellProvider(shellPath: string): ShellProvider {
-  let currentSandboxTmpDir: string | undefined
+  let currentSandboxTmpDir: string | undefined;
 
   return {
     type: 'powershell' as ShellProvider['type'],
@@ -35,13 +35,13 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
     async buildExecCommand(
       command: string,
       opts: {
-        id: number | string
-        sandboxTmpDir?: string
-        useSandbox: boolean
+        id: number | string;
+        sandboxTmpDir?: string;
+        useSandbox: boolean;
       },
     ): Promise<{ commandString: string; cwdFilePath: string }> {
       // Stash sandboxTmpDir for getEnvironmentOverrides (mirrors bashProvider)
-      currentSandboxTmpDir = opts.useSandbox ? opts.sandboxTmpDir : undefined
+      currentSandboxTmpDir = opts.useSandbox ? opts.sandboxTmpDir : undefined;
 
       // When sandboxed, tmpdir() is not writable — the sandbox only allows
       // writes to sandboxTmpDir. Put the cwd tracking file there so the
@@ -50,8 +50,8 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
       const cwdFilePath =
         opts.useSandbox && opts.sandboxTmpDir
           ? posixJoin(opts.sandboxTmpDir, `claude-pwd-ps-${opts.id}`)
-          : join(tmpdir(), `claude-pwd-ps-${opts.id}`)
-      const escapedCwdFilePath = cwdFilePath.replace(/'/g, "''")
+          : join(tmpdir(), `claude-pwd-ps-${opts.id}`);
+      const escapedCwdFilePath = cwdFilePath.replace(/'/g, "''");
       // Exit-code capture: prefer $LASTEXITCODE when a native exe ran.
       // On PS 5.1, a native command that writes to stderr while the stream
       // is PS-redirected (e.g. `git push 2>&1`) sets $? = $false even when
@@ -62,8 +62,8 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
       // is also true: `native-fail; cmdlet-ok` now returns the native
       // exit code (was 0 — old logic only looked at $? which the trailing
       // cmdlet set true). Both rarer than the git/npm/curl stderr case.
-      const cwdTracking = `\n; $_ec = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } elseif ($?) { 0 } else { 1 }\n; (Get-Location).Path | Out-File -FilePath '${escapedCwdFilePath}' -Encoding utf8 -NoNewline\n; exit $_ec`
-      const psCommand = command + cwdTracking
+      const cwdTracking = `\n; $_ec = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } elseif ($?) { 0 } else { 1 }\n; (Get-Location).Path | Out-File -FilePath '${escapedCwdFilePath}' -Encoding utf8 -NoNewline\n; exit $_ec`;
+      const psCommand = command + cwdTracking;
 
       // Sandbox wraps the returned commandString as `<binShell> -c '<cmd>'` —
       // hardcoded `-c`, no way to inject -NoProfile -NonInteractive. So for
@@ -91,17 +91,17 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
             '-EncodedCommand',
             encodePowerShellCommand(psCommand),
           ].join(' ')
-        : psCommand
+        : psCommand;
 
-      return { commandString, cwdFilePath }
+      return { commandString, cwdFilePath };
     },
 
     getSpawnArgs(commandString: string): string[] {
-      return buildPowerShellArgs(commandString)
+      return buildPowerShellArgs(commandString);
     },
 
     async getEnvironmentOverrides(): Promise<Record<string, string>> {
-      const env: Record<string, string> = {}
+      const env: Record<string, string> = {};
       // Apply session env vars set via /env (child processes only, not
       // the REPL). Without this, `/env PATH=...` affects Bash tool
       // commands but not PowerShell — so PyCharm users with a stripped
@@ -110,14 +110,14 @@ export function createPowerShellProvider(shellPath: string): ShellProvider {
       // overridden by `/env TMPDIR=...`. bashProvider.ts has these in the
       // opposite order (pre-existing), but sandbox isolation should win.
       for (const [key, value] of getSessionEnvVars()) {
-        env[key] = value
+        env[key] = value;
       }
       if (currentSandboxTmpDir) {
         // PowerShell on Linux/macOS honors TMPDIR for [System.IO.Path]::GetTempPath()
-        env.TMPDIR = currentSandboxTmpDir
-        env.CLAUDE_CODE_TMPDIR = currentSandboxTmpDir
+        env.TMPDIR = currentSandboxTmpDir;
+        env.CLAUDE_CODE_TMPDIR = currentSandboxTmpDir;
       }
-      return env
+      return env;
     },
-  }
+  };
 }

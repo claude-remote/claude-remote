@@ -133,9 +133,7 @@ export function ExportDialog({ open, onClose, onExport, result, loading }: Expor
           {/* Preview */}
           {result && (
             <div className="space-y-2">
-              <span className="text-xs text-gray-500">
-                Preview ({result.filename})
-              </span>
+              <span className="text-xs text-gray-500">Preview ({result.filename})</span>
               <pre className="max-h-48 overflow-auto rounded-lg border border-gray-800 bg-gray-950 p-3 text-xs text-gray-300">
                 {previewLines}
                 {hasMoreLines && '\n...'}

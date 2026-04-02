@@ -103,18 +103,18 @@ export interface Timestamp {
    * 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
    * 9999-12-31T23:59:59Z inclusive.
    */
-  seconds?: number | undefined
+  seconds?: number | undefined;
   /**
    * Non-negative fractions of a second at nanosecond resolution. Negative
    * second values with fractions must still have non-negative nanos values
    * that count forward in time. Must be from 0 to 999,999,999
    * inclusive.
    */
-  nanos?: number | undefined
+  nanos?: number | undefined;
 }
 
 function createBaseTimestamp(): Timestamp {
-  return { seconds: 0, nanos: 0 }
+  return { seconds: 0, nanos: 0 };
 }
 
 export const Timestamp: MessageFns<Timestamp> = {
@@ -122,41 +122,32 @@ export const Timestamp: MessageFns<Timestamp> = {
     return {
       seconds: isSet(object.seconds) ? globalThis.Number(object.seconds) : 0,
       nanos: isSet(object.nanos) ? globalThis.Number(object.nanos) : 0,
-    }
+    };
   },
 
   toJSON(message: Timestamp): unknown {
-    const obj: any = {}
+    const obj: any = {};
     if (message.seconds !== undefined) {
-      obj.seconds = Math.round(message.seconds)
+      obj.seconds = Math.round(message.seconds);
     }
     if (message.nanos !== undefined) {
-      obj.nanos = Math.round(message.nanos)
+      obj.nanos = Math.round(message.nanos);
     }
-    return obj
+    return obj;
   },
 
   create<I extends Exact<DeepPartial<Timestamp>, I>>(base?: I): Timestamp {
-    return Timestamp.fromPartial(base ?? ({} as any))
+    return Timestamp.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<Timestamp>, I>>(
-    object: I,
-  ): Timestamp {
-    const message = createBaseTimestamp()
-    message.seconds = object.seconds ?? 0
-    message.nanos = object.nanos ?? 0
-    return message
+  fromPartial<I extends Exact<DeepPartial<Timestamp>, I>>(object: I): Timestamp {
+    const message = createBaseTimestamp();
+    message.seconds = object.seconds ?? 0;
+    message.nanos = object.nanos ?? 0;
+    return message;
   },
-}
+};
 
-type Builtin =
-  | Date
-  | Function
-  | Uint8Array
-  | string
-  | number
-  | boolean
-  | undefined
+type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 type DeepPartial<T> = T extends Builtin
   ? T
@@ -166,22 +157,22 @@ type DeepPartial<T> = T extends Builtin
       ? ReadonlyArray<DeepPartial<U>>
       : T extends {}
         ? { [K in keyof T]?: DeepPartial<T[K]> }
-        : Partial<T>
+        : Partial<T>;
 
-type KeysOfUnion<T> = T extends T ? keyof T : never
+type KeysOfUnion<T> = T extends T ? keyof T : never;
 type Exact<P, I extends P> = P extends Builtin
   ? P
   : P & { [K in keyof P]: Exact<P[K], I[K]> } & {
-      [K in Exclude<keyof I, KeysOfUnion<P>>]: never
-    }
+      [K in Exclude<keyof I, KeysOfUnion<P>>]: never;
+    };
 
 function isSet(value: any): boolean {
-  return value !== null && value !== undefined
+  return value !== null && value !== undefined;
 }
 
 interface MessageFns<T> {
-  fromJSON(object: any): T
-  toJSON(message: T): unknown
-  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T
-  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T
+  fromJSON(object: any): T;
+  toJSON(message: T): unknown;
+  create<I extends Exact<DeepPartial<T>, I>>(base?: I): T;
+  fromPartial<I extends Exact<DeepPartial<T>, I>>(object: I): T;
 }

@@ -1,25 +1,21 @@
-import { feature } from 'src/utils/feature.js'
-import { chmod, mkdir, readdir, readFile, unlink, writeFile } from 'fs/promises'
-import { join } from 'path'
-import {
-  getOriginalCwd,
-  getSessionId,
-  onSessionSwitch,
-} from '../bootstrap/state.js'
-import { registerCleanup } from './cleanupRegistry.js'
-import { logForDebugging } from './debug.js'
-import { getClaudeConfigHomeDir } from './envUtils.js'
-import { errorMessage, isFsInaccessible } from './errors.js'
-import { isProcessRunning } from './genericProcessUtils.js'
-import { getPlatform } from './platform.js'
-import { jsonParse, jsonStringify } from './slowOperations.js'
-import { getAgentId } from './teammate.js'
+import { chmod, mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { feature } from 'src/utils/feature.js';
+import { getOriginalCwd, getSessionId, onSessionSwitch } from '../bootstrap/state.js';
+import { registerCleanup } from './cleanupRegistry.js';
+import { logForDebugging } from './debug.js';
+import { getClaudeConfigHomeDir } from './envUtils.js';
+import { errorMessage, isFsInaccessible } from './errors.js';
+import { isProcessRunning } from './genericProcessUtils.js';
+import { getPlatform } from './platform.js';
+import { jsonParse, jsonStringify } from './slowOperations.js';
+import { getAgentId } from './teammate.js';
 
-export type SessionKind = 'interactive' | 'bg' | 'daemon' | 'daemon-worker'
-export type SessionStatus = 'busy' | 'idle' | 'waiting'
+export type SessionKind = 'interactive' | 'bg' | 'daemon' | 'daemon-worker';
+export type SessionStatus = 'busy' | 'idle' | 'waiting';
 
 function getSessionsDir(): string {
-  return join(getClaudeConfigHomeDir(), 'sessions')
+  return join(getClaudeConfigHomeDir(), 'sessions');
 }
 
 /**
@@ -30,10 +26,10 @@ function getSessionsDir(): string {
  */
 function envSessionKind(): SessionKind | undefined {
   if (feature('BG_SESSIONS')) {
-    const k = process.env.CLAUDE_CODE_SESSION_KIND
-    if (k === 'bg' || k === 'daemon' || k === 'daemon-worker') return k
+    const k = process.env.CLAUDE_CODE_SESSION_KIND;
+    if (k === 'bg' || k === 'daemon' || k === 'daemon-worker') return k;
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -42,7 +38,7 @@ function envSessionKind(): SessionKind | undefined {
  * instead of killing the process.
  */
 export function isBgSession(): boolean {
-  return envSessionKind() === 'bg'
+  return envSessionKind() === 'bg';
 }
 
 /**
@@ -57,23 +53,23 @@ export function isBgSession(): boolean {
  * Errors logged to debug, never thrown.
  */
 export async function registerSession(): Promise<boolean> {
-  if (getAgentId() != null) return false
+  if (getAgentId() != null) return false;
 
-  const kind: SessionKind = envSessionKind() ?? 'interactive'
-  const dir = getSessionsDir()
-  const pidFile = join(dir, `${process.pid}.json`)
+  const kind: SessionKind = envSessionKind() ?? 'interactive';
+  const dir = getSessionsDir();
+  const pidFile = join(dir, `${process.pid}.json`);
 
   registerCleanup(async () => {
     try {
-      await unlink(pidFile)
+      await unlink(pidFile);
     } catch {
       // ENOENT is fine (already deleted or never written)
     }
-  })
+  });
 
   try {
-    await mkdir(dir, { recursive: true, mode: 0o700 })
-    await chmod(dir, 0o700)
+    await mkdir(dir, { recursive: true, mode: 0o700 });
+    await chmod(dir, 0o700);
     await writeFile(
       pidFile,
       jsonStringify({
@@ -94,17 +90,17 @@ export async function registerSession(): Promise<boolean> {
             }
           : {}),
       }),
-    )
+    );
     // --resume / /resume mutates getSessionId() via switchSession. Without
     // this, the PID file's sessionId goes stale and `claude ps` sparkline
     // reads the wrong transcript.
-    onSessionSwitch(id => {
-      void updatePidFile({ sessionId: id })
-    })
-    return true
+    onSessionSwitch((id) => {
+      void updatePidFile({ sessionId: id });
+    });
+    return true;
   } catch (e) {
-    logForDebugging(`[concurrentSessions] register failed: ${errorMessage(e)}`)
-    return false
+    logForDebugging(`[concurrentSessions] register failed: ${errorMessage(e)}`);
+    return false;
   }
 }
 
@@ -114,25 +110,18 @@ export async function registerSession(): Promise<boolean> {
  * file doesn't exist (session not registered), or read/write fails.
  */
 async function updatePidFile(patch: Record<string, unknown>): Promise<void> {
-  const pidFile = join(getSessionsDir(), `${process.pid}.json`)
+  const pidFile = join(getSessionsDir(), `${process.pid}.json`);
   try {
-    const data = jsonParse(await readFile(pidFile, 'utf8')) as Record<
-      string,
-      unknown
-    >
-    await writeFile(pidFile, jsonStringify({ ...data, ...patch }))
+    const data = jsonParse(await readFile(pidFile, 'utf8')) as Record<string, unknown>;
+    await writeFile(pidFile, jsonStringify({ ...data, ...patch }));
   } catch (e) {
-    logForDebugging(
-      `[concurrentSessions] updatePidFile failed: ${errorMessage(e)}`,
-    )
+    logForDebugging(`[concurrentSessions] updatePidFile failed: ${errorMessage(e)}`);
   }
 }
 
-export async function updateSessionName(
-  name: string | undefined,
-): Promise<void> {
-  if (!name) return
-  await updatePidFile({ name })
+export async function updateSessionName(name: string | undefined): Promise<void> {
+  if (!name) return;
+  await updatePidFile({ name });
 }
 
 /**
@@ -141,10 +130,8 @@ export async function updateSessionName(
  * once (local wins). Cleared on bridge teardown so stale IDs don't
  * suppress a legitimately-remote session after reconnect.
  */
-export async function updateSessionBridgeId(
-  bridgeSessionId: string | null,
-): Promise<void> {
-  await updatePidFile({ bridgeSessionId })
+export async function updateSessionBridgeId(bridgeSessionId: string | null): Promise<void> {
+  await updatePidFile({ bridgeSessionId });
 }
 
 /**
@@ -153,11 +140,11 @@ export async function updateSessionBridgeId(
  * transcript-tail derivation for one refresh.
  */
 export async function updateSessionActivity(patch: {
-  status?: SessionStatus
-  waitingFor?: string
+  status?: SessionStatus;
+  waitingFor?: string;
 }): Promise<void> {
-  if (!feature('BG_SESSIONS')) return
-  await updatePidFile({ ...patch, updatedAt: Date.now() })
+  if (!feature('BG_SESSIONS')) return;
+  await updatePidFile({ ...patch, updatedAt: Date.now() });
 }
 
 /**
@@ -166,39 +153,39 @@ export async function updateSessionActivity(patch: {
  * Returns 0 on any error (conservative).
  */
 export async function countConcurrentSessions(): Promise<number> {
-  const dir = getSessionsDir()
-  let files: string[]
+  const dir = getSessionsDir();
+  let files: string[];
   try {
-    files = await readdir(dir)
+    files = await readdir(dir);
   } catch (e) {
     if (!isFsInaccessible(e)) {
-      logForDebugging(`[concurrentSessions] readdir failed: ${errorMessage(e)}`)
+      logForDebugging(`[concurrentSessions] readdir failed: ${errorMessage(e)}`);
     }
-    return 0
+    return 0;
   }
 
-  let count = 0
+  let count = 0;
   for (const file of files) {
     // Strict filename guard: only `<pid>.json` is a candidate. parseInt's
     // lenient prefix-parsing means `2026-03-14_notes.md` would otherwise
     // parse as PID 2026 and get swept as stale — silent user data loss.
     // See anthropics/claude-code#34210.
-    if (!/^\d+\.json$/.test(file)) continue
-    const pid = parseInt(file.slice(0, -5), 10)
+    if (!/^\d+\.json$/.test(file)) continue;
+    const pid = Number.parseInt(file.slice(0, -5), 10);
     if (pid === process.pid) {
-      count++
-      continue
+      count++;
+      continue;
     }
     if (isProcessRunning(pid)) {
-      count++
+      count++;
     } else if (getPlatform() !== 'wsl') {
       // Stale file from a crashed session — sweep it. Skip on WSL: if
       // ~/.claude/sessions/ is shared with Windows-native Claude (symlink
       // or CLAUDE_CONFIG_DIR), a Windows PID won't be probeable from WSL
       // and we'd falsely delete a live session's file. This is just
       // telemetry so conservative undercount is acceptable.
-      void unlink(join(dir, file)).catch(() => {})
+      void unlink(join(dir, file)).catch(() => {});
     }
   }
-  return count
+  return count;
 }

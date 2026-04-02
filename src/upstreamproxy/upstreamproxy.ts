@@ -19,17 +19,17 @@
  * Design doc: api-go/ccr/docs/plans/CCR_AUTH_DESIGN.md § "Week-1 pilot scope".
  */
 
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
-import { homedir } from 'os'
-import { join } from 'path'
-import { registerCleanup } from '../utils/cleanupRegistry.js'
-import { logForDebugging } from '../utils/debug.js'
-import { isEnvTruthy } from '../utils/envUtils.js'
-import { isENOENT } from '../utils/errors.js'
-import { startUpstreamProxyRelay } from './relay.js'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { registerCleanup } from '../utils/cleanupRegistry.js';
+import { logForDebugging } from '../utils/debug.js';
+import { isEnvTruthy } from '../utils/envUtils.js';
+import { isENOENT } from '../utils/errors.js';
+import { startUpstreamProxyRelay } from './relay.js';
 
-export const SESSION_TOKEN_PATH = '/run/ccr/session_token'
-const SYSTEM_CA_BUNDLE = '/etc/ssl/certs/ca-certificates.crt'
+export const SESSION_TOKEN_PATH = '/run/ccr/session_token';
+const SYSTEM_CA_BUNDLE = '/etc/ssl/certs/ca-certificates.crt';
 
 // Hosts the proxy must NOT intercept. Covers loopback, RFC1918, the IMDS
 // range, and the package registries + GitHub that CCR containers already
@@ -60,15 +60,15 @@ const NO_PROXY_LIST = [
   'files.pythonhosted.org',
   'index.crates.io',
   'proxy.golang.org',
-].join(',')
+].join(',');
 
 type UpstreamProxyState = {
-  enabled: boolean
-  port?: number
-  caBundlePath?: string
-}
+  enabled: boolean;
+  port?: number;
+  caBundlePath?: string;
+};
 
-let state: UpstreamProxyState = { enabled: false }
+let state: UpstreamProxyState = { enabled: false };
 
 /**
  * Initialize upstreamproxy. Called once from init.ts. Safe to call when the
@@ -77,79 +77,74 @@ let state: UpstreamProxyState = { enabled: false }
  * Overridable paths are for tests; production uses the defaults.
  */
 export async function initUpstreamProxy(opts?: {
-  tokenPath?: string
-  systemCaPath?: string
-  caBundlePath?: string
-  ccrBaseUrl?: string
+  tokenPath?: string;
+  systemCaPath?: string;
+  caBundlePath?: string;
+  ccrBaseUrl?: string;
 }): Promise<UpstreamProxyState> {
   if (!isEnvTruthy(process.env.CLAUDE_CODE_REMOTE)) {
-    return state
+    return state;
   }
   // CCR evaluates ccr_upstream_proxy_enabled server-side (where GrowthBook is
   // warm) and injects this env var via StartupContext.EnvironmentVariables.
   // Every CCR session is a fresh container with no GB cache, so a client-side
   // GB check here always returned the default (false).
   if (!isEnvTruthy(process.env.CCR_UPSTREAM_PROXY_ENABLED)) {
-    return state
+    return state;
   }
 
-  const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
+  const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID;
   if (!sessionId) {
-    logForDebugging(
-      '[upstreamproxy] CLAUDE_CODE_REMOTE_SESSION_ID unset; proxy disabled',
-      { level: 'warn' },
-    )
-    return state
+    logForDebugging('[upstreamproxy] CLAUDE_CODE_REMOTE_SESSION_ID unset; proxy disabled', {
+      level: 'warn',
+    });
+    return state;
   }
 
-  const tokenPath = opts?.tokenPath ?? SESSION_TOKEN_PATH
-  const token = await readToken(tokenPath)
+  const tokenPath = opts?.tokenPath ?? SESSION_TOKEN_PATH;
+  const token = await readToken(tokenPath);
   if (!token) {
-    logForDebugging('[upstreamproxy] no session token file; proxy disabled')
-    return state
+    logForDebugging('[upstreamproxy] no session token file; proxy disabled');
+    return state;
   }
 
-  setNonDumpable()
+  setNonDumpable();
 
   // CCR injects ANTHROPIC_BASE_URL via StartupContext (sessionExecutor.ts /
   // sessionHandler.ts). getOauthConfig() is wrong here: it keys off
   // USER_TYPE + USE_{LOCAL,STAGING}_OAUTH, none of which the container sets,
   // so it always returned the prod URL and the CA fetch 404'd.
-  const baseUrl =
-    opts?.ccrBaseUrl ??
-    process.env.ANTHROPIC_BASE_URL ??
-    'https://api.anthropic.com'
-  const caBundlePath =
-    opts?.caBundlePath ?? join(homedir(), '.ccr', 'ca-bundle.crt')
+  const baseUrl = opts?.ccrBaseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com';
+  const caBundlePath = opts?.caBundlePath ?? join(homedir(), '.ccr', 'ca-bundle.crt');
 
   const caOk = await downloadCaBundle(
     baseUrl,
     opts?.systemCaPath ?? SYSTEM_CA_BUNDLE,
     caBundlePath,
-  )
-  if (!caOk) return state
+  );
+  if (!caOk) return state;
 
   try {
-    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/v1/code/upstreamproxy/ws'
-    const relay = await startUpstreamProxyRelay({ wsUrl, sessionId, token })
-    registerCleanup(async () => relay.stop())
-    state = { enabled: true, port: relay.port, caBundlePath }
-    logForDebugging(`[upstreamproxy] enabled on 127.0.0.1:${relay.port}`)
+    const wsUrl = `${baseUrl.replace(/^http/, 'ws')}/v1/code/upstreamproxy/ws`;
+    const relay = await startUpstreamProxyRelay({ wsUrl, sessionId, token });
+    registerCleanup(async () => relay.stop());
+    state = { enabled: true, port: relay.port, caBundlePath };
+    logForDebugging(`[upstreamproxy] enabled on 127.0.0.1:${relay.port}`);
     // Only unlink after the listener is up: if CA download or listen()
     // fails, a supervisor restart can retry with the token still on disk.
     await unlink(tokenPath).catch(() => {
       logForDebugging('[upstreamproxy] token file unlink failed', {
         level: 'warn',
-      })
-    })
+      });
+    });
   } catch (err) {
     logForDebugging(
       `[upstreamproxy] relay start failed: ${err instanceof Error ? err.message : String(err)}; proxy disabled`,
       { level: 'warn' },
-    )
+    );
   }
 
-  return state
+  return state;
 }
 
 /**
@@ -165,7 +160,7 @@ export function getUpstreamProxyEnv(): Record<string, string> {
     // parent (HTTPS_PROXY + SSL_CERT_FILE both set), pass them through so
     // our subprocesses also route through the parent's relay.
     if (process.env.HTTPS_PROXY && process.env.SSL_CERT_FILE) {
-      const inherited: Record<string, string> = {}
+      const inherited: Record<string, string> = {};
       for (const key of [
         'HTTPS_PROXY',
         'https_proxy',
@@ -176,13 +171,13 @@ export function getUpstreamProxyEnv(): Record<string, string> {
         'REQUESTS_CA_BUNDLE',
         'CURL_CA_BUNDLE',
       ]) {
-        if (process.env[key]) inherited[key] = process.env[key]
+        if (process.env[key]) inherited[key] = process.env[key];
       }
-      return inherited
+      return inherited;
     }
-    return {}
+    return {};
   }
-  const proxyUrl = `http://127.0.0.1:${state.port}`
+  const proxyUrl = `http://127.0.0.1:${state.port}`;
   // HTTPS only: the relay handles CONNECT and nothing else. Plain HTTP has
   // no credentials to inject, so routing it through the relay would just
   // break the request with a 405.
@@ -195,25 +190,25 @@ export function getUpstreamProxyEnv(): Record<string, string> {
     NODE_EXTRA_CA_CERTS: state.caBundlePath,
     REQUESTS_CA_BUNDLE: state.caBundlePath,
     CURL_CA_BUNDLE: state.caBundlePath,
-  }
+  };
 }
 
 /** Test-only: reset module state between test cases. */
 export function resetUpstreamProxyForTests(): void {
-  state = { enabled: false }
+  state = { enabled: false };
 }
 
 async function readToken(path: string): Promise<string | null> {
   try {
-    const raw = await readFile(path, 'utf8')
-    return raw.trim() || null
+    const raw = await readFile(path, 'utf8');
+    return raw.trim() || null;
   } catch (err) {
-    if (isENOENT(err)) return null
+    if (isENOENT(err)) return null;
     logForDebugging(
       `[upstreamproxy] token read failed: ${err instanceof Error ? err.message : String(err)}`,
       { level: 'warn' },
-    )
-    return null
+    );
+    return null;
   }
 }
 
@@ -223,31 +218,28 @@ async function readToken(path: string): Promise<string | null> {
  * the heap. Linux-only; silently no-ops elsewhere.
  */
 function setNonDumpable(): void {
-  if (process.platform !== 'linux' || typeof Bun === 'undefined') return
+  if (process.platform !== 'linux' || typeof Bun === 'undefined') return;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const ffi = require('bun:ffi') as typeof import('bun:ffi')
+    const ffi = require('bun:ffi') as typeof import('bun:ffi');
     const lib = ffi.dlopen('libc.so.6', {
       prctl: {
         args: ['int', 'u64', 'u64', 'u64', 'u64'],
         returns: 'int',
       },
-    } as const)
-    const PR_SET_DUMPABLE = 4
-    const rc = lib.symbols.prctl(PR_SET_DUMPABLE, 0n, 0n, 0n, 0n)
+    } as const);
+    const PR_SET_DUMPABLE = 4;
+    const rc = lib.symbols.prctl(PR_SET_DUMPABLE, 0n, 0n, 0n, 0n);
     if (rc !== 0) {
-      logForDebugging(
-        '[upstreamproxy] prctl(PR_SET_DUMPABLE,0) returned nonzero',
-        {
-          level: 'warn',
-        },
-      )
+      logForDebugging('[upstreamproxy] prctl(PR_SET_DUMPABLE,0) returned nonzero', {
+        level: 'warn',
+      });
     }
   } catch (err) {
     logForDebugging(
       `[upstreamproxy] prctl unavailable: ${err instanceof Error ? err.message : String(err)}`,
       { level: 'warn' },
-    )
+    );
   }
 }
 
@@ -262,24 +254,23 @@ async function downloadCaBundle(
       // Bun has no default fetch timeout — a hung endpoint would block CLI
       // startup forever. 5s is generous for a small PEM.
       signal: AbortSignal.timeout(5000),
-    })
+    });
     if (!resp.ok) {
-      logForDebugging(
-        `[upstreamproxy] ca-cert fetch ${resp.status}; proxy disabled`,
-        { level: 'warn' },
-      )
-      return false
+      logForDebugging(`[upstreamproxy] ca-cert fetch ${resp.status}; proxy disabled`, {
+        level: 'warn',
+      });
+      return false;
     }
-    const ccrCa = await resp.text()
-    const systemCa = await readFile(systemCaPath, 'utf8').catch(() => '')
-    await mkdir(join(outPath, '..'), { recursive: true })
-    await writeFile(outPath, systemCa + '\n' + ccrCa, 'utf8')
-    return true
+    const ccrCa = await resp.text();
+    const systemCa = await readFile(systemCaPath, 'utf8').catch(() => '');
+    await mkdir(join(outPath, '..'), { recursive: true });
+    await writeFile(outPath, `${systemCa}\n${ccrCa}`, 'utf8');
+    return true;
   } catch (err) {
     logForDebugging(
       `[upstreamproxy] ca-cert download failed: ${err instanceof Error ? err.message : String(err)}; proxy disabled`,
       { level: 'warn' },
-    )
-    return false
+    );
+    return false;
   }
 }

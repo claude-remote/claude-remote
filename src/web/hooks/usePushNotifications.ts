@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import type { ContextUsage } from '@/shared/types';
 import type { HubEvent, HubResponse } from '@/shared/protocol';
+import type { ContextUsage } from '@/shared/types';
 import { useNotificationPermission } from './useNotificationPermission';
 
 export interface UsePushNotificationsOptions {
@@ -43,22 +43,14 @@ export function usePushNotifications({ sessionId, onEvent }: UsePushNotification
         // Permission request: tool needs approval
         case 'sdk:control': {
           const toolName = extractToolName(event.payload.request);
-          notify(
-            'Approval needed',
-            `Tool "${toolName}" needs your permission`,
-            chatUrl,
-          );
+          notify('Approval needed', `Tool "${toolName}" needs your permission`, chatUrl);
           break;
         }
 
         // Session status changed to idle → task likely completed
         case 'hub:session:statusChanged': {
           if (event.sessionId === sessionId && event.status === 'idle') {
-            notify(
-              'Task completed',
-              'Claude finished the task',
-              chatUrl,
-            );
+            notify('Task completed', 'Claude finished the task', chatUrl);
           }
           break;
         }
@@ -75,11 +67,7 @@ export function usePushNotifications({ sessionId, onEvent }: UsePushNotification
         case 'hub:rateLimited': {
           if (event.sessionId === sessionId) {
             const seconds = Math.ceil(event.retryAfterMs / 1000);
-            notify(
-              'Rate limited',
-              `Retry in ${seconds}s (${event.scope})`,
-              chatUrl,
-            );
+            notify('Rate limited', `Retry in ${seconds}s (${event.scope})`, chatUrl);
           }
           break;
         }
@@ -109,11 +97,7 @@ function notifyContextWarning(
   for (const threshold of CONTEXT_WARNING_THRESHOLDS) {
     if (usage.percentage >= threshold && !notifiedThresholds.has(threshold)) {
       notifiedThresholds.add(threshold);
-      notify(
-        'Context warning',
-        `Context is ${Math.round(usage.percentage)}% full`,
-        url,
-      );
+      notify('Context warning', `Context is ${Math.round(usage.percentage)}% full`, url);
       break; // Only one notification per event
     }
   }

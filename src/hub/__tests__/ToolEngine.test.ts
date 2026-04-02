@@ -1,9 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-  ToolEngine,
-  type ToolEngineDeps,
-  type ToolExecutionInput,
-} from '@/hub/ToolEngine';
+import { ToolEngine, type ToolEngineDeps, type ToolExecutionInput } from '@/hub/ToolEngine';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -145,17 +141,17 @@ describe('ToolEngine', () => {
 
     const p1 = smallEngine.execute(makeInput({ sessionId: 's1' }), async () => {
       started.push(1);
-      await gates[0]!.promise;
+      await gates[0]?.promise;
       return '1';
     });
     const p2 = smallEngine.execute(makeInput({ sessionId: 's2' }), async () => {
       started.push(2);
-      await gates[1]!.promise;
+      await gates[1]?.promise;
       return '2';
     });
     const p3 = smallEngine.execute(makeInput({ sessionId: 's3' }), async () => {
       started.push(3);
-      await gates[2]!.promise;
+      await gates[2]?.promise;
       return '3';
     });
 
@@ -164,15 +160,15 @@ describe('ToolEngine', () => {
     expect(started).toHaveLength(2); // third is blocked
 
     // Release first slot
-    gates[0]!.resolve();
+    gates[0]?.resolve();
     await p1;
 
     // Third should now start
     await new Promise((r) => setTimeout(r, 20));
     expect(started).toHaveLength(3);
 
-    gates[1]!.resolve();
-    gates[2]!.resolve();
+    gates[1]?.resolve();
+    gates[2]?.resolve();
     await Promise.all([p2, p3]);
   });
 
@@ -254,7 +250,9 @@ describe('ToolEngine', () => {
     // Start a tool that blocks
     const p = engine.execute(makeInput(), async (signal) => {
       await new Promise<void>((resolve, reject) => {
-        signal.addEventListener('abort', () => reject(Object.assign(new Error('abort'), { name: 'AbortError' })));
+        signal.addEventListener('abort', () =>
+          reject(Object.assign(new Error('abort'), { name: 'AbortError' })),
+        );
         gate.promise.then(() => resolve());
       });
       return 'done';
@@ -286,7 +284,9 @@ describe('ToolEngine', () => {
 
     const p = engine.execute(makeInput(), async (signal) => {
       await new Promise<void>((resolve, reject) => {
-        signal.addEventListener('abort', () => reject(Object.assign(new Error('abort'), { name: 'AbortError' })));
+        signal.addEventListener('abort', () =>
+          reject(Object.assign(new Error('abort'), { name: 'AbortError' })),
+        );
         gate.promise.then(() => resolve());
       });
       return 'done';
@@ -308,8 +308,8 @@ describe('ToolEngine', () => {
     await engine.execute(makeInput(), async () => 'ok');
 
     expect(deps.eventBus.events).toHaveLength(1);
-    expect(deps.eventBus.events[0]!.sessionId).toBe('sess-1');
-    expect(deps.eventBus.events[0]!.event.type).toBe('hub:session:statusChanged');
+    expect(deps.eventBus.events[0]?.sessionId).toBe('sess-1');
+    expect(deps.eventBus.events[0]?.event.type).toBe('hub:session:statusChanged');
   });
 
   /* ---------- buildPermissionRequest ---------- */

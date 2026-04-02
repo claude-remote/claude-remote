@@ -1,5 +1,5 @@
-import type { Command } from '../../commands.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
+import type { Command } from '../../commands.js';
+import { isEnvTruthy } from '../../utils/envUtils.js';
 
 const doctor: Command = {
   name: 'doctor',
@@ -7,6 +7,6 @@ const doctor: Command = {
   isEnabled: () => !isEnvTruthy(process.env.DISABLE_DOCTOR_COMMAND),
   type: 'local-jsx',
   load: () => import('./doctor.js'),
-}
+};
 
-export default doctor
+export default doctor;

@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const exportCommand = {
   type: 'local-jsx',
@@ -6,6 +6,6 @@ const exportCommand = {
   description: 'Export the current conversation to a file or clipboard',
   argumentHint: '[filename]',
   load: () => import('./export.js'),
-} satisfies Command
+} satisfies Command;
 
-export default exportCommand
+export default exportCommand;

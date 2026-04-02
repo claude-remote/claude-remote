@@ -128,39 +128,39 @@ export const PREAPPROVED_HOSTS = new Set([
   'git-scm.com', // Git
   'nginx.org', // Nginx
   'httpd.apache.org', // Apache HTTP Server
-])
+]);
 
 // Split once at module load so lookups are O(1) Set.has() for the common
 // hostname-only case, falling back to a small per-host path-prefix list
 // for the handful of path-scoped entries (e.g., "github.com/anthropics").
 const { HOSTNAME_ONLY, PATH_PREFIXES } = (() => {
-  const hosts = new Set<string>()
-  const paths = new Map<string, string[]>()
+  const hosts = new Set<string>();
+  const paths = new Map<string, string[]>();
   for (const entry of PREAPPROVED_HOSTS) {
-    const slash = entry.indexOf('/')
+    const slash = entry.indexOf('/');
     if (slash === -1) {
-      hosts.add(entry)
+      hosts.add(entry);
     } else {
-      const host = entry.slice(0, slash)
-      const path = entry.slice(slash)
-      const prefixes = paths.get(host)
-      if (prefixes) prefixes.push(path)
-      else paths.set(host, [path])
+      const host = entry.slice(0, slash);
+      const path = entry.slice(slash);
+      const prefixes = paths.get(host);
+      if (prefixes) prefixes.push(path);
+      else paths.set(host, [path]);
     }
   }
-  return { HOSTNAME_ONLY: hosts, PATH_PREFIXES: paths }
-})()
+  return { HOSTNAME_ONLY: hosts, PATH_PREFIXES: paths };
+})();
 
 export function isPreapprovedHost(hostname: string, pathname: string): boolean {
-  if (HOSTNAME_ONLY.has(hostname)) return true
-  const prefixes = PATH_PREFIXES.get(hostname)
+  if (HOSTNAME_ONLY.has(hostname)) return true;
+  const prefixes = PATH_PREFIXES.get(hostname);
   if (prefixes) {
     for (const p of prefixes) {
       // Enforce path segment boundaries: "/anthropics" must not match
       // "/anthropics-evil/malware". Only exact match or a "/" after the
       // prefix is allowed.
-      if (pathname === p || pathname.startsWith(p + '/')) return true
+      if (pathname === p || pathname.startsWith(`${p}/`)) return true;
     }
   }
-  return false
+  return false;
 }

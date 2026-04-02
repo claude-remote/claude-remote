@@ -1,6 +1,6 @@
-import { useCallback, useContext, useLayoutEffect, useRef } from 'react'
-import CursorDeclarationContext from '../components/CursorDeclarationContext.js'
-import type { DOMElement } from '../dom.js'
+import { useCallback, useContext, useLayoutEffect, useRef } from 'react';
+import CursorDeclarationContext from '../components/CursorDeclarationContext.js';
+import type { DOMElement } from '../dom.js';
 
 /**
  * Declares where the terminal cursor should be parked after each frame.
@@ -27,16 +27,16 @@ export function useDeclaredCursor({
   column,
   active,
 }: {
-  line: number
-  column: number
-  active: boolean
+  line: number;
+  column: number;
+  active: boolean;
 }): (element: DOMElement | null) => void {
-  const setCursorDeclaration = useContext(CursorDeclarationContext)
-  const nodeRef = useRef<DOMElement | null>(null)
+  const setCursorDeclaration = useContext(CursorDeclarationContext);
+  const nodeRef = useRef<DOMElement | null>(null);
 
   const setNode = useCallback((node: DOMElement | null) => {
-    nodeRef.current = node
-  }, [])
+    nodeRef.current = node;
+  }, []);
 
   // When active, set unconditionally. When inactive, clear conditionally
   // (only if the currently-declared node is ours). The node-identity check
@@ -52,22 +52,22 @@ export function useDeclaredCursor({
   // re-claims the declaration after another instance's unmount-cleanup or
   // sibling handoff nulls it.
   useLayoutEffect(() => {
-    const node = nodeRef.current
+    const node = nodeRef.current;
     if (active && node) {
-      setCursorDeclaration({ relativeX: column, relativeY: line, node })
+      setCursorDeclaration({ relativeX: column, relativeY: line, node });
     } else {
-      setCursorDeclaration(null, node)
+      setCursorDeclaration(null, node);
     }
-  })
+  });
 
   // Clear on unmount (conditionally — another instance may own by then).
   // Separate effect with empty deps so cleanup only fires once — not on
   // every line/column change, which would transiently null between commits.
   useLayoutEffect(() => {
     return () => {
-      setCursorDeclaration(null, nodeRef.current)
-    }
-  }, [setCursorDeclaration])
+      setCursorDeclaration(null, nodeRef.current);
+    };
+  }, [setCursorDeclaration]);
 
-  return setNode
+  return setNode;
 }

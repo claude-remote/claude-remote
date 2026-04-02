@@ -7,34 +7,27 @@
  * - 1P/Cloud mode: Query Files API listDirectory for file IDs (rclone handles sync)
  */
 
-import { feature } from 'src/utils/feature.js'
-import { join, relative } from 'path'
+import { join, relative } from 'node:path';
+import { feature } from 'src/utils/feature.js';
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../services/analytics/index.js'
-import {
-  type FilesApiConfig,
-  uploadSessionFiles,
-} from '../../services/api/filesApi.js'
-import { getCwd } from '../cwd.js'
-import { errorMessage } from '../errors.js'
-import { logError } from '../log.js'
-import { getSessionIngressAuthToken } from '../sessionIngressAuth.js'
-import {
-  findModifiedFiles,
-  getEnvironmentKind,
-  logDebug,
-} from './outputsScanner.js'
+} from '../../services/analytics/index.js';
+import { type FilesApiConfig, uploadSessionFiles } from '../../services/api/filesApi.js';
+import { getCwd } from '../cwd.js';
+import { errorMessage } from '../errors.js';
+import { logError } from '../log.js';
+import { getSessionIngressAuthToken } from '../sessionIngressAuth.js';
+import { findModifiedFiles, getEnvironmentKind, logDebug } from './outputsScanner.js';
 import {
   DEFAULT_UPLOAD_CONCURRENCY,
-  type FailedPersistence,
   FILE_COUNT_LIMIT,
+  type FailedPersistence,
   type FilesPersistedEventData,
   OUTPUTS_SUBDIR,
   type PersistedFile,
   type TurnStartTime,
-} from './types.js'
+} from './types.js';
 
 /**
  * Execute file persistence for modified files in the outputs directory.
@@ -52,84 +45,74 @@ export async function runFilePersistence(
   turnStartTime: TurnStartTime,
   signal?: AbortSignal,
 ): Promise<FilesPersistedEventData | null> {
-  const environmentKind = getEnvironmentKind()
+  const environmentKind = getEnvironmentKind();
   if (environmentKind !== 'byoc') {
-    return null
+    return null;
   }
 
-  const sessionAccessToken = getSessionIngressAuthToken()
+  const sessionAccessToken = getSessionIngressAuthToken();
   if (!sessionAccessToken) {
-    return null
+    return null;
   }
 
-  const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID
+  const sessionId = process.env.CLAUDE_CODE_REMOTE_SESSION_ID;
   if (!sessionId) {
-    logError(
-      new Error(
-        'File persistence enabled but CLAUDE_CODE_REMOTE_SESSION_ID is not set',
-      ),
-    )
-    return null
+    logError(new Error('File persistence enabled but CLAUDE_CODE_REMOTE_SESSION_ID is not set'));
+    return null;
   }
 
   const config: FilesApiConfig = {
     oauthToken: sessionAccessToken,
     sessionId,
-  }
+  };
 
-  const outputsDir = join(getCwd(), sessionId, OUTPUTS_SUBDIR)
+  const outputsDir = join(getCwd(), sessionId, OUTPUTS_SUBDIR);
 
   // Check if aborted
   if (signal?.aborted) {
-    logDebug('Persistence aborted before processing')
-    return null
+    logDebug('Persistence aborted before processing');
+    return null;
   }
 
-  const startTime = Date.now()
+  const startTime = Date.now();
   logEvent('tengu_file_persistence_started', {
     mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  })
+  });
 
   try {
-    let result: FilesPersistedEventData
+    let result: FilesPersistedEventData;
     if (environmentKind === 'byoc') {
-      result = await executeBYOCPersistence(
-        turnStartTime,
-        config,
-        outputsDir,
-        signal,
-      )
+      result = await executeBYOCPersistence(turnStartTime, config, outputsDir, signal);
     } else {
-      result = await executeCloudPersistence()
+      result = await executeCloudPersistence();
     }
 
     // Nothing to report
     if (result.files.length === 0 && result.failed.length === 0) {
-      return null
+      return null;
     }
 
-    const durationMs = Date.now() - startTime
+    const durationMs = Date.now() - startTime;
     logEvent('tengu_file_persistence_completed', {
       success_count: result.files.length,
       failure_count: result.failed.length,
       duration_ms: durationMs,
       mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
+    });
 
-    return result
+    return result;
   } catch (error) {
-    logError(error)
-    logDebug(`File persistence failed: ${error}`)
+    logError(error);
+    logDebug(`File persistence failed: ${error}`);
 
-    const durationMs = Date.now() - startTime
+    const durationMs = Date.now() - startTime;
     logEvent('tengu_file_persistence_completed', {
       success_count: 0,
       failure_count: 0,
       duration_ms: durationMs,
       mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      error:
-        'exception' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    })
+      error: 'exception' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    });
 
     return {
       files: [],
@@ -139,7 +122,7 @@ export async function runFilePersistence(
           error: errorMessage(error),
         },
       ],
-    }
+    };
   }
 }
 
@@ -155,28 +138,26 @@ async function executeBYOCPersistence(
 ): Promise<FilesPersistedEventData> {
   // Find modified files via local filesystem scan
   // Uses same directory structure as downloads: {cwd}/{sessionId}/outputs
-  const modifiedFiles = await findModifiedFiles(turnStartTime, outputsDir)
+  const modifiedFiles = await findModifiedFiles(turnStartTime, outputsDir);
 
   if (modifiedFiles.length === 0) {
-    logDebug('No modified files to persist')
-    return { files: [], failed: [] }
+    logDebug('No modified files to persist');
+    return { files: [], failed: [] };
   }
 
-  logDebug(`Found ${modifiedFiles.length} modified files`)
+  logDebug(`Found ${modifiedFiles.length} modified files`);
 
   if (signal?.aborted) {
-    return { files: [], failed: [] }
+    return { files: [], failed: [] };
   }
 
   // Enforce file count limit
   if (modifiedFiles.length > FILE_COUNT_LIMIT) {
-    logDebug(
-      `File count limit exceeded: ${modifiedFiles.length} > ${FILE_COUNT_LIMIT}`,
-    )
+    logDebug(`File count limit exceeded: ${modifiedFiles.length} > ${FILE_COUNT_LIMIT}`);
     logEvent('tengu_file_persistence_limit_exceeded', {
       file_count: modifiedFiles.length,
       limit: FILE_COUNT_LIMIT,
-    })
+    });
     return {
       files: [],
       failed: [
@@ -185,58 +166,54 @@ async function executeBYOCPersistence(
           error: `Too many files modified (${modifiedFiles.length}). Maximum: ${FILE_COUNT_LIMIT}.`,
         },
       ],
-    }
+    };
   }
 
   const filesToProcess = modifiedFiles
-    .map(filePath => ({
+    .map((filePath) => ({
       path: filePath,
       relativePath: relative(outputsDir, filePath),
     }))
     .filter(({ relativePath }) => {
       // Security: skip files that resolve outside the outputs directory
       if (relativePath.startsWith('..')) {
-        logDebug(`Skipping file outside outputs directory: ${relativePath}`)
-        return false
+        logDebug(`Skipping file outside outputs directory: ${relativePath}`);
+        return false;
       }
-      return true
-    })
+      return true;
+    });
 
-  logDebug(`BYOC mode: uploading ${filesToProcess.length} files`)
+  logDebug(`BYOC mode: uploading ${filesToProcess.length} files`);
 
   // Upload files in parallel
-  const results = await uploadSessionFiles(
-    filesToProcess,
-    config,
-    DEFAULT_UPLOAD_CONCURRENCY,
-  )
+  const results = await uploadSessionFiles(filesToProcess, config, DEFAULT_UPLOAD_CONCURRENCY);
 
   // Separate successful and failed uploads
-  const persistedFiles: PersistedFile[] = []
-  const failedFiles: FailedPersistence[] = []
+  const persistedFiles: PersistedFile[] = [];
+  const failedFiles: FailedPersistence[] = [];
 
   for (const result of results) {
     if (result.success) {
       persistedFiles.push({
         filename: result.path,
         file_id: result.fileId,
-      })
+      });
     } else {
       failedFiles.push({
         filename: result.path,
         error: 'error' in result ? result.error : 'upload failed',
-      })
+      });
     }
   }
 
   logDebug(
     `BYOC persistence complete: ${persistedFiles.length} uploaded, ${failedFiles.length} failed`,
-  )
+  );
 
   return {
     files: persistedFiles,
     failed: failedFiles,
-  }
+  };
 }
 
 /**
@@ -245,8 +222,8 @@ async function executeBYOCPersistence(
  * currently being added for 1P environments.
  */
 function executeCloudPersistence(): FilesPersistedEventData {
-  logDebug('Cloud mode: xattr-based file ID reading not yet implemented')
-  return { files: [], failed: [] }
+  logDebug('Cloud mode: xattr-based file ID reading not yet implemented');
+  return { files: [], failed: [] };
 }
 
 /**
@@ -259,12 +236,12 @@ export async function executeFilePersistence(
   onResult: (result: FilesPersistedEventData) => void,
 ): Promise<void> {
   try {
-    const result = await runFilePersistence(turnStartTime, signal)
+    const result = await runFilePersistence(turnStartTime, signal);
     if (result) {
-      onResult(result)
+      onResult(result);
     }
   } catch (error) {
-    logError(error)
+    logError(error);
   }
 }
 
@@ -281,7 +258,7 @@ export function isFilePersistenceEnabled(): boolean {
       getEnvironmentKind() === 'byoc' &&
       !!getSessionIngressAuthToken() &&
       !!process.env.CLAUDE_CODE_REMOTE_SESSION_ID
-    )
+    );
   }
-  return false
+  return false;
 }

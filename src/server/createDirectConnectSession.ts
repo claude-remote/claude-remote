@@ -1,17 +1,17 @@
 /* eslint-disable eslint-plugin-n/no-unsupported-features/node-builtins */
 
-import { errorMessage } from '../utils/errors.js'
-import { jsonStringify } from '../utils/slowOperations.js'
-import type { DirectConnectConfig } from './directConnectManager.js'
-import { connectResponseSchema } from './types.js'
+import { errorMessage } from '../utils/errors.js';
+import { jsonStringify } from '../utils/slowOperations.js';
+import type { DirectConnectConfig } from './directConnectManager.js';
+import { connectResponseSchema } from './types.js';
 
 /**
  * Errors thrown by createDirectConnectSession when the connection fails.
  */
 export class DirectConnectError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = 'DirectConnectError'
+    super(message);
+    this.name = 'DirectConnectError';
   }
 }
 
@@ -29,22 +29,22 @@ export async function createDirectConnectSession({
   cwd,
   dangerouslySkipPermissions,
 }: {
-  serverUrl: string
-  authToken?: string
-  cwd: string
-  dangerouslySkipPermissions?: boolean
+  serverUrl: string;
+  authToken?: string;
+  cwd: string;
+  dangerouslySkipPermissions?: boolean;
 }): Promise<{
-  config: DirectConnectConfig
-  workDir?: string
+  config: DirectConnectConfig;
+  workDir?: string;
 }> {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
-  }
+  };
   if (authToken) {
-    headers['authorization'] = `Bearer ${authToken}`
+    headers.authorization = `Bearer ${authToken}`;
   }
 
-  let resp: Response
+  let resp: Response;
   try {
     resp = await fetch(`${serverUrl}/sessions`, {
       method: 'POST',
@@ -55,27 +55,23 @@ export async function createDirectConnectSession({
           dangerously_skip_permissions: true,
         }),
       }),
-    })
+    });
   } catch (err) {
     throw new DirectConnectError(
       `Failed to connect to server at ${serverUrl}: ${errorMessage(err)}`,
-    )
+    );
   }
 
   if (!resp.ok) {
-    throw new DirectConnectError(
-      `Failed to create session: ${resp.status} ${resp.statusText}`,
-    )
+    throw new DirectConnectError(`Failed to create session: ${resp.status} ${resp.statusText}`);
   }
 
-  const result = connectResponseSchema().safeParse(await resp.json())
+  const result = connectResponseSchema().safeParse(await resp.json());
   if (!result.success) {
-    throw new DirectConnectError(
-      `Invalid session response: ${result.error.message}`,
-    )
+    throw new DirectConnectError(`Invalid session response: ${result.error.message}`);
   }
 
-  const data = result.data
+  const data = result.data;
   return {
     config: {
       serverUrl,
@@ -84,5 +80,5 @@ export async function createDirectConnectSession({
       authToken,
     },
     workDir: data.work_dir,
-  }
+  };
 }

@@ -1,9 +1,13 @@
-import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React, { useState } from 'react';
-import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
+import { c as _c } from 'react/compiler-runtime';
 import { Box, Text } from '../../ink.js';
-import { AGENT_COLOR_TO_THEME_COLOR, AGENT_COLORS, type AgentColorName } from '../../tools/AgentTool/agentColorManager.js';
+import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
+import {
+  AGENT_COLORS,
+  AGENT_COLOR_TO_THEME_COLOR,
+  type AgentColorName,
+} from '../../tools/AgentTool/agentColorManager.js';
 import { capitalize } from '../../utils/stringUtils.js';
 type ColorOption = AgentColorName | 'automatic';
 const COLOR_OPTIONS: ColorOption[] = ['automatic', ...AGENT_COLORS];
@@ -14,15 +18,11 @@ type Props = {
 };
 export function ColorPicker(t0) {
   const $ = _c(17);
-  const {
-    agentName,
-    currentColor: t1,
-    onConfirm
-  } = t0;
-  const currentColor = t1 === undefined ? "automatic" : t1;
+  const { agentName, currentColor: t1, onConfirm } = t0;
+  const currentColor = t1 === undefined ? 'automatic' : t1;
   let t2;
   if ($[0] !== currentColor) {
-    t2 = COLOR_OPTIONS.findIndex(opt => opt === currentColor);
+    t2 = COLOR_OPTIONS.findIndex((opt) => opt === currentColor);
     $[0] = currentColor;
     $[1] = t2;
   } else {
@@ -31,19 +31,19 @@ export function ColorPicker(t0) {
   const [selectedIndex, setSelectedIndex] = useState(Math.max(0, t2));
   let t3;
   if ($[2] !== onConfirm || $[3] !== selectedIndex) {
-    t3 = e => {
-      if (e.key === "up") {
+    t3 = (e) => {
+      if (e.key === 'up') {
         e.preventDefault();
         setSelectedIndex(_temp);
       } else {
-        if (e.key === "down") {
+        if (e.key === 'down') {
           e.preventDefault();
           setSelectedIndex(_temp2);
         } else {
-          if (e.key === "return") {
+          if (e.key === 'return') {
             e.preventDefault();
             const selected = COLOR_OPTIONS[selectedIndex];
-            onConfirm(selected === "automatic" ? undefined : selected);
+            onConfirm(selected === 'automatic' ? undefined : selected);
           }
         }
       }
@@ -60,7 +60,23 @@ export function ColorPicker(t0) {
   if ($[5] !== selectedIndex) {
     t4 = COLOR_OPTIONS.map((option, index) => {
       const isSelected = index === selectedIndex;
-      return <Box key={option} flexDirection="row" gap={1}><Text color={isSelected ? "suggestion" : undefined}>{isSelected ? figures.pointer : " "}</Text>{option === "automatic" ? <Text bold={isSelected}>Automatic color</Text> : <Box gap={1}><Text backgroundColor={AGENT_COLOR_TO_THEME_COLOR[option]} color="inverseText">{" "}</Text><Text bold={isSelected}>{capitalize(option)}</Text></Box>}</Box>;
+      return (
+        <Box key={option} flexDirection="row" gap={1}>
+          <Text color={isSelected ? 'suggestion' : undefined}>
+            {isSelected ? figures.pointer : ' '}
+          </Text>
+          {option === 'automatic' ? (
+            <Text bold={isSelected}>Automatic color</Text>
+          ) : (
+            <Box gap={1}>
+              <Text backgroundColor={AGENT_COLOR_TO_THEME_COLOR[option]} color="inverseText">
+                {' '}
+              </Text>
+              <Text bold={isSelected}>{capitalize(option)}</Text>
+            </Box>
+          )}
+        </Box>
+      );
     });
     $[5] = selectedIndex;
     $[6] = t4;
@@ -76,7 +92,7 @@ export function ColorPicker(t0) {
     t5 = $[8];
   }
   let t6;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
     t6 = <Text>Preview: </Text>;
     $[9] = t6;
   } else {
@@ -84,7 +100,26 @@ export function ColorPicker(t0) {
   }
   let t7;
   if ($[10] !== agentName || $[11] !== selectedValue) {
-    t7 = <Box marginTop={1}>{t6}{selectedValue === undefined || selectedValue === "automatic" ? <Text inverse={true} bold={true}>{" "}@{agentName}{" "}</Text> : <Text backgroundColor={AGENT_COLOR_TO_THEME_COLOR[selectedValue]} color="inverseText" bold={true}>{" "}@{agentName}{" "}</Text>}</Box>;
+    t7 = (
+      <Box marginTop={1}>
+        {t6}
+        {selectedValue === undefined || selectedValue === 'automatic' ? (
+          <Text inverse={true} bold={true}>
+            {' '}
+            @{agentName}{' '}
+          </Text>
+        ) : (
+          <Text
+            backgroundColor={AGENT_COLOR_TO_THEME_COLOR[selectedValue]}
+            color="inverseText"
+            bold={true}
+          >
+            {' '}
+            @{agentName}{' '}
+          </Text>
+        )}
+      </Box>
+    );
     $[10] = agentName;
     $[11] = selectedValue;
     $[12] = t7;
@@ -93,7 +128,12 @@ export function ColorPicker(t0) {
   }
   let t8;
   if ($[13] !== handleKeyDown || $[14] !== t5 || $[15] !== t7) {
-    t8 = <Box flexDirection="column" gap={1} tabIndex={0} autoFocus={true} onKeyDown={handleKeyDown}>{t5}{t7}</Box>;
+    t8 = (
+      <Box flexDirection="column" gap={1} tabIndex={0} autoFocus={true} onKeyDown={handleKeyDown}>
+        {t5}
+        {t7}
+      </Box>
+    );
     $[13] = handleKeyDown;
     $[14] = t5;
     $[15] = t7;

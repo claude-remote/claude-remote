@@ -1,9 +1,9 @@
-import { APIUserAbortError } from '@anthropic-ai/sdk'
+import { APIUserAbortError } from '@anthropic-ai/sdk';
 
 export class ClaudeError extends Error {
   constructor(message: string) {
-    super(message)
-    this.name = this.constructor.name
+    super(message);
+    this.name = this.constructor.name;
   }
 }
 
@@ -11,8 +11,8 @@ export class MalformedCommandError extends Error {}
 
 export class AbortError extends Error {
   constructor(message?: string) {
-    super(message)
-    this.name = 'AbortError'
+    super(message);
+    this.name = 'AbortError';
   }
 }
 
@@ -29,7 +29,7 @@ export function isAbortError(e: unknown): boolean {
     e instanceof AbortError ||
     e instanceof APIUserAbortError ||
     (e instanceof Error && e.name === 'AbortError')
-  )
+  );
 }
 
 /**
@@ -37,14 +37,14 @@ export function isAbortError(e: unknown): boolean {
  * Includes the file path and the default configuration that should be used
  */
 export class ConfigParseError extends Error {
-  filePath: string
-  defaultConfig: unknown
+  filePath: string;
+  defaultConfig: unknown;
 
   constructor(message: string, filePath: string, defaultConfig: unknown) {
-    super(message)
-    this.name = 'ConfigParseError'
-    this.filePath = filePath
-    this.defaultConfig = defaultConfig
+    super(message);
+    this.name = 'ConfigParseError';
+    this.filePath = filePath;
+    this.defaultConfig = defaultConfig;
   }
 }
 
@@ -55,8 +55,8 @@ export class ShellError extends Error {
     public readonly code: number,
     public readonly interrupted: boolean,
   ) {
-    super('Shell command failed')
-    this.name = 'ShellError'
+    super('Shell command failed');
+    this.name = 'ShellError';
   }
 }
 
@@ -65,8 +65,8 @@ export class TeleportOperationError extends Error {
     message: string,
     public readonly formattedMessage: string,
   ) {
-    super(message)
-    this.name = 'TeleportOperationError'
+    super(message);
+    this.name = 'TeleportOperationError';
   }
 }
 
@@ -91,17 +91,17 @@ export class TeleportOperationError extends Error {
  * )
  */
 export class TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS extends Error {
-  readonly telemetryMessage: string
+  readonly telemetryMessage: string;
 
   constructor(message: string, telemetryMessage?: string) {
-    super(message)
-    this.name = 'TelemetrySafeError'
-    this.telemetryMessage = telemetryMessage ?? message
+    super(message);
+    this.name = 'TelemetrySafeError';
+    this.telemetryMessage = telemetryMessage ?? message;
   }
 }
 
 export function hasExactErrorMessage(error: unknown, message: string): boolean {
-  return error instanceof Error && error.message === message
+  return error instanceof Error && error.message === message;
 }
 
 /**
@@ -109,7 +109,7 @@ export function hasExactErrorMessage(error: unknown, message: string): boolean {
  * Use at catch-site boundaries when you need an Error instance.
  */
 export function toError(e: unknown): Error {
-  return e instanceof Error ? e : new Error(String(e))
+  return e instanceof Error ? e : new Error(String(e));
 }
 
 /**
@@ -117,7 +117,7 @@ export function toError(e: unknown): Error {
  * Use when you only need the message (e.g., for logging or display).
  */
 export function errorMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e)
+  return e instanceof Error ? e.message : String(e);
 }
 
 /**
@@ -127,9 +127,9 @@ export function errorMessage(e: unknown): string {
  */
 export function getErrnoCode(e: unknown): string | undefined {
   if (e && typeof e === 'object' && 'code' in e && typeof e.code === 'string') {
-    return e.code
+    return e.code;
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -137,7 +137,7 @@ export function getErrnoCode(e: unknown): string | undefined {
  * Replaces `(e as NodeJS.ErrnoException).code === 'ENOENT'`.
  */
 export function isENOENT(e: unknown): boolean {
-  return getErrnoCode(e) === 'ENOENT'
+  return getErrnoCode(e) === 'ENOENT';
 }
 
 /**
@@ -147,9 +147,9 @@ export function isENOENT(e: unknown): boolean {
  */
 export function getErrnoPath(e: unknown): string | undefined {
   if (e && typeof e === 'object' && 'path' in e && typeof e.path === 'string') {
-    return e.path
+    return e.path;
   }
-  return undefined
+  return undefined;
 }
 
 /**
@@ -159,15 +159,15 @@ export function getErrnoPath(e: unknown): string | undefined {
  * waste context tokens. Keep the full stack in debug logs instead.
  */
 export function shortErrorStack(e: unknown, maxFrames = 5): string {
-  if (!(e instanceof Error)) return String(e)
-  if (!e.stack) return e.message
+  if (!(e instanceof Error)) return String(e);
+  if (!e.stack) return e.message;
   // V8/Bun stack format: "Name: message\n    at frame1\n    at frame2..."
   // First line is the message; subsequent "    at " lines are frames.
-  const lines = e.stack.split('\n')
-  const header = lines[0] ?? e.message
-  const frames = lines.slice(1).filter(l => l.trim().startsWith('at '))
-  if (frames.length <= maxFrames) return e.stack
-  return [header, ...frames.slice(0, maxFrames)].join('\n')
+  const lines = e.stack.split('\n');
+  const header = lines[0] ?? e.message;
+  const frames = lines.slice(1).filter((l) => l.trim().startsWith('at '));
+  if (frames.length <= maxFrames) return e.stack;
+  return [header, ...frames.slice(0, maxFrames)].join('\n');
 }
 
 /**
@@ -184,14 +184,14 @@ export function shortErrorStack(e: unknown, maxFrames = 5): string {
  *  ELOOP     — too many symlink levels (circular symlinks)
  */
 export function isFsInaccessible(e: unknown): e is NodeJS.ErrnoException {
-  const code = getErrnoCode(e)
+  const code = getErrnoCode(e);
   return (
     code === 'ENOENT' ||
     code === 'EACCES' ||
     code === 'EPERM' ||
     code === 'ENOTDIR' ||
     code === 'ELOOP'
-  )
+  );
 }
 
 export type AxiosErrorKind =
@@ -199,7 +199,7 @@ export type AxiosErrorKind =
   | 'timeout' // ECONNABORTED
   | 'network' // ECONNREFUSED/ENOTFOUND
   | 'http' // other axios error (may have status)
-  | 'other' // not an axios error
+  | 'other'; // not an axios error
 
 /**
  * Classify a caught error from an axios request into one of a few buckets.
@@ -211,28 +211,23 @@ export type AxiosErrorKind =
  * axios.isAxiosError()) to keep this module dependency-free.
  */
 export function classifyAxiosError(e: unknown): {
-  kind: AxiosErrorKind
-  status?: number
-  message: string
+  kind: AxiosErrorKind;
+  status?: number;
+  message: string;
 } {
-  const message = errorMessage(e)
-  if (
-    !e ||
-    typeof e !== 'object' ||
-    !('isAxiosError' in e) ||
-    !e.isAxiosError
-  ) {
-    return { kind: 'other', message }
+  const message = errorMessage(e);
+  if (!e || typeof e !== 'object' || !('isAxiosError' in e) || !e.isAxiosError) {
+    return { kind: 'other', message };
   }
   const err = e as {
-    response?: { status?: number }
-    code?: string
-  }
-  const status = err.response?.status
-  if (status === 401 || status === 403) return { kind: 'auth', status, message }
-  if (err.code === 'ECONNABORTED') return { kind: 'timeout', status, message }
+    response?: { status?: number };
+    code?: string;
+  };
+  const status = err.response?.status;
+  if (status === 401 || status === 403) return { kind: 'auth', status, message };
+  if (err.code === 'ECONNABORTED') return { kind: 'timeout', status, message };
   if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
-    return { kind: 'network', status, message }
+    return { kind: 'network', status, message };
   }
-  return { kind: 'http', status, message }
+  return { kind: 'http', status, message };
 }

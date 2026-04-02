@@ -1,1 +1,1 @@
-export const EXIT_WORKTREE_TOOL_NAME = 'ExitWorktree'
+export const EXIT_WORKTREE_TOOL_NAME = 'ExitWorktree';

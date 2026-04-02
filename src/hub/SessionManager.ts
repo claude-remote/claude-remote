@@ -1,3 +1,4 @@
+import { DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_MAX_SESSIONS } from '@/shared/constants';
 import type {
   Session,
   SessionConfig,
@@ -5,10 +6,9 @@ import type {
   SessionSnapshot,
   SessionStatus,
 } from '@/shared/types';
-import { DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_MAX_SESSIONS } from '@/shared/constants';
 
-import type { SqliteStore } from '@/hub/store/SqliteStore';
 import type { EventBus } from '@/hub/EventBus';
+import type { SqliteStore } from '@/hub/store/SqliteStore';
 
 export interface CreateSessionInput {
   cwd: string;
@@ -80,9 +80,7 @@ export class SessionManager {
 
   listSessions(filter?: { status?: SessionStatus }): SessionMeta[] {
     const all = Array.from(this.sessions.values());
-    const filtered = filter?.status
-      ? all.filter((s) => s.status === filter.status)
-      : all;
+    const filtered = filter?.status ? all.filter((s) => s.status === filter.status) : all;
     return filtered.map((s) => this.toMeta(s));
   }
 
@@ -138,9 +136,7 @@ export class SessionManager {
     const valid = VALID_TRANSITIONS[session.status];
 
     if (!valid.includes(newStatus)) {
-      throw new Error(
-        `invalid transition: ${session.status} → ${newStatus}`,
-      );
+      throw new Error(`invalid transition: ${session.status} → ${newStatus}`);
     }
 
     session.status = newStatus;
@@ -205,10 +201,7 @@ export class SessionManager {
 
   private resetIdleTimer(sessionId: string): void {
     this.clearIdleTimer(sessionId);
-    const timer = setTimeout(
-      () => this.onIdleTimeout(sessionId),
-      this.config.defaultIdleTimeoutMs,
-    );
+    const timer = setTimeout(() => this.onIdleTimeout(sessionId), this.config.defaultIdleTimeoutMs);
     this.idleTimers.set(sessionId, timer);
   }
 
@@ -279,9 +272,7 @@ export class SessionManager {
   // ── Resource limits ─────────────────────────────────────────────────
 
   private checkLimits(): void {
-    const nonArchived = Array.from(this.sessions.values()).filter(
-      (s) => s.status !== 'archived',
-    );
+    const nonArchived = Array.from(this.sessions.values()).filter((s) => s.status !== 'archived');
 
     if (nonArchived.length >= this.config.maxSessions) {
       // Try to auto-archive the oldest idle session
@@ -299,9 +290,7 @@ export class SessionManager {
         return;
       }
 
-      throw new Error(
-        `max sessions limit reached (${this.config.maxSessions})`,
-      );
+      throw new Error(`max sessions limit reached (${this.config.maxSessions})`);
     }
   }
 

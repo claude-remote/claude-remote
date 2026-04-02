@@ -16,7 +16,11 @@ export function PermissionBanner({ requests, writerStatus, onRespond }: Permissi
 
   // Vibrate on mobile when a new permission arrives
   useEffect(() => {
-    if (requests.length > prevCountRef.current && typeof navigator !== 'undefined' && navigator.vibrate) {
+    if (
+      requests.length > prevCountRef.current &&
+      typeof navigator !== 'undefined' &&
+      navigator.vibrate
+    ) {
       navigator.vibrate(200);
     }
     prevCountRef.current = requests.length;
@@ -43,12 +47,7 @@ export function PermissionBanner({ requests, writerStatus, onRespond }: Permissi
         {requests.length} pending permission{requests.length !== 1 ? 's' : ''}
       </p>
       {requests.map((req) => (
-        <PermissionCard
-          key={req.id}
-          request={req}
-          isWriter={isWriter}
-          onRespond={handleRespond}
-        />
+        <PermissionCard key={req.id} request={req} isWriter={isWriter} onRespond={handleRespond} />
       ))}
     </aside>
   );

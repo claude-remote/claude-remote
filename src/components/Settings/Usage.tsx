@@ -1,20 +1,28 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { extraUsage as extraUsageCommand } from 'src/commands/extra-usage/index.js';
 import { formatCost } from 'src/cost-tracker.js';
 import { getSubscriptionType } from 'src/utils/auth.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding } from '../../keybindings/useKeybinding.js';
-import { type ExtraUsage, fetchUtilization, type RateLimit, type Utilization } from '../../services/api/usage.js';
+import {
+  type ExtraUsage,
+  type RateLimit,
+  type Utilization,
+  fetchUtilization,
+} from '../../services/api/usage.js';
 import { formatResetText } from '../../utils/format.js';
 import { logError } from '../../utils/log.js';
 import { jsonStringify } from '../../utils/slowOperations.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
+import {
+  OverageCreditUpsell,
+  isEligibleForOverageCreditGrant,
+} from '../LogoV2/OverageCreditUpsell.js';
 import { Byline } from '../design-system/Byline.js';
 import { ProgressBar } from '../design-system/ProgressBar.js';
-import { isEligibleForOverageCreditGrant, OverageCreditUpsell } from '../LogoV2/OverageCreditUpsell.js';
 type LimitBarProps = {
   title: string;
   limit: RateLimit;
@@ -24,18 +32,9 @@ type LimitBarProps = {
 };
 function LimitBar(t0) {
   const $ = _c(34);
-  const {
-    title,
-    limit,
-    maxWidth,
-    showTimeInReset: t1,
-    extraSubtext
-  } = t0;
+  const { title, limit, maxWidth, showTimeInReset: t1, extraSubtext } = t0;
   const showTimeInReset = t1 === undefined ? true : t1;
-  const {
-    utilization,
-    resets_at
-  } = limit;
+  const { utilization, resets_at } = limit;
   if (utilization === null) {
     return null;
   }
@@ -72,7 +71,14 @@ function LimitBar(t0) {
     const t3 = utilization / 100;
     let t4;
     if ($[5] !== t3) {
-      t4 = <ProgressBar ratio={t3} width={50} fillColor="rate_limit_fill" emptyColor="rate_limit_empty" />;
+      t4 = (
+        <ProgressBar
+          ratio={t3}
+          width={50}
+          fillColor="rate_limit_fill"
+          emptyColor="rate_limit_empty"
+        />
+      );
       $[5] = t3;
       $[6] = t4;
     } else {
@@ -88,7 +94,12 @@ function LimitBar(t0) {
     }
     let t6;
     if ($[9] !== t4 || $[10] !== t5) {
-      t6 = <Box flexDirection="row" gap={1}>{t4}{t5}</Box>;
+      t6 = (
+        <Box flexDirection="row" gap={1}>
+          {t4}
+          {t5}
+        </Box>
+      );
       $[9] = t4;
       $[10] = t5;
       $[11] = t6;
@@ -105,7 +116,13 @@ function LimitBar(t0) {
     }
     let t8;
     if ($[14] !== t2 || $[15] !== t6 || $[16] !== t7) {
-      t8 = <Box flexDirection="column">{t2}{t6}{t7}</Box>;
+      t8 = (
+        <Box flexDirection="column">
+          {t2}
+          {t6}
+          {t7}
+        </Box>
+      );
       $[14] = t2;
       $[15] = t6;
       $[16] = t7;
@@ -114,70 +131,90 @@ function LimitBar(t0) {
       t8 = $[17];
     }
     return t8;
-  } else {
-    let t2;
-    if ($[18] !== title) {
-      t2 = <Text bold={true}>{title}</Text>;
-      $[18] = title;
-      $[19] = t2;
-    } else {
-      t2 = $[19];
-    }
-    let t3;
-    if ($[20] !== subtext) {
-      t3 = subtext && <><Text> </Text><Text dimColor={true}>· {subtext}</Text></>;
-      $[20] = subtext;
-      $[21] = t3;
-    } else {
-      t3 = $[21];
-    }
-    let t4;
-    if ($[22] !== t2 || $[23] !== t3) {
-      t4 = <Text>{t2}{t3}</Text>;
-      $[22] = t2;
-      $[23] = t3;
-      $[24] = t4;
-    } else {
-      t4 = $[24];
-    }
-    const t5 = utilization / 100;
-    let t6;
-    if ($[25] !== maxWidth || $[26] !== t5) {
-      t6 = <ProgressBar ratio={t5} width={maxWidth} fillColor="rate_limit_fill" emptyColor="rate_limit_empty" />;
-      $[25] = maxWidth;
-      $[26] = t5;
-      $[27] = t6;
-    } else {
-      t6 = $[27];
-    }
-    let t7;
-    if ($[28] !== usedText) {
-      t7 = <Text>{usedText}</Text>;
-      $[28] = usedText;
-      $[29] = t7;
-    } else {
-      t7 = $[29];
-    }
-    let t8;
-    if ($[30] !== t4 || $[31] !== t6 || $[32] !== t7) {
-      t8 = <Box flexDirection="column">{t4}{t6}{t7}</Box>;
-      $[30] = t4;
-      $[31] = t6;
-      $[32] = t7;
-      $[33] = t8;
-    } else {
-      t8 = $[33];
-    }
-    return t8;
   }
+  let t2;
+  if ($[18] !== title) {
+    t2 = <Text bold={true}>{title}</Text>;
+    $[18] = title;
+    $[19] = t2;
+  } else {
+    t2 = $[19];
+  }
+  let t3;
+  if ($[20] !== subtext) {
+    t3 = subtext && (
+      <>
+        <Text> </Text>
+        <Text dimColor={true}>· {subtext}</Text>
+      </>
+    );
+    $[20] = subtext;
+    $[21] = t3;
+  } else {
+    t3 = $[21];
+  }
+  let t4;
+  if ($[22] !== t2 || $[23] !== t3) {
+    t4 = (
+      <Text>
+        {t2}
+        {t3}
+      </Text>
+    );
+    $[22] = t2;
+    $[23] = t3;
+    $[24] = t4;
+  } else {
+    t4 = $[24];
+  }
+  const t5 = utilization / 100;
+  let t6;
+  if ($[25] !== maxWidth || $[26] !== t5) {
+    t6 = (
+      <ProgressBar
+        ratio={t5}
+        width={maxWidth}
+        fillColor="rate_limit_fill"
+        emptyColor="rate_limit_empty"
+      />
+    );
+    $[25] = maxWidth;
+    $[26] = t5;
+    $[27] = t6;
+  } else {
+    t6 = $[27];
+  }
+  let t7;
+  if ($[28] !== usedText) {
+    t7 = <Text>{usedText}</Text>;
+    $[28] = usedText;
+    $[29] = t7;
+  } else {
+    t7 = $[29];
+  }
+  let t8;
+  if ($[30] !== t4 || $[31] !== t6 || $[32] !== t7) {
+    t8 = (
+      <Box flexDirection="column">
+        {t4}
+        {t6}
+        {t7}
+      </Box>
+    );
+    $[30] = t4;
+    $[31] = t6;
+    $[32] = t7;
+    $[33] = t8;
+  } else {
+    t8 = $[33];
+  }
+  return t8;
 }
 export function Usage(): React.ReactNode {
   const [utilization, setUtilization] = useState<Utilization | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const {
-    columns
-  } = useTerminalSize();
+  const { columns } = useTerminalSize();
   const availableWidth = columns - 2; // 2 for screen padding
   const maxWidth = Math.min(availableWidth, 80);
   const loadUtilization = React.useCallback(async () => {
@@ -193,8 +230,12 @@ export function Usage(): React.ReactNode {
           data?: unknown;
         };
       };
-      const responseBody = axiosError.response?.data ? jsonStringify(axiosError.response.data) : undefined;
-      setError(responseBody ? `Failed to load usage data: ${responseBody}` : 'Failed to load usage data');
+      const responseBody = axiosError.response?.data
+        ? jsonStringify(axiosError.response.data)
+        : undefined;
+      setError(
+        responseBody ? `Failed to load usage data: ${responseBody}` : 'Failed to load usage data',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -202,30 +243,53 @@ export function Usage(): React.ReactNode {
   useEffect(() => {
     void loadUtilization();
   }, [loadUtilization]);
-  useKeybinding('settings:retry', () => {
-    void loadUtilization();
-  }, {
-    context: 'Settings',
-    isActive: !!error && !isLoading
-  });
+  useKeybinding(
+    'settings:retry',
+    () => {
+      void loadUtilization();
+    },
+    {
+      context: 'Settings',
+      isActive: !!error && !isLoading,
+    },
+  );
   if (error) {
-    return <Box flexDirection="column" gap={1}>
+    return (
+      <Box flexDirection="column" gap={1}>
         <Text color="error">Error: {error}</Text>
         <Text dimColor>
           <Byline>
-            <ConfigurableShortcutHint action="settings:retry" context="Settings" fallback="r" description="retry" />
-            <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
+            <ConfigurableShortcutHint
+              action="settings:retry"
+              context="Settings"
+              fallback="r"
+              description="retry"
+            />
+            <ConfigurableShortcutHint
+              action="confirm:no"
+              context="Settings"
+              fallback="Esc"
+              description="cancel"
+            />
           </Byline>
         </Text>
-      </Box>;
+      </Box>
+    );
   }
   if (!utilization) {
-    return <Box flexDirection="column" gap={1}>
+    return (
+      <Box flexDirection="column" gap={1}>
         <Text dimColor>Loading usage data…</Text>
         <Text dimColor>
-          <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
+          <ConfigurableShortcutHint
+            action="confirm:no"
+            context="Settings"
+            fallback="Esc"
+            description="cancel"
+          />
         </Text>
-      </Box>;
+      </Box>
+    );
   }
 
   // Only Max and Team plans have a Sonnet limit that differs from the weekly
@@ -233,35 +297,53 @@ export function Usage(): React.ReactNode {
   // Show for null (unknown plan) to stay consistent with rateLimitMessages.ts,
   // which labels it "Sonnet limit" in that case.
   const subscriptionType = getSubscriptionType();
-  const showSonnetBar = subscriptionType === 'max' || subscriptionType === 'team' || subscriptionType === null;
-  const limits = [{
-    title: 'Current session',
-    limit: utilization.five_hour
-  }, {
-    title: 'Current week (all models)',
-    limit: utilization.seven_day
-  }, ...(showSonnetBar ? [{
-    title: 'Current week (Sonnet only)',
-    limit: utilization.seven_day_sonnet
-  }] : [])];
-  return <Box flexDirection="column" gap={1} width="100%">
-      {limits.some(({
-      limit
-    }) => limit) || <Text dimColor>/usage is only available for subscription plans.</Text>}
+  const showSonnetBar =
+    subscriptionType === 'max' || subscriptionType === 'team' || subscriptionType === null;
+  const limits = [
+    {
+      title: 'Current session',
+      limit: utilization.five_hour,
+    },
+    {
+      title: 'Current week (all models)',
+      limit: utilization.seven_day,
+    },
+    ...(showSonnetBar
+      ? [
+          {
+            title: 'Current week (Sonnet only)',
+            limit: utilization.seven_day_sonnet,
+          },
+        ]
+      : []),
+  ];
+  return (
+    <Box flexDirection="column" gap={1} width="100%">
+      {limits.some(({ limit }) => limit) || (
+        <Text dimColor>/usage is only available for subscription plans.</Text>
+      )}
 
-      {limits.map(({
-      title,
-      limit: limit_0
-    }) => limit_0 && <LimitBar key={title} title={title} limit={limit_0} maxWidth={maxWidth} />)}
+      {limits.map(
+        ({ title, limit: limit_0 }) =>
+          limit_0 && <LimitBar key={title} title={title} limit={limit_0} maxWidth={maxWidth} />,
+      )}
 
-      {utilization.extra_usage && <ExtraUsageSection extraUsage={utilization.extra_usage} maxWidth={maxWidth} />}
+      {utilization.extra_usage && (
+        <ExtraUsageSection extraUsage={utilization.extra_usage} maxWidth={maxWidth} />
+      )}
 
       {isEligibleForOverageCreditGrant() && <OverageCreditUpsell maxWidth={maxWidth} />}
 
       <Text dimColor>
-        <ConfigurableShortcutHint action="confirm:no" context="Settings" fallback="Esc" description="cancel" />
+        <ConfigurableShortcutHint
+          action="confirm:no"
+          context="Settings"
+          fallback="Esc"
+          description="cancel"
+        />
       </Text>
-    </Box>;
+    </Box>
+  );
 }
 type ExtraUsageSectionProps = {
   extraUsage: ExtraUsage;
@@ -270,20 +352,22 @@ type ExtraUsageSectionProps = {
 const EXTRA_USAGE_SECTION_TITLE = 'Extra usage';
 function ExtraUsageSection(t0) {
   const $ = _c(20);
-  const {
-    extraUsage,
-    maxWidth
-  } = t0;
+  const { extraUsage, maxWidth } = t0;
   const subscriptionType = getSubscriptionType();
-  const isProOrMax = subscriptionType === "pro" || subscriptionType === "max";
+  const isProOrMax = subscriptionType === 'pro' || subscriptionType === 'max';
   if (!isProOrMax) {
     return false;
   }
   if (!extraUsage.is_enabled) {
     if (extraUsageCommand.isEnabled()) {
       let t1;
-      if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-        t1 = <Box flexDirection="column"><Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text><Text dimColor={true}>Extra usage not enabled · /extra-usage to enable</Text></Box>;
+      if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
+        t1 = (
+          <Box flexDirection="column">
+            <Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text>
+            <Text dimColor={true}>Extra usage not enabled · /extra-usage to enable</Text>
+          </Box>
+        );
         $[0] = t1;
       } else {
         t1 = $[0];
@@ -294,15 +378,20 @@ function ExtraUsageSection(t0) {
   }
   if (extraUsage.monthly_limit === null) {
     let t1;
-    if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-      t1 = <Box flexDirection="column"><Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text><Text dimColor={true}>Unlimited</Text></Box>;
+    if ($[1] === Symbol.for('react.memo_cache_sentinel')) {
+      t1 = (
+        <Box flexDirection="column">
+          <Text bold={true}>{EXTRA_USAGE_SECTION_TITLE}</Text>
+          <Text dimColor={true}>Unlimited</Text>
+        </Box>
+      );
       $[1] = t1;
     } else {
       t1 = $[1];
     }
     return t1;
   }
-  if (typeof extraUsage.used_credits !== "number" || typeof extraUsage.utilization !== "number") {
+  if (typeof extraUsage.used_credits !== 'number' || typeof extraUsage.utilization !== 'number') {
     return null;
   }
   const t1 = extraUsage.used_credits / 100;
@@ -351,7 +440,7 @@ function ExtraUsageSection(t0) {
   if ($[11] !== t5 || $[12] !== t6) {
     t8 = {
       utilization: t5,
-      resets_at: t6
+      resets_at: t6,
     };
     $[11] = t5;
     $[12] = t6;
@@ -362,7 +451,9 @@ function ExtraUsageSection(t0) {
   const t9 = `${formattedUsedCredits} / ${formattedMonthlyLimit} spent`;
   let t10;
   if ($[14] !== T0 || $[15] !== maxWidth || $[16] !== t7 || $[17] !== t8 || $[18] !== t9) {
-    t10 = <T0 title={t7} limit={t8} showTimeInReset={false} extraSubtext={t9} maxWidth={maxWidth} />;
+    t10 = (
+      <T0 title={t7} limit={t8} showTimeInReset={false} extraSubtext={t9} maxWidth={maxWidth} />
+    );
     $[14] = T0;
     $[15] = maxWidth;
     $[16] = t7;

@@ -1,8 +1,8 @@
-import { c as _c } from "react/compiler-runtime";
-import * as React from 'react';
+import type * as React from 'react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useSettings } from '../hooks/useSettings.js';
-import { Ansi, Box, type DOMElement, measureElement, NoSelect, Text, useTheme } from '../ink.js';
+import { Ansi, Box, type DOMElement, NoSelect, Text, measureElement, useTheme } from '../ink.js';
 import { isFullscreenEnvEnabled } from '../utils/fullscreen.js';
 import sliceAnsi from '../utils/sliceAnsi.js';
 import { countCharInString } from '../utils/stringUtils.js';
@@ -15,16 +15,9 @@ type Props = {
   dim?: boolean;
 };
 const DEFAULT_WIDTH = 80;
-export const HighlightedCode = memo(function HighlightedCode(
-  t0: Props,
-): React.ReactElement {
+export const HighlightedCode = memo(function HighlightedCode(t0: Props): React.ReactElement {
   const $ = _c(21);
-  const {
-    code,
-    filePath,
-    width,
-    dim: t1
-  } = t0;
+  const { code, filePath, width, dim: t1 } = t0;
   const dim = t1 === undefined ? false : t1;
   const ref = useRef(null);
   const [measuredWidth, setMeasuredWidth] = useState(width || DEFAULT_WIDTH);
@@ -38,7 +31,7 @@ export const HighlightedCode = memo(function HighlightedCode(
       break bb0;
     }
     let t3;
-    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+    if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
       t3 = expectColorFile();
       $[0] = t3;
     } else {
@@ -66,9 +59,7 @@ export const HighlightedCode = memo(function HighlightedCode(
   if ($[4] !== width) {
     t3 = () => {
       if (!width && ref.current) {
-        const {
-          width: elementWidth
-        } = measureElement(ref.current);
+        const { width: elementWidth } = measureElement(ref.current);
         if (elementWidth > 0) {
           setMeasuredWidth(elementWidth - 2);
         }
@@ -109,7 +100,7 @@ export const HighlightedCode = memo(function HighlightedCode(
       t6 = 0;
       break bb2;
     }
-    const lineCount = countCharInString(code, "\n") + 1;
+    const lineCount = countCharInString(code, '\n') + 1;
     let t7;
     if ($[12] !== lineCount) {
       t7 = lineCount.toString();
@@ -122,8 +113,38 @@ export const HighlightedCode = memo(function HighlightedCode(
   }
   const gutterWidth = t6;
   let t7;
-  if ($[14] !== code || $[15] !== dim || $[16] !== filePath || $[17] !== gutterWidth || $[18] !== lines || $[19] !== syntaxHighlightingDisabled) {
-    t7 = <Box ref={ref}>{lines ? <Box flexDirection="column">{lines.map((line, i) => gutterWidth > 0 ? <CodeLine key={i} line={line} gutterWidth={gutterWidth} /> : <Text key={i}><Ansi>{line}</Ansi></Text>)}</Box> : <HighlightedCodeFallback code={code} filePath={filePath} dim={dim} skipColoring={syntaxHighlightingDisabled} />}</Box>;
+  if (
+    $[14] !== code ||
+    $[15] !== dim ||
+    $[16] !== filePath ||
+    $[17] !== gutterWidth ||
+    $[18] !== lines ||
+    $[19] !== syntaxHighlightingDisabled
+  ) {
+    t7 = (
+      <Box ref={ref}>
+        {lines ? (
+          <Box flexDirection="column">
+            {lines.map((line, i) =>
+              gutterWidth > 0 ? (
+                <CodeLine key={i} line={line} gutterWidth={gutterWidth} />
+              ) : (
+                <Text key={i}>
+                  <Ansi>{line}</Ansi>
+                </Text>
+              ),
+            )}
+          </Box>
+        ) : (
+          <HighlightedCodeFallback
+            code={code}
+            filePath={filePath}
+            dim={dim}
+            skipColoring={syntaxHighlightingDisabled}
+          />
+        )}
+      </Box>
+    );
     $[14] = code;
     $[15] = dim;
     $[16] = filePath;
@@ -141,10 +162,7 @@ function CodeLine(t0: {
   gutterWidth: number;
 }): React.ReactNode {
   const $ = _c(13);
-  const {
-    line,
-    gutterWidth
-  } = t0;
+  const { line, gutterWidth } = t0;
   let t1;
   if ($[0] !== gutterWidth || $[1] !== line) {
     t1 = sliceAnsi(line, 0, gutterWidth);
@@ -167,7 +185,13 @@ function CodeLine(t0: {
   const content = t2;
   let t3;
   if ($[6] !== gutter) {
-    t3 = <NoSelect fromLeftEdge={true}><Text><Ansi>{gutter}</Ansi></Text></NoSelect>;
+    t3 = (
+      <NoSelect fromLeftEdge={true}>
+        <Text>
+          <Ansi>{gutter}</Ansi>
+        </Text>
+      </NoSelect>
+    );
     $[6] = gutter;
     $[7] = t3;
   } else {
@@ -175,7 +199,11 @@ function CodeLine(t0: {
   }
   let t4;
   if ($[8] !== content) {
-    t4 = <Text><Ansi>{content}</Ansi></Text>;
+    t4 = (
+      <Text>
+        <Ansi>{content}</Ansi>
+      </Text>
+    );
     $[8] = content;
     $[9] = t4;
   } else {
@@ -183,7 +211,12 @@ function CodeLine(t0: {
   }
   let t5;
   if ($[10] !== t3 || $[11] !== t4) {
-    t5 = <Box flexDirection="row">{t3}{t4}</Box>;
+    t5 = (
+      <Box flexDirection="row">
+        {t3}
+        {t4}
+      </Box>
+    );
     $[10] = t3;
     $[11] = t4;
     $[12] = t5;

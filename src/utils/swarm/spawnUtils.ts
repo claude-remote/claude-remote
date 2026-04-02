@@ -8,12 +8,12 @@ import {
   getInlinePlugins,
   getMainLoopModelOverride,
   getSessionBypassPermissionsMode,
-} from '../../bootstrap/state.js'
-import { quote } from '../bash/shellQuote.js'
-import { isInBundledMode } from '../bundledMode.js'
-import type { PermissionMode } from '../permissions/PermissionMode.js'
-import { getTeammateModeFromSnapshot } from './backends/teammateModeSnapshot.js'
-import { TEAMMATE_COMMAND_ENV_VAR } from './constants.js'
+} from '../../bootstrap/state.js';
+import { quote } from '../bash/shellQuote.js';
+import { isInBundledMode } from '../bundledMode.js';
+import type { PermissionMode } from '../permissions/PermissionMode.js';
+import { getTeammateModeFromSnapshot } from './backends/teammateModeSnapshot.js';
+import { TEAMMATE_COMMAND_ENV_VAR } from './constants.js';
 
 /**
  * Gets the command to use for spawning teammate processes.
@@ -22,9 +22,9 @@ import { TEAMMATE_COMMAND_ENV_VAR } from './constants.js'
  */
 export function getTeammateCommand(): string {
   if (process.env[TEAMMATE_COMMAND_ENV_VAR]) {
-    return process.env[TEAMMATE_COMMAND_ENV_VAR]
+    return process.env[TEAMMATE_COMMAND_ENV_VAR];
   }
-  return isInBundledMode() ? process.execPath : process.argv[1]!
+  return isInBundledMode() ? process.execPath : process.argv[1]!;
 }
 
 /**
@@ -36,56 +36,53 @@ export function getTeammateCommand(): string {
  * @param options.permissionMode - Permission mode to propagate
  */
 export function buildInheritedCliFlags(options?: {
-  planModeRequired?: boolean
-  permissionMode?: PermissionMode
+  planModeRequired?: boolean;
+  permissionMode?: PermissionMode;
 }): string {
-  const flags: string[] = []
-  const { planModeRequired, permissionMode } = options || {}
+  const flags: string[] = [];
+  const { planModeRequired, permissionMode } = options || {};
 
   // Propagate permission mode to teammates, but NOT if plan mode is required
   // Plan mode takes precedence over bypass permissions for safety
   if (planModeRequired) {
     // Don't inherit bypass permissions when plan mode is required
-  } else if (
-    permissionMode === 'bypassPermissions' ||
-    getSessionBypassPermissionsMode()
-  ) {
-    flags.push('--dangerously-skip-permissions')
+  } else if (permissionMode === 'bypassPermissions' || getSessionBypassPermissionsMode()) {
+    flags.push('--dangerously-skip-permissions');
   } else if (permissionMode === 'acceptEdits') {
-    flags.push('--permission-mode acceptEdits')
+    flags.push('--permission-mode acceptEdits');
   }
 
   // Propagate --model if explicitly set via CLI
-  const modelOverride = getMainLoopModelOverride()
+  const modelOverride = getMainLoopModelOverride();
   if (modelOverride) {
-    flags.push(`--model ${quote([modelOverride])}`)
+    flags.push(`--model ${quote([modelOverride])}`);
   }
 
   // Propagate --settings if set via CLI
-  const settingsPath = getFlagSettingsPath()
+  const settingsPath = getFlagSettingsPath();
   if (settingsPath) {
-    flags.push(`--settings ${quote([settingsPath])}`)
+    flags.push(`--settings ${quote([settingsPath])}`);
   }
 
   // Propagate --plugin-dir for each inline plugin
-  const inlinePlugins = getInlinePlugins()
+  const inlinePlugins = getInlinePlugins();
   for (const pluginDir of inlinePlugins) {
-    flags.push(`--plugin-dir ${quote([pluginDir])}`)
+    flags.push(`--plugin-dir ${quote([pluginDir])}`);
   }
 
   // Propagate --teammate-mode so tmux teammates use the same mode as leader
-  const sessionMode = getTeammateModeFromSnapshot()
-  flags.push(`--teammate-mode ${sessionMode}`)
+  const sessionMode = getTeammateModeFromSnapshot();
+  flags.push(`--teammate-mode ${sessionMode}`);
 
   // Propagate --chrome / --no-chrome if explicitly set on the CLI
-  const chromeFlagOverride = getChromeFlagOverride()
+  const chromeFlagOverride = getChromeFlagOverride();
   if (chromeFlagOverride === true) {
-    flags.push('--chrome')
+    flags.push('--chrome');
   } else if (chromeFlagOverride === false) {
-    flags.push('--no-chrome')
+    flags.push('--no-chrome');
   }
 
-  return flags.join(' ')
+  return flags.join(' ');
 }
 
 /**
@@ -125,7 +122,7 @@ const TEAMMATE_ENV_VARS = [
   'NODE_EXTRA_CA_CERTS',
   'REQUESTS_CA_BUNDLE',
   'CURL_CA_BUNDLE',
-] as const
+] as const;
 
 /**
  * Builds the `env KEY=VALUE ...` string for teammate spawn commands.
@@ -133,14 +130,14 @@ const TEAMMATE_ENV_VARS = [
  * plus any provider/config env vars that are set in the current process.
  */
 export function buildInheritedEnvVars(): string {
-  const envVars = ['CLAUDECODE=1', 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1']
+  const envVars = ['CLAUDECODE=1', 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1'];
 
   for (const key of TEAMMATE_ENV_VARS) {
-    const value = process.env[key]
+    const value = process.env[key];
     if (value !== undefined && value !== '') {
-      envVars.push(`${key}=${quote([value])}`)
+      envVars.push(`${key}=${quote([value])}`);
     }
   }
 
-  return envVars.join(' ')
+  return envVars.join(' ');
 }

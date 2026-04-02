@@ -1,3 +1,3 @@
 export function checkProtectedNamespace(): boolean {
-  return false
+  return false;
 }

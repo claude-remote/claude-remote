@@ -1,39 +1,41 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import { getSubscriptionType } from '../../utils/auth.js'
-import { hasEmbeddedSearchTools } from '../../utils/embeddedTools.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
-import { isTeammate } from '../../utils/teammate.js'
-import { isInProcessTeammate } from '../../utils/teammateContext.js'
-import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../GlobTool/prompt.js'
-import { SEND_MESSAGE_TOOL_NAME } from '../SendMessageTool/constants.js'
-import { AGENT_TOOL_NAME } from './constants.js'
-import { isForkSubagentEnabled } from './forkSubagent.js'
-import type { AgentDefinition } from './loadAgentsDir.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
+import { getSubscriptionType } from '../../utils/auth.js';
+import { hasEmbeddedSearchTools } from '../../utils/embeddedTools.js';
+import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js';
+import { isTeammate } from '../../utils/teammate.js';
+import { isInProcessTeammate } from '../../utils/teammateContext.js';
+import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js';
+import { FILE_WRITE_TOOL_NAME } from '../FileWriteTool/prompt.js';
+import { GLOB_TOOL_NAME } from '../GlobTool/prompt.js';
+import { SEND_MESSAGE_TOOL_NAME } from '../SendMessageTool/constants.js';
+import { AGENT_TOOL_NAME } from './constants.js';
+import { isForkSubagentEnabled } from './forkSubagent.js';
+import type { AgentDefinition } from './loadAgentsDir.js';
 
 function getToolsDescription(agent: AgentDefinition): string {
-  const { tools, disallowedTools } = agent
-  const hasAllowlist = tools && tools.length > 0
-  const hasDenylist = disallowedTools && disallowedTools.length > 0
+  const { tools, disallowedTools } = agent;
+  const hasAllowlist = tools && tools.length > 0;
+  const hasDenylist = disallowedTools && disallowedTools.length > 0;
 
   if (hasAllowlist && hasDenylist) {
     // Both defined: filter allowlist by denylist to match runtime behavior
-    const denySet = new Set(disallowedTools)
-    const effectiveTools = tools.filter(t => !denySet.has(t))
+    const denySet = new Set(disallowedTools);
+    const effectiveTools = tools.filter((t) => !denySet.has(t));
     if (effectiveTools.length === 0) {
-      return 'None'
+      return 'None';
     }
-    return effectiveTools.join(', ')
-  } else if (hasAllowlist) {
+    return effectiveTools.join(', ');
+  }
+  if (hasAllowlist) {
     // Allowlist only: show the specific tools available
-    return tools.join(', ')
-  } else if (hasDenylist) {
+    return tools.join(', ');
+  }
+  if (hasDenylist) {
     // Denylist only: show "All tools except X, Y, Z"
-    return `All tools except ${disallowedTools.join(', ')}`
+    return `All tools except ${disallowedTools.join(', ')}`;
   }
   // No restrictions
-  return 'All tools'
+  return 'All tools';
 }
 
 /**
@@ -41,8 +43,8 @@ function getToolsDescription(agent: AgentDefinition): string {
  * `- type: whenToUse (Tools: ...)`.
  */
 export function formatAgentLine(agent: AgentDefinition): string {
-  const toolsDescription = getToolsDescription(agent)
-  return `- ${agent.agentType}: ${agent.whenToUse} (Tools: ${toolsDescription})`
+  const toolsDescription = getToolsDescription(agent);
+  return `- ${agent.agentType}: ${agent.whenToUse} (Tools: ${toolsDescription})`;
 }
 
 /**
@@ -57,10 +59,9 @@ export function formatAgentLine(agent: AgentDefinition): string {
  * Override with CLAUDE_CODE_AGENT_LIST_IN_MESSAGES=true/false for testing.
  */
 export function shouldInjectAgentListInMessages(): boolean {
-  if (isEnvTruthy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES)) return true
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES))
-    return false
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_agent_list_attach', false)
+  if (isEnvTruthy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES)) return true;
+  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_AGENT_LIST_IN_MESSAGES)) return false;
+  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_agent_list_attach', false);
 }
 
 export async function getPrompt(
@@ -70,12 +71,12 @@ export async function getPrompt(
 ): Promise<string> {
   // Filter agents by allowed types when Agent(x,y) restricts which agents can be spawned
   const effectiveAgents = allowedAgentTypes
-    ? agentDefinitions.filter(a => allowedAgentTypes.includes(a.agentType))
-    : agentDefinitions
+    ? agentDefinitions.filter((a) => allowedAgentTypes.includes(a.agentType))
+    : agentDefinitions;
 
   // Fork subagent feature: when enabled, insert the "When to fork" section
   // (fork semantics, directive-style prompts) and swap in fork-aware examples.
-  const forkEnabled = isForkSubagentEnabled()
+  const forkEnabled = isForkSubagentEnabled();
 
   const whenToForkSection = forkEnabled
     ? `
@@ -94,7 +95,7 @@ Forks are cheap because they share your prompt cache. Don't set \`model\` on a f
 
 **Writing a fork prompt.** Since the fork inherits your context, the prompt is a *directive* — what to do, not what the situation is. Be specific about scope: what's in, what's out, what another agent is handling. Don't re-explain background.
 `
-    : ''
+    : '';
 
   const writingThePromptSection = `
 
@@ -110,7 +111,7 @@ ${forkEnabled ? 'When spawning a fresh agent (with a `subagent_type`), it starts
 ${forkEnabled ? 'For fresh agents, terse' : 'Terse'} command-style prompts produce shallow, generic work.
 
 **Never delegate understanding.** Don't write "based on your findings, fix the bug" or "based on the research, implement it." Those phrases push synthesis onto the agent instead of doing it yourself. Write prompts that prove you understood: include file paths, line numbers, what specifically to change.
-`
+`;
 
   const forkExamples = `Example usage:
 
@@ -151,7 +152,7 @@ ${AGENT_TOOL_NAME}({
   prompt: "Review migration 0042_user_schema.sql for safety. Context: we're adding a NOT NULL column to a 50M-row table. Existing rows get a backfill default. I want a second opinion on whether the backfill approach is safe under concurrent writes — I've checked locking behavior but want independent verification. Report: is this safe, and if not, what specifically breaks?"
 })
 </example>
-`
+`;
 
   const currentExamples = `Example usage:
 
@@ -185,18 +186,18 @@ Since the user is greeting, use the greeting-responder agent to respond with a f
 </commentary>
 assistant: "I'm going to use the ${AGENT_TOOL_NAME} tool to launch the greeting-responder agent"
 </example>
-`
+`;
 
   // When the gate is on, the agent list lives in an agent_listing_delta
   // attachment (see attachments.ts) instead of inline here. This keeps the
   // tool description static across MCP/plugin/permission changes so the
   // tools-block prompt cache doesn't bust every time an agent loads.
-  const listViaAttachment = shouldInjectAgentListInMessages()
+  const listViaAttachment = shouldInjectAgentListInMessages();
 
   const agentListSection = listViaAttachment
-    ? `Available agent types are listed in <system-reminder> messages in the conversation.`
+    ? 'Available agent types are listed in <system-reminder> messages in the conversation.'
     : `Available agent types and the tools they have access to:
-${effectiveAgents.map(agent => formatAgentLine(agent)).join('\n')}`
+${effectiveAgents.map((agent) => formatAgentLine(agent)).join('\n')}`;
 
   // Shared core prompt used by both coordinator and non-coordinator modes
   const shared = `Launch a new agent to handle complex, multi-step tasks autonomously.
@@ -209,26 +210,22 @@ ${
   forkEnabled
     ? `When using the ${AGENT_TOOL_NAME} tool, specify a subagent_type to use a specialized agent, or omit it to fork yourself — a fork inherits your full conversation context.`
     : `When using the ${AGENT_TOOL_NAME} tool, specify a subagent_type parameter to select which agent type to use. If omitted, the general-purpose agent is used.`
-}`
+}`;
 
   // Coordinator mode gets the slim prompt -- the coordinator system prompt
   // already covers usage notes, examples, and when-not-to-use guidance.
   if (isCoordinator) {
-    return shared
+    return shared;
   }
 
   // Ant-native builds alias find/grep to embedded bfs/ugrep and remove the
   // dedicated Glob/Grep tools, so point at find via Bash instead.
-  const embedded = hasEmbeddedSearchTools()
-  const fileSearchHint = embedded
-    ? '`find` via the Bash tool'
-    : `the ${GLOB_TOOL_NAME} tool`
+  const embedded = hasEmbeddedSearchTools();
+  const fileSearchHint = embedded ? '`find` via the Bash tool' : `the ${GLOB_TOOL_NAME} tool`;
   // The "class Foo" example is about content search. Non-embedded stays Glob
   // (original intent: find-the-file-containing). Embedded gets grep because
   // find -name doesn't look at file contents.
-  const contentSearchHint = embedded
-    ? '`grep` via the Bash tool'
-    : `the ${GLOB_TOOL_NAME} tool`
+  const contentSearchHint = embedded ? '`grep` via the Bash tool' : `the ${GLOB_TOOL_NAME} tool`;
   const whenNotToUseSection = forkEnabled
     ? ''
     : `
@@ -237,7 +234,7 @@ When NOT to use the ${AGENT_TOOL_NAME} tool:
 - If you are searching for a specific class definition like "class Foo", use ${contentSearchHint} instead, to find the match more quickly
 - If you are searching for code within a specific file or set of 2-3 files, use the ${FILE_READ_TOOL_NAME} tool instead of the ${AGENT_TOOL_NAME} tool, to find the match more quickly
 - Other tasks that are not related to the agent descriptions above
-`
+`;
 
   // When listing via attachment, the "launch multiple agents" note is in the
   // attachment message (conditioned on subscription there). When inline, keep
@@ -246,7 +243,7 @@ When NOT to use the ${AGENT_TOOL_NAME} tool:
     !listViaAttachment && getSubscriptionType() !== 'pro'
       ? `
 - Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses`
-      : ''
+      : '';
 
   // Non-coordinator gets the full prompt with all sections
   return `${shared}
@@ -283,5 +280,5 @@ Usage notes:
         : ''
   }${whenToForkSection}${writingThePromptSection}
 
-${forkEnabled ? forkExamples : currentExamples}`
+${forkEnabled ? forkExamples : currentExamples}`;
 }

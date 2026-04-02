@@ -1,6 +1,6 @@
-import type { BetaToolUseBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages.mjs'
-import type { Tools } from '../Tool.js'
+import type { BetaToolUseBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs';
+import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages.mjs';
+import type { Tools } from '../Tool.js';
 import type {
   GroupedToolUseMessage,
   NormalizedAssistantMessage,
@@ -8,42 +8,42 @@ import type {
   NormalizedUserMessage,
   ProgressMessage,
   RenderableMessage,
-} from '../types/message.js'
+} from '../types/message.js';
 
-export type MessageWithoutProgress = Exclude<NormalizedMessage, ProgressMessage>
+export type MessageWithoutProgress = Exclude<NormalizedMessage, ProgressMessage>;
 
 export type GroupingResult = {
-  messages: RenderableMessage[]
-}
+  messages: RenderableMessage[];
+};
 
 // Cache the set of tool names that support grouped rendering, keyed by the
 // tools array reference. The tools array is stable across renders (only
 // replaced on MCP connect/disconnect), so this avoids rebuilding the set on
 // every call. WeakMap lets old entries be GC'd when the array is replaced.
-const GROUPING_CACHE = new WeakMap<Tools, Set<string>>()
+const GROUPING_CACHE = new WeakMap<Tools, Set<string>>();
 
 function getToolsWithGrouping(tools: Tools): Set<string> {
-  let cached = GROUPING_CACHE.get(tools)
+  let cached = GROUPING_CACHE.get(tools);
   if (!cached) {
-    cached = new Set(tools.filter(t => t.renderGroupedToolUse).map(t => t.name))
-    GROUPING_CACHE.set(tools, cached)
+    cached = new Set(tools.filter((t) => t.renderGroupedToolUse).map((t) => t.name));
+    GROUPING_CACHE.set(tools, cached);
   }
-  return cached
+  return cached;
 }
 
 function getToolUseInfo(
   msg: any,
 ): { messageId: string; toolUseId: string; toolName: string } | null {
-  const current = msg as any
+  const current = msg as any;
   if (current.type === 'assistant' && current.message.content[0]?.type === 'tool_use') {
-    const content = current.message.content[0]
+    const content = current.message.content[0];
     return {
       messageId: current.message.id,
       toolUseId: content.id,
       toolName: content.name,
-    }
+    };
   }
-  return null
+  return null;
 }
 
 /**
@@ -55,46 +55,40 @@ function getToolUseInfo(
 export function applyGrouping(
   messages: MessageWithoutProgress[],
   tools: Tools,
-  verbose: boolean = false,
+  verbose = false,
 ): GroupingResult {
   // In verbose mode, don't group - each message renders at its original position
   if (verbose) {
     return {
       messages: messages,
-    }
+    };
   }
-  const toolsWithGrouping = getToolsWithGrouping(tools)
+  const toolsWithGrouping = getToolsWithGrouping(tools);
 
   // First pass: group tool uses by message.id + tool name
-  const groups = new Map<
-    string,
-    NormalizedAssistantMessage<BetaToolUseBlock>[]
-  >()
+  const groups = new Map<string, NormalizedAssistantMessage<BetaToolUseBlock>[]>();
 
   for (const msg of messages) {
-    const info = getToolUseInfo(msg)
+    const info = getToolUseInfo(msg);
     if (info && toolsWithGrouping.has(info.toolName)) {
-      const key = `${info.messageId}:${info.toolName}`
-      const group = groups.get(key) ?? []
-      group.push(msg as NormalizedAssistantMessage<BetaToolUseBlock>)
-      groups.set(key, group)
+      const key = `${info.messageId}:${info.toolName}`;
+      const group = groups.get(key) ?? [];
+      group.push(msg as NormalizedAssistantMessage<BetaToolUseBlock>);
+      groups.set(key, group);
     }
   }
 
   // Identify valid groups (2+ items) and collect their tool use IDs
-  const validGroups = new Map<
-    string,
-    NormalizedAssistantMessage<BetaToolUseBlock>[]
-  >()
-  const groupedToolUseIds = new Set<any>()
+  const validGroups = new Map<string, NormalizedAssistantMessage<BetaToolUseBlock>[]>();
+  const groupedToolUseIds = new Set<any>();
 
   for (const [key, group] of groups) {
     if (group.length >= 2) {
-      validGroups.set(key, group)
+      validGroups.set(key, group);
       for (const msg of group) {
-        const info = getToolUseInfo(msg as any)
+        const info = getToolUseInfo(msg as any);
         if (info) {
-          groupedToolUseIds.add(info.toolUseId)
+          groupedToolUseIds.add(info.toolUseId);
         }
       }
     }
@@ -102,48 +96,43 @@ export function applyGrouping(
 
   // Collect result messages for grouped tool_uses
   // Map from tool_use_id to the user message containing that result
-  const resultsByToolUseId = new Map<string, NormalizedUserMessage>()
+  const resultsByToolUseId = new Map<string, NormalizedUserMessage>();
 
   for (const msg of messages) {
-    const current = msg as any
+    const current = msg as any;
     if (current.type === 'user') {
       for (const content of current.message.content) {
-        if (
-          content.type === 'tool_result' &&
-          groupedToolUseIds.has(content.tool_use_id)
-        ) {
-          resultsByToolUseId.set(content.tool_use_id, current)
+        if (content.type === 'tool_result' && groupedToolUseIds.has(content.tool_use_id)) {
+          resultsByToolUseId.set(content.tool_use_id, current);
         }
       }
     }
   }
 
   // Second pass: build output, emitting each group only once
-  const result: RenderableMessage[] = []
-  const emittedGroups = new Set<string>()
+  const result: RenderableMessage[] = [];
+  const emittedGroups = new Set<string>();
 
   for (const msg of messages) {
-    const current = msg as any
-    const info = getToolUseInfo(msg)
+    const current = msg as any;
+    const info = getToolUseInfo(msg);
 
     if (info) {
-      const key = `${info.messageId}:${info.toolName}`
-      const group = validGroups.get(key)
+      const key = `${info.messageId}:${info.toolName}`;
+      const group = validGroups.get(key);
 
       if (group) {
         if (!emittedGroups.has(key)) {
-          emittedGroups.add(key)
-          const firstMsg = group[0]!
+          emittedGroups.add(key);
+          const firstMsg = group[0]!;
 
           // Collect results for this group
-          const results: NormalizedUserMessage[] = []
+          const results: NormalizedUserMessage[] = [];
           for (const assistantMsg of group) {
-            const toolUseId = (
-              assistantMsg.message.content[0] as { id: string }
-            ).id
-            const resultMsg = resultsByToolUseId.get(toolUseId)
+            const toolUseId = (assistantMsg.message.content[0] as { id: string }).id;
+            const resultMsg = resultsByToolUseId.get(toolUseId);
             if (resultMsg) {
-              results.push(resultMsg)
+              results.push(resultMsg);
             }
           }
 
@@ -156,10 +145,10 @@ export function applyGrouping(
             uuid: `grouped-${firstMsg.uuid}`,
             timestamp: firstMsg.timestamp,
             messageId: info.messageId,
-          }
-          result.push(groupedMessage)
+          };
+          result.push(groupedMessage);
         }
-        continue
+        continue;
       }
     }
 
@@ -167,19 +156,17 @@ export function applyGrouping(
     if (current.type === 'user') {
       const toolResults = current.message.content.filter(
         (c): c is ToolResultBlockParam => c.type === 'tool_result',
-      )
+      );
       if (toolResults.length > 0) {
-        const allGrouped = toolResults.every(tr =>
-          groupedToolUseIds.has(tr.tool_use_id),
-        )
+        const allGrouped = toolResults.every((tr) => groupedToolUseIds.has(tr.tool_use_id));
         if (allGrouped) {
-          continue
+          continue;
         }
       }
     }
 
-    result.push(current)
+    result.push(current);
   }
 
-  return { messages: result }
+  return { messages: result };
 }

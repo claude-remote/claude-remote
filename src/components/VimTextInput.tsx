@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useClipboardImageHint } from '../hooks/useClipboardImageHint.js';
 import { useVimInput } from '../hooks/useVimInput.js';
 import { Box, color, useTerminalFocus, useTheme } from '../ink.js';
@@ -27,19 +27,46 @@ export default function VimTextInput(props) {
   const t9 = props.focus;
   const t10 = props.mask;
   const t11 = props.multiline;
-  const t12 = props.showCursor ? " " : "";
+  const t12 = props.showCursor ? ' ' : '';
   const t13 = props.highlightPastedText;
   const t14 = isTerminalFocused ? chalk.inverse : _temp;
   let t15;
   if ($[0] !== theme) {
-    t15 = color("text", theme);
+    t15 = color('text', theme);
     $[0] = theme;
     $[1] = t15;
   } else {
     t15 = $[1];
   }
   let t16;
-  if ($[2] !== props.columns || $[3] !== props.cursorOffset || $[4] !== props.disableCursorMovementForUpDownKeys || $[5] !== props.disableEscapeDoublePress || $[6] !== props.focus || $[7] !== props.highlightPastedText || $[8] !== props.inputFilter || $[9] !== props.mask || $[10] !== props.maxVisibleLines || $[11] !== props.multiline || $[12] !== props.onChange || $[13] !== props.onChangeCursorOffset || $[14] !== props.onClearInput || $[15] !== props.onExit || $[16] !== props.onExitMessage || $[17] !== props.onHistoryDown || $[18] !== props.onHistoryReset || $[19] !== props.onHistoryUp || $[20] !== props.onImagePaste || $[21] !== props.onModeChange || $[22] !== props.onSubmit || $[23] !== props.onUndo || $[24] !== props.value || $[25] !== t12 || $[26] !== t14 || $[27] !== t15) {
+  if (
+    $[2] !== props.columns ||
+    $[3] !== props.cursorOffset ||
+    $[4] !== props.disableCursorMovementForUpDownKeys ||
+    $[5] !== props.disableEscapeDoublePress ||
+    $[6] !== props.focus ||
+    $[7] !== props.highlightPastedText ||
+    $[8] !== props.inputFilter ||
+    $[9] !== props.mask ||
+    $[10] !== props.maxVisibleLines ||
+    $[11] !== props.multiline ||
+    $[12] !== props.onChange ||
+    $[13] !== props.onChangeCursorOffset ||
+    $[14] !== props.onClearInput ||
+    $[15] !== props.onExit ||
+    $[16] !== props.onExitMessage ||
+    $[17] !== props.onHistoryDown ||
+    $[18] !== props.onHistoryReset ||
+    $[19] !== props.onHistoryUp ||
+    $[20] !== props.onImagePaste ||
+    $[21] !== props.onModeChange ||
+    $[22] !== props.onSubmit ||
+    $[23] !== props.onUndo ||
+    $[24] !== props.value ||
+    $[25] !== t12 ||
+    $[26] !== t14 ||
+    $[27] !== t15
+  ) {
     t16 = {
       value: t0,
       onChange: t1,
@@ -66,7 +93,7 @@ export default function VimTextInput(props) {
       onOffsetChange: props.onChangeCursorOffset,
       inputFilter: props.inputFilter,
       onModeChange: props.onModeChange,
-      onUndo: props.onUndo
+      onUndo: props.onUndo,
     };
     $[2] = props.columns;
     $[3] = props.cursorOffset;
@@ -99,10 +126,7 @@ export default function VimTextInput(props) {
     t16 = $[28];
   }
   const vimInputState = useVimInput(t16);
-  const {
-    mode,
-    setMode
-  } = vimInputState;
+  const { mode, setMode } = vimInputState;
   let t17;
   let t18;
   if ($[29] !== mode || $[30] !== props.initialMode || $[31] !== setMode) {
@@ -124,7 +148,16 @@ export default function VimTextInput(props) {
   React.useEffect(t17, t18);
   let t19;
   if ($[34] !== isTerminalFocused || $[35] !== props || $[36] !== vimInputState) {
-    t19 = <Box flexDirection="column"><BaseTextInput inputState={vimInputState} terminalFocus={isTerminalFocused} highlights={props.highlights} {...props} /></Box>;
+    t19 = (
+      <Box flexDirection="column">
+        <BaseTextInput
+          inputState={vimInputState}
+          terminalFocus={isTerminalFocused}
+          highlights={props.highlights}
+          {...props}
+        />
+      </Box>
+    );
     $[34] = isTerminalFocused;
     $[35] = props;
     $[36] = vimInputState;

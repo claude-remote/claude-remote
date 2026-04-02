@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../../ink.js';
 import { formatDuration } from '../../utils/format.js';
 type Props = {
@@ -8,18 +8,17 @@ type Props = {
 };
 export function ShellTimeDisplay(t0) {
   const $ = _c(10);
-  const {
-    elapsedTimeSeconds,
-    timeoutMs
-  } = t0;
+  const { elapsedTimeSeconds, timeoutMs } = t0;
   if (elapsedTimeSeconds === undefined && !timeoutMs) {
     return null;
   }
   let t1;
   if ($[0] !== timeoutMs) {
-    t1 = timeoutMs ? formatDuration(timeoutMs, {
-      hideTrailingZeros: true
-    }) : undefined;
+    t1 = timeoutMs
+      ? formatDuration(timeoutMs, {
+          hideTrailingZeros: true,
+        })
+      : undefined;
     $[0] = timeoutMs;
     $[1] = t1;
   } else {

@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const installSlackApp = {
   type: 'local',
@@ -7,6 +7,6 @@ const installSlackApp = {
   availability: ['claude-ai'],
   supportsNonInteractive: false,
   load: () => import('./install-slack-app.js'),
-} satisfies Command
+} satisfies Command;
 
-export default installSlackApp
+export default installSlackApp;

@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react'
-import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
-import type { Message } from '../types/message.js'
-import { getUserMessageText } from '../utils/messages.js'
+import { useMemo, useRef } from 'react';
+import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js';
+import type { Message } from '../types/message.js';
+import { getUserMessageText } from '../utils/messages.js';
 
 const EXTERNAL_COMMAND_PATTERNS = [
   /\bcurl\b/,
@@ -22,7 +22,7 @@ const EXTERNAL_COMMAND_PATTERNS = [
   /\bncat\b/,
   /\btelnet\b/,
   /\bftp\b/,
-]
+];
 
 const FRICTION_PATTERNS = [
   // "No," or "No!" at start — comma/exclamation implies correction tone
@@ -40,94 +40,90 @@ const FRICTION_PATTERNS = [
   // Explicit retry/revert of Claude's work
   /\btry again\b/i,
   /\b(undo|revert) (that|this|it|what you)\b/i,
-]
+];
 
 export function isSessionContainerCompatible(messages: Message[]): boolean {
   for (const msg of messages) {
     if (msg.type !== 'assistant') {
-      continue
+      continue;
     }
-    const content = msg.message.content
+    const content = msg.message.content;
     if (!Array.isArray(content)) {
-      continue
+      continue;
     }
     for (const block of content) {
       if (block.type !== 'tool_use' || !('name' in block)) {
-        continue
+        continue;
       }
-      const toolName = block.name as string
+      const toolName = block.name as string;
       if (toolName.startsWith('mcp__')) {
-        return false
+        return false;
       }
       if (toolName === BASH_TOOL_NAME) {
-        const input = (block as { input?: Record<string, unknown> }).input
-        const command = (input?.command as string) || ''
-        if (EXTERNAL_COMMAND_PATTERNS.some(p => p.test(command))) {
-          return false
+        const input = (block as { input?: Record<string, unknown> }).input;
+        const command = (input?.command as string) || '';
+        if (EXTERNAL_COMMAND_PATTERNS.some((p) => p.test(command))) {
+          return false;
         }
       }
     }
   }
-  return true
+  return true;
 }
 
 export function hasFrictionSignal(messages: Message[]): boolean {
   for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i]!
+    const msg = messages[i]!;
     if (msg.type !== 'user') {
-      continue
+      continue;
     }
-    const text = getUserMessageText(msg)
+    const text = getUserMessageText(msg);
     if (!text) {
-      continue
+      continue;
     }
-    return FRICTION_PATTERNS.some(p => p.test(text))
+    return FRICTION_PATTERNS.some((p) => p.test(text));
   }
-  return false
+  return false;
 }
 
-const MIN_SUBMIT_COUNT = 3
-const COOLDOWN_MS = 30 * 60 * 1000
+const MIN_SUBMIT_COUNT = 3;
+const COOLDOWN_MS = 30 * 60 * 1000;
 
-export function useIssueFlagBanner(
-  messages: Message[],
-  submitCount: number,
-): boolean {
+export function useIssueFlagBanner(messages: Message[], submitCount: number): boolean {
   if (process.env.USER_TYPE !== 'ant') {
-    return false
+    return false;
   }
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
-  const lastTriggeredAtRef = useRef(0)
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
-  const activeForSubmitRef = useRef(-1)
+  const lastTriggeredAtRef = useRef(0);
+
+  const activeForSubmitRef = useRef(-1);
 
   // Memoize the O(messages) scans. This hook runs on every REPL render
   // (including every keystroke), but messages is stable during typing.
   // isSessionContainerCompatible walks all messages + regex-tests each
   // bash command — by far the heaviest work here.
-  // biome-ignore lint/correctness/useHookAtTopLevel: process.env.USER_TYPE is a compile-time constant
+
   const shouldTrigger = useMemo(
     () => isSessionContainerCompatible(messages) && hasFrictionSignal(messages),
     [messages],
-  )
+  );
 
   // Keep showing the banner until the user submits another message
   if (activeForSubmitRef.current === submitCount) {
-    return true
+    return true;
   }
 
   if (Date.now() - lastTriggeredAtRef.current < COOLDOWN_MS) {
-    return false
+    return false;
   }
   if (submitCount < MIN_SUBMIT_COUNT) {
-    return false
+    return false;
   }
   if (!shouldTrigger) {
-    return false
+    return false;
   }
 
-  lastTriggeredAtRef.current = Date.now()
-  activeForSubmitRef.current = submitCount
-  return true
+  lastTriggeredAtRef.current = Date.now();
+  activeForSubmitRef.current = submitCount;
+  return true;
 }

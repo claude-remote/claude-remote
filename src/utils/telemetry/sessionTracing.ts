@@ -10,23 +10,23 @@
  * - Configure OTEL_TRACES_EXPORTER (console, otlp, etc.)
  */
 
-import { feature } from 'src/utils/feature.js'
-import { context as otelContext, type Span, trace } from '@opentelemetry/api'
-import { AsyncLocalStorage } from 'async_hooks'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import type { AssistantMessage, UserMessage } from '../../types/message.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../envUtils.js'
-import { getTelemetryAttributes } from '../telemetryAttributes.js'
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { type Span, context as otelContext, trace } from '@opentelemetry/api';
+import { feature } from 'src/utils/feature.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
+import type { AssistantMessage, UserMessage } from '../../types/message.js';
+import { isEnvDefinedFalsy, isEnvTruthy } from '../envUtils.js';
+import { getTelemetryAttributes } from '../telemetryAttributes.js';
 import {
+  type LLMRequestNewContext,
   addBetaInteractionAttributes,
   addBetaLLMRequestAttributes,
   addBetaLLMResponseAttributes,
   addBetaToolInputAttributes,
   addBetaToolResultAttributes,
   isBetaTracingEnabled,
-  type LLMRequestNewContext,
   truncateContent,
-} from './betaSessionTracing.js'
+} from './betaSessionTracing.js';
 import {
   endInteractionPerfettoSpan,
   endLLMRequestPerfettoSpan,
@@ -37,14 +37,14 @@ import {
   startLLMRequestPerfettoSpan,
   startToolPerfettoSpan,
   startUserInputPerfettoSpan,
-} from './perfettoTracing.js'
+} from './perfettoTracing.js';
 
 // Re-export for callers
-export type { Span }
-export { isBetaTracingEnabled, type LLMRequestNewContext }
+export type { Span };
+export { isBetaTracingEnabled, type LLMRequestNewContext };
 
 // Message type for API calls (UserMessage or AssistantMessage)
-type APIMessage = UserMessage | AssistantMessage
+type APIMessage = UserMessage | AssistantMessage;
 
 type SpanType =
   | 'interaction'
@@ -52,34 +52,34 @@ type SpanType =
   | 'tool'
   | 'tool.blocked_on_user'
   | 'tool.execution'
-  | 'hook'
+  | 'hook';
 
 interface SpanContext {
-  span: Span
-  startTime: number
-  attributes: Record<string, string | number | boolean>
-  ended?: boolean
-  perfettoSpanId?: string
+  span: Span;
+  startTime: number;
+  attributes: Record<string, string | number | boolean>;
+  ended?: boolean;
+  perfettoSpanId?: string;
 }
 
 // ALS stores SpanContext directly so it holds a strong reference while a span
 // is active. With that, activeSpans can use WeakRef — when ALS is cleared
 // (enterWith(undefined)) and no other code holds the SpanContext, GC can collect
 // it and the WeakRef goes stale.
-const interactionContext = new AsyncLocalStorage<SpanContext | undefined>()
-const toolContext = new AsyncLocalStorage<SpanContext | undefined>()
-const activeSpans = new Map<string, WeakRef<SpanContext>>()
+const interactionContext = new AsyncLocalStorage<SpanContext | undefined>();
+const toolContext = new AsyncLocalStorage<SpanContext | undefined>();
+const activeSpans = new Map<string, WeakRef<SpanContext>>();
 // Spans not stored in ALS (LLM request, blocked-on-user, tool execution, hook)
 // need a strong reference to prevent GC from collecting the SpanContext before
 // the corresponding end* function retrieves it.
-const strongSpans = new Map<string, SpanContext>()
-let interactionSequence = 0
-let _cleanupIntervalStarted = false
+const strongSpans = new Map<string, SpanContext>();
+let interactionSequence = 0;
+let _cleanupIntervalStarted = false;
 
-const SPAN_TTL_MS = 30 * 60 * 1000 // 30 minutes
+const SPAN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function getSpanId(span: Span): string {
-  return span.spanContext().spanId || ''
+  return span.spanContext().spanId || '';
 }
 
 /**
@@ -98,24 +98,24 @@ function getSpanId(span: Span): string {
  * work is done.
  */
 function ensureCleanupInterval(): void {
-  if (_cleanupIntervalStarted) return
-  _cleanupIntervalStarted = true
+  if (_cleanupIntervalStarted) return;
+  _cleanupIntervalStarted = true;
   const interval = setInterval(() => {
-    const cutoff = Date.now() - SPAN_TTL_MS
+    const cutoff = Date.now() - SPAN_TTL_MS;
     for (const [spanId, weakRef] of activeSpans) {
-      const ctx = weakRef.deref()
+      const ctx = weakRef.deref();
       if (ctx === undefined) {
-        activeSpans.delete(spanId)
-        strongSpans.delete(spanId)
+        activeSpans.delete(spanId);
+        strongSpans.delete(spanId);
       } else if (ctx.startTime < cutoff) {
-        if (!ctx.ended) ctx.span.end() // flush any recorded attributes to the exporter
-        activeSpans.delete(spanId)
-        strongSpans.delete(spanId)
+        if (!ctx.ended) ctx.span.end(); // flush any recorded attributes to the exporter
+        activeSpans.delete(spanId);
+        strongSpans.delete(spanId);
       }
     }
-  }, 60_000)
+  }, 60_000);
   if (typeof interval.unref === 'function') {
-    interval.unref() // Node.js / Bun: don't block process exit
+    interval.unref(); // Node.js / Bun: don't block process exit
   }
 }
 
@@ -126,46 +126,45 @@ function ensureCleanupInterval(): void {
 export function isEnhancedTelemetryEnabled(): boolean {
   if (feature('ENHANCED_TELEMETRY_BETA')) {
     const env =
-      process.env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ??
-      process.env.ENABLE_ENHANCED_TELEMETRY_BETA
+      process.env.CLAUDE_CODE_ENHANCED_TELEMETRY_BETA ?? process.env.ENABLE_ENHANCED_TELEMETRY_BETA;
     if (isEnvTruthy(env)) {
-      return true
+      return true;
     }
     if (isEnvDefinedFalsy(env)) {
-      return false
+      return false;
     }
     return (
       process.env.USER_TYPE === 'ant' ||
       getFeatureValue_CACHED_MAY_BE_STALE('enhanced_telemetry_beta', false)
-    )
+    );
   }
-  return false
+  return false;
 }
 
 /**
  * Check if any tracing is enabled (either standard enhanced telemetry OR beta tracing)
  */
 function isAnyTracingEnabled(): boolean {
-  return isEnhancedTelemetryEnabled() || isBetaTracingEnabled()
+  return isEnhancedTelemetryEnabled() || isBetaTracingEnabled();
 }
 
 function getTracer() {
-  return trace.getTracer('com.anthropic.claude_code.tracing', '1.0.0')
+  return trace.getTracer('com.anthropic.claude_code.tracing', '1.0.0');
 }
 
 function createSpanAttributes(
   spanType: SpanType,
   customAttributes: Record<string, string | number | boolean> = {},
 ): Record<string, string | number | boolean> {
-  const baseAttributes = getTelemetryAttributes()
+  const baseAttributes = getTelemetryAttributes();
 
   const attributes: Record<string, string | number | boolean> = {
     ...baseAttributes,
     'span.type': spanType,
     ...customAttributes,
-  }
+  };
 
-  return attributes
+  return attributes;
 }
 
 /**
@@ -174,101 +173,99 @@ function createSpanAttributes(
  * Sets the interaction context for all subsequent operations.
  */
 export function startInteractionSpan(userPrompt: string): Span {
-  ensureCleanupInterval()
+  ensureCleanupInterval();
 
   // Start Perfetto span regardless of OTel tracing state
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startInteractionPerfettoSpan(userPrompt)
-    : undefined
+    : undefined;
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
     if (perfettoSpanId) {
-      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
-      const spanId = getSpanId(dummySpan)
+      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy');
+      const spanId = getSpanId(dummySpan);
       const spanContextObj: SpanContext = {
         span: dummySpan,
         startTime: Date.now(),
         attributes: {},
         perfettoSpanId,
-      }
-      activeSpans.set(spanId, new WeakRef(spanContextObj))
-      interactionContext.enterWith(spanContextObj)
-      return dummySpan
+      };
+      activeSpans.set(spanId, new WeakRef(spanContextObj));
+      interactionContext.enterWith(spanContextObj);
+      return dummySpan;
     }
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const isUserPromptLoggingEnabled = isEnvTruthy(
-    process.env.OTEL_LOG_USER_PROMPTS,
-  )
-  const promptToLog = isUserPromptLoggingEnabled ? userPrompt : '<REDACTED>'
+  const tracer = getTracer();
+  const isUserPromptLoggingEnabled = isEnvTruthy(process.env.OTEL_LOG_USER_PROMPTS);
+  const promptToLog = isUserPromptLoggingEnabled ? userPrompt : '<REDACTED>';
 
-  interactionSequence++
+  interactionSequence++;
 
   const attributes = createSpanAttributes('interaction', {
     user_prompt: promptToLog,
     user_prompt_length: userPrompt.length,
     'interaction.sequence': interactionSequence,
-  })
+  });
 
   const span = tracer.startSpan('claude_code.interaction', {
     attributes,
-  })
+  });
 
   // Add experimental attributes (new_context)
-  addBetaInteractionAttributes(span, userPrompt)
+  addBetaInteractionAttributes(span, userPrompt);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
     perfettoSpanId,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
 
-  interactionContext.enterWith(spanContextObj)
+  interactionContext.enterWith(spanContextObj);
 
-  return span
+  return span;
 }
 
 export function endInteractionSpan(): void {
-  const spanContext = interactionContext.getStore()
+  const spanContext = interactionContext.getStore();
   if (!spanContext) {
-    return
+    return;
   }
 
   if (spanContext.ended) {
-    return
+    return;
   }
 
   // End Perfetto span
   if (spanContext.perfettoSpanId) {
-    endInteractionPerfettoSpan(spanContext.perfettoSpanId)
+    endInteractionPerfettoSpan(spanContext.perfettoSpanId);
   }
 
   if (!isAnyTracingEnabled()) {
-    spanContext.ended = true
-    activeSpans.delete(getSpanId(spanContext.span))
+    spanContext.ended = true;
+    activeSpans.delete(getSpanId(spanContext.span));
     // Clear the store so async continuations created after this point (timers,
     // promise callbacks, I/O) do not inherit a reference to the ended span.
     // enterWith(undefined) is intentional: exit(() => {}) is a no-op because it
     // only suppresses the store inside the callback and returns immediately.
-    interactionContext.enterWith(undefined)
-    return
+    interactionContext.enterWith(undefined);
+    return;
   }
 
-  const duration = Date.now() - spanContext.startTime
+  const duration = Date.now() - spanContext.startTime;
   spanContext.span.setAttributes({
     'interaction.duration_ms': duration,
-  })
+  });
 
-  spanContext.span.end()
-  spanContext.ended = true
-  activeSpans.delete(getSpanId(spanContext.span))
-  interactionContext.enterWith(undefined)
+  spanContext.span.end();
+  spanContext.ended = true;
+  activeSpans.delete(getSpanId(spanContext.span));
+  interactionContext.enterWith(undefined);
 }
 
 export function startLLMRequestSpan(
@@ -284,59 +281,59 @@ export function startLLMRequestSpan(
         querySource: newContext?.querySource,
         messageId: undefined, // Will be set in endLLMRequestSpan
       })
-    : undefined
+    : undefined;
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
     if (perfettoSpanId) {
-      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
-      const spanId = getSpanId(dummySpan)
+      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy');
+      const spanId = getSpanId(dummySpan);
       const spanContextObj: SpanContext = {
         span: dummySpan,
         startTime: Date.now(),
         attributes: { model },
         perfettoSpanId,
-      }
-      activeSpans.set(spanId, new WeakRef(spanContextObj))
-      strongSpans.set(spanId, spanContextObj)
-      return dummySpan
+      };
+      activeSpans.set(spanId, new WeakRef(spanContextObj));
+      strongSpans.set(spanId, spanContextObj);
+      return dummySpan;
     }
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = interactionContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = interactionContext.getStore();
 
   const attributes = createSpanAttributes('llm_request', {
     model: model,
     'llm_request.context': parentSpanCtx ? 'interaction' : 'standalone',
     speed: fastMode ? 'fast' : 'normal',
-  })
+  });
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan('claude_code.llm_request', { attributes }, ctx)
+    : otelContext.active();
+  const span = tracer.startSpan('claude_code.llm_request', { attributes }, ctx);
 
   // Add query_source (agent name) if provided
   if (newContext?.querySource) {
-    span.setAttribute('query_source', newContext.querySource)
+    span.setAttribute('query_source', newContext.querySource);
   }
 
   // Add experimental attributes (system prompt, new_context)
-  addBetaLLMRequestAttributes(span, newContext, messagesForAPI)
+  addBetaLLMRequestAttributes(span, newContext, messagesForAPI);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
     perfettoSpanId,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
-  strongSpans.set(spanId, spanContextObj)
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
+  strongSpans.set(spanId, spanContextObj);
 
-  return span
+  return span;
 }
 
 /**
@@ -353,55 +350,52 @@ export function startLLMRequestSpan(
 export function endLLMRequestSpan(
   span?: Span,
   metadata?: {
-    inputTokens?: number
-    outputTokens?: number
-    cacheReadTokens?: number
-    cacheCreationTokens?: number
-    success?: boolean
-    statusCode?: number
-    error?: string
-    attempt?: number
-    modelResponse?: string
+    inputTokens?: number;
+    outputTokens?: number;
+    cacheReadTokens?: number;
+    cacheCreationTokens?: number;
+    success?: boolean;
+    statusCode?: number;
+    error?: string;
+    attempt?: number;
+    modelResponse?: string;
     /** Text output from the model (non-thinking content) */
-    modelOutput?: string
+    modelOutput?: string;
     /** Thinking/reasoning output from the model */
-    thinkingOutput?: string
+    thinkingOutput?: string;
     /** Whether the output included tool calls (look at tool spans for details) */
-    hasToolCall?: boolean
+    hasToolCall?: boolean;
     /** Time to first token in milliseconds */
-    ttftMs?: number
+    ttftMs?: number;
     /** Time spent in pre-request setup before the successful attempt */
-    requestSetupMs?: number
+    requestSetupMs?: number;
     /** Timestamps (Date.now()) of each attempt start — used to emit retry sub-spans */
-    attemptStartTimes?: number[]
+    attemptStartTimes?: number[];
   },
 ): void {
-  let llmSpanContext: SpanContext | undefined
+  let llmSpanContext: SpanContext | undefined;
 
   if (span) {
     // Use the provided span directly - this is the correct approach for parallel requests
-    const spanId = getSpanId(span)
-    llmSpanContext = activeSpans.get(spanId)?.deref()
+    const spanId = getSpanId(span);
+    llmSpanContext = activeSpans.get(spanId)?.deref();
   } else {
     // Legacy fallback: find the most recent llm_request span
     // WARNING: This can cause mismatched responses when multiple requests are in flight
     llmSpanContext = Array.from(activeSpans.values())
-      .findLast(r => {
-        const ctx = r.deref()
-        return (
-          ctx?.attributes['span.type'] === 'llm_request' ||
-          ctx?.attributes['model']
-        )
+      .findLast((r) => {
+        const ctx = r.deref();
+        return ctx?.attributes['span.type'] === 'llm_request' || ctx?.attributes.model;
       })
-      ?.deref()
+      ?.deref();
   }
 
   if (!llmSpanContext) {
     // Span was already ended or never tracked
-    return
+    return;
   }
 
-  const duration = Date.now() - llmSpanContext.startTime
+  const duration = Date.now() - llmSpanContext.startTime;
 
   // End Perfetto span with full metadata
   if (llmSpanContext.perfettoSpanId) {
@@ -416,51 +410,45 @@ export function endLLMRequestSpan(
       error: metadata?.error,
       requestSetupMs: metadata?.requestSetupMs,
       attemptStartTimes: metadata?.attemptStartTimes,
-    })
+    });
   }
 
   if (!isAnyTracingEnabled()) {
-    const spanId = getSpanId(llmSpanContext.span)
-    activeSpans.delete(spanId)
-    strongSpans.delete(spanId)
-    return
+    const spanId = getSpanId(llmSpanContext.span);
+    activeSpans.delete(spanId);
+    strongSpans.delete(spanId);
+    return;
   }
 
   const endAttributes: Record<string, string | number | boolean> = {
     duration_ms: duration,
-  }
+  };
 
   if (metadata) {
-    if (metadata.inputTokens !== undefined)
-      endAttributes['input_tokens'] = metadata.inputTokens
-    if (metadata.outputTokens !== undefined)
-      endAttributes['output_tokens'] = metadata.outputTokens
+    if (metadata.inputTokens !== undefined) endAttributes.input_tokens = metadata.inputTokens;
+    if (metadata.outputTokens !== undefined) endAttributes.output_tokens = metadata.outputTokens;
     if (metadata.cacheReadTokens !== undefined)
-      endAttributes['cache_read_tokens'] = metadata.cacheReadTokens
+      endAttributes.cache_read_tokens = metadata.cacheReadTokens;
     if (metadata.cacheCreationTokens !== undefined)
-      endAttributes['cache_creation_tokens'] = metadata.cacheCreationTokens
-    if (metadata.success !== undefined)
-      endAttributes['success'] = metadata.success
-    if (metadata.statusCode !== undefined)
-      endAttributes['status_code'] = metadata.statusCode
-    if (metadata.error !== undefined) endAttributes['error'] = metadata.error
-    if (metadata.attempt !== undefined)
-      endAttributes['attempt'] = metadata.attempt
+      endAttributes.cache_creation_tokens = metadata.cacheCreationTokens;
+    if (metadata.success !== undefined) endAttributes.success = metadata.success;
+    if (metadata.statusCode !== undefined) endAttributes.status_code = metadata.statusCode;
+    if (metadata.error !== undefined) endAttributes.error = metadata.error;
+    if (metadata.attempt !== undefined) endAttributes.attempt = metadata.attempt;
     if (metadata.hasToolCall !== undefined)
-      endAttributes['response.has_tool_call'] = metadata.hasToolCall
-    if (metadata.ttftMs !== undefined)
-      endAttributes['ttft_ms'] = metadata.ttftMs
+      endAttributes['response.has_tool_call'] = metadata.hasToolCall;
+    if (metadata.ttftMs !== undefined) endAttributes.ttft_ms = metadata.ttftMs;
 
     // Add experimental response attributes (model_output, thinking_output)
-    addBetaLLMResponseAttributes(endAttributes, metadata)
+    addBetaLLMResponseAttributes(endAttributes, metadata);
   }
 
-  llmSpanContext.span.setAttributes(endAttributes)
-  llmSpanContext.span.end()
+  llmSpanContext.span.setAttributes(endAttributes);
+  llmSpanContext.span.end();
 
-  const spanId = getSpanId(llmSpanContext.span)
-  activeSpans.delete(spanId)
-  strongSpans.delete(spanId)
+  const spanId = getSpanId(llmSpanContext.span);
+  activeSpans.delete(spanId);
+  strongSpans.delete(spanId);
 }
 
 export function startToolSpan(
@@ -471,121 +459,112 @@ export function startToolSpan(
   // Start Perfetto span regardless of OTel tracing state
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startToolPerfettoSpan(toolName, toolAttributes)
-    : undefined
+    : undefined;
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
     if (perfettoSpanId) {
-      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
-      const spanId = getSpanId(dummySpan)
+      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy');
+      const spanId = getSpanId(dummySpan);
       const spanContextObj: SpanContext = {
         span: dummySpan,
         startTime: Date.now(),
         attributes: { 'span.type': 'tool', tool_name: toolName },
         perfettoSpanId,
-      }
-      activeSpans.set(spanId, new WeakRef(spanContextObj))
-      toolContext.enterWith(spanContextObj)
-      return dummySpan
+      };
+      activeSpans.set(spanId, new WeakRef(spanContextObj));
+      toolContext.enterWith(spanContextObj);
+      return dummySpan;
     }
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = interactionContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = interactionContext.getStore();
 
   const attributes = createSpanAttributes('tool', {
     tool_name: toolName,
     ...toolAttributes,
-  })
+  });
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan('claude_code.tool', { attributes }, ctx)
+    : otelContext.active();
+  const span = tracer.startSpan('claude_code.tool', { attributes }, ctx);
 
   // Add experimental tool input attributes
   if (toolInput) {
-    addBetaToolInputAttributes(span, toolName, toolInput)
+    addBetaToolInputAttributes(span, toolName, toolInput);
   }
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
     perfettoSpanId,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
 
-  toolContext.enterWith(spanContextObj)
+  toolContext.enterWith(spanContextObj);
 
-  return span
+  return span;
 }
 
 export function startToolBlockedOnUserSpan(): Span {
   // Start Perfetto span regardless of OTel tracing state
   const perfettoSpanId = isPerfettoTracingEnabled()
     ? startUserInputPerfettoSpan('tool_permission')
-    : undefined
+    : undefined;
 
   if (!isAnyTracingEnabled()) {
     // Still track Perfetto span even if OTel is disabled
     if (perfettoSpanId) {
-      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy')
-      const spanId = getSpanId(dummySpan)
+      const dummySpan = trace.getActiveSpan() || getTracer().startSpan('dummy');
+      const spanId = getSpanId(dummySpan);
       const spanContextObj: SpanContext = {
         span: dummySpan,
         startTime: Date.now(),
         attributes: { 'span.type': 'tool.blocked_on_user' },
         perfettoSpanId,
-      }
-      activeSpans.set(spanId, new WeakRef(spanContextObj))
-      strongSpans.set(spanId, spanContextObj)
-      return dummySpan
+      };
+      activeSpans.set(spanId, new WeakRef(spanContextObj));
+      strongSpans.set(spanId, spanContextObj);
+      return dummySpan;
     }
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = toolContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = toolContext.getStore();
 
-  const attributes = createSpanAttributes('tool.blocked_on_user')
+  const attributes = createSpanAttributes('tool.blocked_on_user');
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan(
-    'claude_code.tool.blocked_on_user',
-    { attributes },
-    ctx,
-  )
+    : otelContext.active();
+  const span = tracer.startSpan('claude_code.tool.blocked_on_user', { attributes }, ctx);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
     perfettoSpanId,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
-  strongSpans.set(spanId, spanContextObj)
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
+  strongSpans.set(spanId, spanContextObj);
 
-  return span
+  return span;
 }
 
-export function endToolBlockedOnUserSpan(
-  decision?: string,
-  source?: string,
-): void {
+export function endToolBlockedOnUserSpan(decision?: string, source?: string): void {
   const blockedSpanContext = Array.from(activeSpans.values())
-    .findLast(
-      r => r.deref()?.attributes['span.type'] === 'tool.blocked_on_user',
-    )
-    ?.deref()
+    .findLast((r) => r.deref()?.attributes['span.type'] === 'tool.blocked_on_user')
+    ?.deref();
 
   if (!blockedSpanContext) {
-    return
+    return;
   }
 
   // End Perfetto span
@@ -593,106 +572,102 @@ export function endToolBlockedOnUserSpan(
     endUserInputPerfettoSpan(blockedSpanContext.perfettoSpanId, {
       decision,
       source,
-    })
+    });
   }
 
   if (!isAnyTracingEnabled()) {
-    const spanId = getSpanId(blockedSpanContext.span)
-    activeSpans.delete(spanId)
-    strongSpans.delete(spanId)
-    return
+    const spanId = getSpanId(blockedSpanContext.span);
+    activeSpans.delete(spanId);
+    strongSpans.delete(spanId);
+    return;
   }
 
-  const duration = Date.now() - blockedSpanContext.startTime
+  const duration = Date.now() - blockedSpanContext.startTime;
   const attributes: Record<string, string | number | boolean> = {
     duration_ms: duration,
-  }
+  };
 
   if (decision) {
-    attributes['decision'] = decision
+    attributes.decision = decision;
   }
   if (source) {
-    attributes['source'] = source
+    attributes.source = source;
   }
 
-  blockedSpanContext.span.setAttributes(attributes)
-  blockedSpanContext.span.end()
+  blockedSpanContext.span.setAttributes(attributes);
+  blockedSpanContext.span.end();
 
-  const spanId = getSpanId(blockedSpanContext.span)
-  activeSpans.delete(spanId)
-  strongSpans.delete(spanId)
+  const spanId = getSpanId(blockedSpanContext.span);
+  activeSpans.delete(spanId);
+  strongSpans.delete(spanId);
 }
 
 export function startToolExecutionSpan(): Span {
   if (!isAnyTracingEnabled()) {
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = toolContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = toolContext.getStore();
 
-  const attributes = createSpanAttributes('tool.execution')
+  const attributes = createSpanAttributes('tool.execution');
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan(
-    'claude_code.tool.execution',
-    { attributes },
-    ctx,
-  )
+    : otelContext.active();
+  const span = tracer.startSpan('claude_code.tool.execution', { attributes }, ctx);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
-  strongSpans.set(spanId, spanContextObj)
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
+  strongSpans.set(spanId, spanContextObj);
 
-  return span
+  return span;
 }
 
 export function endToolExecutionSpan(metadata?: {
-  success?: boolean
-  error?: string
+  success?: boolean;
+  error?: string;
 }): void {
   if (!isAnyTracingEnabled()) {
-    return
+    return;
   }
 
   const executionSpanContext = Array.from(activeSpans.values())
-    .findLast(r => r.deref()?.attributes['span.type'] === 'tool.execution')
-    ?.deref()
+    .findLast((r) => r.deref()?.attributes['span.type'] === 'tool.execution')
+    ?.deref();
 
   if (!executionSpanContext) {
-    return
+    return;
   }
 
-  const duration = Date.now() - executionSpanContext.startTime
+  const duration = Date.now() - executionSpanContext.startTime;
   const attributes: Record<string, string | number | boolean> = {
     duration_ms: duration,
-  }
+  };
 
   if (metadata) {
-    if (metadata.success !== undefined) attributes['success'] = metadata.success
-    if (metadata.error !== undefined) attributes['error'] = metadata.error
+    if (metadata.success !== undefined) attributes.success = metadata.success;
+    if (metadata.error !== undefined) attributes.error = metadata.error;
   }
 
-  executionSpanContext.span.setAttributes(attributes)
-  executionSpanContext.span.end()
+  executionSpanContext.span.setAttributes(attributes);
+  executionSpanContext.span.end();
 
-  const spanId = getSpanId(executionSpanContext.span)
-  activeSpans.delete(spanId)
-  strongSpans.delete(spanId)
+  const spanId = getSpanId(executionSpanContext.span);
+  activeSpans.delete(spanId);
+  strongSpans.delete(spanId);
 }
 
 export function endToolSpan(toolResult?: string, resultTokens?: number): void {
-  const toolSpanContext = toolContext.getStore()
+  const toolSpanContext = toolContext.getStore();
 
   if (!toolSpanContext) {
-    return
+    return;
   }
 
   // End Perfetto span
@@ -700,43 +675,43 @@ export function endToolSpan(toolResult?: string, resultTokens?: number): void {
     endToolPerfettoSpan(toolSpanContext.perfettoSpanId, {
       success: true,
       resultTokens,
-    })
+    });
   }
 
   if (!isAnyTracingEnabled()) {
-    const spanId = getSpanId(toolSpanContext.span)
-    activeSpans.delete(spanId)
+    const spanId = getSpanId(toolSpanContext.span);
+    activeSpans.delete(spanId);
     // Same reasoning as interactionContext above: clear so subsequent async
     // work doesn't hold a stale reference to the ended tool span.
-    toolContext.enterWith(undefined)
-    return
+    toolContext.enterWith(undefined);
+    return;
   }
 
-  const duration = Date.now() - toolSpanContext.startTime
+  const duration = Date.now() - toolSpanContext.startTime;
   const endAttributes: Record<string, string | number | boolean> = {
     duration_ms: duration,
-  }
+  };
 
   // Add experimental tool result attributes (new_context)
   if (toolResult) {
-    const toolName = toolSpanContext.attributes['tool_name'] || 'unknown'
-    addBetaToolResultAttributes(endAttributes, toolName, toolResult)
+    const toolName = toolSpanContext.attributes.tool_name || 'unknown';
+    addBetaToolResultAttributes(endAttributes, toolName, toolResult);
   }
 
   if (resultTokens !== undefined) {
-    endAttributes['result_tokens'] = resultTokens
+    endAttributes.result_tokens = resultTokens;
   }
 
-  toolSpanContext.span.setAttributes(endAttributes)
-  toolSpanContext.span.end()
+  toolSpanContext.span.setAttributes(endAttributes);
+  toolSpanContext.span.end();
 
-  const spanId = getSpanId(toolSpanContext.span)
-  activeSpans.delete(spanId)
-  toolContext.enterWith(undefined)
+  const spanId = getSpanId(toolSpanContext.span);
+  activeSpans.delete(spanId);
+  toolContext.enterWith(undefined);
 }
 
 function isToolContentLoggingEnabled(): boolean {
-  return isEnvTruthy(process.env.OTEL_LOG_TOOL_CONTENT)
+  return isEnvTruthy(process.env.OTEL_LOG_TOOL_CONTENT);
 }
 
 /**
@@ -749,40 +724,38 @@ export function addToolContentEvent(
   attributes: Record<string, string | number | boolean>,
 ): void {
   if (!isAnyTracingEnabled() || !isToolContentLoggingEnabled()) {
-    return
+    return;
   }
 
-  const currentSpanCtx = toolContext.getStore()
+  const currentSpanCtx = toolContext.getStore();
   if (!currentSpanCtx) {
-    return
+    return;
   }
 
   // Truncate string attributes that might be large
-  const processedAttributes: Record<string, string | number | boolean> = {}
+  const processedAttributes: Record<string, string | number | boolean> = {};
   for (const [key, value] of Object.entries(attributes)) {
     if (typeof value === 'string') {
-      const { content, truncated } = truncateContent(value)
-      processedAttributes[key] = content
+      const { content, truncated } = truncateContent(value);
+      processedAttributes[key] = content;
       if (truncated) {
-        processedAttributes[`${key}_truncated`] = true
-        processedAttributes[`${key}_original_length`] = value.length
+        processedAttributes[`${key}_truncated`] = true;
+        processedAttributes[`${key}_original_length`] = value.length;
       }
     } else {
-      processedAttributes[key] = value
+      processedAttributes[key] = value;
     }
   }
 
-  currentSpanCtx.span.addEvent(eventName, processedAttributes)
+  currentSpanCtx.span.addEvent(eventName, processedAttributes);
 }
 
 export function getCurrentSpan(): Span | null {
   if (!isAnyTracingEnabled()) {
-    return null
+    return null;
   }
 
-  return (
-    toolContext.getStore()?.span ?? interactionContext.getStore()?.span ?? null
-  )
+  return toolContext.getStore()?.span ?? interactionContext.getStore()?.span ?? null;
 }
 
 export async function executeInSpan<T>(
@@ -791,44 +764,44 @@ export async function executeInSpan<T>(
   attributes?: Record<string, string | number | boolean>,
 ): Promise<T> {
   if (!isAnyTracingEnabled()) {
-    return fn(trace.getActiveSpan() || getTracer().startSpan('dummy'))
+    return fn(trace.getActiveSpan() || getTracer().startSpan('dummy'));
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = toolContext.getStore() ?? interactionContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = toolContext.getStore() ?? interactionContext.getStore();
 
   const finalAttributes = createSpanAttributes('tool', {
     ...attributes,
-  })
+  });
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan(spanName, { attributes: finalAttributes }, ctx)
+    : otelContext.active();
+  const span = tracer.startSpan(spanName, { attributes: finalAttributes }, ctx);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes: finalAttributes,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
-  strongSpans.set(spanId, spanContextObj)
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
+  strongSpans.set(spanId, spanContextObj);
 
   try {
-    const result = await fn(span)
-    span.end()
-    activeSpans.delete(spanId)
-    strongSpans.delete(spanId)
-    return result
+    const result = await fn(span);
+    span.end();
+    activeSpans.delete(spanId);
+    strongSpans.delete(spanId);
+    return result;
   } catch (error) {
     if (error instanceof Error) {
-      span.recordException(error)
+      span.recordException(error);
     }
-    span.end()
-    activeSpans.delete(spanId)
-    strongSpans.delete(spanId)
-    throw error
+    span.end();
+    activeSpans.delete(spanId);
+    strongSpans.delete(spanId);
+    throw error;
   }
 }
 
@@ -848,34 +821,34 @@ export function startHookSpan(
   hookDefinitions: string,
 ): Span {
   if (!isBetaTracingEnabled()) {
-    return trace.getActiveSpan() || getTracer().startSpan('dummy')
+    return trace.getActiveSpan() || getTracer().startSpan('dummy');
   }
 
-  const tracer = getTracer()
-  const parentSpanCtx = toolContext.getStore() ?? interactionContext.getStore()
+  const tracer = getTracer();
+  const parentSpanCtx = toolContext.getStore() ?? interactionContext.getStore();
 
   const attributes = createSpanAttributes('hook', {
     hook_event: hookEvent,
     hook_name: hookName,
     num_hooks: numHooks,
     hook_definitions: hookDefinitions,
-  })
+  });
 
   const ctx = parentSpanCtx
     ? trace.setSpan(otelContext.active(), parentSpanCtx.span)
-    : otelContext.active()
-  const span = tracer.startSpan('claude_code.hook', { attributes }, ctx)
+    : otelContext.active();
+  const span = tracer.startSpan('claude_code.hook', { attributes }, ctx);
 
-  const spanId = getSpanId(span)
+  const spanId = getSpanId(span);
   const spanContextObj: SpanContext = {
     span,
     startTime: Date.now(),
     attributes,
-  }
-  activeSpans.set(spanId, new WeakRef(spanContextObj))
-  strongSpans.set(spanId, spanContextObj)
+  };
+  activeSpans.set(spanId, new WeakRef(spanContextObj));
+  strongSpans.set(spanId, spanContextObj);
 
-  return span
+  return span;
 }
 
 /**
@@ -887,41 +860,38 @@ export function startHookSpan(
 export function endHookSpan(
   span: Span,
   metadata?: {
-    numSuccess?: number
-    numBlocking?: number
-    numNonBlockingError?: number
-    numCancelled?: number
+    numSuccess?: number;
+    numBlocking?: number;
+    numNonBlockingError?: number;
+    numCancelled?: number;
   },
 ): void {
   if (!isBetaTracingEnabled()) {
-    return
+    return;
   }
 
-  const spanId = getSpanId(span)
-  const spanContext = activeSpans.get(spanId)?.deref()
+  const spanId = getSpanId(span);
+  const spanContext = activeSpans.get(spanId)?.deref();
 
   if (!spanContext) {
-    return
+    return;
   }
 
-  const duration = Date.now() - spanContext.startTime
+  const duration = Date.now() - spanContext.startTime;
   const endAttributes: Record<string, string | number | boolean> = {
     duration_ms: duration,
-  }
+  };
 
   if (metadata) {
-    if (metadata.numSuccess !== undefined)
-      endAttributes['num_success'] = metadata.numSuccess
-    if (metadata.numBlocking !== undefined)
-      endAttributes['num_blocking'] = metadata.numBlocking
+    if (metadata.numSuccess !== undefined) endAttributes.num_success = metadata.numSuccess;
+    if (metadata.numBlocking !== undefined) endAttributes.num_blocking = metadata.numBlocking;
     if (metadata.numNonBlockingError !== undefined)
-      endAttributes['num_non_blocking_error'] = metadata.numNonBlockingError
-    if (metadata.numCancelled !== undefined)
-      endAttributes['num_cancelled'] = metadata.numCancelled
+      endAttributes.num_non_blocking_error = metadata.numNonBlockingError;
+    if (metadata.numCancelled !== undefined) endAttributes.num_cancelled = metadata.numCancelled;
   }
 
-  spanContext.span.setAttributes(endAttributes)
-  spanContext.span.end()
-  activeSpans.delete(spanId)
-  strongSpans.delete(spanId)
+  spanContext.span.setAttributes(endAttributes);
+  spanContext.span.end();
+  activeSpans.delete(spanId);
+  strongSpans.delete(spanId);
 }

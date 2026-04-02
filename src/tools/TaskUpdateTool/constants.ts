@@ -1,1 +1,1 @@
-export const TASK_UPDATE_TOOL_NAME = 'TaskUpdate'
+export const TASK_UPDATE_TOOL_NAME = 'TaskUpdate';

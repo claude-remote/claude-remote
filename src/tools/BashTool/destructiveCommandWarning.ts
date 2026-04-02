@@ -5,9 +5,9 @@
  */
 
 type DestructivePattern = {
-  pattern: RegExp
-  warning: string
-}
+  pattern: RegExp;
+  warning: string;
+};
 
 const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
   // Git — data loss / hard to reverse
@@ -20,8 +20,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may overwrite remote history',
   },
   {
-    pattern:
-      /\bgit\s+clean\b(?![^;&|\n]*(?:-[a-zA-Z]*n|--dry-run))[^;&|\n]*-[a-zA-Z]*f/,
+    pattern: /\bgit\s+clean\b(?![^;&|\n]*(?:-[a-zA-Z]*n|--dry-run))[^;&|\n]*-[a-zA-Z]*f/,
     warning: 'Note: may permanently delete untracked files',
   },
   {
@@ -37,8 +36,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     warning: 'Note: may permanently remove stashed changes',
   },
   {
-    pattern:
-      /\bgit\s+branch\s+(-D[ \t]|--delete\s+--force|--force\s+--delete)\b/,
+    pattern: /\bgit\s+branch\s+(-D[ \t]|--delete\s+--force|--force\s+--delete)\b/,
     warning: 'Note: may force-delete a branch',
   },
 
@@ -86,7 +84,7 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
     pattern: /\bterraform\s+destroy\b/,
     warning: 'Note: may destroy Terraform infrastructure',
   },
-]
+];
 
 /**
  * Checks if a bash command matches known destructive patterns.
@@ -95,8 +93,8 @@ const DESTRUCTIVE_PATTERNS: DestructivePattern[] = [
 export function getDestructiveCommandWarning(command: string): string | null {
   for (const { pattern, warning } of DESTRUCTIVE_PATTERNS) {
     if (pattern.test(command)) {
-      return warning
+      return warning;
     }
   }
-  return null
+  return null;
 }

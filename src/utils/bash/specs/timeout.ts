@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const timeout: CommandSpec = {
   name: 'timeout',
@@ -15,6 +15,6 @@ const timeout: CommandSpec = {
       isCommand: true,
     },
   ],
-}
+};
 
-export default timeout
+export default timeout;

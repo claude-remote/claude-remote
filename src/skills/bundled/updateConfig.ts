@@ -1,15 +1,15 @@
-import { toJSONSchema } from 'zod/v4'
-import { SettingsSchema } from '../../utils/settings/types.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import { toJSONSchema } from 'zod/v4';
+import { SettingsSchema } from '../../utils/settings/types.js';
+import { jsonStringify } from '../../utils/slowOperations.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 /**
  * Generate JSON Schema from the settings Zod schema.
  * This keeps the skill prompt in sync with the actual types.
  */
 function generateSettingsSchema(): string {
-  const jsonSchema = toJSONSchema(SettingsSchema(), { io: 'input' })
-  return jsonStringify(jsonSchema, null, 2)
+  const jsonSchema = toJSONSchema(SettingsSchema(), { io: 'input' });
+  return jsonStringify(jsonSchema, null, 2);
 }
 
 const SETTINGS_EXAMPLES_DOCS = `## Settings File Locations
@@ -101,7 +101,7 @@ Plugin syntax: \`plugin-name@source\` where source is \`claude-code-marketplace\
 - \`spinnerVerbs\`: Customize spinner verbs (\`{ "mode": "append" | "replace", "verbs": [...] }\`)
 - \`spinnerTipsOverride\`: Override spinner tips (\`{ "excludeDefault": true, "tips": ["Custom tip"] }\`)
 - \`syntaxHighlightingDisabled\`: Disable diff highlighting
-`
+`;
 
 // Note: We keep hand-written examples for common patterns since they're more
 // actionable than auto-generated schema docs. The generated schema list
@@ -264,7 +264,7 @@ echo '{"systemMessage": "Session complete!"}'
   }
 }
 \`\`\`
-`
+`;
 
 const HOOK_VERIFICATION_FLOW = `## Constructing a Hook (with verification)
 
@@ -302,7 +302,7 @@ Given an event, matcher, target file, and desired behavior, follow this flow. Ea
    **If proof fails but pipe-test passed and \`jq -e\` passed**: the settings watcher isn't watching \`.claude/\` — it only watches directories that had a settings file when this session started. The hook is written correctly. Tell the user to open \`/hooks\` once (reloads config) or restart — you can't do this yourself; \`/hooks\` is a user UI menu and opening it ends this turn.
 
 7. **Handoff.** Tell the user the hook is live (or needs \`/hooks\`/restart per the watcher caveat). Point them at \`/hooks\` to review, edit, or disable it later. The UI only shows "Ran N hooks" if a hook errors or is slow — silent success is invisible by design.
-`
+`;
 
 const UPDATE_CONFIG_PROMPT = `# Update Config Skill
 
@@ -440,7 +440,7 @@ If a hook isn't running:
 4. **Check hook type** - Is it "command", "prompt", or "agent"?
 5. **Test the command** - Run the hook command manually to see if it works
 6. **Use --debug** - Run \`claude --debug\` to see hook execution logs
-`
+`;
 
 export function registerUpdateConfigSkill(): void {
   registerBundledSkill({
@@ -451,25 +451,25 @@ export function registerUpdateConfigSkill(): void {
     userInvocable: true,
     async getPromptForCommand(args) {
       if (args.startsWith('[hooks-only]')) {
-        const req = args.slice('[hooks-only]'.length).trim()
-        let prompt = HOOKS_DOCS + '\n\n' + HOOK_VERIFICATION_FLOW
+        const req = args.slice('[hooks-only]'.length).trim();
+        let prompt = `${HOOKS_DOCS}\n\n${HOOK_VERIFICATION_FLOW}`;
         if (req) {
-          prompt += `\n\n## Task\n\n${req}`
+          prompt += `\n\n## Task\n\n${req}`;
         }
-        return [{ type: 'text', text: prompt }]
+        return [{ type: 'text', text: prompt }];
       }
 
       // Generate schema dynamically to stay in sync with types
-      const jsonSchema = generateSettingsSchema()
+      const jsonSchema = generateSettingsSchema();
 
-      let prompt = UPDATE_CONFIG_PROMPT
-      prompt += `\n\n## Full Settings JSON Schema\n\n\`\`\`json\n${jsonSchema}\n\`\`\``
+      let prompt = UPDATE_CONFIG_PROMPT;
+      prompt += `\n\n## Full Settings JSON Schema\n\n\`\`\`json\n${jsonSchema}\n\`\`\``;
 
       if (args) {
-        prompt += `\n\n## User Request\n\n${args}`
+        prompt += `\n\n## User Request\n\n${args}`;
       }
 
-      return [{ type: 'text', text: prompt }]
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

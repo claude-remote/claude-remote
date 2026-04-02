@@ -65,7 +65,9 @@ export function CostBadge({ cost }: CostBadgeProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Duration</span>
-              <span className="font-mono text-gray-300">{formatDuration(cost.sessionDuration)}</span>
+              <span className="font-mono text-gray-300">
+                {formatDuration(cost.sessionDuration)}
+              </span>
             </div>
           </div>
 

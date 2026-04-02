@@ -1,92 +1,92 @@
-import chalk, { Chalk } from 'chalk'
-import { env } from './env.js'
+import chalk, { Chalk } from 'chalk';
+import { env } from './env.js';
 
 export type Theme = {
-  autoAccept: string
-  bashBorder: string
-  claude: string
-  claudeShimmer: string // Lighter version of claude color for shimmer effect
-  claudeBlue_FOR_SYSTEM_SPINNER: string
-  claudeBlueShimmer_FOR_SYSTEM_SPINNER: string
-  permission: string
-  permissionShimmer: string // Lighter version of permission color for shimmer effect
-  planMode: string
-  ide: string
-  promptBorder: string
-  promptBorderShimmer: string // Lighter version of promptBorder color for shimmer effect
-  text: string
-  inverseText: string
-  inactive: string
-  inactiveShimmer: string // Lighter version of inactive color for shimmer effect
-  subtle: string
-  suggestion: string
-  remember: string
-  background: string
+  autoAccept: string;
+  bashBorder: string;
+  claude: string;
+  claudeShimmer: string; // Lighter version of claude color for shimmer effect
+  claudeBlue_FOR_SYSTEM_SPINNER: string;
+  claudeBlueShimmer_FOR_SYSTEM_SPINNER: string;
+  permission: string;
+  permissionShimmer: string; // Lighter version of permission color for shimmer effect
+  planMode: string;
+  ide: string;
+  promptBorder: string;
+  promptBorderShimmer: string; // Lighter version of promptBorder color for shimmer effect
+  text: string;
+  inverseText: string;
+  inactive: string;
+  inactiveShimmer: string; // Lighter version of inactive color for shimmer effect
+  subtle: string;
+  suggestion: string;
+  remember: string;
+  background: string;
   // Semantic colors
-  success: string
-  error: string
-  warning: string
-  merged: string
-  warningShimmer: string // Lighter version of warning color for shimmer effect
+  success: string;
+  error: string;
+  warning: string;
+  merged: string;
+  warningShimmer: string; // Lighter version of warning color for shimmer effect
   // Diff colors
-  diffAdded: string
-  diffRemoved: string
-  diffAddedDimmed: string
-  diffRemovedDimmed: string
+  diffAdded: string;
+  diffRemoved: string;
+  diffAddedDimmed: string;
+  diffRemovedDimmed: string;
   // Word-level diff highlighting
-  diffAddedWord: string
-  diffRemovedWord: string
+  diffAddedWord: string;
+  diffRemovedWord: string;
   // Agent colors
-  red_FOR_SUBAGENTS_ONLY: string
-  blue_FOR_SUBAGENTS_ONLY: string
-  green_FOR_SUBAGENTS_ONLY: string
-  yellow_FOR_SUBAGENTS_ONLY: string
-  purple_FOR_SUBAGENTS_ONLY: string
-  orange_FOR_SUBAGENTS_ONLY: string
-  pink_FOR_SUBAGENTS_ONLY: string
-  cyan_FOR_SUBAGENTS_ONLY: string
+  red_FOR_SUBAGENTS_ONLY: string;
+  blue_FOR_SUBAGENTS_ONLY: string;
+  green_FOR_SUBAGENTS_ONLY: string;
+  yellow_FOR_SUBAGENTS_ONLY: string;
+  purple_FOR_SUBAGENTS_ONLY: string;
+  orange_FOR_SUBAGENTS_ONLY: string;
+  pink_FOR_SUBAGENTS_ONLY: string;
+  cyan_FOR_SUBAGENTS_ONLY: string;
   // Grove colors
-  professionalBlue: string
+  professionalBlue: string;
   // Chrome colors
-  chromeYellow: string
+  chromeYellow: string;
   // TUI V2 colors
-  clawd_body: string
-  clawd_background: string
-  userMessageBackground: string
-  userMessageBackgroundHover: string
+  clawd_body: string;
+  clawd_background: string;
+  userMessageBackground: string;
+  userMessageBackgroundHover: string;
   /** Message-actions selection. Cool shift toward `suggestion` blue; distinct from default AND userMessageBackground. */
-  messageActionsBackground: string
+  messageActionsBackground: string;
   /** Text-selection highlight background (alt-screen mouse selection). Solid
    *  bg that REPLACES the cell's bg while preserving its fg — matches native
    *  terminal selection. Previously SGR-7 inverse (swapped fg/bg per cell),
    *  which fragmented badly over syntax highlighting. */
-  selectionBg: string
-  bashMessageBackgroundColor: string
+  selectionBg: string;
+  bashMessageBackgroundColor: string;
 
-  memoryBackgroundColor: string
-  rate_limit_fill: string
-  rate_limit_empty: string
-  fastMode: string
-  fastModeShimmer: string
+  memoryBackgroundColor: string;
+  rate_limit_fill: string;
+  rate_limit_empty: string;
+  fastMode: string;
+  fastModeShimmer: string;
   // Brief/assistant mode label colors
-  briefLabelYou: string
-  briefLabelClaude: string
+  briefLabelYou: string;
+  briefLabelClaude: string;
   // Rainbow colors for ultrathink keyword highlighting
-  rainbow_red: string
-  rainbow_orange: string
-  rainbow_yellow: string
-  rainbow_green: string
-  rainbow_blue: string
-  rainbow_indigo: string
-  rainbow_violet: string
-  rainbow_red_shimmer: string
-  rainbow_orange_shimmer: string
-  rainbow_yellow_shimmer: string
-  rainbow_green_shimmer: string
-  rainbow_blue_shimmer: string
-  rainbow_indigo_shimmer: string
-  rainbow_violet_shimmer: string
-}
+  rainbow_red: string;
+  rainbow_orange: string;
+  rainbow_yellow: string;
+  rainbow_green: string;
+  rainbow_blue: string;
+  rainbow_indigo: string;
+  rainbow_violet: string;
+  rainbow_red_shimmer: string;
+  rainbow_orange_shimmer: string;
+  rainbow_yellow_shimmer: string;
+  rainbow_green_shimmer: string;
+  rainbow_blue_shimmer: string;
+  rainbow_indigo_shimmer: string;
+  rainbow_violet_shimmer: string;
+};
 
 export const THEME_NAMES = [
   'dark',
@@ -95,18 +95,18 @@ export const THEME_NAMES = [
   'dark-daltonized',
   'light-ansi',
   'dark-ansi',
-] as const
+] as const;
 
 /** A renderable theme. Always resolvable to a concrete color palette. */
-export type ThemeName = (typeof THEME_NAMES)[number]
+export type ThemeName = (typeof THEME_NAMES)[number];
 
-export const THEME_SETTINGS = ['auto', ...THEME_NAMES] as const
+export const THEME_SETTINGS = ['auto', ...THEME_NAMES] as const;
 
 /**
  * A theme preference as stored in user config. `'auto'` follows the system
  * dark/light mode and is resolved to a ThemeName at runtime.
  */
-export type ThemeSetting = (typeof THEME_SETTINGS)[number]
+export type ThemeSetting = (typeof THEME_SETTINGS)[number];
 
 /**
  * Light theme using explicit RGB values to avoid inconsistencies
@@ -188,7 +188,7 @@ const lightTheme: Theme = {
   rainbow_blue_shimmer: 'rgb(180,205,240)',
   rainbow_indigo_shimmer: 'rgb(195,180,230)',
   rainbow_violet_shimmer: 'rgb(230,180,210)',
-}
+};
 
 /**
  * Light ANSI theme using only the 16 standard ANSI colors
@@ -269,7 +269,7 @@ const lightAnsiTheme: Theme = {
   rainbow_blue_shimmer: 'ansi:cyanBright',
   rainbow_indigo_shimmer: 'ansi:blueBright',
   rainbow_violet_shimmer: 'ansi:magentaBright',
-}
+};
 
 /**
  * Dark ANSI theme using only the 16 standard ANSI colors
@@ -350,7 +350,7 @@ const darkAnsiTheme: Theme = {
   rainbow_blue_shimmer: 'ansi:cyanBright',
   rainbow_indigo_shimmer: 'ansi:blueBright',
   rainbow_violet_shimmer: 'ansi:magentaBright',
-}
+};
 
 /**
  * Light daltonized theme (color-blind friendly) using explicit RGB values
@@ -431,7 +431,7 @@ const lightDaltonizedTheme: Theme = {
   rainbow_blue_shimmer: 'rgb(180,205,240)',
   rainbow_indigo_shimmer: 'rgb(195,180,230)',
   rainbow_violet_shimmer: 'rgb(230,180,210)',
-}
+};
 
 /**
  * Dark theme using explicit RGB values to avoid inconsistencies
@@ -512,7 +512,7 @@ const darkTheme: Theme = {
   rainbow_blue_shimmer: 'rgb(180,205,240)',
   rainbow_indigo_shimmer: 'rgb(195,180,230)',
   rainbow_violet_shimmer: 'rgb(230,180,210)',
-}
+};
 
 /**
  * Dark daltonized theme (color-blind friendly) using explicit RGB values
@@ -593,22 +593,22 @@ const darkDaltonizedTheme: Theme = {
   rainbow_blue_shimmer: 'rgb(180,205,240)',
   rainbow_indigo_shimmer: 'rgb(195,180,230)',
   rainbow_violet_shimmer: 'rgb(230,180,210)',
-}
+};
 
 export function getTheme(themeName: ThemeName): Theme {
   switch (themeName) {
     case 'light':
-      return lightTheme
+      return lightTheme;
     case 'light-ansi':
-      return lightAnsiTheme
+      return lightAnsiTheme;
     case 'dark-ansi':
-      return darkAnsiTheme
+      return darkAnsiTheme;
     case 'light-daltonized':
-      return lightDaltonizedTheme
+      return lightDaltonizedTheme;
     case 'dark-daltonized':
-      return darkDaltonizedTheme
+      return darkDaltonizedTheme;
     default:
-      return darkTheme
+      return darkTheme;
   }
 }
 
@@ -617,23 +617,23 @@ export function getTheme(themeName: ThemeName): Theme {
 const chalkForChart =
   env.terminal === 'Apple_Terminal'
     ? new Chalk({ level: 2 }) // 256 colors
-    : chalk
+    : chalk;
 
 /**
  * Converts a theme color to an ANSI escape sequence for use with asciichart.
  * Uses chalk to generate the escape codes, with 256-color mode for Apple Terminal.
  */
 export function themeColorToAnsi(themeColor: string): string {
-  const rgbMatch = themeColor.match(/rgb\(\s?(\d+),\s?(\d+),\s?(\d+)\s?\)/)
+  const rgbMatch = themeColor.match(/rgb\(\s?(\d+),\s?(\d+),\s?(\d+)\s?\)/);
   if (rgbMatch) {
-    const r = parseInt(rgbMatch[1]!, 10)
-    const g = parseInt(rgbMatch[2]!, 10)
-    const b = parseInt(rgbMatch[3]!, 10)
+    const r = Number.parseInt(rgbMatch[1]!, 10);
+    const g = Number.parseInt(rgbMatch[2]!, 10);
+    const b = Number.parseInt(rgbMatch[3]!, 10);
     // Use chalk.rgb which auto-converts to 256 colors when level is 2
     // Extract just the opening escape sequence by using a marker
-    const colored = chalkForChart.rgb(r, g, b)('X')
-    return colored.slice(0, colored.indexOf('X'))
+    const colored = chalkForChart.rgb(r, g, b)('X');
+    return colored.slice(0, colored.indexOf('X'));
   }
   // Fallback to magenta if parsing fails
-  return '\x1b[35m'
+  return '\x1b[35m';
 }

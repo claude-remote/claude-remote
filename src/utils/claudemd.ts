@@ -25,71 +25,56 @@
  * - Non-existent files are silently ignored
  */
 
-import { feature } from 'src/utils/feature.js'
-import ignore from 'ignore'
-import memoize from 'lodash-es/memoize.js'
-import { Lexer } from 'marked'
-import {
-  basename,
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  parse,
-  relative,
-  sep,
-} from 'path'
-import picomatch from 'picomatch'
-import { logEvent } from 'src/services/analytics/index.js'
-import {
-  getAdditionalDirectoriesForClaudeMd,
-  getOriginalCwd,
-} from '../bootstrap/state.js'
-import { truncateEntrypointContent } from '../memdir/memdir.js'
-import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { basename, dirname, extname, isAbsolute, join, parse, relative, sep } from 'node:path';
+import ignore from 'ignore';
+import memoize from 'lodash-es/memoize.js';
+import { Lexer } from 'marked';
+import picomatch from 'picomatch';
+import { logEvent } from 'src/services/analytics/index.js';
+import { feature } from 'src/utils/feature.js';
+import { getAdditionalDirectoriesForClaudeMd, getOriginalCwd } from '../bootstrap/state.js';
+import { truncateEntrypointContent } from '../memdir/memdir.js';
+import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
 import {
   getCurrentProjectConfig,
   getManagedClaudeRulesDir,
   getMemoryPath,
   getUserClaudeRulesDir,
-} from './config.js'
-import { logForDebugging } from './debug.js'
-import { logForDiagnosticsNoPII } from './diagLogs.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
-import { getErrnoCode } from './errors.js'
-import { normalizePathForComparison } from './file.js'
-import { cacheKeys, type FileStateCache } from './fileStateCache.js'
+} from './config.js';
+import { logForDebugging } from './debug.js';
+import { logForDiagnosticsNoPII } from './diagLogs.js';
+import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js';
+import { getErrnoCode } from './errors.js';
+import { normalizePathForComparison } from './file.js';
+import { type FileStateCache, cacheKeys } from './fileStateCache.js';
+import { parseFrontmatter, splitPathInFrontmatter } from './frontmatterParser.js';
+import { getFsImplementation, safeResolvePath } from './fsOperations.js';
+import { findCanonicalGitRoot, findGitRoot } from './git.js';
 import {
-  parseFrontmatter,
-  splitPathInFrontmatter,
-} from './frontmatterParser.js'
-import { getFsImplementation, safeResolvePath } from './fsOperations.js'
-import { findCanonicalGitRoot, findGitRoot } from './git.js'
-import {
-  executeInstructionsLoadedHooks,
-  hasInstructionsLoadedHook,
   type InstructionsLoadReason,
   type InstructionsMemoryType,
-} from './hooks.js'
-import type { MemoryType } from './memory/types.js'
-import { expandPath } from './path.js'
-import { pathInWorkingPath } from './permissions/filesystem.js'
-import { isSettingSourceEnabled } from './settings/constants.js'
-import { getInitialSettings } from './settings/settings.js'
+  executeInstructionsLoadedHooks,
+  hasInstructionsLoadedHook,
+} from './hooks.js';
+import type { MemoryType } from './memory/types.js';
+import { expandPath } from './path.js';
+import { pathInWorkingPath } from './permissions/filesystem.js';
+import { isSettingSourceEnabled } from './settings/constants.js';
+import { getInitialSettings } from './settings/settings.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemPaths = feature('TEAMMEM')
   ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
-  : null
+  : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-let hasLoggedInitialLoad = false
+let hasLoggedInitialLoad = false;
 
 const MEMORY_INSTRUCTION_PROMPT =
-  'Codebase and user instructions are shown below. Be sure to adhere to these instructions. IMPORTANT: These instructions OVERRIDE any default behavior and you MUST follow them exactly as written.'
+  'Codebase and user instructions are shown below. Be sure to adhere to these instructions. IMPORTANT: These instructions OVERRIDE any default behavior and you MUST follow them exactly as written.';
 // Recommended max character count for a memory file
-export const MAX_MEMORY_CHARACTER_COUNT = 40000
+export const MAX_MEMORY_CHARACTER_COUNT = 40000;
 
 // File extensions that are allowed for @include directives
 // This prevents binary files (images, PDFs, etc.) from being loaded into memory
@@ -224,26 +209,26 @@ const TEXT_FILE_EXTENSIONS = new Set([
   '.log',
   '.diff',
   '.patch',
-])
+]);
 
 export type MemoryFileInfo = {
-  path: string
-  type: MemoryType
-  content: string
-  parent?: string // Path of the file that included this one
-  globs?: string[] // Glob patterns for file paths this rule applies to
+  path: string;
+  type: MemoryType;
+  content: string;
+  parent?: string; // Path of the file that included this one
+  globs?: string[]; // Glob patterns for file paths this rule applies to
   // True when auto-injection transformed `content` (stripped HTML comments,
   // stripped frontmatter, truncated MEMORY.md) such that it no longer matches
   // the bytes on disk. When set, `rawContent` holds the unmodified disk bytes
   // so callers can cache a `isPartialView` readFileState entry — presence in
   // cache provides dedup + change detection, but Edit/Write still require an
   // explicit Read before proceeding.
-  contentDiffersFromDisk?: boolean
-  rawContent?: string
-}
+  contentDiffersFromDisk?: boolean;
+  rawContent?: string;
+};
 
 function pathInOriginalCwd(path: string): boolean {
-  return pathInWorkingPath(path, getOriginalCwd())
+  return pathInWorkingPath(path, getOriginalCwd());
 }
 
 /**
@@ -252,30 +237,30 @@ function pathInOriginalCwd(path: string): boolean {
  * @returns Object with content and globs (undefined if no paths or match-all pattern)
  */
 function parseFrontmatterPaths(rawContent: string): {
-  content: string
-  paths?: string[]
+  content: string;
+  paths?: string[];
 } {
-  const { frontmatter, content } = parseFrontmatter(rawContent)
+  const { frontmatter, content } = parseFrontmatter(rawContent);
 
   if (!frontmatter.paths) {
-    return { content }
+    return { content };
   }
 
   const patterns = splitPathInFrontmatter(frontmatter.paths)
-    .map(pattern => {
+    .map((pattern) => {
       // Remove /** suffix - ignore library treats 'path' as matching both
       // the path itself and everything inside it
-      return pattern.endsWith('/**') ? pattern.slice(0, -3) : pattern
+      return pattern.endsWith('/**') ? pattern.slice(0, -3) : pattern;
     })
-    .filter((p: string) => p.length > 0)
+    .filter((p: string) => p.length > 0);
 
   // If all patterns are ** (match-all), treat as no globs (undefined)
   // This means the file applies to all paths
   if (patterns.length === 0 || patterns.every((p: string) => p === '**')) {
-    return { content }
+    return { content };
   }
 
-  return { content, paths: patterns }
+  return { content, paths: patterns };
 }
 
 /**
@@ -290,47 +275,47 @@ function parseFrontmatterPaths(rawContent: string): {
  * typo doesn't silently swallow the rest of the file.
  */
 export function stripHtmlComments(content: string): {
-  content: string
-  stripped: boolean
+  content: string;
+  stripped: boolean;
 } {
   if (!content.includes('<!--')) {
-    return { content, stripped: false }
+    return { content, stripped: false };
   }
   // gfm:false is fine here — html-block detection is a CommonMark rule.
-  return stripHtmlCommentsFromTokens(new Lexer({ gfm: false }).lex(content))
+  return stripHtmlCommentsFromTokens(new Lexer({ gfm: false }).lex(content));
 }
 
 function stripHtmlCommentsFromTokens(tokens: ReturnType<Lexer['lex']>): {
-  content: string
-  stripped: boolean
+  content: string;
+  stripped: boolean;
 } {
-  let result = ''
-  let stripped = false
+  let result = '';
+  let stripped = false;
 
   // A well-formed HTML comment span. Non-greedy so multiple comments on the
   // same line are matched independently; [\s\S] to span newlines.
-  const commentSpan = /<!--[\s\S]*?-->/g
+  const commentSpan = /<!--[\s\S]*?-->/g;
 
   for (const token of tokens) {
     if (token.type === 'html') {
-      const trimmed = token.raw.trimStart()
+      const trimmed = token.raw.trimStart();
       if (trimmed.startsWith('<!--') && trimmed.includes('-->')) {
         // Per CommonMark, a type-2 HTML block ends at the *line* containing
         // `-->`, so text after `-->` on that line is part of this token.
         // Strip only the comment spans and keep any residual content.
-        const residue = token.raw.replace(commentSpan, '')
-        stripped = true
+        const residue = token.raw.replace(commentSpan, '');
+        stripped = true;
         if (residue.trim().length > 0) {
           // Residual content exists (e.g. `<!-- note --> Use bun`): keep it.
-          result += residue
+          result += residue;
         }
-        continue
+        continue;
       }
     }
-    result += token.raw
+    result += token.raw;
   }
 
-  return { content: result, stripped }
+  return { content: result, stripped };
 }
 
 /**
@@ -347,45 +332,42 @@ function parseMemoryFileContent(
   includeBasePath?: string,
 ): { info: MemoryFileInfo | null; includePaths: string[] } {
   // Skip non-text files to prevent loading binary data (images, PDFs, etc.) into memory
-  const ext = extname(filePath).toLowerCase()
+  const ext = extname(filePath).toLowerCase();
   if (ext && !TEXT_FILE_EXTENSIONS.has(ext)) {
-    logForDebugging(`Skipping non-text file in @include: ${filePath}`)
-    return { info: null, includePaths: [] }
+    logForDebugging(`Skipping non-text file in @include: ${filePath}`);
+    return { info: null, includePaths: [] };
   }
 
-  const { content: withoutFrontmatter, paths } =
-    parseFrontmatterPaths(rawContent)
+  const { content: withoutFrontmatter, paths } = parseFrontmatterPaths(rawContent);
 
   // Lex once so strip and @include-extract share the same tokens. gfm:false
   // is required by extract (so ~/path doesn't tokenize as strikethrough) and
   // doesn't affect strip (html blocks are a CommonMark rule).
-  const hasComment = withoutFrontmatter.includes('<!--')
+  const hasComment = withoutFrontmatter.includes('<!--');
   const tokens =
     hasComment || includeBasePath !== undefined
       ? new Lexer({ gfm: false }).lex(withoutFrontmatter)
-      : undefined
+      : undefined;
 
   // Only rebuild via tokens when a comment actually needs stripping —
   // marked normalises \r\n during lex, so round-tripping a CRLF file
   // through token.raw would spuriously flip contentDiffersFromDisk.
   const strippedContent =
-    hasComment && tokens
-      ? stripHtmlCommentsFromTokens(tokens).content
-      : withoutFrontmatter
+    hasComment && tokens ? stripHtmlCommentsFromTokens(tokens).content : withoutFrontmatter;
 
   const includePaths =
     tokens && includeBasePath !== undefined
       ? extractIncludePathsFromTokens(tokens, includeBasePath)
-      : []
+      : [];
 
   // Truncate MEMORY.md entrypoints to the line AND byte caps
-  let finalContent = strippedContent
+  let finalContent = strippedContent;
   if (type === 'AutoMem' || type === 'TeamMem') {
-    finalContent = truncateEntrypointContent(strippedContent).content
+    finalContent = truncateEntrypointContent(strippedContent).content;
   }
 
   // Covers frontmatter strip, HTML comment strip, and MEMORY.md truncation
-  const contentDiffersFromDisk = finalContent !== rawContent
+  const contentDiffersFromDisk = finalContent !== rawContent;
   return {
     info: {
       path: filePath,
@@ -396,14 +378,14 @@ function parseMemoryFileContent(
       rawContent: contentDiffersFromDisk ? rawContent : undefined,
     },
     includePaths,
-  }
+  };
 }
 
 function handleMemoryFileReadError(error: unknown, filePath: string): void {
-  const code = getErrnoCode(error)
+  const code = getErrnoCode(error);
   // ENOENT = file doesn't exist, EISDIR = is a directory — both expected
   if (code === 'ENOENT' || code === 'EISDIR') {
-    return
+    return;
   }
   // Log permission errors (EACCES) as they're actionable
   if (code === 'EACCES') {
@@ -411,7 +393,7 @@ function handleMemoryFileReadError(error: unknown, filePath: string): void {
     logEvent('tengu_claude_md_permission_error', {
       is_access_error: 1,
       has_home_dir: filePath.includes(getClaudeConfigHomeDir()) ? 1 : 0,
-    })
+    });
   }
 }
 
@@ -427,23 +409,23 @@ async function safelyReadMemoryFileAsync(
   includeBasePath?: string,
 ): Promise<{ info: MemoryFileInfo | null; includePaths: string[] }> {
   try {
-    const fs = getFsImplementation()
-    const rawContent = await fs.readFile(filePath, { encoding: 'utf-8' })
-    return parseMemoryFileContent(rawContent, filePath, type, includeBasePath)
+    const fs = getFsImplementation();
+    const rawContent = await fs.readFile(filePath, { encoding: 'utf-8' });
+    return parseMemoryFileContent(rawContent, filePath, type, includeBasePath);
   } catch (error) {
-    handleMemoryFileReadError(error, filePath)
-    return { info: null, includePaths: [] }
+    handleMemoryFileReadError(error, filePath);
+    return { info: null, includePaths: [] };
   }
 }
 
 type MarkdownToken = {
-  type: string
-  text?: string
-  href?: string
-  tokens?: MarkdownToken[]
-  raw?: string
-  items?: MarkdownToken[]
-}
+  type: string;
+  text?: string;
+  href?: string;
+  tokens?: MarkdownToken[];
+  raw?: string;
+  items?: MarkdownToken[];
+};
 
 // Extract @path include references from pre-lexed tokens and resolve to
 // absolute paths. Skips html tokens so @paths inside block comments are
@@ -452,25 +434,25 @@ function extractIncludePathsFromTokens(
   tokens: ReturnType<Lexer['lex']>,
   basePath: string,
 ): string[] {
-  const absolutePaths = new Set<string>()
+  const absolutePaths = new Set<string>();
 
   // Extract @paths from a text string and add resolved paths to absolutePaths.
   function extractPathsFromText(textContent: string) {
-    const includeRegex = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g
-    let match
+    const includeRegex = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
+    let match;
     while ((match = includeRegex.exec(textContent)) !== null) {
-      let path = match[1]
-      if (!path) continue
+      let path = match[1];
+      if (!path) continue;
 
       // Strip fragment identifiers (#heading, #section-name, etc.)
-      const hashIndex = path.indexOf('#')
+      const hashIndex = path.indexOf('#');
       if (hashIndex !== -1) {
-        path = path.substring(0, hashIndex)
+        path = path.substring(0, hashIndex);
       }
-      if (!path) continue
+      if (!path) continue;
 
       // Unescape the spaces in the path
-      path = path.replace(/\\ /g, ' ')
+      path = path.replace(/\\ /g, ' ');
 
       // Accept @path, @./path, @~/path, or @/path
       if (path) {
@@ -478,13 +460,11 @@ function extractIncludePathsFromTokens(
           path.startsWith('./') ||
           path.startsWith('~/') ||
           (path.startsWith('/') && path !== '/') ||
-          (!path.startsWith('@') &&
-            !path.match(/^[#%^&*()]+/) &&
-            path.match(/^[a-zA-Z0-9._-]/))
+          (!path.startsWith('@') && !path.match(/^[#%^&*()]+/) && path.match(/^[a-zA-Z0-9._-]/));
 
         if (isValidPath) {
-          const resolvedPath = expandPath(path, dirname(basePath))
-          absolutePaths.add(resolvedPath)
+          const resolvedPath = expandPath(path, dirname(basePath));
+          absolutePaths.add(resolvedPath);
         }
       }
     }
@@ -494,47 +474,47 @@ function extractIncludePathsFromTokens(
   function processElements(elements: MarkdownToken[]) {
     for (const element of elements) {
       if (element.type === 'code' || element.type === 'codespan') {
-        continue
+        continue;
       }
 
       // For html tokens that contain comments, strip the comment spans and
       // check the residual for @paths (e.g. `<!-- note --> @./file.md`).
       // Other html tokens (non-comment tags) are skipped entirely.
       if (element.type === 'html') {
-        const raw = element.raw || ''
-        const trimmed = raw.trimStart()
+        const raw = element.raw || '';
+        const trimmed = raw.trimStart();
         if (trimmed.startsWith('<!--') && trimmed.includes('-->')) {
-          const commentSpan = /<!--[\s\S]*?-->/g
-          const residue = raw.replace(commentSpan, '')
+          const commentSpan = /<!--[\s\S]*?-->/g;
+          const residue = raw.replace(commentSpan, '');
           if (residue.trim().length > 0) {
-            extractPathsFromText(residue)
+            extractPathsFromText(residue);
           }
         }
-        continue
+        continue;
       }
 
       // Process text nodes
       if (element.type === 'text') {
-        extractPathsFromText(element.text || '')
+        extractPathsFromText(element.text || '');
       }
 
       // Recurse into children tokens
       if (element.tokens) {
-        processElements(element.tokens)
+        processElements(element.tokens);
       }
 
       // Special handling for list structures
       if (element.items) {
-        processElements(element.items)
+        processElements(element.items);
       }
     }
   }
 
-  processElements(tokens as MarkdownToken[])
-  return [...absolutePaths]
+  processElements(tokens as MarkdownToken[]);
+  return [...absolutePaths];
 }
 
-const MAX_INCLUDE_DEPTH = 5
+const MAX_INCLUDE_DEPTH = 5;
 
 /**
  * Checks whether a CLAUDE.md file path is excluded by the claudeMdExcludes setting.
@@ -546,30 +526,28 @@ const MAX_INCLUDE_DEPTH = 5
  */
 function isClaudeMdExcluded(filePath: string, type: MemoryType): boolean {
   if (type !== 'User' && type !== 'Project' && type !== 'Local') {
-    return false
+    return false;
   }
 
-  const patterns = getInitialSettings().claudeMdExcludes
+  const patterns = getInitialSettings().claudeMdExcludes;
   if (!patterns || patterns.length === 0) {
-    return false
+    return false;
   }
 
-  const matchOpts = { dot: true }
-  const normalizedPath = filePath.replaceAll('\\', '/')
+  const matchOpts = { dot: true };
+  const normalizedPath = filePath.replaceAll('\\', '/');
 
   // Build an expanded pattern list that includes realpath-resolved versions of
   // absolute patterns. This handles symlinks like /tmp -> /private/tmp on macOS:
   // the user writes "/tmp/project/CLAUDE.md" in their exclude, but the system
   // resolves the CWD to "/private/tmp/project/...", so the file path uses the
   // real path. By resolving the patterns too, both sides match.
-  const expandedPatterns = resolveExcludePatterns(patterns).filter(
-    p => p.length > 0,
-  )
+  const expandedPatterns = resolveExcludePatterns(patterns).filter((p) => p.length > 0);
   if (expandedPatterns.length === 0) {
-    return false
+    return false;
   }
 
-  return picomatch.isMatch(normalizedPath, expandedPatterns, matchOpts)
+  return picomatch.isMatch(normalizedPath, expandedPatterns, matchOpts);
 }
 
 /**
@@ -579,36 +557,34 @@ function isClaudeMdExcluded(filePath: string, type: MemoryType): boolean {
  * Glob patterns (containing *) have their static prefix resolved.
  */
 function resolveExcludePatterns(patterns: string[]): string[] {
-  const fs = getFsImplementation()
-  const expanded: string[] = patterns.map(p => p.replaceAll('\\', '/'))
+  const fs = getFsImplementation();
+  const expanded: string[] = patterns.map((p) => p.replaceAll('\\', '/'));
 
   for (const normalized of expanded) {
     // Only resolve absolute patterns — glob-only patterns like "**/*.md" don't have
     // a filesystem prefix to resolve
     if (!normalized.startsWith('/')) {
-      continue
+      continue;
     }
 
     // Find the static prefix before any glob characters
-    const globStart = normalized.search(/[*?{[]/)
-    const staticPrefix =
-      globStart === -1 ? normalized : normalized.slice(0, globStart)
-    const dirToResolve = dirname(staticPrefix)
+    const globStart = normalized.search(/[*?{[]/);
+    const staticPrefix = globStart === -1 ? normalized : normalized.slice(0, globStart);
+    const dirToResolve = dirname(staticPrefix);
 
     try {
       // sync IO: called from sync context (isClaudeMdExcluded -> processMemoryFile -> getMemoryFiles)
-      const resolvedDir = fs.realpathSync(dirToResolve).replaceAll('\\', '/')
+      const resolvedDir = fs.realpathSync(dirToResolve).replaceAll('\\', '/');
       if (resolvedDir !== dirToResolve) {
-        const resolvedPattern =
-          resolvedDir + normalized.slice(dirToResolve.length)
-        expanded.push(resolvedPattern)
+        const resolvedPattern = resolvedDir + normalized.slice(dirToResolve.length);
+        expanded.push(resolvedPattern);
       }
     } catch {
       // Directory doesn't exist; skip resolution for this pattern
     }
   }
 
-  return expanded
+  return expanded;
 }
 
 /**
@@ -620,53 +596,53 @@ export async function processMemoryFile(
   type: MemoryType,
   processedPaths: Set<string>,
   includeExternal: boolean,
-  depth: number = 0,
+  depth = 0,
   parent?: string,
 ): Promise<MemoryFileInfo[]> {
   // Skip if already processed or max depth exceeded.
   // Normalize paths for comparison to handle Windows drive letter casing
   // differences (e.g., C:\Users vs c:\Users).
-  const normalizedPath = normalizePathForComparison(filePath)
+  const normalizedPath = normalizePathForComparison(filePath);
   if (processedPaths.has(normalizedPath) || depth >= MAX_INCLUDE_DEPTH) {
-    return []
+    return [];
   }
 
   // Skip if path is excluded by claudeMdExcludes setting
   if (isClaudeMdExcluded(filePath, type)) {
-    return []
+    return [];
   }
 
   // Resolve symlink path early for @import resolution
-  const { resolvedPath, isSymlink } = safeResolvePath(
-    getFsImplementation(),
-    filePath,
-  )
+  const { resolvedPath, isSymlink } = safeResolvePath(getFsImplementation(), filePath);
 
-  processedPaths.add(normalizedPath)
+  processedPaths.add(normalizedPath);
   if (isSymlink) {
-    processedPaths.add(normalizePathForComparison(resolvedPath))
+    processedPaths.add(normalizePathForComparison(resolvedPath));
   }
 
-  const { info: memoryFile, includePaths: resolvedIncludePaths } =
-    await safelyReadMemoryFileAsync(filePath, type, resolvedPath)
+  const { info: memoryFile, includePaths: resolvedIncludePaths } = await safelyReadMemoryFileAsync(
+    filePath,
+    type,
+    resolvedPath,
+  );
   if (!memoryFile || !memoryFile.content.trim()) {
-    return []
+    return [];
   }
 
   // Add parent information
   if (parent) {
-    memoryFile.parent = parent
+    memoryFile.parent = parent;
   }
 
-  const result: MemoryFileInfo[] = []
+  const result: MemoryFileInfo[] = [];
 
   // Add the main file first (parent before children)
-  result.push(memoryFile)
+  result.push(memoryFile);
 
   for (const resolvedIncludePath of resolvedIncludePaths) {
-    const isExternal = !pathInOriginalCwd(resolvedIncludePath)
+    const isExternal = !pathInOriginalCwd(resolvedIncludePath);
     if (isExternal && !includeExternal) {
-      continue
+      continue;
     }
 
     // Recursively process included files with this file as parent
@@ -677,11 +653,11 @@ export async function processMemoryFile(
       includeExternal,
       depth + 1,
       filePath, // Pass current file as parent
-    )
-    result.push(...includedFiles)
+    );
+    result.push(...includedFiles);
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -702,54 +678,48 @@ export async function processMdRules({
   conditionalRule,
   visitedDirs = new Set(),
 }: {
-  rulesDir: string
-  type: MemoryType
-  processedPaths: Set<string>
-  includeExternal: boolean
-  conditionalRule: boolean
-  visitedDirs?: Set<string>
+  rulesDir: string;
+  type: MemoryType;
+  processedPaths: Set<string>;
+  includeExternal: boolean;
+  conditionalRule: boolean;
+  visitedDirs?: Set<string>;
 }): Promise<MemoryFileInfo[]> {
   if (visitedDirs.has(rulesDir)) {
-    return []
+    return [];
   }
 
   try {
-    const fs = getFsImplementation()
+    const fs = getFsImplementation();
 
-    const { resolvedPath: resolvedRulesDir, isSymlink } = safeResolvePath(
-      fs,
-      rulesDir,
-    )
+    const { resolvedPath: resolvedRulesDir, isSymlink } = safeResolvePath(fs, rulesDir);
 
-    visitedDirs.add(rulesDir)
+    visitedDirs.add(rulesDir);
     if (isSymlink) {
-      visitedDirs.add(resolvedRulesDir)
+      visitedDirs.add(resolvedRulesDir);
     }
 
-    const result: MemoryFileInfo[] = []
-    let entries: import('fs').Dirent[]
+    const result: MemoryFileInfo[] = [];
+    let entries: import('fs').Dirent[];
     try {
-      entries = await fs.readdir(resolvedRulesDir)
+      entries = await fs.readdir(resolvedRulesDir);
     } catch (e: unknown) {
-      const code = getErrnoCode(e)
+      const code = getErrnoCode(e);
       if (code === 'ENOENT' || code === 'EACCES' || code === 'ENOTDIR') {
-        return []
+        return [];
       }
-      throw e
+      throw e;
     }
 
     for (const entry of entries) {
-      const entryPath = join(rulesDir, entry.name)
-      const { resolvedPath: resolvedEntryPath, isSymlink } = safeResolvePath(
-        fs,
-        entryPath,
-      )
+      const entryPath = join(rulesDir, entry.name);
+      const { resolvedPath: resolvedEntryPath, isSymlink } = safeResolvePath(fs, entryPath);
 
       // Use Dirent methods for non-symlinks to avoid extra stat calls.
       // For symlinks, we need stat to determine what the target is.
-      const stats = isSymlink ? await fs.stat(resolvedEntryPath) : null
-      const isDirectory = stats ? stats.isDirectory() : entry.isDirectory()
-      const isFile = stats ? stats.isFile() : entry.isFile()
+      const stats = isSymlink ? await fs.stat(resolvedEntryPath) : null;
+      const isDirectory = stats ? stats.isDirectory() : entry.isDirectory();
+      const isFile = stats ? stats.isFile() : entry.isFile();
 
       if (isDirectory) {
         result.push(
@@ -761,57 +731,48 @@ export async function processMdRules({
             conditionalRule,
             visitedDirs,
           })),
-        )
+        );
       } else if (isFile && entry.name.endsWith('.md')) {
         const files = await processMemoryFile(
           resolvedEntryPath,
           type,
           processedPaths,
           includeExternal,
-        )
-        result.push(
-          ...files.filter(f => (conditionalRule ? f.globs : !f.globs)),
-        )
+        );
+        result.push(...files.filter((f) => (conditionalRule ? f.globs : !f.globs)));
       }
     }
 
-    return result
+    return result;
   } catch (error) {
     if (error instanceof Error && error.message.includes('EACCES')) {
       logEvent('tengu_claude_rules_md_permission_error', {
         is_access_error: 1,
         has_home_dir: rulesDir.includes(getClaudeConfigHomeDir()) ? 1 : 0,
-      })
+      });
     }
-    return []
+    return [];
   }
 }
 
 export const getMemoryFiles = memoize(
-  async (forceIncludeExternal: boolean = false): Promise<MemoryFileInfo[]> => {
-    const startTime = Date.now()
-    logForDiagnosticsNoPII('info', 'memory_files_started')
+  async (forceIncludeExternal = false): Promise<MemoryFileInfo[]> => {
+    const startTime = Date.now();
+    logForDiagnosticsNoPII('info', 'memory_files_started');
 
-    const result: MemoryFileInfo[] = []
-    const processedPaths = new Set<string>()
-    const config = getCurrentProjectConfig()
+    const result: MemoryFileInfo[] = [];
+    const processedPaths = new Set<string>();
+    const config = getCurrentProjectConfig();
     const includeExternal =
-      forceIncludeExternal ||
-      config.hasClaudeMdExternalIncludesApproved ||
-      false
+      forceIncludeExternal || config.hasClaudeMdExternalIncludesApproved || false;
 
     // Process Managed file first (always loaded - policy settings)
-    const managedClaudeMd = getMemoryPath('Managed')
+    const managedClaudeMd = getMemoryPath('Managed');
     result.push(
-      ...(await processMemoryFile(
-        managedClaudeMd,
-        'Managed',
-        processedPaths,
-        includeExternal,
-      )),
-    )
+      ...(await processMemoryFile(managedClaudeMd, 'Managed', processedPaths, includeExternal)),
+    );
     // Process Managed .claude/rules/*.md files
-    const managedClaudeRulesDir = getManagedClaudeRulesDir()
+    const managedClaudeRulesDir = getManagedClaudeRulesDir();
     result.push(
       ...(await processMdRules({
         rulesDir: managedClaudeRulesDir,
@@ -820,11 +781,11 @@ export const getMemoryFiles = memoize(
         includeExternal,
         conditionalRule: false,
       })),
-    )
+    );
 
     // Process User file (only if userSettings is enabled)
     if (isSettingSourceEnabled('userSettings')) {
-      const userClaudeMd = getMemoryPath('User')
+      const userClaudeMd = getMemoryPath('User');
       result.push(
         ...(await processMemoryFile(
           userClaudeMd,
@@ -832,9 +793,9 @@ export const getMemoryFiles = memoize(
           processedPaths,
           true, // User memory can always include external files
         )),
-      )
+      );
       // Process User ~/.claude/rules/*.md files
-      const userClaudeRulesDir = getUserClaudeRulesDir()
+      const userClaudeRulesDir = getUserClaudeRulesDir();
       result.push(
         ...(await processMdRules({
           rulesDir: userClaudeRulesDir,
@@ -843,17 +804,17 @@ export const getMemoryFiles = memoize(
           includeExternal: true,
           conditionalRule: false,
         })),
-      )
+      );
     }
 
     // Then process Project and Local files
-    const dirs: string[] = []
-    const originalCwd = getOriginalCwd()
-    let currentDir = originalCwd
+    const dirs: string[] = [];
+    const originalCwd = getOriginalCwd();
+    let currentDir = originalCwd;
 
     while (currentDir !== parse(currentDir).root) {
-      dirs.push(currentDir)
-      currentDir = dirname(currentDir)
+      dirs.push(currentDir);
+      currentDir = dirname(currentDir);
     }
 
     // When running from a git worktree nested inside its main repo (e.g.,
@@ -865,14 +826,13 @@ export const getMemoryFiles = memoize(
     // already has its own checkout. CLAUDE.local.md is gitignored so it only
     // exists in the main repo and is still loaded.
     // See: https://github.com/anthropics/claude-code/issues/29599
-    const gitRoot = findGitRoot(originalCwd)
-    const canonicalRoot = findCanonicalGitRoot(originalCwd)
+    const gitRoot = findGitRoot(originalCwd);
+    const canonicalRoot = findCanonicalGitRoot(originalCwd);
     const isNestedWorktree =
       gitRoot !== null &&
       canonicalRoot !== null &&
-      normalizePathForComparison(gitRoot) !==
-        normalizePathForComparison(canonicalRoot) &&
-      pathInWorkingPath(gitRoot, canonicalRoot)
+      normalizePathForComparison(gitRoot) !== normalizePathForComparison(canonicalRoot) &&
+      pathInWorkingPath(gitRoot, canonicalRoot);
 
     // Process from root downward to CWD
     for (const dir of dirs.reverse()) {
@@ -881,33 +841,23 @@ export const getMemoryFiles = memoize(
       const skipProject =
         isNestedWorktree &&
         pathInWorkingPath(dir, canonicalRoot) &&
-        !pathInWorkingPath(dir, gitRoot)
+        !pathInWorkingPath(dir, gitRoot);
 
       // Try reading CLAUDE.md (Project) - only if projectSettings is enabled
       if (isSettingSourceEnabled('projectSettings') && !skipProject) {
-        const projectPath = join(dir, 'CLAUDE.md')
+        const projectPath = join(dir, 'CLAUDE.md');
         result.push(
-          ...(await processMemoryFile(
-            projectPath,
-            'Project',
-            processedPaths,
-            includeExternal,
-          )),
-        )
+          ...(await processMemoryFile(projectPath, 'Project', processedPaths, includeExternal)),
+        );
 
         // Try reading .claude/CLAUDE.md (Project)
-        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
+        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md');
         result.push(
-          ...(await processMemoryFile(
-            dotClaudePath,
-            'Project',
-            processedPaths,
-            includeExternal,
-          )),
-        )
+          ...(await processMemoryFile(dotClaudePath, 'Project', processedPaths, includeExternal)),
+        );
 
         // Try reading .claude/rules/*.md files (Project)
-        const rulesDir = join(dir, '.claude', 'rules')
+        const rulesDir = join(dir, '.claude', 'rules');
         result.push(
           ...(await processMdRules({
             rulesDir,
@@ -916,20 +866,15 @@ export const getMemoryFiles = memoize(
             includeExternal,
             conditionalRule: false,
           })),
-        )
+        );
       }
 
       // Try reading CLAUDE.local.md (Local) - only if localSettings is enabled
       if (isSettingSourceEnabled('localSettings')) {
-        const localPath = join(dir, 'CLAUDE.local.md')
+        const localPath = join(dir, 'CLAUDE.local.md');
         result.push(
-          ...(await processMemoryFile(
-            localPath,
-            'Local',
-            processedPaths,
-            includeExternal,
-          )),
-        )
+          ...(await processMemoryFile(localPath, 'Local', processedPaths, includeExternal)),
+        );
       }
     }
 
@@ -938,32 +883,22 @@ export const getMemoryFiles = memoize(
     // Note: we don't check isSettingSourceEnabled('projectSettings') here because --add-dir
     // is an explicit user action and the SDK defaults settingSources to [] when not specified
     if (isEnvTruthy(process.env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD)) {
-      const additionalDirs = getAdditionalDirectoriesForClaudeMd()
+      const additionalDirs = getAdditionalDirectoriesForClaudeMd();
       for (const dir of additionalDirs) {
         // Try reading CLAUDE.md from the additional directory
-        const projectPath = join(dir, 'CLAUDE.md')
+        const projectPath = join(dir, 'CLAUDE.md');
         result.push(
-          ...(await processMemoryFile(
-            projectPath,
-            'Project',
-            processedPaths,
-            includeExternal,
-          )),
-        )
+          ...(await processMemoryFile(projectPath, 'Project', processedPaths, includeExternal)),
+        );
 
         // Try reading .claude/CLAUDE.md from the additional directory
-        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
+        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md');
         result.push(
-          ...(await processMemoryFile(
-            dotClaudePath,
-            'Project',
-            processedPaths,
-            includeExternal,
-          )),
-        )
+          ...(await processMemoryFile(dotClaudePath, 'Project', processedPaths, includeExternal)),
+        );
 
         // Try reading .claude/rules/*.md files from the additional directory
-        const rulesDir = join(dir, '.claude', 'rules')
+        const rulesDir = join(dir, '.claude', 'rules');
         result.push(
           ...(await processMdRules({
             rulesDir,
@@ -972,7 +907,7 @@ export const getMemoryFiles = memoize(
             includeExternal,
             conditionalRule: false,
           })),
-        )
+        );
       }
     }
 
@@ -981,62 +916,57 @@ export const getMemoryFiles = memoize(
       const { info: memdirEntry } = await safelyReadMemoryFileAsync(
         getAutoMemEntrypoint(),
         'AutoMem',
-      )
+      );
       if (memdirEntry) {
-        const normalizedPath = normalizePathForComparison(memdirEntry.path)
+        const normalizedPath = normalizePathForComparison(memdirEntry.path);
         if (!processedPaths.has(normalizedPath)) {
-          processedPaths.add(normalizedPath)
-          result.push(memdirEntry)
+          processedPaths.add(normalizedPath);
+          result.push(memdirEntry);
         }
       }
     }
 
     // Team memory entrypoint - only if feature is on and file exists
-    if (feature('TEAMMEM') && teamMemPaths!.isTeamMemoryEnabled()) {
+    if (feature('TEAMMEM') && teamMemPaths?.isTeamMemoryEnabled()) {
       const { info: teamMemEntry } = await safelyReadMemoryFileAsync(
-        teamMemPaths!.getTeamMemEntrypoint(),
+        teamMemPaths?.getTeamMemEntrypoint(),
         'TeamMem',
-      )
+      );
       if (teamMemEntry) {
-        const normalizedPath = normalizePathForComparison(teamMemEntry.path)
+        const normalizedPath = normalizePathForComparison(teamMemEntry.path);
         if (!processedPaths.has(normalizedPath)) {
-          processedPaths.add(normalizedPath)
-          result.push(teamMemEntry)
+          processedPaths.add(normalizedPath);
+          result.push(teamMemEntry);
         }
       }
     }
 
-    const totalContentLength = result.reduce(
-      (sum, f) => sum + f.content.length,
-      0,
-    )
+    const totalContentLength = result.reduce((sum, f) => sum + f.content.length, 0);
 
     logForDiagnosticsNoPII('info', 'memory_files_completed', {
       duration_ms: Date.now() - startTime,
       file_count: result.length,
       total_content_length: totalContentLength,
-    })
+    });
 
-    const typeCounts: Record<string, number> = {}
+    const typeCounts: Record<string, number> = {};
     for (const f of result) {
-      typeCounts[f.type] = (typeCounts[f.type] ?? 0) + 1
+      typeCounts[f.type] = (typeCounts[f.type] ?? 0) + 1;
     }
 
     if (!hasLoggedInitialLoad) {
-      hasLoggedInitialLoad = true
+      hasLoggedInitialLoad = true;
       logEvent('tengu_claudemd__initial_load', {
         file_count: result.length,
         total_content_length: totalContentLength,
-        user_count: typeCounts['User'] ?? 0,
-        project_count: typeCounts['Project'] ?? 0,
-        local_count: typeCounts['Local'] ?? 0,
-        managed_count: typeCounts['Managed'] ?? 0,
-        automem_count: typeCounts['AutoMem'] ?? 0,
-        ...(feature('TEAMMEM')
-          ? { teammem_count: typeCounts['TeamMem'] ?? 0 }
-          : {}),
+        user_count: typeCounts.User ?? 0,
+        project_count: typeCounts.Project ?? 0,
+        local_count: typeCounts.Local ?? 0,
+        managed_count: typeCounts.Managed ?? 0,
+        automem_count: typeCounts.AutoMem ?? 0,
+        ...(feature('TEAMMEM') ? { teammem_count: typeCounts.TeamMem ?? 0 } : {}),
         duration_ms: Date.now() - startTime,
-      })
+      });
     }
 
     // Fire InstructionsLoaded hook for each instruction file loaded
@@ -1052,37 +982,25 @@ export const getMemoryFiles = memoize(
     // followed by a direct .cache.clear() would spuriously fire with a stale
     // 'session_start' reason.
     if (!forceIncludeExternal) {
-      const eagerLoadReason = consumeNextEagerLoadReason()
+      const eagerLoadReason = consumeNextEagerLoadReason();
       if (eagerLoadReason !== undefined && hasInstructionsLoadedHook()) {
         for (const file of result) {
-          if (!isInstructionsMemoryType(file.type)) continue
-          const loadReason = file.parent ? 'include' : eagerLoadReason
-          void executeInstructionsLoadedHooks(
-            file.path,
-            file.type,
-            loadReason,
-            {
-              globs: file.globs,
-              parentFilePath: file.parent,
-            },
-          )
+          if (!isInstructionsMemoryType(file.type)) continue;
+          const loadReason = file.parent ? 'include' : eagerLoadReason;
+          void executeInstructionsLoadedHooks(file.path, file.type, loadReason, {
+            globs: file.globs,
+            parentFilePath: file.parent,
+          });
         }
       }
     }
 
-    return result
+    return result;
   },
-)
+);
 
-function isInstructionsMemoryType(
-  type: MemoryType,
-): type is InstructionsMemoryType {
-  return (
-    type === 'User' ||
-    type === 'Project' ||
-    type === 'Local' ||
-    type === 'Managed'
-  )
+function isInstructionsMemoryType(type: MemoryType): type is InstructionsMemoryType {
+  return type === 'User' || type === 'Project' || type === 'Local' || type === 'Managed';
 }
 
 // Load reason to report for top-level (non-included) files on the next eager
@@ -1090,21 +1008,21 @@ function isInstructionsMemoryType(
 // compaction clears the cache, so the InstructionsLoaded hook reports the
 // reload correctly instead of misreporting it as 'session_start'. One-shot:
 // reset to 'session_start' after being read.
-let nextEagerLoadReason: InstructionsLoadReason = 'session_start'
+let nextEagerLoadReason: InstructionsLoadReason = 'session_start';
 
 // Whether the InstructionsLoaded hook should fire on the next cache miss.
 // true initially (for session_start), consumed after firing, re-enabled only
 // by resetGetMemoryFilesCache(). Callers that only need cache invalidation
 // for correctness (e.g. worktree enter/exit, settings sync, /memory dialog)
 // should use clearMemoryFileCaches() instead to avoid spurious hook fires.
-let shouldFireHook = true
+let shouldFireHook = true;
 
 function consumeNextEagerLoadReason(): InstructionsLoadReason | undefined {
-  if (!shouldFireHook) return undefined
-  shouldFireHook = false
-  const reason = nextEagerLoadReason
-  nextEagerLoadReason = 'session_start'
-  return reason
+  if (!shouldFireHook) return undefined;
+  shouldFireHook = false;
+  const reason = nextEagerLoadReason;
+  nextEagerLoadReason = 'session_start';
+  return reason;
 }
 
 /**
@@ -1118,19 +1036,17 @@ function consumeNextEagerLoadReason(): InstructionsLoadReason | undefined {
  */
 export function clearMemoryFileCaches(): void {
   // ?.cache because tests spyOn this, which replaces the memoize wrapper.
-  getMemoryFiles.cache?.clear?.()
+  getMemoryFiles.cache?.clear?.();
 }
 
-export function resetGetMemoryFilesCache(
-  reason: InstructionsLoadReason = 'session_start',
-): void {
-  nextEagerLoadReason = reason
-  shouldFireHook = true
-  clearMemoryFileCaches()
+export function resetGetMemoryFilesCache(reason: InstructionsLoadReason = 'session_start'): void {
+  nextEagerLoadReason = reason;
+  shouldFireHook = true;
+  clearMemoryFileCaches();
 }
 
 export function getLargeMemoryFiles(files: MemoryFileInfo[]): MemoryFileInfo[] {
-  return files.filter(f => f.content.length > MAX_MEMORY_CHARACTER_COUNT)
+  return files.filter((f) => f.content.length > MAX_MEMORY_CHARACTER_COUNT);
 }
 
 /**
@@ -1139,31 +1055,22 @@ export function getLargeMemoryFiles(files: MemoryFileInfo[]): MemoryFileInfo[] {
  * into the system prompt. Callsites that care about "what's actually in
  * context" (context builder, /context viz) should filter through this.
  */
-export function filterInjectedMemoryFiles(
-  files: MemoryFileInfo[],
-): MemoryFileInfo[] {
-  const skipMemoryIndex = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_moth_copse',
-    false,
-  )
-  if (!skipMemoryIndex) return files
-  return files.filter(f => f.type !== 'AutoMem' && f.type !== 'TeamMem')
+export function filterInjectedMemoryFiles(files: MemoryFileInfo[]): MemoryFileInfo[] {
+  const skipMemoryIndex = getFeatureValue_CACHED_MAY_BE_STALE('tengu_moth_copse', false);
+  if (!skipMemoryIndex) return files;
+  return files.filter((f) => f.type !== 'AutoMem' && f.type !== 'TeamMem');
 }
 
 export const getClaudeMds = (
   memoryFiles: MemoryFileInfo[],
   filter?: (type: MemoryType) => boolean,
 ): string => {
-  const memories: string[] = []
-  const skipProjectLevel = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_paper_halyard',
-    false,
-  )
+  const memories: string[] = [];
+  const skipProjectLevel = getFeatureValue_CACHED_MAY_BE_STALE('tengu_paper_halyard', false);
 
   for (const file of memoryFiles) {
-    if (filter && !filter(file.type)) continue
-    if (skipProjectLevel && (file.type === 'Project' || file.type === 'Local'))
-      continue
+    if (filter && !filter(file.type)) continue;
+    if (skipProjectLevel && (file.type === 'Project' || file.type === 'Local')) continue;
     if (file.content) {
       const description =
         file.type === 'Project'
@@ -1174,25 +1081,25 @@ export const getClaudeMds = (
               ? ' (shared team memory, synced across the organization)'
               : file.type === 'AutoMem'
                 ? " (user's auto-memory, persists across conversations)"
-                : " (user's private global instructions for all projects)"
+                : " (user's private global instructions for all projects)";
 
-      const content = file.content.trim()
+      const content = file.content.trim();
       if (feature('TEAMMEM') && file.type === 'TeamMem') {
         memories.push(
           `Contents of ${file.path}${description}:\n\n<team-memory-content source="shared">\n${content}\n</team-memory-content>`,
-        )
+        );
       } else {
-        memories.push(`Contents of ${file.path}${description}:\n\n${content}`)
+        memories.push(`Contents of ${file.path}${description}:\n\n${content}`);
       }
     }
   }
 
   if (memories.length === 0) {
-    return ''
+    return '';
   }
 
-  return `${MEMORY_INSTRUCTION_PROMPT}\n\n${memories.join('\n\n')}`
-}
+  return `${MEMORY_INSTRUCTION_PROMPT}\n\n${memories.join('\n\n')}`;
+};
 
 /**
  * Gets managed and user conditional rules that match the target path.
@@ -1206,10 +1113,10 @@ export async function getManagedAndUserConditionalRules(
   targetPath: string,
   processedPaths: Set<string>,
 ): Promise<MemoryFileInfo[]> {
-  const result: MemoryFileInfo[] = []
+  const result: MemoryFileInfo[] = [];
 
   // Process Managed conditional .claude/rules/*.md files
-  const managedClaudeRulesDir = getManagedClaudeRulesDir()
+  const managedClaudeRulesDir = getManagedClaudeRulesDir();
   result.push(
     ...(await processConditionedMdRules(
       targetPath,
@@ -1218,11 +1125,11 @@ export async function getManagedAndUserConditionalRules(
       processedPaths,
       false,
     )),
-  )
+  );
 
   if (isSettingSourceEnabled('userSettings')) {
     // Process User conditional .claude/rules/*.md files
-    const userClaudeRulesDir = getUserClaudeRulesDir()
+    const userClaudeRulesDir = getUserClaudeRulesDir();
     result.push(
       ...(await processConditionedMdRules(
         targetPath,
@@ -1231,10 +1138,10 @@ export async function getManagedAndUserConditionalRules(
         processedPaths,
         true,
       )),
-    )
+    );
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -1251,43 +1158,27 @@ export async function getMemoryFilesForNestedDirectory(
   targetPath: string,
   processedPaths: Set<string>,
 ): Promise<MemoryFileInfo[]> {
-  const result: MemoryFileInfo[] = []
+  const result: MemoryFileInfo[] = [];
 
   // Process project memory files (CLAUDE.md and .claude/CLAUDE.md)
   if (isSettingSourceEnabled('projectSettings')) {
-    const projectPath = join(dir, 'CLAUDE.md')
-    result.push(
-      ...(await processMemoryFile(
-        projectPath,
-        'Project',
-        processedPaths,
-        false,
-      )),
-    )
-    const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
-    result.push(
-      ...(await processMemoryFile(
-        dotClaudePath,
-        'Project',
-        processedPaths,
-        false,
-      )),
-    )
+    const projectPath = join(dir, 'CLAUDE.md');
+    result.push(...(await processMemoryFile(projectPath, 'Project', processedPaths, false)));
+    const dotClaudePath = join(dir, '.claude', 'CLAUDE.md');
+    result.push(...(await processMemoryFile(dotClaudePath, 'Project', processedPaths, false)));
   }
 
   // Process local memory file (CLAUDE.local.md)
   if (isSettingSourceEnabled('localSettings')) {
-    const localPath = join(dir, 'CLAUDE.local.md')
-    result.push(
-      ...(await processMemoryFile(localPath, 'Local', processedPaths, false)),
-    )
+    const localPath = join(dir, 'CLAUDE.local.md');
+    result.push(...(await processMemoryFile(localPath, 'Local', processedPaths, false)));
   }
 
-  const rulesDir = join(dir, '.claude', 'rules')
+  const rulesDir = join(dir, '.claude', 'rules');
 
   // Process project unconditional .claude/rules/*.md files, which were not eagerly loaded
   // Use a separate processedPaths set to avoid marking conditional rule files as processed
-  const unconditionalProcessedPaths = new Set(processedPaths)
+  const unconditionalProcessedPaths = new Set(processedPaths);
   result.push(
     ...(await processMdRules({
       rulesDir,
@@ -1296,25 +1187,19 @@ export async function getMemoryFilesForNestedDirectory(
       includeExternal: false,
       conditionalRule: false,
     })),
-  )
+  );
 
   // Process project conditional .claude/rules/*.md files
   result.push(
-    ...(await processConditionedMdRules(
-      targetPath,
-      rulesDir,
-      'Project',
-      processedPaths,
-      false,
-    )),
-  )
+    ...(await processConditionedMdRules(targetPath, rulesDir, 'Project', processedPaths, false)),
+  );
 
   // processedPaths must be seeded with unconditional paths for subsequent directories
   for (const path of unconditionalProcessedPaths) {
-    processedPaths.add(path)
+    processedPaths.add(path);
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -1331,14 +1216,8 @@ export async function getConditionalRulesForCwdLevelDirectory(
   targetPath: string,
   processedPaths: Set<string>,
 ): Promise<MemoryFileInfo[]> {
-  const rulesDir = join(dir, '.claude', 'rules')
-  return processConditionedMdRules(
-    targetPath,
-    rulesDir,
-    'Project',
-    processedPaths,
-    false,
-  )
+  const rulesDir = join(dir, '.claude', 'rules');
+  return processConditionedMdRules(targetPath, rulesDir, 'Project', processedPaths, false);
 }
 
 /**
@@ -1364,12 +1243,12 @@ export async function processConditionedMdRules(
     processedPaths,
     includeExternal,
     conditionalRule: true,
-  })
+  });
 
   // Filter to only include files whose globs patterns match the targetPath
-  return conditionedRuleMdFiles.filter(file => {
+  return conditionedRuleMdFiles.filter((file) => {
     if (!file.globs || file.globs.length === 0) {
-      return false
+      return false;
     }
 
     // For Project rules: glob patterns are relative to the directory containing .claude
@@ -1377,78 +1256,67 @@ export async function processConditionedMdRules(
     const baseDir =
       type === 'Project'
         ? dirname(dirname(rulesDir)) // Parent of .claude
-        : getOriginalCwd() // Project root for managed/user rules
+        : getOriginalCwd(); // Project root for managed/user rules
 
-    const relativePath = isAbsolute(targetPath)
-      ? relative(baseDir, targetPath)
-      : targetPath
+    const relativePath = isAbsolute(targetPath) ? relative(baseDir, targetPath) : targetPath;
     // ignore() throws on empty strings, paths escaping the base (../),
     // and absolute paths (Windows cross-drive relative() returns absolute).
     // Files outside baseDir can't match baseDir-relative globs anyway.
-    if (
-      !relativePath ||
-      relativePath.startsWith('..') ||
-      isAbsolute(relativePath)
-    ) {
-      return false
+    if (!relativePath || relativePath.startsWith('..') || isAbsolute(relativePath)) {
+      return false;
     }
-    return ignore().add(file.globs).ignores(relativePath)
-  })
+    return ignore().add(file.globs).ignores(relativePath);
+  });
 }
 
 export type ExternalClaudeMdInclude = {
-  path: string
-  parent: string
-}
+  path: string;
+  parent: string;
+};
 
-export function getExternalClaudeMdIncludes(
-  files: MemoryFileInfo[],
-): ExternalClaudeMdInclude[] {
-  const externals: ExternalClaudeMdInclude[] = []
+export function getExternalClaudeMdIncludes(files: MemoryFileInfo[]): ExternalClaudeMdInclude[] {
+  const externals: ExternalClaudeMdInclude[] = [];
   for (const file of files) {
     if (file.type !== 'User' && file.parent && !pathInOriginalCwd(file.path)) {
-      externals.push({ path: file.path, parent: file.parent })
+      externals.push({ path: file.path, parent: file.parent });
     }
   }
-  return externals
+  return externals;
 }
 
 export function hasExternalClaudeMdIncludes(files: MemoryFileInfo[]): boolean {
-  return getExternalClaudeMdIncludes(files).length > 0
+  return getExternalClaudeMdIncludes(files).length > 0;
 }
 
 export async function shouldShowClaudeMdExternalIncludesWarning(): Promise<boolean> {
-  const config = getCurrentProjectConfig()
+  const config = getCurrentProjectConfig();
   if (
     config.hasClaudeMdExternalIncludesApproved ||
     config.hasClaudeMdExternalIncludesWarningShown
   ) {
-    return false
+    return false;
   }
 
-  return hasExternalClaudeMdIncludes(await getMemoryFiles(true))
+  return hasExternalClaudeMdIncludes(await getMemoryFiles(true));
 }
 
 /**
  * Check if a file path is a memory file (CLAUDE.md, CLAUDE.local.md, or .claude/rules/*.md)
  */
 export function isMemoryFilePath(filePath: string): boolean {
-  const name = basename(filePath)
+  const name = basename(filePath);
 
   // CLAUDE.md or CLAUDE.local.md anywhere
   if (name === 'CLAUDE.md' || name === 'CLAUDE.local.md') {
-    return true
+    return true;
   }
 
   // .md files in .claude/rules/ directories
-  if (
-    name.endsWith('.md') &&
-    filePath.includes(`${sep}.claude${sep}rules${sep}`)
-  ) {
-    return true
+  if (name.endsWith('.md') && filePath.includes(`${sep}.claude${sep}rules${sep}`)) {
+    return true;
   }
 
-  return false
+  return false;
 }
 
 /**
@@ -1461,19 +1329,19 @@ export function getAllMemoryFilePaths(
   files: MemoryFileInfo[],
   readFileState: FileStateCache,
 ): string[] {
-  const paths = new Set<string>()
+  const paths = new Set<string>();
   for (const file of files) {
     if (file.content.trim().length > 0) {
-      paths.add(file.path)
+      paths.add(file.path);
     }
   }
 
   // Add memory files from readFileState (includes child directories)
   for (const filePath of cacheKeys(readFileState)) {
     if (isMemoryFilePath(filePath)) {
-      paths.add(filePath)
+      paths.add(filePath);
     }
   }
 
-  return Array.from(paths)
+  return Array.from(paths);
 }

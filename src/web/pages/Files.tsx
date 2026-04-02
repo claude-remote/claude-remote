@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileViewer } from '@/web/components/FileViewer';
 import { CwdPicker } from '@/web/components/CwdPicker';
+import { FileViewer } from '@/web/components/FileViewer';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -50,7 +50,7 @@ function buildBreadcrumbs(path: string): Array<{ label: string; path: string }> 
   const crumbs: Array<{ label: string; path: string }> = [];
   let accumulated = '';
   for (const seg of segs) {
-    accumulated += '/' + seg;
+    accumulated += `/${seg}`;
     crumbs.push({ label: seg, path: accumulated });
   }
   if (crumbs.length === 0) {
@@ -155,9 +155,7 @@ function TreeRow({
     >
       <span className="shrink-0 text-xs">{icon}</span>
       <span className="truncate">{node.name}</span>
-      {node.loading && (
-        <span className="ml-auto text-xs text-gray-600 animate-pulse">...</span>
-      )}
+      {node.loading && <span className="ml-auto text-xs text-gray-600 animate-pulse">...</span>}
     </button>
   );
 }
@@ -287,7 +285,7 @@ export function Files() {
       };
 
       // First pass: toggle expanded state
-      let newTree = await toggleInTree(tree);
+      const newTree = await toggleInTree(tree);
       setTree(newTree);
 
       // If we need to fetch children
@@ -342,7 +340,7 @@ export function Files() {
       setLoadingMore(true);
       try {
         const data = await fetchFileContent(selectedFile, offset, LINES_PER_PAGE);
-        setFileContent((prev) => prev + '\n' + data.content);
+        setFileContent((prev) => `${prev}\n${data.content}`);
       } catch {
         setError('Failed to load more lines');
       } finally {
@@ -362,20 +360,17 @@ export function Files() {
     setCwd(path);
   }, []);
 
-  const handleAddFavorite = useCallback(
-    (path: string, label?: string) => {
-      const newFav: Favorite = {
-        id: `fav-${Date.now()}`,
-        label: label || path.split('/').filter(Boolean).pop() || path,
-        path,
-      };
-      setFavorites((prev) => {
-        if (prev.some((f) => f.path === path)) return prev;
-        return [...prev, newFav];
-      });
-    },
-    [],
-  );
+  const handleAddFavorite = useCallback((path: string, label?: string) => {
+    const newFav: Favorite = {
+      id: `fav-${Date.now()}`,
+      label: label || path.split('/').filter(Boolean).pop() || path,
+      path,
+    };
+    setFavorites((prev) => {
+      if (prev.some((f) => f.path === path)) return prev;
+      return [...prev, newFav];
+    });
+  }, []);
 
   const handleBrowse = useCallback(async (partial: string) => {
     return fetchBrowseDirs(partial);
@@ -428,10 +423,7 @@ export function Files() {
       {error && (
         <div className="shrink-0 border-b border-red-900/50 bg-red-950/30 px-4 py-2 text-xs text-red-400">
           {error}
-          <button
-            onClick={() => setError(null)}
-            className="ml-2 text-red-500 hover:text-red-300"
-          >
+          <button onClick={() => setError(null)} className="ml-2 text-red-500 hover:text-red-300">
             Dismiss
           </button>
         </div>
@@ -447,9 +439,7 @@ export function Files() {
         >
           <div className="p-2">
             {tree.length === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-gray-600">
-                No files found
-              </p>
+              <p className="px-2 py-4 text-center text-xs text-gray-600">No files found</p>
             ) : (
               <TreeBranch
                 nodes={tree}

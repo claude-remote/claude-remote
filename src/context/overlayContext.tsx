@@ -1,4 +1,3 @@
-import { c as _c } from "react/compiler-runtime";
 /**
  * Overlay tracking for Escape key coordination.
  *
@@ -14,6 +13,7 @@ import { c as _c } from "react/compiler-runtime";
  * so no manual cleanup or state management is needed.
  */
 import { useContext, useEffect, useLayoutEffect } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import instances from '../ink/instances.js';
 import { AppStoreContext, useAppState } from '../state/AppState.js';
 
@@ -47,7 +47,7 @@ export function useRegisterOverlay(id: string, t0?: boolean): void {
       if (!enabled || !setAppState) {
         return;
       }
-      setAppState(prev => {
+      setAppState((prev) => {
         if (prev.activeOverlays.has(id)) {
           return prev;
         }
@@ -55,11 +55,11 @@ export function useRegisterOverlay(id: string, t0?: boolean): void {
         next.add(id);
         return {
           ...prev,
-          activeOverlays: next
+          activeOverlays: next,
         };
       });
       return () => {
-        setAppState(prev_0 => {
+        setAppState((prev_0) => {
           if (!prev_0.activeOverlays.has(id)) {
             return prev_0;
           }
@@ -67,7 +67,7 @@ export function useRegisterOverlay(id: string, t0?: boolean): void {
           next_0.delete(id);
           return {
             ...prev_0,
-            activeOverlays: next_0
+            activeOverlays: next_0,
           };
         });
       };

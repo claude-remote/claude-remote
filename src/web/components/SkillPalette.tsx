@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SkillInfo } from '@/shared/types';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface SkillPaletteProps {
   visible: boolean;
@@ -50,7 +50,6 @@ export function SkillPalette({ visible, query, skills, onSelect, onClose }: Skil
   const filtered = filterSkills(skills, query);
 
   // Reset selection when query or visibility changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: query and visible are intentional triggers
   useEffect(() => {
     setSelectedIndex(0);
   }, [query, visible]);

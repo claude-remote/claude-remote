@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const nohup: CommandSpec = {
   name: 'nohup',
@@ -8,6 +8,6 @@ const nohup: CommandSpec = {
     description: 'Command to run with nohup',
     isCommand: true,
   },
-}
+};
 
-export default nohup
+export default nohup;

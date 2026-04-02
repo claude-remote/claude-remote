@@ -23,14 +23,14 @@
  * - Bedrock/Vertex/Foundry (different endpoints, different auth)
  */
 
-import { getOauthConfig } from '../constants/oauth.js'
-import { isEnvTruthy } from './envUtils.js'
+import { getOauthConfig } from '../constants/oauth.js';
+import { isEnvTruthy } from './envUtils.js';
 
-let fired = false
+let fired = false;
 
 export function preconnectAnthropicApi(): void {
-  if (fired) return
-  fired = true
+  if (fired) return;
+  fired = true;
 
   // Skip if using a cloud provider — different endpoint + auth
   if (
@@ -38,7 +38,7 @@ export function preconnectAnthropicApi(): void {
     isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
     isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
   ) {
-    return
+    return;
   }
   // Skip if proxy/mTLS/unix — SDK's custom dispatcher won't reuse this pool
   if (
@@ -50,14 +50,13 @@ export function preconnectAnthropicApi(): void {
     process.env.CLAUDE_CODE_CLIENT_CERT ||
     process.env.CLAUDE_CODE_CLIENT_KEY
   ) {
-    return
+    return;
   }
 
   // Use configured base URL (staging, local, or custom gateway). Covers
   // ANTHROPIC_BASE_URL env + USE_STAGING_OAUTH + USE_LOCAL_OAUTH in one lookup.
   // NODE_EXTRA_CA_CERTS no longer a skip — init.ts applied it before this fires.
-  const baseUrl =
-    process.env.ANTHROPIC_BASE_URL || getOauthConfig().BASE_API_URL
+  const baseUrl = process.env.ANTHROPIC_BASE_URL || getOauthConfig().BASE_API_URL;
 
   // Fire and forget. HEAD means no response body — the connection is eligible
   // for keep-alive pool reuse immediately after headers arrive. 10s timeout
@@ -67,5 +66,5 @@ export function preconnectAnthropicApi(): void {
   void fetch(baseUrl, {
     method: 'HEAD',
     signal: AbortSignal.timeout(10_000),
-  }).catch(() => {})
+  }).catch(() => {});
 }

@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { type PropsWithChildren, type Ref } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { Except } from 'type-fest';
 import type { DOMElement } from '../dom.js';
 import type { ClickEvent } from '../events/click-event.js';
@@ -102,27 +102,27 @@ function Box(t0) {
     onKeyDown = t16;
     onKeyDownCapture = t17;
     style = t18;
-    flexWrap = t2 === undefined ? "nowrap" : t2;
-    flexDirection = t3 === undefined ? "row" : t3;
+    flexWrap = t2 === undefined ? 'nowrap' : t2;
+    flexDirection = t3 === undefined ? 'row' : t3;
     flexGrow = t4 === undefined ? 0 : t4;
     flexShrink = t5 === undefined ? 1 : t5;
-    warn.ifNotInteger(style.margin, "margin");
-    warn.ifNotInteger(style.marginX, "marginX");
-    warn.ifNotInteger(style.marginY, "marginY");
-    warn.ifNotInteger(style.marginTop, "marginTop");
-    warn.ifNotInteger(style.marginBottom, "marginBottom");
-    warn.ifNotInteger(style.marginLeft, "marginLeft");
-    warn.ifNotInteger(style.marginRight, "marginRight");
-    warn.ifNotInteger(style.padding, "padding");
-    warn.ifNotInteger(style.paddingX, "paddingX");
-    warn.ifNotInteger(style.paddingY, "paddingY");
-    warn.ifNotInteger(style.paddingTop, "paddingTop");
-    warn.ifNotInteger(style.paddingBottom, "paddingBottom");
-    warn.ifNotInteger(style.paddingLeft, "paddingLeft");
-    warn.ifNotInteger(style.paddingRight, "paddingRight");
-    warn.ifNotInteger(style.gap, "gap");
-    warn.ifNotInteger(style.columnGap, "columnGap");
-    warn.ifNotInteger(style.rowGap, "rowGap");
+    warn.ifNotInteger(style.margin, 'margin');
+    warn.ifNotInteger(style.marginX, 'marginX');
+    warn.ifNotInteger(style.marginY, 'marginY');
+    warn.ifNotInteger(style.marginTop, 'marginTop');
+    warn.ifNotInteger(style.marginBottom, 'marginBottom');
+    warn.ifNotInteger(style.marginLeft, 'marginLeft');
+    warn.ifNotInteger(style.marginRight, 'marginRight');
+    warn.ifNotInteger(style.padding, 'padding');
+    warn.ifNotInteger(style.paddingX, 'paddingX');
+    warn.ifNotInteger(style.paddingY, 'paddingY');
+    warn.ifNotInteger(style.paddingTop, 'paddingTop');
+    warn.ifNotInteger(style.paddingBottom, 'paddingBottom');
+    warn.ifNotInteger(style.paddingLeft, 'paddingLeft');
+    warn.ifNotInteger(style.paddingRight, 'paddingRight');
+    warn.ifNotInteger(style.gap, 'gap');
+    warn.ifNotInteger(style.columnGap, 'columnGap');
+    warn.ifNotInteger(style.rowGap, 'rowGap');
     $[0] = t0;
     $[1] = autoFocus;
     $[2] = children;
@@ -162,10 +162,18 @@ function Box(t0) {
     style = $[17];
     tabIndex = $[18];
   }
-  const t1 = style.overflowX ?? style.overflow ?? "visible";
-  const t2 = style.overflowY ?? style.overflow ?? "visible";
+  const t1 = style.overflowX ?? style.overflow ?? 'visible';
+  const t2 = style.overflowY ?? style.overflow ?? 'visible';
   let t3;
-  if ($[19] !== flexDirection || $[20] !== flexGrow || $[21] !== flexShrink || $[22] !== flexWrap || $[23] !== style || $[24] !== t1 || $[25] !== t2) {
+  if (
+    $[19] !== flexDirection ||
+    $[20] !== flexGrow ||
+    $[21] !== flexShrink ||
+    $[22] !== flexWrap ||
+    $[23] !== style ||
+    $[24] !== t1 ||
+    $[25] !== t2
+  ) {
     t3 = {
       flexWrap,
       flexDirection,
@@ -173,7 +181,7 @@ function Box(t0) {
       flexShrink,
       ...style,
       overflowX: t1,
-      overflowY: t2
+      overflowY: t2,
     };
     $[19] = flexDirection;
     $[20] = flexGrow;
@@ -187,8 +195,40 @@ function Box(t0) {
     t3 = $[26];
   }
   let t4;
-  if ($[27] !== autoFocus || $[28] !== children || $[29] !== onBlur || $[30] !== onBlurCapture || $[31] !== onClick || $[32] !== onFocus || $[33] !== onFocusCapture || $[34] !== onKeyDown || $[35] !== onKeyDownCapture || $[36] !== onMouseEnter || $[37] !== onMouseLeave || $[38] !== ref || $[39] !== t3 || $[40] !== tabIndex) {
-    t4 = <ink-box ref={ref} tabIndex={tabIndex} autoFocus={autoFocus} onClick={onClick} onFocus={onFocus} onFocusCapture={onFocusCapture} onBlur={onBlur} onBlurCapture={onBlurCapture} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onKeyDown={onKeyDown} onKeyDownCapture={onKeyDownCapture} style={t3}>{children}</ink-box>;
+  if (
+    $[27] !== autoFocus ||
+    $[28] !== children ||
+    $[29] !== onBlur ||
+    $[30] !== onBlurCapture ||
+    $[31] !== onClick ||
+    $[32] !== onFocus ||
+    $[33] !== onFocusCapture ||
+    $[34] !== onKeyDown ||
+    $[35] !== onKeyDownCapture ||
+    $[36] !== onMouseEnter ||
+    $[37] !== onMouseLeave ||
+    $[38] !== ref ||
+    $[39] !== t3 ||
+    $[40] !== tabIndex
+  ) {
+    t4 = (
+      <ink-box
+        ref={ref}
+        tabIndex={tabIndex}
+        onClick={onClick}
+        onFocus={onFocus}
+        onFocusCapture={onFocusCapture}
+        onBlur={onBlur}
+        onBlurCapture={onBlurCapture}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onKeyDown={onKeyDown}
+        onKeyDownCapture={onKeyDownCapture}
+        style={t3}
+      >
+        {children}
+      </ink-box>
+    );
     $[27] = autoFocus;
     $[28] = children;
     $[29] = onBlur;

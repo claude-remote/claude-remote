@@ -1,4 +1,4 @@
-import { c as _c } from "react/compiler-runtime";
+import { c as _c } from 'react/compiler-runtime';
 /**
  * CoordinatorTaskPanel — Steerable list of background agents.
  *
@@ -11,11 +11,14 @@ import figures from 'figures';
 import * as React from 'react';
 import { BLACK_CIRCLE, PAUSE_ICON, PLAY_ICON } from '../constants/figures.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
-import { stringWidth } from '../ink/stringWidth.js';
 import { Box, Text, wrapText } from '../ink.js';
+import { stringWidth } from '../ink/stringWidth.js';
 import { type AppState, useAppState, useSetAppState } from '../state/AppState.js';
 import { enterTeammateView, exitTeammateView } from '../state/teammateViewHelpers.js';
-import { isPanelAgentTask, type LocalAgentTaskState } from '../tasks/LocalAgentTask/LocalAgentTask.js';
+import {
+  type LocalAgentTaskState,
+  isPanelAgentTask,
+} from '../tasks/LocalAgentTask/LocalAgentTask.js';
 import { formatDuration, formatNumber } from '../utils/format.js';
 import { evictTerminalTask } from '../utils/task/framework.js';
 import { isTerminalStatus } from './tasks/taskStatusUtils.js';
@@ -29,14 +32,16 @@ import { isTerminalStatus } from './tasks/taskStatusUtils.js';
  * and index resolvers so the math can't drift.
  */
 export function getVisibleAgentTasks(tasks: AppState['tasks']): LocalAgentTaskState[] {
-  return Object.values(tasks).filter((t): t is LocalAgentTaskState => isPanelAgentTask(t) && t.evictAfter !== 0).sort((a, b) => a.startTime - b.startTime);
+  return Object.values(tasks)
+    .filter((t): t is LocalAgentTaskState => isPanelAgentTask(t) && t.evictAfter !== 0)
+    .sort((a, b) => a.startTime - b.startTime);
 }
 export function CoordinatorTaskPanel(): React.ReactNode {
-  const tasks = useAppState(s => s.tasks);
-  const viewingAgentTaskId = useAppState(s_0 => s_0.viewingAgentTaskId);
-  const agentNameRegistry = useAppState(s_1 => s_1.agentNameRegistry);
-  const coordinatorTaskIndex = useAppState(s_2 => s_2.coordinatorTaskIndex);
-  const tasksSelected = useAppState(s_3 => s_3.footerSelection === 'tasks');
+  const tasks = useAppState((s) => s.tasks);
+  const viewingAgentTaskId = useAppState((s_0) => s_0.viewingAgentTaskId);
+  const agentNameRegistry = useAppState((s_1) => s_1.agentNameRegistry);
+  const coordinatorTaskIndex = useAppState((s_2) => s_2.coordinatorTaskIndex);
+  const tasksSelected = useAppState((s_3) => s_3.footerSelection === 'tasks');
   const selectedIndex = tasksSelected ? coordinatorTaskIndex : undefined;
   const setAppState = useSetAppState();
   const visibleTasks = getVisibleAgentTasks(tasks);
@@ -50,15 +55,21 @@ export function CoordinatorTaskPanel(): React.ReactNode {
   const [, setTick] = React.useState(0);
   React.useEffect(() => {
     if (!hasTasks) return;
-    const interval = setInterval((tasksRef_0, setAppState_0, setTick_0) => {
-      const now = Date.now();
-      for (const t of Object.values(tasksRef_0.current)) {
-        if (isPanelAgentTask(t) && (t.evictAfter ?? Infinity) <= now) {
-          evictTerminalTask(t.id, setAppState_0);
+    const interval = setInterval(
+      (tasksRef_0, setAppState_0, setTick_0) => {
+        const now = Date.now();
+        for (const t of Object.values(tasksRef_0.current)) {
+          if (isPanelAgentTask(t) && (t.evictAfter ?? Number.POSITIVE_INFINITY) <= now) {
+            evictTerminalTask(t.id, setAppState_0);
+          }
         }
-      }
-      setTick_0((prev: number) => prev + 1);
-    }, 1000, tasksRef, setAppState, setTick);
+        setTick_0((prev: number) => prev + 1);
+      },
+      1000,
+      tasksRef,
+      setAppState,
+      setTick,
+    );
     return () => clearInterval(interval);
   }, [hasTasks, setAppState]);
   const nameByAgentId = React.useMemo(() => {
@@ -69,10 +80,25 @@ export function CoordinatorTaskPanel(): React.ReactNode {
   if (visibleTasks.length === 0) {
     return null;
   }
-  return <Box flexDirection="column" marginTop={1}>
-      <MainLine isSelected={selectedIndex === 0} isViewed={viewingAgentTaskId === undefined} onClick={() => exitTeammateView(setAppState)} />
-      {visibleTasks.map((task, i) => <AgentLine key={task.id} task={task} name={nameByAgentId.get(task.id)} isSelected={selectedIndex === i + 1} isViewed={viewingAgentTaskId === task.id} onClick={() => enterTeammateView(task.id, setAppState)} />)}
-    </Box>;
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <MainLine
+        isSelected={selectedIndex === 0}
+        isViewed={viewingAgentTaskId === undefined}
+        onClick={() => exitTeammateView(setAppState)}
+      />
+      {visibleTasks.map((task, i) => (
+        <AgentLine
+          key={task.id}
+          task={task}
+          name={nameByAgentId.get(task.id)}
+          isSelected={selectedIndex === i + 1}
+          isViewed={viewingAgentTaskId === task.id}
+          onClick={() => enterTeammateView(task.id, setAppState)}
+        />
+      ))}
+    </Box>
+  );
 }
 
 /**
@@ -91,17 +117,13 @@ function _temp(s) {
 }
 function MainLine(t0) {
   const $ = _c(10);
-  const {
-    isSelected,
-    isViewed,
-    onClick
-  } = t0;
+  const { isSelected, isViewed, onClick } = t0;
   const [hover, setHover] = React.useState(false);
-  const prefix = isSelected || hover ? figures.pointer + " " : "  ";
+  const prefix = isSelected || hover ? `${figures.pointer} ` : '  ';
   const bullet = isViewed ? BLACK_CIRCLE : figures.circle;
   let t1;
   let t2;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = () => setHover(true);
     t2 = () => setHover(false);
     $[0] = t1;
@@ -113,7 +135,12 @@ function MainLine(t0) {
   const t3 = !isSelected && !isViewed && !hover;
   let t4;
   if ($[2] !== bullet || $[3] !== isViewed || $[4] !== prefix || $[5] !== t3) {
-    t4 = <Text dimColor={t3} bold={isViewed}>{prefix}{bullet} main</Text>;
+    t4 = (
+      <Text dimColor={t3} bold={isViewed}>
+        {prefix}
+        {bullet} main
+      </Text>
+    );
     $[2] = bullet;
     $[3] = isViewed;
     $[4] = prefix;
@@ -124,7 +151,11 @@ function MainLine(t0) {
   }
   let t5;
   if ($[7] !== onClick || $[8] !== t4) {
-    t5 = <Box onClick={onClick} onMouseEnter={t1} onMouseLeave={t2}>{t4}</Box>;
+    t5 = (
+      <Box onClick={onClick} onMouseEnter={t1} onMouseLeave={t2}>
+        {t4}
+      </Box>
+    );
     $[7] = onClick;
     $[8] = t4;
     $[9] = t5;
@@ -142,20 +173,17 @@ type AgentLineProps = {
 };
 function AgentLine(t0) {
   const $ = _c(32);
-  const {
-    task,
-    name,
-    isSelected,
-    isViewed,
-    onClick
-  } = t0;
-  const {
-    columns
-  } = useTerminalSize();
+  const { task, name, isSelected, isViewed, onClick } = t0;
+  const { columns } = useTerminalSize();
   const [hover, setHover] = React.useState(false);
   const isRunning = !isTerminalStatus(task.status);
   const pausedMs = task.totalPausedMs ?? 0;
-  const elapsedMs = Math.max(0, isRunning ? Date.now() - task.startTime - pausedMs : (task.endTime ?? task.startTime) - task.startTime - pausedMs);
+  const elapsedMs = Math.max(
+    0,
+    isRunning
+      ? Date.now() - task.startTime - pausedMs
+      : (task.endTime ?? task.startTime) - task.startTime - pausedMs,
+  );
   let t1;
   if ($[0] !== elapsedMs) {
     t1 = formatDuration(elapsedMs);
@@ -170,7 +198,10 @@ function AgentLine(t0) {
   const arrow = lastActivity ? figures.arrowDown : figures.arrowUp;
   let t2;
   if ($[2] !== arrow || $[3] !== tokenCount) {
-    t2 = tokenCount !== undefined && tokenCount > 0 ? ` · ${arrow} ${formatNumber(tokenCount)} tokens` : "";
+    t2 =
+      tokenCount !== undefined && tokenCount > 0
+        ? ` · ${arrow} ${formatNumber(tokenCount)} tokens`
+        : '';
     $[2] = arrow;
     $[3] = tokenCount;
     $[4] = t2;
@@ -179,21 +210,26 @@ function AgentLine(t0) {
   }
   const tokenText = t2;
   const queuedCount = task.pendingMessages.length;
-  const queuedText = queuedCount > 0 ? ` · ${queuedCount} queued` : "";
+  const queuedText = queuedCount > 0 ? ` · ${queuedCount} queued` : '';
   const displayDescription = task.progress?.summary || task.description;
   const highlighted = isSelected || hover;
-  const prefix = highlighted ? figures.pointer + " " : "  ";
+  const prefix = highlighted ? `${figures.pointer} ` : '  ';
   const bullet = isViewed ? BLACK_CIRCLE : figures.circle;
   const dim = !highlighted && !isViewed;
   const sep = isRunning ? PLAY_ICON : PAUSE_ICON;
-  const namePart = name ? `${name}: ` : "";
-  const hintPart = isSelected && !isViewed ? ` · x to ${isRunning ? "stop" : "clear"}` : "";
+  const namePart = name ? `${name}: ` : '';
+  const hintPart = isSelected && !isViewed ? ` · x to ${isRunning ? 'stop' : 'clear'}` : '';
   const suffixPart = ` ${sep} ${elapsed}${tokenText}${queuedText}${hintPart}`;
-  const availableForDesc = columns - stringWidth(prefix) - stringWidth(`${bullet} `) - stringWidth(namePart) - stringWidth(suffixPart);
+  const availableForDesc =
+    columns -
+    stringWidth(prefix) -
+    stringWidth(`${bullet} `) -
+    stringWidth(namePart) -
+    stringWidth(suffixPart);
   const t3 = Math.max(0, availableForDesc);
   let t4;
   if ($[5] !== displayDescription || $[6] !== t3) {
-    t4 = wrapText(displayDescription, t3, "truncate-end");
+    t4 = wrapText(displayDescription, t3, 'truncate-end');
     $[5] = displayDescription;
     $[6] = t3;
     $[7] = t4;
@@ -203,7 +239,14 @@ function AgentLine(t0) {
   const truncated = t4;
   let t5;
   if ($[8] !== name) {
-    t5 = name && <><Text dimColor={false} bold={true}>{name}</Text>{": "}</>;
+    t5 = name && (
+      <>
+        <Text dimColor={false} bold={true}>
+          {name}
+        </Text>
+        {': '}
+      </>
+    );
     $[8] = name;
     $[9] = t5;
   } else {
@@ -227,8 +270,29 @@ function AgentLine(t0) {
     t7 = $[14];
   }
   let t8;
-  if ($[15] !== bullet || $[16] !== dim || $[17] !== elapsed || $[18] !== isViewed || $[19] !== prefix || $[20] !== sep || $[21] !== t5 || $[22] !== t6 || $[23] !== t7 || $[24] !== tokenText || $[25] !== truncated) {
-    t8 = <Text dimColor={dim} bold={isViewed}>{prefix}{bullet}{" "}{t5}{truncated} {sep} {elapsed}{tokenText}{t6}{t7}</Text>;
+  if (
+    $[15] !== bullet ||
+    $[16] !== dim ||
+    $[17] !== elapsed ||
+    $[18] !== isViewed ||
+    $[19] !== prefix ||
+    $[20] !== sep ||
+    $[21] !== t5 ||
+    $[22] !== t6 ||
+    $[23] !== t7 ||
+    $[24] !== tokenText ||
+    $[25] !== truncated
+  ) {
+    t8 = (
+      <Text dimColor={dim} bold={isViewed}>
+        {prefix}
+        {bullet} {t5}
+        {truncated} {sep} {elapsed}
+        {tokenText}
+        {t6}
+        {t7}
+      </Text>
+    );
     $[15] = bullet;
     $[16] = dim;
     $[17] = elapsed;
@@ -250,7 +314,7 @@ function AgentLine(t0) {
   }
   let t10;
   let t9;
-  if ($[27] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[27] === Symbol.for('react.memo_cache_sentinel')) {
     t9 = () => setHover(true);
     t10 = () => setHover(false);
     $[27] = t10;
@@ -261,7 +325,11 @@ function AgentLine(t0) {
   }
   let t11;
   if ($[29] !== line || $[30] !== onClick) {
-    t11 = <Box onClick={onClick} onMouseEnter={t9} onMouseLeave={t10}>{line}</Box>;
+    t11 = (
+      <Box onClick={onClick} onMouseEnter={t9} onMouseLeave={t10}>
+        {line}
+      </Box>
+    );
     $[29] = line;
     $[30] = onClick;
     $[31] = t11;

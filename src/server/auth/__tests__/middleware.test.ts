@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { SESSION_COOKIE_NAME } from '@/shared/constants';
 import { authMiddleware } from '@/server/auth/middleware';
 import {
   clearAuthFailures,
@@ -11,6 +10,7 @@ import {
   rotateMasterToken,
   signSessionToken,
 } from '@/server/auth/token';
+import { SESSION_COOKIE_NAME } from '@/shared/constants';
 
 type HeaderMap = Record<string, string | undefined>;
 
@@ -44,7 +44,7 @@ function createContext(headers: HeaderMap) {
     async run() {
       await authMiddleware(context as never, async () => {
         nextCalled = true;
-      })
+      });
 
       return { nextCalled, response };
     },
@@ -65,7 +65,7 @@ describe('auth middleware', () => {
   afterEach(() => {
     clearAuthFailures();
     clearMasterTokenCache(configDir);
-    delete process.env.CLAUDE_REMOTE_CONFIG_DIR;
+    process.env.CLAUDE_REMOTE_CONFIG_DIR = undefined;
     rmSync(configDir, { recursive: true, force: true });
   });
 
@@ -91,7 +91,7 @@ describe('auth middleware', () => {
 
     const result = await request.run();
 
-    expect(result.nextCalled).toBe(false)
+    expect(result.nextCalled).toBe(false);
     expect(result.response).toEqual({
       body: { error: 'Unauthorized' },
       status: 401,

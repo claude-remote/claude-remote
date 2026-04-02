@@ -1,16 +1,16 @@
-import axios from 'axios'
-import memoize from 'lodash-es/memoize.js'
-import { hostname } from 'os'
-import { getOauthConfig } from '../constants/oauth.js'
+import { hostname } from 'node:os';
+import axios from 'axios';
+import memoize from 'lodash-es/memoize.js';
+import { getOauthConfig } from '../constants/oauth.js';
 import {
   checkGate_CACHED_OR_BLOCKING,
   getFeatureValue_CACHED_MAY_BE_STALE,
-} from '../services/analytics/growthbook.js'
-import { logForDebugging } from '../utils/debug.js'
-import { errorMessage } from '../utils/errors.js'
-import { isEssentialTrafficOnly } from '../utils/privacyLevel.js'
-import { getSecureStorage } from '../utils/secureStorage/index.js'
-import { jsonStringify } from '../utils/slowOperations.js'
+} from '../services/analytics/growthbook.js';
+import { logForDebugging } from '../utils/debug.js';
+import { errorMessage } from '../utils/errors.js';
+import { isEssentialTrafficOnly } from '../utils/privacyLevel.js';
+import { getSecureStorage } from '../utils/secureStorage/index.js';
+import { jsonStringify } from '../utils/slowOperations.js';
 
 /**
  * Trusted device token source for bridge (remote-control) sessions.
@@ -30,10 +30,10 @@ import { jsonStringify } from '../utils/slowOperations.js'
  * #295987 (B2 Python routes), #307150 (C1' CCR v2 gate).
  */
 
-const TRUSTED_DEVICE_GATE = 'tengu_sessions_elevated_auth_enforcement'
+const TRUSTED_DEVICE_GATE = 'tengu_sessions_elevated_auth_enforcement';
 
 function isGateEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE(TRUSTED_DEVICE_GATE, false)
+  return getFeatureValue_CACHED_MAY_BE_STALE(TRUSTED_DEVICE_GATE, false);
 }
 
 // Memoized — secureStorage.read() spawns a macOS `security` subprocess (~40ms).
@@ -44,22 +44,22 @@ function isGateEnabled(): boolean {
 // that a gate flip after GrowthBook refresh takes effect without a restart.
 const readStoredToken = memoize((): string | undefined => {
   // Env var takes precedence for testing/canary.
-  const envToken = process.env.CLAUDE_TRUSTED_DEVICE_TOKEN
+  const envToken = process.env.CLAUDE_TRUSTED_DEVICE_TOKEN;
   if (envToken) {
-    return envToken
+    return envToken;
   }
-  return getSecureStorage().read()?.trustedDeviceToken
-})
+  return getSecureStorage().read()?.trustedDeviceToken;
+});
 
 export function getTrustedDeviceToken(): string | undefined {
   if (!isGateEnabled()) {
-    return undefined
+    return undefined;
   }
-  return readStoredToken()
+  return readStoredToken();
 }
 
 export function clearTrustedDeviceTokenCache(): void {
-  readStoredToken.cache?.clear?.()
+  readStoredToken.cache?.clear?.();
 }
 
 /**
@@ -71,19 +71,19 @@ export function clearTrustedDeviceTokenCache(): void {
  */
 export function clearTrustedDeviceToken(): void {
   if (!isGateEnabled()) {
-    return
+    return;
   }
-  const secureStorage = getSecureStorage()
+  const secureStorage = getSecureStorage();
   try {
-    const data = secureStorage.read()
+    const data = secureStorage.read();
     if (data?.trustedDeviceToken) {
-      delete data.trustedDeviceToken
-      secureStorage.update(data)
+      data.trustedDeviceToken = undefined;
+      secureStorage.update(data);
     }
   } catch {
     // Best-effort — don't block login if storage is inaccessible
   }
-  readStoredToken.cache?.clear?.()
+  readStoredToken.cache?.clear?.();
 }
 
 /**
@@ -101,10 +101,8 @@ export async function enrollTrustedDevice(): Promise<void> {
     // (triggered by refreshGrowthBookAfterAuthChange in login.tsx) before
     // reading the gate, so we get the post-refresh value.
     if (!(await checkGate_CACHED_OR_BLOCKING(TRUSTED_DEVICE_GATE))) {
-      logForDebugging(
-        `[trusted-device] Gate ${TRUSTED_DEVICE_GATE} is off, skipping enrollment`,
-      )
-      return
+      logForDebugging(`[trusted-device] Gate ${TRUSTED_DEVICE_GATE} is off, skipping enrollment`);
+      return;
     }
     // If CLAUDE_TRUSTED_DEVICE_TOKEN is set (e.g. by an enterprise wrapper),
     // skip enrollment — the env var takes precedence in readStoredToken() so
@@ -112,39 +110,36 @@ export async function enrollTrustedDevice(): Promise<void> {
     if (process.env.CLAUDE_TRUSTED_DEVICE_TOKEN) {
       logForDebugging(
         '[trusted-device] CLAUDE_TRUSTED_DEVICE_TOKEN env var is set, skipping enrollment (env var takes precedence)',
-      )
-      return
+      );
+      return;
     }
     // Lazy require — utils/auth.ts transitively pulls ~1300 modules
     // (config → file → permissions → sessionStorage → commands). Daemon callers
     // of getTrustedDeviceToken() don't need this; only /login does.
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { getClaudeAIOAuthTokens } =
-      require('../utils/auth.js') as typeof import('../utils/auth.js')
+    const { getClaudeAIOAuthTokens } = require('../utils/auth.js') as typeof import('../utils/auth.js');
     /* eslint-enable @typescript-eslint/no-require-imports */
-    const accessToken = getClaudeAIOAuthTokens()?.accessToken
+    const accessToken = getClaudeAIOAuthTokens()?.accessToken;
     if (!accessToken) {
-      logForDebugging('[trusted-device] No OAuth token, skipping enrollment')
-      return
+      logForDebugging('[trusted-device] No OAuth token, skipping enrollment');
+      return;
     }
     // Always re-enroll on /login — the existing token may belong to a
     // different account (account-switch without /logout). Skipping enrollment
     // would send the old account's token on the new account's bridge calls.
-    const secureStorage = getSecureStorage()
+    const secureStorage = getSecureStorage();
 
     if (isEssentialTrafficOnly()) {
-      logForDebugging(
-        '[trusted-device] Essential traffic only, skipping enrollment',
-      )
-      return
+      logForDebugging('[trusted-device] Essential traffic only, skipping enrollment');
+      return;
     }
 
-    const baseUrl = getOauthConfig().BASE_API_URL
-    let response
+    const baseUrl = getOauthConfig().BASE_API_URL;
+    let response;
     try {
       response = await axios.post<{
-        device_token?: string
-        device_id?: string
+        device_token?: string;
+        device_id?: string;
       }>(
         `${baseUrl}/api/auth/trusted_devices`,
         { display_name: `Claude Code on ${hostname()} · ${process.platform}` },
@@ -154,57 +149,47 @@ export async function enrollTrustedDevice(): Promise<void> {
             'Content-Type': 'application/json',
           },
           timeout: 10_000,
-          validateStatus: s => s < 500,
+          validateStatus: (s) => s < 500,
         },
-      )
+      );
     } catch (err: unknown) {
-      logForDebugging(
-        `[trusted-device] Enrollment request failed: ${errorMessage(err)}`,
-      )
-      return
+      logForDebugging(`[trusted-device] Enrollment request failed: ${errorMessage(err)}`);
+      return;
     }
 
     if (response.status !== 200 && response.status !== 201) {
       logForDebugging(
         `[trusted-device] Enrollment failed ${response.status}: ${jsonStringify(response.data).slice(0, 200)}`,
-      )
-      return
+      );
+      return;
     }
 
-    const token = response.data?.device_token
+    const token = response.data?.device_token;
     if (!token || typeof token !== 'string') {
-      logForDebugging(
-        '[trusted-device] Enrollment response missing device_token field',
-      )
-      return
+      logForDebugging('[trusted-device] Enrollment response missing device_token field');
+      return;
     }
 
     try {
-      const storageData = secureStorage.read()
+      const storageData = secureStorage.read();
       if (!storageData) {
-        logForDebugging(
-          '[trusted-device] Cannot read storage, skipping token persist',
-        )
-        return
+        logForDebugging('[trusted-device] Cannot read storage, skipping token persist');
+        return;
       }
-      storageData.trustedDeviceToken = token
-      const result = secureStorage.update(storageData)
+      storageData.trustedDeviceToken = token;
+      const result = secureStorage.update(storageData);
       if (!result.success) {
-        logForDebugging(
-          `[trusted-device] Failed to persist token: ${result.warning ?? 'unknown'}`,
-        )
-        return
+        logForDebugging(`[trusted-device] Failed to persist token: ${result.warning ?? 'unknown'}`);
+        return;
       }
-      readStoredToken.cache?.clear?.()
+      readStoredToken.cache?.clear?.();
       logForDebugging(
         `[trusted-device] Enrolled device_id=${response.data.device_id ?? 'unknown'}`,
-      )
+      );
     } catch (err: unknown) {
-      logForDebugging(
-        `[trusted-device] Storage write failed: ${errorMessage(err)}`,
-      )
+      logForDebugging(`[trusted-device] Storage write failed: ${errorMessage(err)}`);
     }
   } catch (err: unknown) {
-    logForDebugging(`[trusted-device] Enrollment error: ${errorMessage(err)}`)
+    logForDebugging(`[trusted-device] Enrollment error: ${errorMessage(err)}`);
   }
 }

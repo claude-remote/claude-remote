@@ -1,10 +1,11 @@
-import { c as _c } from "react/compiler-runtime";
-import { feature } from 'src/utils/feature.js';
 import figures from 'figures';
-import React, { useEffect, useRef, useState } from 'react';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
+import { feature } from 'src/utils/feature.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
-import { stringWidth } from '../ink/stringWidth.js';
 import { Box, Text } from '../ink.js';
+import { stringWidth } from '../ink/stringWidth.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
 import type { AppState } from '../state/AppStateStore.js';
 import { getGlobalConfig } from '../utils/config.js';
@@ -24,7 +25,13 @@ const IDLE_SEQUENCE = [0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 2, 0, 0, 0];
 
 // Hearts float up-and-out over 5 ticks (~2.5s). Prepended above the sprite.
 const H = figures.heart;
-const PET_HEARTS = [`   ${H}    ${H}   `, `  ${H}  ${H}   ${H}  `, ` ${H}   ${H}  ${H}   `, `${H}  ${H}      ${H} `, '·    ·   ·  '];
+const PET_HEARTS = [
+  `   ${H}    ${H}   `,
+  `  ${H}  ${H}   ${H}  `,
+  ` ${H}   ${H}  ${H}   `,
+  `${H}  ${H}      ${H} `,
+  '·    ·   ·  ',
+];
 function wrap(text: string, width: number): string[] {
   const words = text.split(' ');
   const lines: string[] = [];
@@ -42,12 +49,7 @@ function wrap(text: string, width: number): string[] {
 }
 function SpeechBubble(t0) {
   const $ = _c(31);
-  const {
-    text,
-    color,
-    fading,
-    tail
-  } = t0;
+  const { text, color, fading, tail } = t0;
   let T0;
   let borderColor;
   let t1;
@@ -58,16 +60,20 @@ function SpeechBubble(t0) {
   let t6;
   if ($[0] !== color || $[1] !== fading || $[2] !== text) {
     const lines = wrap(text, 30);
-    borderColor = fading ? "inactive" : color;
+    borderColor = fading ? 'inactive' : color;
     T0 = Box;
-    t1 = "column";
-    t2 = "round";
+    t1 = 'column';
+    t2 = 'round';
     t3 = borderColor;
     t4 = 1;
     t5 = 34;
     let t7;
     if ($[11] !== fading) {
-      t7 = (l, i) => <Text key={i} italic={true} dimColor={!fading} color={fading ? "inactive" : undefined}>{l}</Text>;
+      t7 = (l, i) => (
+        <Text key={i} italic={true} dimColor={!fading} color={fading ? 'inactive' : undefined}>
+          {l}
+        </Text>
+      );
       $[11] = fading;
       $[12] = t7;
     } else {
@@ -96,8 +102,20 @@ function SpeechBubble(t0) {
     t6 = $[10];
   }
   let t7;
-  if ($[13] !== T0 || $[14] !== t1 || $[15] !== t2 || $[16] !== t3 || $[17] !== t4 || $[18] !== t5 || $[19] !== t6) {
-    t7 = <T0 flexDirection={t1} borderStyle={t2} borderColor={t3} paddingX={t4} width={t5}>{t6}</T0>;
+  if (
+    $[13] !== T0 ||
+    $[14] !== t1 ||
+    $[15] !== t2 ||
+    $[16] !== t3 ||
+    $[17] !== t4 ||
+    $[18] !== t5 ||
+    $[19] !== t6
+  ) {
+    t7 = (
+      <T0 flexDirection={t1} borderStyle={t2} borderColor={t3} paddingX={t4} width={t5}>
+        {t6}
+      </T0>
+    );
     $[13] = T0;
     $[14] = t1;
     $[15] = t2;
@@ -110,7 +128,7 @@ function SpeechBubble(t0) {
     t7 = $[20];
   }
   const bubble = t7;
-  if (tail === "right") {
+  if (tail === 'right') {
     let t8;
     if ($[21] !== borderColor) {
       t8 = <Text color={borderColor}>─</Text>;
@@ -121,7 +139,12 @@ function SpeechBubble(t0) {
     }
     let t9;
     if ($[23] !== bubble || $[24] !== t8) {
-      t9 = <Box flexDirection="row" alignItems="center">{bubble}{t8}</Box>;
+      t9 = (
+        <Box flexDirection="row" alignItems="center">
+          {bubble}
+          {t8}
+        </Box>
+      );
       $[23] = bubble;
       $[24] = t8;
       $[25] = t9;
@@ -132,7 +155,12 @@ function SpeechBubble(t0) {
   }
   let t8;
   if ($[26] !== borderColor) {
-    t8 = <Box flexDirection="column" alignItems="flex-end" paddingRight={6}><Text color={borderColor}>╲ </Text><Text color={borderColor}>╲</Text></Box>;
+    t8 = (
+      <Box flexDirection="column" alignItems="flex-end" paddingRight={6}>
+        <Text color={borderColor}>╲ </Text>
+        <Text color={borderColor}>╲</Text>
+      </Box>
+    );
     $[26] = borderColor;
     $[27] = t8;
   } else {
@@ -140,7 +168,12 @@ function SpeechBubble(t0) {
   }
   let t9;
   if ($[28] !== bubble || $[29] !== t8) {
-    t9 = <Box flexDirection="column" alignItems="flex-end" marginRight={1}>{bubble}{t8}</Box>;
+    t9 = (
+      <Box flexDirection="column" alignItems="flex-end" marginRight={1}>
+        {bubble}
+        {t8}
+      </Box>
+    );
     $[28] = bubble;
     $[29] = t8;
     $[30] = t9;
@@ -174,41 +207,45 @@ export function companionReservedColumns(terminalColumns: number, speaking: bool
   return spriteColWidth(nameWidth) + SPRITE_PADDING_X + bubble;
 }
 export function CompanionSprite(): React.ReactNode {
-  const reaction = useAppState(s => s.companionReaction);
-  const petAt = useAppState(s => s.companionPetAt);
-  const focused = useAppState(s => s.footerSelection === 'companion');
+  const reaction = useAppState((s) => s.companionReaction);
+  const petAt = useAppState((s) => s.companionPetAt);
+  const focused = useAppState((s) => s.footerSelection === 'companion');
   const setAppState = useSetAppState();
-  const {
-    columns
-  } = useTerminalSize();
+  const { columns } = useTerminalSize();
   const [tick, setTick] = useState(0);
   const lastSpokeTick = useRef(0);
   // Sync-during-render (not useEffect) so the first post-pet render already
   // has petStartTick=tick and petAge=0 — otherwise frame 0 is skipped.
-  const [{
-    petStartTick,
-    forPetAt
-  }, setPetStart] = useState({
+  const [{ petStartTick, forPetAt }, setPetStart] = useState({
     petStartTick: 0,
-    forPetAt: petAt
+    forPetAt: petAt,
   });
   if (petAt !== forPetAt) {
     setPetStart({
       petStartTick: tick,
-      forPetAt: petAt
+      forPetAt: petAt,
     });
   }
   useEffect(() => {
-    const timer = setInterval(setT => setT((t: number) => t + 1), TICK_MS, setTick);
+    const timer = setInterval((setT) => setT((t: number) => t + 1), TICK_MS, setTick);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
     if (!reaction) return;
     lastSpokeTick.current = tick;
-    const timer = setTimeout(setA => setA((prev: AppState) => prev.companionReaction === undefined ? prev : {
-      ...prev,
-      companionReaction: undefined
-    }), BUBBLE_SHOW * TICK_MS, setAppState);
+    const timer = setTimeout(
+      (setA) =>
+        setA((prev: AppState) =>
+          prev.companionReaction === undefined
+            ? prev
+            : {
+                ...prev,
+                companionReaction: undefined,
+              },
+        ),
+      BUBBLE_SHOW * TICK_MS,
+      setAppState,
+    );
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick intentionally captured at reaction-change, not tracked
   }, [reaction, setAppState]);
@@ -219,25 +256,36 @@ export function CompanionSprite(): React.ReactNode {
   const colWidth = spriteColWidth(stringWidth(companion.name));
   const bubbleAge = reaction ? tick - lastSpokeTick.current : 0;
   const fading = reaction !== undefined && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW;
-  const petAge = petAt ? tick - petStartTick : Infinity;
+  const petAge = petAt ? tick - petStartTick : Number.POSITIVE_INFINITY;
   const petting = petAge * TICK_MS < PET_BURST_MS;
 
   // Narrow terminals: collapse to one-line face. When speaking, the quip
   // replaces the name beside the face (no room for a bubble).
   if (columns < MIN_COLS_FOR_FULL_SPRITE) {
-    const quip = reaction && reaction.length > NARROW_QUIP_CAP ? reaction.slice(0, NARROW_QUIP_CAP - 1) + '…' : reaction;
+    const quip =
+      reaction && reaction.length > NARROW_QUIP_CAP
+        ? `${reaction.slice(0, NARROW_QUIP_CAP - 1)}…`
+        : reaction;
     const label = quip ? `"${quip}"` : focused ? ` ${companion.name} ` : companion.name;
-    return <Box paddingX={1} alignSelf="flex-end">
+    return (
+      <Box paddingX={1} alignSelf="flex-end">
         <Text>
           {petting && <Text color="autoAccept">{figures.heart} </Text>}
           <Text bold color={color}>
             {renderFace(companion)}
           </Text>{' '}
-          <Text italic dimColor={!focused && !reaction} bold={focused} inverse={focused && !reaction} color={reaction ? fading ? 'inactive' : color : focused ? color : undefined}>
+          <Text
+            italic
+            dimColor={!focused && !reaction}
+            bold={focused}
+            inverse={focused && !reaction}
+            color={reaction ? (fading ? 'inactive' : color) : focused ? color : undefined}
+          >
             {label}
           </Text>
         </Text>
-      </Box>;
+      </Box>
+    );
   }
   const frameCount = spriteFrameCount(companion.species);
   const heartFrame = petting ? PET_HEARTS[petAge % PET_HEARTS.length] : null;
@@ -255,7 +303,9 @@ export function CompanionSprite(): React.ReactNode {
       spriteFrame = step % frameCount;
     }
   }
-  const body = renderSprite(companion, spriteFrame).map(line => blink ? line.replaceAll(companion.eye, '-') : line);
+  const body = renderSprite(companion, spriteFrame).map((line) =>
+    blink ? line.replaceAll(companion.eye, '-') : line,
+  );
   const sprite = heartFrame ? [heartFrame, ...body] : body;
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
@@ -263,14 +313,24 @@ export function CompanionSprite(): React.ReactNode {
   // PromptInputFooter's right column so this row stays one line and the
   // sprite doesn't jump up when selected. flexShrink=0 stops the
   // inline-bubble row wrapper from squeezing the sprite to fit.
-  const spriteColumn = <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
-      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color}>
+  const spriteColumn = (
+    <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
+      {sprite.map((line, i) => (
+        <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color}>
           {line}
-        </Text>)}
-      <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
+        </Text>
+      ))}
+      <Text
+        italic
+        bold={focused}
+        dimColor={!focused}
+        color={focused ? color : undefined}
+        inverse={focused}
+      >
         {focused ? ` ${companion.name} ` : companion.name}
       </Text>
-    </Box>;
+    </Box>
+  );
   if (!reaction) {
     return <Box paddingX={1}>{spriteColumn}</Box>;
   }
@@ -283,10 +343,12 @@ export function CompanionSprite(): React.ReactNode {
   if (isFullscreenActive()) {
     return <Box paddingX={1}>{spriteColumn}</Box>;
   }
-  return <Box flexDirection="row" alignItems="flex-end" paddingX={1} flexShrink={0}>
+  return (
+    <Box flexDirection="row" alignItems="flex-end" paddingX={1} flexShrink={0}>
       <SpeechBubble text={reaction} color={color} fading={fading} tail="right" />
       {spriteColumn}
-    </Box>;
+    </Box>
+  );
 }
 
 // Floating bubble overlay for fullscreen mode. Mounted in FullscreenLayout's
@@ -300,7 +362,7 @@ export function CompanionFloatingBubble() {
   if ($[0] !== reaction) {
     t0 = {
       tick: 0,
-      forReaction: reaction
+      forReaction: reaction,
     };
     $[0] = reaction;
     $[1] = t0;
@@ -308,14 +370,11 @@ export function CompanionFloatingBubble() {
     t0 = $[1];
   }
   const [t1, setTick] = useState(t0);
-  const {
-    tick,
-    forReaction
-  } = t1;
+  const { tick, forReaction } = t1;
   if (reaction !== forReaction) {
     setTick({
       tick: 0,
-      forReaction: reaction
+      forReaction: reaction,
     });
   }
   let t2;
@@ -337,7 +396,7 @@ export function CompanionFloatingBubble() {
     t3 = $[4];
   }
   useEffect(t2, t3);
-  if (!feature("BUDDY") || !reaction) {
+  if (!feature('BUDDY') || !reaction) {
     return null;
   }
   const companion = getCompanion();
@@ -347,7 +406,14 @@ export function CompanionFloatingBubble() {
   const t4 = tick >= BUBBLE_SHOW - FADE_WINDOW;
   let t5;
   if ($[5] !== reaction || $[6] !== t4) {
-    t5 = <SpeechBubble text={reaction} color={RARITY_COLORS[companion.rarity]} fading={t4} tail="down" />;
+    t5 = (
+      <SpeechBubble
+        text={reaction}
+        color={RARITY_COLORS[companion.rarity]}
+        fading={t4}
+        tail="down"
+      />
+    );
     $[5] = reaction;
     $[6] = t4;
     $[7] = t5;
@@ -362,7 +428,7 @@ function _temp3(set) {
 function _temp2(s_0) {
   return {
     ...s_0,
-    tick: s_0.tick + 1
+    tick: s_0.tick + 1,
   };
 }
 function _temp(s) {

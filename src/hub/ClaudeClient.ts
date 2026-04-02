@@ -1,7 +1,13 @@
-import type { HubEvent, SDKMessage } from '@/shared/protocol';
-import type { CostSummary, ContextUsage, Message, SessionConfig, ToolUseBlock } from '@/shared/types';
 import type { EventBus } from '@/hub/EventBus';
 import type { ToolEngine, ToolExecutionResult } from '@/hub/ToolEngine';
+import type { HubEvent, SDKMessage } from '@/shared/protocol';
+import type {
+  ContextUsage,
+  CostSummary,
+  Message,
+  SessionConfig,
+  ToolUseBlock,
+} from '@/shared/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,20 +97,18 @@ export class ClaudeClient {
     }
 
     // Run streaming in background — caller gets handle immediately
-    this.streamChat(sessionId, messages, config, controller).catch(
-      async (err) => {
-        if ((err as Error).name !== 'AbortError') {
-          await this.deps.eventBus.publish(sessionId, {
-            type: 'sdk:message',
-            sessionId,
-            payload: {
-              type: 'error',
-              error: (err as Error).message ?? String(err),
-            },
-          } as Omit<HubEvent, 'seq'>);
-        }
-      },
-    );
+    this.streamChat(sessionId, messages, config, controller).catch(async (err) => {
+      if ((err as Error).name !== 'AbortError') {
+        await this.deps.eventBus.publish(sessionId, {
+          type: 'sdk:message',
+          sessionId,
+          payload: {
+            type: 'error',
+            error: (err as Error).message ?? String(err),
+          },
+        } as Omit<HubEvent, 'seq'>);
+      }
+    });
 
     return {
       cancel: () => this.abort(sessionId),
@@ -123,8 +127,7 @@ export class ClaudeClient {
   /** Convert a raw API payload to an SDKMessage suitable for the EventBus. */
   toSdkMessage(payload: Record<string, unknown>): SDKMessage {
     const apiType = typeof payload.type === 'string' ? payload.type : 'unknown';
-    const rest = { ...payload };
-    delete rest.type;
+    const { type: _ignoredType, ...rest } = payload;
 
     // Map Claude API event types to our SDK message types
     if (apiType === 'content_block_delta' || apiType === 'message_delta') {
@@ -214,27 +217,16 @@ export class ClaudeClient {
   }
 
   /** Estimate cost in USD based on model pricing. */
-  estimateCost(
-    model: string,
-    inputTokens: number,
-    outputTokens: number,
-  ): number {
+  estimateCost(model: string, inputTokens: number, outputTokens: number): number {
     const pricing = MODEL_PRICING[model] ?? DEFAULT_PRICING;
-    return (
-      (inputTokens / 1_000_000) * pricing.input +
-      (outputTokens / 1_000_000) * pricing.output
-    );
+    return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
   }
 
   /**
    * Compact context by summarising a conversation via the API.
    * Returns a shortened message array.
    */
-  async compact(
-    sessionId: string,
-    messages: Message[],
-    config: SessionConfig,
-  ): Promise<Message[]> {
+  async compact(sessionId: string, messages: Message[], config: SessionConfig): Promise<Message[]> {
     const apiKey = this.deps.apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
     const baseUrl =
       this.deps.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? 'https://api.anthropic.com';
@@ -247,8 +239,8 @@ export class ClaudeClient {
       messages: messages.map((m) => ({
         role: m.role === 'system' ? ('user' as const) : m.role,
         content:
-          m.content.length === 1 && m.content[0]!.type === 'text'
-            ? m.content[0]!.text
+          m.content.length === 1 && m.content[0]?.type === 'text'
+            ? m.content[0]?.text
             : JSON.stringify(m.content),
       })),
     };
@@ -317,12 +309,7 @@ export class ClaudeClient {
     const maxToolRounds = 25; // safety limit
 
     for (let round = 0; round < maxToolRounds; round++) {
-      const result = await this.callApi(
-        sessionId,
-        conversation,
-        config,
-        controller,
-      );
+      const result = await this.callApi(sessionId, conversation, config, controller);
 
       // If there are no tool_use blocks, we're done
       const toolBlocks: ToolUseBlock[] = result.toolUseBlocks;
@@ -385,9 +372,7 @@ export class ClaudeClient {
 
     if (!resp.ok) {
       const errorText = await resp.text().catch(() => '');
-      throw new Error(
-        `Claude API error: ${resp.status} ${resp.statusText} – ${errorText}`,
-      );
+      throw new Error(`Claude API error: ${resp.status} ${resp.statusText} – ${errorText}`);
     }
 
     const toolUseBlocks: ToolUseBlock[] = [];
@@ -452,9 +437,11 @@ export class ClaudeClient {
           this.trackUsage(sessionId, { output_tokens: usage.output_tokens });
         }
       } else if (eventType === 'message_stop') {
-        const usage = (data as {
-          message?: { usage?: { input_tokens?: number; output_tokens?: number } };
-        }).message?.usage;
+        const usage = (
+          data as {
+            message?: { usage?: { input_tokens?: number; output_tokens?: number } };
+          }
+        ).message?.usage;
         if (usage) {
           this.trackUsage(sessionId, usage);
         }
@@ -513,10 +500,7 @@ export class ClaudeClient {
   // -----------------------------------------------------------------------
 
   /** Parse an SSE stream from a fetch Response. */
-  private async *parseSSE(
-    response: Response,
-    signal: AbortSignal,
-  ): AsyncGenerator<SSEEvent> {
+  private async *parseSSE(response: Response, signal: AbortSignal): AsyncGenerator<SSEEvent> {
     const reader = response.body?.getReader();
     if (!reader) return;
 
@@ -568,8 +552,8 @@ export class ClaudeClient {
       .map((m) => ({
         role: m.role === 'system' ? ('user' as const) : m.role,
         content:
-          m.content.length === 1 && m.content[0]!.type === 'text'
-            ? m.content[0]!.text
+          m.content.length === 1 && m.content[0]?.type === 'text'
+            ? m.content[0]?.text
             : m.content.map((block) => {
                 if (block.type === 'text') return { type: 'text', text: block.text };
                 if (block.type === 'tool_result') {
@@ -608,10 +592,7 @@ export class ClaudeClient {
   }
 
   /** Publish context and cost events after an API call. */
-  private async publishUsageEvents(
-    sessionId: string,
-    model: string,
-  ): Promise<void> {
+  private async publishUsageEvents(sessionId: string, model: string): Promise<void> {
     const usage = this.sessionUsage.get(sessionId);
     if (!usage) return;
 

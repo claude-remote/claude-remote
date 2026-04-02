@@ -7,8 +7,8 @@
  * — add a cmdlet once, both consumers pick it up.
  */
 
-import { CROSS_PLATFORM_CODE_EXEC } from '../permissions/dangerousPatterns.js'
-import { COMMON_ALIASES } from './parser.js'
+import { CROSS_PLATFORM_CODE_EXEC } from '../permissions/dangerousPatterns.js';
+import { COMMON_ALIASES } from './parser.js';
 
 /**
  * Cmdlets that accept a -FilePath (or positional path) and execute the
@@ -19,7 +19,7 @@ export const FILEPATH_EXECUTION_CMDLETS = new Set([
   'start-job',
   'start-threadjob',
   'register-scheduledjob',
-])
+]);
 
 /**
  * Cmdlets where a scriptblock argument executes arbitrary code (not just
@@ -36,7 +36,7 @@ export const DANGEROUS_SCRIPT_BLOCK_CMDLETS = new Set([
   'register-wmievent',
   'new-pssession',
   'enter-pssession',
-])
+]);
 
 /**
  * Cmdlets that load and execute module/script code. `.psm1` files run
@@ -50,7 +50,7 @@ export const MODULE_LOADING_CMDLETS = new Set([
   'update-module',
   'install-script',
   'save-script',
-])
+]);
 
 /**
  * Shells and process spawners. Small, stable — add here only for cmdlets
@@ -67,22 +67,19 @@ const SHELLS_AND_SPAWNERS = [
   'start',
   'add-type',
   'new-object',
-] as const
+] as const;
 
 function aliasesOf(targets: ReadonlySet<string>): string[] {
   return Object.entries(COMMON_ALIASES)
     .filter(([, target]) => targets.has(target.toLowerCase()))
-    .map(([alias]) => alias)
+    .map(([alias]) => alias);
 }
 
 /**
  * Network cmdlets — wildcard rules for these enable exfil/download without
  * prompt. No legitimate narrow prefix exists.
  */
-export const NETWORK_CMDLETS = new Set([
-  'invoke-webrequest',
-  'invoke-restmethod',
-])
+export const NETWORK_CMDLETS = new Set(['invoke-webrequest', 'invoke-restmethod']);
 
 /**
  * Alias/variable mutation cmdlets — Set-Alias rebinds command resolution,
@@ -98,7 +95,7 @@ export const ALIAS_HIJACK_CMDLETS = new Set([
   'sv', // alias not in COMMON_ALIASES — list explicitly
   'new-variable',
   'nv', // alias not in COMMON_ALIASES — list explicitly
-])
+]);
 
 /**
  * WMI/CIM process spawn — Invoke-WmiMethod -Class Win32_Process -Name Create
@@ -111,7 +108,7 @@ export const WMI_CIM_CMDLETS = new Set([
   'invoke-wmimethod',
   'iwmi', // alias not in COMMON_ALIASES — list explicitly
   'invoke-cimmethod',
-])
+]);
 
 /**
  * Cmdlets in CMDLET_ALLOWLIST with additionalCommandIsDangerousCallback.
@@ -146,7 +143,7 @@ export const ARG_GATED_CMDLETS = new Set([
   'ipconfig',
   'hostname',
   'route',
-])
+]);
 
 /**
  * Commands to never suggest as a wildcard prefix in the permission dialog.
@@ -179,7 +176,7 @@ export const NEVER_SUGGEST: ReadonlySet<string> = (() => {
     // auto-mode classifier strips these rules (isDangerousPowerShellPermission)
     // but the suggestion gate didn't. Multi-word entries ('npm run') are
     // filtered out — NEVER_SUGGEST is a single-name lookup on cmd.name.
-    ...CROSS_PLATFORM_CODE_EXEC.filter(p => !p.includes(' ')),
-  ])
-  return new Set([...core, ...aliasesOf(core)])
-})()
+    ...CROSS_PLATFORM_CODE_EXEC.filter((p) => !p.includes(' ')),
+  ]);
+  return new Set([...core, ...aliasesOf(core)]);
+})();

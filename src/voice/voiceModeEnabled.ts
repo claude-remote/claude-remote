@@ -1,9 +1,6 @@
-import { feature } from 'src/utils/feature.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
-import {
-  getClaudeAIOAuthTokens,
-  isAnthropicAuthEnabled,
-} from '../utils/auth.js'
+import { feature } from 'src/utils/feature.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
+import { getClaudeAIOAuthTokens, isAnthropicAuthEnabled } from '../utils/auth.js';
 
 /**
  * Kill-switch check for voice mode. Returns true unless the
@@ -19,7 +16,7 @@ export function isVoiceGrowthBookEnabled(): boolean {
   // inline string literals from external builds.
   return feature('VOICE_MODE')
     ? !getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_quartz_disabled', false)
-    : false
+    : false;
 }
 
 /**
@@ -34,13 +31,13 @@ export function hasVoiceAuth(): boolean {
   // endpoint on claude.ai which is not available with API keys,
   // Bedrock, Vertex, or Foundry.
   if (!isAnthropicAuthEnabled()) {
-    return false
+    return false;
   }
   // isAnthropicAuthEnabled only checks the auth *provider*, not whether
   // a token exists. Without this check, the voice UI renders but
   // connectVoiceStream fails silently when the user isn't logged in.
-  const tokens = getClaudeAIOAuthTokens()
-  return Boolean(tokens?.accessToken)
+  const tokens = getClaudeAIOAuthTokens();
+  return Boolean(tokens?.accessToken);
 }
 
 /**
@@ -50,5 +47,5 @@ export function hasVoiceAuth(): boolean {
  * paths use useVoiceEnabled() instead (memoizes the auth half).
  */
 export function isVoiceModeEnabled(): boolean {
-  return hasVoiceAuth() && isVoiceGrowthBookEnabled()
+  return hasVoiceAuth() && isVoiceGrowthBookEnabled();
 }

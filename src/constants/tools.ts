@@ -1,37 +1,36 @@
-// biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
-import { feature } from 'src/utils/feature.js'
-import { TASK_OUTPUT_TOOL_NAME } from '../tools/TaskOutputTool/constants.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../tools/ExitPlanModeTool/constants.js'
-import { ENTER_PLAN_MODE_TOOL_NAME } from '../tools/EnterPlanModeTool/constants.js'
-import { AGENT_TOOL_NAME } from '../tools/AgentTool/constants.js'
-import { ASK_USER_QUESTION_TOOL_NAME } from '../tools/AskUserQuestionTool/prompt.js'
-import { TASK_STOP_TOOL_NAME } from '../tools/TaskStopTool/prompt.js'
-import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js'
-import { WEB_SEARCH_TOOL_NAME } from '../tools/WebSearchTool/prompt.js'
-import { TODO_WRITE_TOOL_NAME } from '../tools/TodoWriteTool/constants.js'
-import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js'
-import { WEB_FETCH_TOOL_NAME } from '../tools/WebFetchTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../tools/GlobTool/prompt.js'
-import { SHELL_TOOL_NAMES } from '../utils/shell/shellToolUtils.js'
-import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from '../tools/NotebookEditTool/constants.js'
-import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js'
-import { SEND_MESSAGE_TOOL_NAME } from '../tools/SendMessageTool/constants.js'
-import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js'
-import { TASK_GET_TOOL_NAME } from '../tools/TaskGetTool/constants.js'
-import { TASK_LIST_TOOL_NAME } from '../tools/TaskListTool/constants.js'
-import { TASK_UPDATE_TOOL_NAME } from '../tools/TaskUpdateTool/constants.js'
-import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js'
-import { SYNTHETIC_OUTPUT_TOOL_NAME } from '../tools/SyntheticOutputTool/SyntheticOutputTool.js'
-import { ENTER_WORKTREE_TOOL_NAME } from '../tools/EnterWorktreeTool/constants.js'
-import { EXIT_WORKTREE_TOOL_NAME } from '../tools/ExitWorktreeTool/constants.js'
-import { WORKFLOW_TOOL_NAME } from '../tools/WorkflowTool/constants.js'
+import { feature } from 'src/utils/feature.js';
+import { AGENT_TOOL_NAME } from '../tools/AgentTool/constants.js';
+import { ASK_USER_QUESTION_TOOL_NAME } from '../tools/AskUserQuestionTool/prompt.js';
+import { ENTER_PLAN_MODE_TOOL_NAME } from '../tools/EnterPlanModeTool/constants.js';
+import { ENTER_WORKTREE_TOOL_NAME } from '../tools/EnterWorktreeTool/constants.js';
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../tools/ExitPlanModeTool/constants.js';
+import { EXIT_WORKTREE_TOOL_NAME } from '../tools/ExitWorktreeTool/constants.js';
+import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js';
+import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js';
+import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js';
+import { GLOB_TOOL_NAME } from '../tools/GlobTool/prompt.js';
+import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js';
+import { NOTEBOOK_EDIT_TOOL_NAME } from '../tools/NotebookEditTool/constants.js';
 import {
   CRON_CREATE_TOOL_NAME,
   CRON_DELETE_TOOL_NAME,
   CRON_LIST_TOOL_NAME,
-} from '../tools/ScheduleCronTool/prompt.js'
+} from '../tools/ScheduleCronTool/prompt.js';
+import { SEND_MESSAGE_TOOL_NAME } from '../tools/SendMessageTool/constants.js';
+import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js';
+import { SYNTHETIC_OUTPUT_TOOL_NAME } from '../tools/SyntheticOutputTool/SyntheticOutputTool.js';
+import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js';
+import { TASK_GET_TOOL_NAME } from '../tools/TaskGetTool/constants.js';
+import { TASK_LIST_TOOL_NAME } from '../tools/TaskListTool/constants.js';
+import { TASK_OUTPUT_TOOL_NAME } from '../tools/TaskOutputTool/constants.js';
+import { TASK_STOP_TOOL_NAME } from '../tools/TaskStopTool/prompt.js';
+import { TASK_UPDATE_TOOL_NAME } from '../tools/TaskUpdateTool/constants.js';
+import { TODO_WRITE_TOOL_NAME } from '../tools/TodoWriteTool/constants.js';
+import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js';
+import { WEB_FETCH_TOOL_NAME } from '../tools/WebFetchTool/prompt.js';
+import { WEB_SEARCH_TOOL_NAME } from '../tools/WebSearchTool/prompt.js';
+import { WORKFLOW_TOOL_NAME } from '../tools/WorkflowTool/constants.js';
+import { SHELL_TOOL_NAMES } from '../utils/shell/shellToolUtils.js';
 
 export const ALL_AGENT_DISALLOWED_TOOLS = new Set([
   TASK_OUTPUT_TOOL_NAME,
@@ -43,11 +42,9 @@ export const ALL_AGENT_DISALLOWED_TOOLS = new Set([
   TASK_STOP_TOOL_NAME,
   // Prevent recursive workflow execution inside subagents.
   ...(feature('WORKFLOW_SCRIPTS') ? [WORKFLOW_TOOL_NAME] : []),
-])
+]);
 
-export const CUSTOM_AGENT_DISALLOWED_TOOLS = new Set([
-  ...ALL_AGENT_DISALLOWED_TOOLS,
-])
+export const CUSTOM_AGENT_DISALLOWED_TOOLS = new Set([...ALL_AGENT_DISALLOWED_TOOLS]);
 
 /*
  * Async Agent Tool Availability Status (Source of Truth)
@@ -68,7 +65,7 @@ export const ASYNC_AGENT_ALLOWED_TOOLS = new Set([
   TOOL_SEARCH_TOOL_NAME,
   ENTER_WORKTREE_TOOL_NAME,
   EXIT_WORKTREE_TOOL_NAME,
-])
+]);
 /**
  * Tools allowed only for in-process teammates (not general async agents).
  * These are injected by inProcessRunner.ts and allowed through filterToolsForAgent
@@ -85,7 +82,7 @@ export const IN_PROCESS_TEAMMATE_ALLOWED_TOOLS = new Set([
   ...(feature('AGENT_TRIGGERS')
     ? [CRON_CREATE_TOOL_NAME, CRON_DELETE_TOOL_NAME, CRON_LIST_TOOL_NAME]
     : []),
-])
+]);
 
 /*
  * BLOCKED FOR ASYNC AGENTS:
@@ -109,4 +106,4 @@ export const COORDINATOR_MODE_ALLOWED_TOOLS = new Set([
   TASK_STOP_TOOL_NAME,
   SEND_MESSAGE_TOOL_NAME,
   SYNTHETIC_OUTPUT_TOOL_NAME,
-])
+]);

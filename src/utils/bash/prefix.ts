@@ -1,17 +1,17 @@
-import { buildPrefix } from '../shell/specPrefix.js'
-import { splitCommand_DEPRECATED } from './commands.js'
-import { extractCommandArguments, parseCommand } from './parser.js'
-import { getCommandSpec } from './registry.js'
+import { buildPrefix } from '../shell/specPrefix.js';
+import { splitCommand_DEPRECATED } from './commands.js';
+import { extractCommandArguments, parseCommand } from './parser.js';
+import { getCommandSpec } from './registry.js';
 
-const NUMERIC = /^\d+$/
-const ENV_VAR = /^[A-Za-z_][A-Za-z0-9_]*=/
+const NUMERIC = /^\d+$/;
+const ENV_VAR = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 // Wrapper commands with complex option handling that can't be expressed in specs
 const WRAPPER_COMMANDS = new Set([
   'nice', // command position varies based on options
-])
+]);
 
-const toArray = <T>(val: T | T[]): T[] => (Array.isArray(val) ? val : [val])
+const toArray = <T>(val: T | T[]): T[] => (Array.isArray(val) ? val : [val]);
 
 // Check if args[0] matches a known subcommand (disambiguates wrapper commands
 // that also have subcommands, e.g. the git spec has isCommand args for aliases).
@@ -19,10 +19,10 @@ function isKnownSubcommand(
   arg: string,
   spec: { subcommands?: { name: string | string[] }[] } | null,
 ): boolean {
-  if (!spec?.subcommands?.length) return false
-  return spec.subcommands.some(sub =>
+  if (!spec?.subcommands?.length) return false;
+  return spec.subcommands.some((sub) =>
     Array.isArray(sub.name) ? sub.name.includes(arg) : sub.name === arg,
-  )
+  );
 }
 
 export async function getCommandPrefixStatic(
@@ -30,43 +30,42 @@ export async function getCommandPrefixStatic(
   recursionDepth = 0,
   wrapperCount = 0,
 ): Promise<{ commandPrefix: string | null } | null> {
-  if (wrapperCount > 2 || recursionDepth > 10) return null
+  if (wrapperCount > 2 || recursionDepth > 10) return null;
 
-  const parsed = await parseCommand(command)
-  if (!parsed) return null
+  const parsed = await parseCommand(command);
+  if (!parsed) return null;
   if (!parsed.commandNode) {
-    return { commandPrefix: null }
+    return { commandPrefix: null };
   }
 
-  const { envVars, commandNode } = parsed
-  const cmdArgs = extractCommandArguments(commandNode)
+  const { envVars, commandNode } = parsed;
+  const cmdArgs = extractCommandArguments(commandNode);
 
-  const [cmd, ...args] = cmdArgs
-  if (!cmd) return { commandPrefix: null }
+  const [cmd, ...args] = cmdArgs;
+  if (!cmd) return { commandPrefix: null };
 
   // Check if this is a wrapper command by looking at its spec
-  const spec = await getCommandSpec(cmd)
+  const spec = await getCommandSpec(cmd);
   // Check if this is a wrapper command
   let isWrapper =
-    WRAPPER_COMMANDS.has(cmd) ||
-    (spec?.args && toArray(spec.args).some(arg => arg?.isCommand))
+    WRAPPER_COMMANDS.has(cmd) || (spec?.args && toArray(spec.args).some((arg) => arg?.isCommand));
 
   // Special case: if the command has subcommands and the first arg matches a subcommand,
   // treat it as a regular command, not a wrapper
   if (isWrapper && args[0] && isKnownSubcommand(args[0], spec)) {
-    isWrapper = false
+    isWrapper = false;
   }
 
   const prefix = isWrapper
     ? await handleWrapper(cmd, args, recursionDepth, wrapperCount)
-    : await buildPrefix(cmd, args, spec)
+    : await buildPrefix(cmd, args, spec);
 
   if (prefix === null && recursionDepth === 0 && isWrapper) {
-    return null
+    return null;
   }
 
-  const envPrefix = envVars.length ? `${envVars.join(' ')} ` : ''
-  return { commandPrefix: prefix ? envPrefix + prefix : null }
+  const envPrefix = envVars.length ? `${envVars.join(' ')} ` : '';
+  return { commandPrefix: prefix ? envPrefix + prefix : null };
 }
 
 async function handleWrapper(
@@ -75,13 +74,13 @@ async function handleWrapper(
   recursionDepth: number,
   wrapperCount: number,
 ): Promise<string | null> {
-  const spec = await getCommandSpec(command)
+  const spec = await getCommandSpec(command);
 
   if (spec?.args) {
-    const commandArgIndex = toArray(spec.args).findIndex(arg => arg?.isCommand)
+    const commandArgIndex = toArray(spec.args).findIndex((arg) => arg?.isCommand);
 
     if (commandArgIndex !== -1) {
-      const parts = [command]
+      const parts = [command];
 
       for (let i = 0; i < args.length && i <= commandArgIndex; i++) {
         if (i === commandArgIndex) {
@@ -89,35 +88,32 @@ async function handleWrapper(
             args.slice(i).join(' '),
             recursionDepth + 1,
             wrapperCount + 1,
-          )
+          );
           if (result?.commandPrefix) {
-            parts.push(...result.commandPrefix.split(' '))
-            return parts.join(' ')
+            parts.push(...result.commandPrefix.split(' '));
+            return parts.join(' ');
           }
-          break
-        } else if (
-          args[i] &&
-          !args[i]!.startsWith('-') &&
-          !ENV_VAR.test(args[i]!)
-        ) {
-          parts.push(args[i]!)
+          break;
+        }
+        if (args[i] && !args[i]?.startsWith('-') && !ENV_VAR.test(args[i]!)) {
+          parts.push(args[i]!);
         }
       }
     }
   }
 
   const wrapped = args.find(
-    arg => !arg.startsWith('-') && !NUMERIC.test(arg) && !ENV_VAR.test(arg),
-  )
-  if (!wrapped) return command
+    (arg) => !arg.startsWith('-') && !NUMERIC.test(arg) && !ENV_VAR.test(arg),
+  );
+  if (!wrapped) return command;
 
   const result = await getCommandPrefixStatic(
     args.slice(args.indexOf(wrapped)).join(' '),
     recursionDepth + 1,
     wrapperCount + 1,
-  )
+  );
 
-  return !result?.commandPrefix ? null : `${command} ${result.commandPrefix}`
+  return !result?.commandPrefix ? null : `${command} ${result.commandPrefix}`;
 }
 
 /**
@@ -136,42 +132,42 @@ export async function getCompoundCommandPrefixesStatic(
   command: string,
   excludeSubcommand?: (subcommand: string) => boolean,
 ): Promise<string[]> {
-  const subcommands = splitCommand_DEPRECATED(command)
+  const subcommands = splitCommand_DEPRECATED(command);
   if (subcommands.length <= 1) {
-    const result = await getCommandPrefixStatic(command)
-    return result?.commandPrefix ? [result.commandPrefix] : []
+    const result = await getCommandPrefixStatic(command);
+    return result?.commandPrefix ? [result.commandPrefix] : [];
   }
 
-  const prefixes: string[] = []
+  const prefixes: string[] = [];
   for (const subcmd of subcommands) {
-    const trimmed = subcmd.trim()
-    if (excludeSubcommand?.(trimmed)) continue
-    const result = await getCommandPrefixStatic(trimmed)
+    const trimmed = subcmd.trim();
+    if (excludeSubcommand?.(trimmed)) continue;
+    const result = await getCommandPrefixStatic(trimmed);
     if (result?.commandPrefix) {
-      prefixes.push(result.commandPrefix)
+      prefixes.push(result.commandPrefix);
     }
   }
 
-  if (prefixes.length === 0) return []
+  if (prefixes.length === 0) return [];
 
   // Group prefixes by their first word (root command)
-  const groups = new Map<string, string[]>()
+  const groups = new Map<string, string[]>();
   for (const prefix of prefixes) {
-    const root = prefix.split(' ')[0]!
-    const group = groups.get(root)
+    const root = prefix.split(' ')[0]!;
+    const group = groups.get(root);
     if (group) {
-      group.push(prefix)
+      group.push(prefix);
     } else {
-      groups.set(root, [prefix])
+      groups.set(root, [prefix]);
     }
   }
 
   // Collapse each group via word-aligned LCP
-  const collapsed: string[] = []
+  const collapsed: string[] = [];
   for (const [, group] of groups) {
-    collapsed.push(longestCommonPrefix(group))
+    collapsed.push(longestCommonPrefix(group));
   }
-  return collapsed
+  return collapsed;
 }
 
 /**
@@ -180,25 +176,25 @@ export async function getCompoundCommandPrefixesStatic(
  *      ["npm run test", "npm run lint"] → "npm run"
  */
 function longestCommonPrefix(strings: string[]): string {
-  if (strings.length === 0) return ''
-  if (strings.length === 1) return strings[0]!
+  if (strings.length === 0) return '';
+  if (strings.length === 1) return strings[0]!;
 
-  const first = strings[0]!
-  const words = first.split(' ')
-  let commonWords = words.length
+  const first = strings[0]!;
+  const words = first.split(' ');
+  let commonWords = words.length;
 
   for (let i = 1; i < strings.length; i++) {
-    const otherWords = strings[i]!.split(' ')
-    let shared = 0
+    const otherWords = strings[i]?.split(' ');
+    let shared = 0;
     while (
       shared < commonWords &&
       shared < otherWords.length &&
       words[shared] === otherWords[shared]
     ) {
-      shared++
+      shared++;
     }
-    commonWords = shared
+    commonWords = shared;
   }
 
-  return words.slice(0, Math.max(1, commonWords)).join(' ')
+  return words.slice(0, Math.max(1, commonWords)).join(' ');
 }

@@ -9,4 +9,4 @@ export const TURN_COMPLETION_VERBS = [
   'Crunched',
   'Sautéed',
   'Worked',
-]
+];

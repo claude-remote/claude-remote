@@ -9,48 +9,42 @@
  * Backend API: anthropic/anthropic#218817
  */
 
-import { feature } from 'src/utils/feature.js'
-import axios from 'axios'
-import { mkdir, readFile, stat, writeFile } from 'fs/promises'
-import pickBy from 'lodash-es/pickBy.js'
-import { dirname } from 'path'
-import { getIsInteractive } from '../../bootstrap/state.js'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import axios from 'axios';
+import pickBy from 'lodash-es/pickBy.js';
+import { feature } from 'src/utils/feature.js';
+import { getIsInteractive } from '../../bootstrap/state.js';
 import {
   CLAUDE_AI_INFERENCE_SCOPE,
-  getOauthConfig,
   OAUTH_BETA_HEADER,
-} from '../../constants/oauth.js'
+  getOauthConfig,
+} from '../../constants/oauth.js';
+import { checkAndRefreshOAuthTokenIfNeeded, getClaudeAIOAuthTokens } from '../../utils/auth.js';
+import { clearMemoryFileCaches } from '../../utils/claudemd.js';
+import { getMemoryPath } from '../../utils/config.js';
+import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js';
+import { classifyAxiosError } from '../../utils/errors.js';
+import { getRepoRemoteHash } from '../../utils/git.js';
+import { getAPIProvider, isFirstPartyAnthropicBaseUrl } from '../../utils/model/providers.js';
+import { markInternalWrite } from '../../utils/settings/internalWrites.js';
+import { getSettingsFilePathForSource } from '../../utils/settings/settings.js';
+import { resetSettingsCache } from '../../utils/settings/settingsCache.js';
+import { sleep } from '../../utils/sleep.js';
+import { getClaudeCodeUserAgent } from '../../utils/userAgent.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js';
+import { logEvent } from '../analytics/index.js';
+import { getRetryDelay } from '../api/withRetry.js';
 import {
-  checkAndRefreshOAuthTokenIfNeeded,
-  getClaudeAIOAuthTokens,
-} from '../../utils/auth.js'
-import { clearMemoryFileCaches } from '../../utils/claudemd.js'
-import { getMemoryPath } from '../../utils/config.js'
-import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
-import { classifyAxiosError } from '../../utils/errors.js'
-import { getRepoRemoteHash } from '../../utils/git.js'
-import {
-  getAPIProvider,
-  isFirstPartyAnthropicBaseUrl,
-} from '../../utils/model/providers.js'
-import { markInternalWrite } from '../../utils/settings/internalWrites.js'
-import { getSettingsFilePathForSource } from '../../utils/settings/settings.js'
-import { resetSettingsCache } from '../../utils/settings/settingsCache.js'
-import { sleep } from '../../utils/sleep.js'
-import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
-import { logEvent } from '../analytics/index.js'
-import { getRetryDelay } from '../api/withRetry.js'
-import {
+  SYNC_KEYS,
   type SettingsSyncFetchResult,
   type SettingsSyncUploadResult,
-  SYNC_KEYS,
   UserSyncDataSchema,
-} from './types.js'
+} from './types.js';
 
-const SETTINGS_SYNC_TIMEOUT_MS = 10000 // 10 seconds
-const DEFAULT_MAX_RETRIES = 3
-const MAX_FILE_SIZE_BYTES = 500 * 1024 // 500 KB per file (matches backend limit)
+const SETTINGS_SYNC_TIMEOUT_MS = 10000; // 10 seconds
+const DEFAULT_MAX_RETRIES = 3;
+const MAX_FILE_SIZE_BYTES = 500 * 1024; // 500 KB per file (matches backend limit)
 
 /**
  * Upload local settings to remote (interactive CLI only).
@@ -61,62 +55,56 @@ export async function uploadUserSettingsInBackground(): Promise<void> {
   try {
     if (
       !feature('UPLOAD_USER_SETTINGS') ||
-      !getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_enable_settings_sync_push',
-        false,
-      ) ||
+      !getFeatureValue_CACHED_MAY_BE_STALE('tengu_enable_settings_sync_push', false) ||
       !getIsInteractive() ||
       !isUsingOAuth()
     ) {
-      logForDiagnosticsNoPII('info', 'settings_sync_upload_skipped')
-      logEvent('tengu_settings_sync_upload_skipped_ineligible', {})
-      return
+      logForDiagnosticsNoPII('info', 'settings_sync_upload_skipped');
+      logEvent('tengu_settings_sync_upload_skipped_ineligible', {});
+      return;
     }
 
-    logForDiagnosticsNoPII('info', 'settings_sync_upload_starting')
-    const result = await fetchUserSettings()
+    logForDiagnosticsNoPII('info', 'settings_sync_upload_starting');
+    const result = await fetchUserSettings();
     if (!result.success) {
-      logForDiagnosticsNoPII('warn', 'settings_sync_upload_fetch_failed')
-      logEvent('tengu_settings_sync_upload_fetch_failed', {})
-      return
+      logForDiagnosticsNoPII('warn', 'settings_sync_upload_fetch_failed');
+      logEvent('tengu_settings_sync_upload_fetch_failed', {});
+      return;
     }
 
-    const projectId = await getRepoRemoteHash()
-    const localEntries = await buildEntriesFromLocalFiles(projectId)
-    const remoteEntries = result.isEmpty ? {} : result.data!.content.entries
-    const changedEntries = pickBy(
-      localEntries,
-      (value, key) => remoteEntries[key] !== value,
-    )
+    const projectId = await getRepoRemoteHash();
+    const localEntries = await buildEntriesFromLocalFiles(projectId);
+    const remoteEntries = result.isEmpty ? {} : result.data?.content.entries;
+    const changedEntries = pickBy(localEntries, (value, key) => remoteEntries[key] !== value);
 
-    const entryCount = Object.keys(changedEntries).length
+    const entryCount = Object.keys(changedEntries).length;
     if (entryCount === 0) {
-      logForDiagnosticsNoPII('info', 'settings_sync_upload_no_changes')
-      logEvent('tengu_settings_sync_upload_skipped', {})
-      return
+      logForDiagnosticsNoPII('info', 'settings_sync_upload_no_changes');
+      logEvent('tengu_settings_sync_upload_skipped', {});
+      return;
     }
 
-    const uploadResult = await uploadUserSettings(changedEntries)
+    const uploadResult = await uploadUserSettings(changedEntries);
     if (uploadResult.success) {
-      logForDiagnosticsNoPII('info', 'settings_sync_upload_success')
-      logEvent('tengu_settings_sync_upload_success', { entryCount })
+      logForDiagnosticsNoPII('info', 'settings_sync_upload_success');
+      logEvent('tengu_settings_sync_upload_success', { entryCount });
     } else {
-      logForDiagnosticsNoPII('warn', 'settings_sync_upload_failed')
-      logEvent('tengu_settings_sync_upload_failed', { entryCount })
+      logForDiagnosticsNoPII('warn', 'settings_sync_upload_failed');
+      logEvent('tengu_settings_sync_upload_failed', { entryCount });
     }
   } catch {
     // Fail-open: log unexpected errors but don't block startup
-    logForDiagnosticsNoPII('error', 'settings_sync_unexpected_error')
+    logForDiagnosticsNoPII('error', 'settings_sync_unexpected_error');
   }
 }
 
 // Cached so the fire-and-forget at runHeadless entry and the await in
 // installPluginsAndApplyMcpInBackground share one fetch.
-let downloadPromise: Promise<boolean> | null = null
+let downloadPromise: Promise<boolean> | null = null;
 
 /** Test-only: clear the cached download promise between tests. */
 export function _resetDownloadPromiseForTesting(): void {
-  downloadPromise = null
+  downloadPromise = null;
 }
 
 /**
@@ -128,10 +116,10 @@ export function _resetDownloadPromiseForTesting(): void {
  */
 export function downloadUserSettings(): Promise<boolean> {
   if (downloadPromise) {
-    return downloadPromise
+    return downloadPromise;
   }
-  downloadPromise = doDownloadUserSettings()
-  return downloadPromise
+  downloadPromise = doDownloadUserSettings();
+  return downloadPromise;
 }
 
 /**
@@ -150,55 +138,50 @@ export function downloadUserSettings(): Promise<boolean> {
  * settingsSync → changeDetector cycle edge.
  */
 export function redownloadUserSettings(): Promise<boolean> {
-  downloadPromise = doDownloadUserSettings(0)
-  return downloadPromise
+  downloadPromise = doDownloadUserSettings(0);
+  return downloadPromise;
 }
 
-async function doDownloadUserSettings(
-  maxRetries = DEFAULT_MAX_RETRIES,
-): Promise<boolean> {
+async function doDownloadUserSettings(maxRetries = DEFAULT_MAX_RETRIES): Promise<boolean> {
   if (feature('DOWNLOAD_USER_SETTINGS')) {
     try {
-      if (
-        !getFeatureValue_CACHED_MAY_BE_STALE('tengu_strap_foyer', false) ||
-        !isUsingOAuth()
-      ) {
-        logForDiagnosticsNoPII('info', 'settings_sync_download_skipped')
-        logEvent('tengu_settings_sync_download_skipped', {})
-        return false
+      if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_strap_foyer', false) || !isUsingOAuth()) {
+        logForDiagnosticsNoPII('info', 'settings_sync_download_skipped');
+        logEvent('tengu_settings_sync_download_skipped', {});
+        return false;
       }
 
-      logForDiagnosticsNoPII('info', 'settings_sync_download_starting')
-      const result = await fetchUserSettings(maxRetries)
+      logForDiagnosticsNoPII('info', 'settings_sync_download_starting');
+      const result = await fetchUserSettings(maxRetries);
       if (!result.success) {
-        logForDiagnosticsNoPII('warn', 'settings_sync_download_fetch_failed')
-        logEvent('tengu_settings_sync_download_fetch_failed', {})
-        return false
+        logForDiagnosticsNoPII('warn', 'settings_sync_download_fetch_failed');
+        logEvent('tengu_settings_sync_download_fetch_failed', {});
+        return false;
       }
 
       if (result.isEmpty) {
-        logForDiagnosticsNoPII('info', 'settings_sync_download_empty')
-        logEvent('tengu_settings_sync_download_empty', {})
-        return false
+        logForDiagnosticsNoPII('info', 'settings_sync_download_empty');
+        logEvent('tengu_settings_sync_download_empty', {});
+        return false;
       }
 
-      const entries = result.data!.content.entries
-      const projectId = await getRepoRemoteHash()
-      const entryCount = Object.keys(entries).length
+      const entries = result.data?.content.entries;
+      const projectId = await getRepoRemoteHash();
+      const entryCount = Object.keys(entries).length;
       logForDiagnosticsNoPII('info', 'settings_sync_download_applying', {
         entryCount,
-      })
-      await applyRemoteEntriesToLocal(entries, projectId)
-      logEvent('tengu_settings_sync_download_success', { entryCount })
-      return true
+      });
+      await applyRemoteEntriesToLocal(entries, projectId);
+      logEvent('tengu_settings_sync_download_success', { entryCount });
+      return true;
     } catch {
       // Fail-open: log error but don't block CCR startup
-      logForDiagnosticsNoPII('error', 'settings_sync_download_error')
-      logEvent('tengu_settings_sync_download_error', {})
-      return false
+      logForDiagnosticsNoPII('error', 'settings_sync_download_error');
+      logEvent('tengu_settings_sync_download_error', {});
+      return false;
     }
   }
-  return false
+  return false;
 }
 
 /**
@@ -211,103 +194,101 @@ async function doDownloadUserSettings(
  */
 function isUsingOAuth(): boolean {
   if (getAPIProvider() !== 'firstParty' || !isFirstPartyAnthropicBaseUrl()) {
-    return false
+    return false;
   }
 
-  const tokens = getClaudeAIOAuthTokens()
-  return Boolean(
-    tokens?.accessToken && tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE),
-  )
+  const tokens = getClaudeAIOAuthTokens();
+  return Boolean(tokens?.accessToken && tokens.scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE));
 }
 
 function getSettingsSyncEndpoint(): string {
-  return `${getOauthConfig().BASE_API_URL}/api/claude_code/user_settings`
+  return `${getOauthConfig().BASE_API_URL}/api/claude_code/user_settings`;
 }
 
 function getSettingsSyncAuthHeaders(): {
-  headers: Record<string, string>
-  error?: string
+  headers: Record<string, string>;
+  error?: string;
 } {
-  const oauthTokens = getClaudeAIOAuthTokens()
+  const oauthTokens = getClaudeAIOAuthTokens();
   if (oauthTokens?.accessToken) {
     return {
       headers: {
         Authorization: `Bearer ${oauthTokens.accessToken}`,
         'anthropic-beta': OAUTH_BETA_HEADER,
       },
-    }
+    };
   }
 
   return {
     headers: {},
     error: 'No OAuth token available',
-  }
+  };
 }
 
 async function fetchUserSettingsOnce(): Promise<SettingsSyncFetchResult> {
   try {
-    await checkAndRefreshOAuthTokenIfNeeded()
+    await checkAndRefreshOAuthTokenIfNeeded();
 
-    const authHeaders = getSettingsSyncAuthHeaders()
+    const authHeaders = getSettingsSyncAuthHeaders();
     if (authHeaders.error) {
       return {
         success: false,
         error: authHeaders.error,
         skipRetry: true,
-      }
+      };
     }
 
     const headers: Record<string, string> = {
       ...authHeaders.headers,
       'User-Agent': getClaudeCodeUserAgent(),
-    }
+    };
 
-    const endpoint = getSettingsSyncEndpoint()
+    const endpoint = getSettingsSyncEndpoint();
     const response = await axios.get(endpoint, {
       headers,
       timeout: SETTINGS_SYNC_TIMEOUT_MS,
-      validateStatus: status => status === 200 || status === 404,
-    })
+      validateStatus: (status) => status === 200 || status === 404,
+    });
 
     // 404 means no settings exist yet
     if (response.status === 404) {
-      logForDiagnosticsNoPII('info', 'settings_sync_fetch_empty')
+      logForDiagnosticsNoPII('info', 'settings_sync_fetch_empty');
       return {
         success: true,
         isEmpty: true,
-      }
+      };
     }
 
-    const parsed = UserSyncDataSchema().safeParse(response.data)
+    const parsed = UserSyncDataSchema().safeParse(response.data);
     if (!parsed.success) {
-      logForDiagnosticsNoPII('warn', 'settings_sync_fetch_invalid_format')
+      logForDiagnosticsNoPII('warn', 'settings_sync_fetch_invalid_format');
       return {
         success: false,
         error: 'Invalid settings sync response format',
-      }
+      };
     }
 
-    logForDiagnosticsNoPII('info', 'settings_sync_fetch_success')
+    logForDiagnosticsNoPII('info', 'settings_sync_fetch_success');
     return {
       success: true,
       data: parsed.data,
       isEmpty: false,
-    }
+    };
   } catch (error) {
-    const { kind, message } = classifyAxiosError(error)
+    const { kind, message } = classifyAxiosError(error);
     switch (kind) {
       case 'auth':
         return {
           success: false,
           error: 'Not authorized for settings sync',
           skipRetry: true,
-        }
+        };
       case 'timeout':
-        return { success: false, error: 'Settings sync request timeout' }
+        return { success: false, error: 'Settings sync request timeout' };
       case 'network':
-        return { success: false, error: 'Cannot connect to server' }
+        return { success: false, error: 'Cannot connect to server' };
       default:
-        return { success: false, error: message }
+        return { success: false, error: message };
     }
   }
 }
@@ -315,56 +296,56 @@ async function fetchUserSettingsOnce(): Promise<SettingsSyncFetchResult> {
 async function fetchUserSettings(
   maxRetries = DEFAULT_MAX_RETRIES,
 ): Promise<SettingsSyncFetchResult> {
-  let lastResult: SettingsSyncFetchResult | null = null
+  let lastResult: SettingsSyncFetchResult | null = null;
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
-    lastResult = await fetchUserSettingsOnce()
+    lastResult = await fetchUserSettingsOnce();
 
     if (lastResult.success) {
-      return lastResult
+      return lastResult;
     }
 
     if (lastResult.skipRetry) {
-      return lastResult
+      return lastResult;
     }
 
     if (attempt > maxRetries) {
-      return lastResult
+      return lastResult;
     }
 
-    const delayMs = getRetryDelay(attempt)
+    const delayMs = getRetryDelay(attempt);
     logForDiagnosticsNoPII('info', 'settings_sync_retry', {
       attempt,
       maxRetries,
       delayMs,
-    })
-    await sleep(delayMs)
+    });
+    await sleep(delayMs);
   }
 
-  return lastResult!
+  return lastResult!;
 }
 
 async function uploadUserSettings(
   entries: Record<string, string>,
 ): Promise<SettingsSyncUploadResult> {
   try {
-    await checkAndRefreshOAuthTokenIfNeeded()
+    await checkAndRefreshOAuthTokenIfNeeded();
 
-    const authHeaders = getSettingsSyncAuthHeaders()
+    const authHeaders = getSettingsSyncAuthHeaders();
     if (authHeaders.error) {
       return {
         success: false,
         error: authHeaders.error,
-      }
+      };
     }
 
     const headers: Record<string, string> = {
       ...authHeaders.headers,
       'User-Agent': getClaudeCodeUserAgent(),
       'Content-Type': 'application/json',
-    }
+    };
 
-    const endpoint = getSettingsSyncEndpoint()
+    const endpoint = getSettingsSyncEndpoint();
     const response = await axios.put(
       endpoint,
       { entries },
@@ -372,22 +353,22 @@ async function uploadUserSettings(
         headers,
         timeout: SETTINGS_SYNC_TIMEOUT_MS,
       },
-    )
+    );
 
     logForDiagnosticsNoPII('info', 'settings_sync_uploaded', {
       entryCount: Object.keys(entries).length,
-    })
+    });
     return {
       success: true,
       checksum: response.data?.checksum,
       lastModified: response.data?.lastModified,
-    }
+    };
   } catch (error) {
-    logForDiagnosticsNoPII('warn', 'settings_sync_upload_error')
+    logForDiagnosticsNoPII('warn', 'settings_sync_upload_error');
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-    }
+    };
   }
 }
 
@@ -397,83 +378,80 @@ async function uploadUserSettings(
  */
 async function tryReadFileForSync(filePath: string): Promise<string | null> {
   try {
-    const stats = await stat(filePath)
+    const stats = await stat(filePath);
     if (stats.size > MAX_FILE_SIZE_BYTES) {
-      logForDiagnosticsNoPII('info', 'settings_sync_file_too_large')
-      return null
+      logForDiagnosticsNoPII('info', 'settings_sync_file_too_large');
+      return null;
     }
 
-    const content = await readFile(filePath, 'utf8')
+    const content = await readFile(filePath, 'utf8');
     // Check for empty/whitespace-only without allocating a trimmed copy
     if (!content || /^\s*$/.test(content)) {
-      return null
+      return null;
     }
 
-    return content
+    return content;
   } catch {
-    return null
+    return null;
   }
 }
 
 async function buildEntriesFromLocalFiles(
   projectId: string | null,
 ): Promise<Record<string, string>> {
-  const entries: Record<string, string> = {}
+  const entries: Record<string, string> = {};
 
   // Global user settings
-  const userSettingsPath = getSettingsFilePathForSource('userSettings')
+  const userSettingsPath = getSettingsFilePathForSource('userSettings');
   if (userSettingsPath) {
-    const content = await tryReadFileForSync(userSettingsPath)
+    const content = await tryReadFileForSync(userSettingsPath);
     if (content) {
-      entries[SYNC_KEYS.USER_SETTINGS] = content
+      entries[SYNC_KEYS.USER_SETTINGS] = content;
     }
   }
 
   // Global user memory
-  const userMemoryPath = getMemoryPath('User')
-  const userMemoryContent = await tryReadFileForSync(userMemoryPath)
+  const userMemoryPath = getMemoryPath('User');
+  const userMemoryContent = await tryReadFileForSync(userMemoryPath);
   if (userMemoryContent) {
-    entries[SYNC_KEYS.USER_MEMORY] = userMemoryContent
+    entries[SYNC_KEYS.USER_MEMORY] = userMemoryContent;
   }
 
   // Project-specific files (only if we have a project ID from git remote)
   if (projectId) {
     // Project local settings
-    const localSettingsPath = getSettingsFilePathForSource('localSettings')
+    const localSettingsPath = getSettingsFilePathForSource('localSettings');
     if (localSettingsPath) {
-      const content = await tryReadFileForSync(localSettingsPath)
+      const content = await tryReadFileForSync(localSettingsPath);
       if (content) {
-        entries[SYNC_KEYS.projectSettings(projectId)] = content
+        entries[SYNC_KEYS.projectSettings(projectId)] = content;
       }
     }
 
     // Project local memory
-    const localMemoryPath = getMemoryPath('Local')
-    const localMemoryContent = await tryReadFileForSync(localMemoryPath)
+    const localMemoryPath = getMemoryPath('Local');
+    const localMemoryContent = await tryReadFileForSync(localMemoryPath);
     if (localMemoryContent) {
-      entries[SYNC_KEYS.projectMemory(projectId)] = localMemoryContent
+      entries[SYNC_KEYS.projectMemory(projectId)] = localMemoryContent;
     }
   }
 
-  return entries
+  return entries;
 }
 
-async function writeFileForSync(
-  filePath: string,
-  content: string,
-): Promise<boolean> {
+async function writeFileForSync(filePath: string, content: string): Promise<boolean> {
   try {
-    const parentDir = dirname(filePath)
+    const parentDir = dirname(filePath);
     if (parentDir) {
-      await mkdir(parentDir, { recursive: true })
+      await mkdir(parentDir, { recursive: true });
     }
 
-    await writeFile(filePath, content, 'utf8')
-    logForDiagnosticsNoPII('info', 'settings_sync_file_written')
-    return true
+    await writeFile(filePath, content, 'utf8');
+    logForDiagnosticsNoPII('info', 'settings_sync_file_written');
+    return true;
   } catch {
-    logForDiagnosticsNoPII('warn', 'settings_sync_file_write_failed')
-    return false
+    logForDiagnosticsNoPII('warn', 'settings_sync_file_write_failed');
+    return false;
   }
 }
 
@@ -489,79 +467,73 @@ async function applyRemoteEntriesToLocal(
   entries: Record<string, string>,
   projectId: string | null,
 ): Promise<void> {
-  let appliedCount = 0
-  let settingsWritten = false
-  let memoryWritten = false
+  let appliedCount = 0;
+  let settingsWritten = false;
+  let memoryWritten = false;
 
   // Helper to check size limit (defense-in-depth, matches backend limit)
   const exceedsSizeLimit = (content: string, _path: string): boolean => {
-    const sizeBytes = Buffer.byteLength(content, 'utf8')
+    const sizeBytes = Buffer.byteLength(content, 'utf8');
     if (sizeBytes > MAX_FILE_SIZE_BYTES) {
       logForDiagnosticsNoPII('info', 'settings_sync_file_too_large', {
         sizeBytes,
         maxBytes: MAX_FILE_SIZE_BYTES,
-      })
-      return true
+      });
+      return true;
     }
-    return false
-  }
+    return false;
+  };
 
   // Apply global user settings
-  const userSettingsContent = entries[SYNC_KEYS.USER_SETTINGS]
+  const userSettingsContent = entries[SYNC_KEYS.USER_SETTINGS];
   if (userSettingsContent) {
-    const userSettingsPath = getSettingsFilePathForSource('userSettings')
-    if (
-      userSettingsPath &&
-      !exceedsSizeLimit(userSettingsContent, userSettingsPath)
-    ) {
+    const userSettingsPath = getSettingsFilePathForSource('userSettings');
+    if (userSettingsPath && !exceedsSizeLimit(userSettingsContent, userSettingsPath)) {
       // Mark as internal write to prevent spurious change detection
-      markInternalWrite(userSettingsPath)
+      markInternalWrite(userSettingsPath);
       if (await writeFileForSync(userSettingsPath, userSettingsContent)) {
-        appliedCount++
-        settingsWritten = true
+        appliedCount++;
+        settingsWritten = true;
       }
     }
   }
 
   // Apply global user memory
-  const userMemoryContent = entries[SYNC_KEYS.USER_MEMORY]
+  const userMemoryContent = entries[SYNC_KEYS.USER_MEMORY];
   if (userMemoryContent) {
-    const userMemoryPath = getMemoryPath('User')
+    const userMemoryPath = getMemoryPath('User');
     if (!exceedsSizeLimit(userMemoryContent, userMemoryPath)) {
       if (await writeFileForSync(userMemoryPath, userMemoryContent)) {
-        appliedCount++
-        memoryWritten = true
+        appliedCount++;
+        memoryWritten = true;
       }
     }
   }
 
   // Apply project-specific files (only if project ID matches)
   if (projectId) {
-    const projectSettingsKey = SYNC_KEYS.projectSettings(projectId)
-    const projectSettingsContent = entries[projectSettingsKey]
+    const projectSettingsKey = SYNC_KEYS.projectSettings(projectId);
+    const projectSettingsContent = entries[projectSettingsKey];
     if (projectSettingsContent) {
-      const localSettingsPath = getSettingsFilePathForSource('localSettings')
-      if (
-        localSettingsPath &&
-        !exceedsSizeLimit(projectSettingsContent, localSettingsPath)
-      ) {
+      const localSettingsPath = getSettingsFilePathForSource('localSettings');
+      if (localSettingsPath && !exceedsSizeLimit(projectSettingsContent, localSettingsPath)) {
         // Mark as internal write to prevent spurious change detection
-        markInternalWrite(localSettingsPath)
+        markInternalWrite(localSettingsPath);
         if (await writeFileForSync(localSettingsPath, projectSettingsContent)) {
-          appliedCount++
-          settingsWritten = true
+          appliedCount++;
+          settingsWritten = true;
         }
       }
     }
 
-    const projectMemoryKey = SYNC_KEYS.projectMemory(projectId)
-    const projectMemoryContent = entries[projectMemoryKey]
+    const projectMemoryKey = SYNC_KEYS.projectMemory(projectId);
+    const projectMemoryContent = entries[projectMemoryKey];
     if (projectMemoryContent) {
-      const localMemoryPath = getMemoryPath('Local')
+      const localMemoryPath = getMemoryPath('Local');
       if (!exceedsSizeLimit(projectMemoryContent, localMemoryPath)) {
         if (await writeFileForSync(localMemoryPath, projectMemoryContent)) {
-          appliedCount++
-          memoryWritten = true
+          appliedCount++;
+          memoryWritten = true;
         }
       }
     }
@@ -569,13 +541,13 @@ async function applyRemoteEntriesToLocal(
 
   // Invalidate caches so subsequent reads pick up new content
   if (settingsWritten) {
-    resetSettingsCache()
+    resetSettingsCache();
   }
   if (memoryWritten) {
-    clearMemoryFileCaches()
+    clearMemoryFileCaches();
   }
 
   logForDiagnosticsNoPII('info', 'settings_sync_applied', {
     appliedCount,
-  })
+  });
 }

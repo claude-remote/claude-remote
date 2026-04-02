@@ -1,4 +1,4 @@
-import type { CommandSpec } from '../registry.js'
+import type { CommandSpec } from '../registry.js';
 
 const srun: CommandSpec = {
   name: 'srun',
@@ -26,6 +26,6 @@ const srun: CommandSpec = {
     description: 'Command to run on the cluster',
     isCommand: true,
   },
-}
+};
 
-export default srun
+export default srun;

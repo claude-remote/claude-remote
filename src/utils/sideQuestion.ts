@@ -6,26 +6,26 @@
  * while keeping the side question response separate from main conversation.
  */
 
-import { formatAPIError } from '../services/api/errorUtils.js'
-import type { NonNullableUsage } from '../services/api/logging.js'
-import type { Message, SystemAPIErrorMessage } from '../types/message.js'
-import { type CacheSafeParams, runForkedAgent } from './forkedAgent.js'
-import { createUserMessage, extractTextContent } from './messages.js'
+import { formatAPIError } from '../services/api/errorUtils.js';
+import type { NonNullableUsage } from '../services/api/logging.js';
+import type { Message, SystemAPIErrorMessage } from '../types/message.js';
+import { type CacheSafeParams, runForkedAgent } from './forkedAgent.js';
+import { createUserMessage, extractTextContent } from './messages.js';
 
 // Pattern to detect "/btw" at start of input (case-insensitive, word boundary)
-const BTW_PATTERN = /^\/btw\b/gi
+const BTW_PATTERN = /^\/btw\b/gi;
 
 /**
  * Find positions of "/btw" keyword at the start of text for highlighting.
  * Similar to findThinkingTriggerPositions in thinking.ts.
  */
 export function findBtwTriggerPositions(text: string): Array<{
-  word: string
-  start: number
-  end: number
+  word: string;
+  start: number;
+  end: number;
 }> {
-  const positions: Array<{ word: string; start: number; end: number }> = []
-  const matches = text.matchAll(BTW_PATTERN)
+  const positions: Array<{ word: string; start: number; end: number }> = [];
+  const matches = text.matchAll(BTW_PATTERN);
 
   for (const match of matches) {
     if (match.index !== undefined) {
@@ -33,17 +33,17 @@ export function findBtwTriggerPositions(text: string): Array<{
         word: match[0],
         start: match.index,
         end: match.index + match[0].length,
-      })
+      });
     }
   }
 
-  return positions
+  return positions;
 }
 
 export type SideQuestionResult = {
-  response: string | null
-  usage: NonNullableUsage
-}
+  response: string | null;
+  usage: NonNullableUsage;
+};
 
 /**
  * Run a side question using a forked agent.
@@ -54,8 +54,8 @@ export async function runSideQuestion({
   question,
   cacheSafeParams,
 }: {
-  question: string
-  cacheSafeParams: CacheSafeParams
+  question: string;
+  cacheSafeParams: CacheSafeParams;
 }): Promise<SideQuestionResult> {
   // Wrap the question with instructions to answer without tools
   const wrappedQuestion = `<system-reminder>This is a side question from the user. You must answer this question directly in a single response.
@@ -75,7 +75,7 @@ CRITICAL CONSTRAINTS:
 
 Simply answer the question with the information you have.</system-reminder>
 
-${question}`
+${question}`;
 
   const agentResult = await runForkedAgent({
     promptMessages: [createUserMessage({ content: wrappedQuestion })],
@@ -93,12 +93,12 @@ ${question}`
     maxTurns: 1, // Single turn only - no tool use loops
     // No future request shares this suffix; skip writing cache entries.
     skipCacheWrite: true,
-  })
+  });
 
   return {
     response: extractSideQuestionResponse(agentResult.messages),
     usage: agentResult.totalUsage,
-  }
+  };
 }
 
 /**
@@ -124,20 +124,20 @@ ${question}`
  */
 function extractSideQuestionResponse(messages: Message[]): string | null {
   // Flatten all assistant content blocks across the per-block messages.
-  const assistantBlocks = messages.flatMap(m =>
+  const assistantBlocks = messages.flatMap((m) =>
     m.type === 'assistant' ? m.message.content : [],
-  )
+  );
 
   if (assistantBlocks.length > 0) {
     // Concatenate all text blocks (there's normally at most one, but be safe).
-    const text = extractTextContent(assistantBlocks, '\n\n').trim()
-    if (text) return text
+    const text = extractTextContent(assistantBlocks, '\n\n').trim();
+    if (text) return text;
 
     // No text — check if the model tried to call a tool despite instructions.
-    const toolUse = assistantBlocks.find(b => b.type === 'tool_use')
+    const toolUse = assistantBlocks.find((b) => b.type === 'tool_use');
     if (toolUse) {
-      const toolName = 'name' in toolUse ? toolUse.name : 'a tool'
-      return `(The model tried to call ${toolName} instead of answering directly. Try rephrasing or ask in the main conversation.)`
+      const toolName = 'name' in toolUse ? toolUse.name : 'a tool';
+      return `(The model tried to call ${toolName} instead of answering directly. Try rephrasing or ask in the main conversation.)`;
     }
   }
 
@@ -146,10 +146,10 @@ function extractSideQuestionResponse(messages: Message[]): string | null {
   const apiErr = messages.find(
     (m): m is SystemAPIErrorMessage =>
       m.type === 'system' && 'subtype' in m && m.subtype === 'api_error',
-  )
+  );
   if (apiErr) {
-    return `(API error: ${formatAPIError(apiErr.error)})`
+    return `(API error: ${formatAPIError(apiErr.error)})`;
   }
 
-  return null
+  return null;
 }

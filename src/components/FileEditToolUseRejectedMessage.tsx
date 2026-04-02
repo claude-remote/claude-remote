@@ -1,7 +1,7 @@
-import { c as _c } from "react/compiler-runtime";
+import { relative } from 'node:path';
 import type { StructuredPatchHunk } from 'diff';
-import { relative } from 'path';
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useTerminalSize } from 'src/hooks/useTerminalSize.js';
 import { getCwd } from 'src/utils/cwd.js';
 import { Box, Text } from '../ink.js';
@@ -23,19 +23,8 @@ type Props = {
 };
 export function FileEditToolUseRejectedMessage(t0) {
   const $ = _c(38);
-  const {
-    file_path,
-    operation,
-    patch,
-    firstLine,
-    fileContent,
-    content,
-    style,
-    verbose
-  } = t0;
-  const {
-    columns
-  } = useTerminalSize();
+  const { file_path, operation, patch, firstLine, fileContent, content, style, verbose } = t0;
+  const { columns } = useTerminalSize();
   let t1;
   if ($[0] !== operation) {
     t1 = <Text color="subtle">User rejected {operation} to </Text>;
@@ -55,7 +44,11 @@ export function FileEditToolUseRejectedMessage(t0) {
   }
   let t3;
   if ($[5] !== t2) {
-    t3 = <Text bold={true} color="subtle">{t2}</Text>;
+    t3 = (
+      <Text bold={true} color="subtle">
+        {t2}
+      </Text>
+    );
     $[5] = t2;
     $[6] = t3;
   } else {
@@ -63,7 +56,12 @@ export function FileEditToolUseRejectedMessage(t0) {
   }
   let t4;
   if ($[7] !== t1 || $[8] !== t3) {
-    t4 = <Box flexDirection="row">{t1}{t3}</Box>;
+    t4 = (
+      <Box flexDirection="row">
+        {t1}
+        {t3}
+      </Box>
+    );
     $[7] = t1;
     $[8] = t3;
     $[9] = t4;
@@ -71,7 +69,7 @@ export function FileEditToolUseRejectedMessage(t0) {
     t4 = $[9];
   }
   const text = t4;
-  if (style === "condensed" && !verbose) {
+  if (style === 'condensed' && !verbose) {
     let t5;
     if ($[10] !== text) {
       t5 = <MessageResponse>{text}</MessageResponse>;
@@ -82,14 +80,14 @@ export function FileEditToolUseRejectedMessage(t0) {
     }
     return t5;
   }
-  if (operation === "write" && content !== undefined) {
+  if (operation === 'write' && content !== undefined) {
     let plusLines;
     let t5;
     if ($[12] !== content || $[13] !== verbose) {
-      const lines = content.split("\n");
+      const lines = content.split('\n');
       const numLines = lines.length;
       plusLines = numLines - MAX_LINES_TO_RENDER;
-      t5 = verbose ? content : lines.slice(0, MAX_LINES_TO_RENDER).join("\n");
+      t5 = verbose ? content : lines.slice(0, MAX_LINES_TO_RENDER).join('\n');
       $[12] = content;
       $[13] = verbose;
       $[14] = plusLines;
@@ -99,7 +97,7 @@ export function FileEditToolUseRejectedMessage(t0) {
       t5 = $[15];
     }
     const truncatedContent = t5;
-    const t6 = truncatedContent || "(No content)";
+    const t6 = truncatedContent || '(No content)';
     const t7 = columns - 12;
     let t8;
     if ($[16] !== file_path || $[17] !== t6 || $[18] !== t7) {
@@ -122,7 +120,15 @@ export function FileEditToolUseRejectedMessage(t0) {
     }
     let t10;
     if ($[23] !== t8 || $[24] !== t9 || $[25] !== text) {
-      t10 = <MessageResponse><Box flexDirection="column">{text}{t8}{t9}</Box></MessageResponse>;
+      t10 = (
+        <MessageResponse>
+          <Box flexDirection="column">
+            {text}
+            {t8}
+            {t9}
+          </Box>
+        </MessageResponse>
+      );
       $[23] = t8;
       $[24] = t9;
       $[25] = text;
@@ -145,8 +151,23 @@ export function FileEditToolUseRejectedMessage(t0) {
   }
   const t5 = columns - 12;
   let t6;
-  if ($[29] !== fileContent || $[30] !== file_path || $[31] !== firstLine || $[32] !== patch || $[33] !== t5) {
-    t6 = <StructuredDiffList hunks={patch} dim={true} width={t5} filePath={file_path} firstLine={firstLine} fileContent={fileContent} />;
+  if (
+    $[29] !== fileContent ||
+    $[30] !== file_path ||
+    $[31] !== firstLine ||
+    $[32] !== patch ||
+    $[33] !== t5
+  ) {
+    t6 = (
+      <StructuredDiffList
+        hunks={patch}
+        dim={true}
+        width={t5}
+        filePath={file_path}
+        firstLine={firstLine}
+        fileContent={fileContent}
+      />
+    );
     $[29] = fileContent;
     $[30] = file_path;
     $[31] = firstLine;
@@ -158,7 +179,14 @@ export function FileEditToolUseRejectedMessage(t0) {
   }
   let t7;
   if ($[35] !== t6 || $[36] !== text) {
-    t7 = <MessageResponse><Box flexDirection="column">{text}{t6}</Box></MessageResponse>;
+    t7 = (
+      <MessageResponse>
+        <Box flexDirection="column">
+          {text}
+          {t6}
+        </Box>
+      </MessageResponse>
+    );
     $[35] = t6;
     $[36] = text;
     $[37] = t7;

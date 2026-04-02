@@ -1,10 +1,10 @@
-import { readdir } from 'fs/promises'
-import { getCwd } from '../../utils/cwd.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import { readdir } from 'node:fs/promises';
+import { getCwd } from '../../utils/cwd.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 // claudeApiContent.js bundles 247KB of .md strings. Lazy-load inside
 // getPromptForCommand so they only enter memory when /claude-api is invoked.
-type SkillContent = typeof import('./claudeApiContent.js')
+type SkillContent = typeof import('./claudeApiContent.js');
 
 type DetectedLanguage =
   | 'python'
@@ -14,7 +14,7 @@ type DetectedLanguage =
   | 'ruby'
   | 'csharp'
   | 'php'
-  | 'curl'
+  | 'curl';
 
 const LANGUAGE_INDICATORS: Record<DetectedLanguage, string[]> = {
   python: ['.py', 'requirements.txt', 'pyproject.toml', 'setup.py', 'Pipfile'],
@@ -25,72 +25,63 @@ const LANGUAGE_INDICATORS: Record<DetectedLanguage, string[]> = {
   csharp: ['.cs', '.csproj'],
   php: ['.php', 'composer.json'],
   curl: [],
-}
+};
 
 async function detectLanguage(): Promise<DetectedLanguage | null> {
-  const cwd = getCwd()
-  let entries: string[]
+  const cwd = getCwd();
+  let entries: string[];
   try {
-    entries = await readdir(cwd)
+    entries = await readdir(cwd);
   } catch {
-    return null
+    return null;
   }
 
   for (const [lang, indicators] of Object.entries(LANGUAGE_INDICATORS) as [
     DetectedLanguage,
     string[],
   ][]) {
-    if (indicators.length === 0) continue
+    if (indicators.length === 0) continue;
     for (const indicator of indicators) {
       if (indicator.startsWith('.')) {
-        if (entries.some(e => e.endsWith(indicator))) return lang
+        if (entries.some((e) => e.endsWith(indicator))) return lang;
       } else {
-        if (entries.includes(indicator)) return lang
+        if (entries.includes(indicator)) return lang;
       }
     }
   }
-  return null
+  return null;
 }
 
-function getFilesForLanguage(
-  lang: DetectedLanguage,
-  content: SkillContent,
-): string[] {
+function getFilesForLanguage(lang: DetectedLanguage, content: SkillContent): string[] {
   return Object.keys(content.SKILL_FILES).filter(
-    path => path.startsWith(`${lang}/`) || path.startsWith('shared/'),
-  )
+    (path) => path.startsWith(`${lang}/`) || path.startsWith('shared/'),
+  );
 }
 
 function processContent(md: string, content: SkillContent): string {
   // Strip HTML comments. Loop to handle nested comments.
-  let out = md
-  let prev
+  let out = md;
+  let prev;
   do {
-    prev = out
-    out = out.replace(/<!--[\s\S]*?-->\n?/g, '')
-  } while (out !== prev)
+    prev = out;
+    out = out.replace(/<!--[\s\S]*?-->\n?/g, '');
+  } while (out !== prev);
 
   out = out.replace(
     /\{\{(\w+)\}\}/g,
-    (match, key: string) =>
-      (content.SKILL_MODEL_VARS as Record<string, string>)[key] ?? match,
-  )
-  return out
+    (match, key: string) => (content.SKILL_MODEL_VARS as Record<string, string>)[key] ?? match,
+  );
+  return out;
 }
 
-function buildInlineReference(
-  filePaths: string[],
-  content: SkillContent,
-): string {
-  const sections: string[] = []
+function buildInlineReference(filePaths: string[], content: SkillContent): string {
+  const sections: string[] = [];
   for (const filePath of filePaths.sort()) {
-    const md = content.SKILL_FILES[filePath]
-    if (!md) continue
-    sections.push(
-      `<doc path="${filePath}">\n${processContent(md, content).trim()}\n</doc>`,
-    )
+    const md = content.SKILL_FILES[filePath];
+    if (!md) continue;
+    sections.push(`<doc path="${filePath}">\n${processContent(md, content).trim()}\n</doc>`);
   }
-  return sections.join('\n\n')
+  return sections.join('\n\n');
 }
 
 const INLINE_READING_GUIDE = `## Reference Documentation
@@ -127,54 +118,44 @@ The relevant documentation for your detected language is included below in \`<do
 → Refer to \`shared/error-codes.md\`
 
 **Latest docs via WebFetch:**
-→ Refer to \`shared/live-sources.md\` for URLs`
+→ Refer to \`shared/live-sources.md\` for URLs`;
 
-function buildPrompt(
-  lang: DetectedLanguage | null,
-  args: string,
-  content: SkillContent,
-): string {
+function buildPrompt(lang: DetectedLanguage | null, args: string, content: SkillContent): string {
   // Take the SKILL.md content up to the "Reading Guide" section
-  const cleanPrompt = processContent(content.SKILL_PROMPT, content)
-  const readingGuideIdx = cleanPrompt.indexOf('## Reading Guide')
+  const cleanPrompt = processContent(content.SKILL_PROMPT, content);
+  const readingGuideIdx = cleanPrompt.indexOf('## Reading Guide');
   const basePrompt =
-    readingGuideIdx !== -1
-      ? cleanPrompt.slice(0, readingGuideIdx).trimEnd()
-      : cleanPrompt
+    readingGuideIdx !== -1 ? cleanPrompt.slice(0, readingGuideIdx).trimEnd() : cleanPrompt;
 
-  const parts: string[] = [basePrompt]
+  const parts: string[] = [basePrompt];
 
   if (lang) {
-    const filePaths = getFilesForLanguage(lang, content)
-    const readingGuide = INLINE_READING_GUIDE.replace(/\{lang\}/g, lang)
-    parts.push(readingGuide)
-    parts.push(
-      '---\n\n## Included Documentation\n\n' +
-        buildInlineReference(filePaths, content),
-    )
+    const filePaths = getFilesForLanguage(lang, content);
+    const readingGuide = INLINE_READING_GUIDE.replace(/\{lang\}/g, lang);
+    parts.push(readingGuide);
+    parts.push(`---\n\n## Included Documentation\n\n${buildInlineReference(filePaths, content)}`);
   } else {
     // No language detected — include all docs and let the model ask
-    parts.push(INLINE_READING_GUIDE.replace(/\{lang\}/g, 'unknown'))
+    parts.push(INLINE_READING_GUIDE.replace(/\{lang\}/g, 'unknown'));
     parts.push(
       'No project language was auto-detected. Ask the user which language they are using, then refer to the matching docs below.',
-    )
+    );
     parts.push(
-      '---\n\n## Included Documentation\n\n' +
-        buildInlineReference(Object.keys(content.SKILL_FILES), content),
-    )
+      `---\n\n## Included Documentation\n\n${buildInlineReference(Object.keys(content.SKILL_FILES), content)}`,
+    );
   }
 
   // Preserve the "When to Use WebFetch" and "Common Pitfalls" sections
-  const webFetchIdx = cleanPrompt.indexOf('## When to Use WebFetch')
+  const webFetchIdx = cleanPrompt.indexOf('## When to Use WebFetch');
   if (webFetchIdx !== -1) {
-    parts.push(cleanPrompt.slice(webFetchIdx).trimEnd())
+    parts.push(cleanPrompt.slice(webFetchIdx).trimEnd());
   }
 
   if (args) {
-    parts.push(`## User Request\n\n${args}`)
+    parts.push(`## User Request\n\n${args}`);
   }
 
-  return parts.join('\n\n')
+  return parts.join('\n\n');
 }
 
 export function registerClaudeApiSkill(): void {
@@ -187,10 +168,10 @@ export function registerClaudeApiSkill(): void {
     allowedTools: ['Read', 'Grep', 'Glob', 'WebFetch'],
     userInvocable: true,
     async getPromptForCommand(args) {
-      const content = await import('./claudeApiContent.js')
-      const lang = await detectLanguage()
-      const prompt = buildPrompt(lang, args, content)
-      return [{ type: 'text', text: prompt }]
+      const content = await import('./claudeApiContent.js');
+      const lang = await detectLanguage();
+      const prompt = buildPrompt(lang, args, content);
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

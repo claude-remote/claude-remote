@@ -1,14 +1,11 @@
-import { realpath } from 'fs/promises'
-import { getOriginalCwd } from '../bootstrap/state.js'
-import { getGlobalConfig, saveGlobalConfig } from './config.js'
-import { logForDebugging } from './debug.js'
-import {
-  detectCurrentRepository,
-  parseGitHubRepository,
-} from './detectRepository.js'
-import { pathExists } from './file.js'
-import { getRemoteUrlForDir } from './git/gitFilesystem.js'
-import { findGitRoot } from './git.js'
+import { realpath } from 'node:fs/promises';
+import { getOriginalCwd } from '../bootstrap/state.js';
+import { getGlobalConfig, saveGlobalConfig } from './config.js';
+import { logForDebugging } from './debug.js';
+import { detectCurrentRepository, parseGitHubRepository } from './detectRepository.js';
+import { pathExists } from './file.js';
+import { findGitRoot } from './git.js';
+import { getRemoteUrlForDir } from './git/gitFilesystem.js';
 
 /**
  * Updates the GitHub repository path mapping in global config.
@@ -22,55 +19,53 @@ import { findGitRoot } from './git.js'
  */
 export async function updateGithubRepoPathMapping(): Promise<void> {
   try {
-    const repo = await detectCurrentRepository()
+    const repo = await detectCurrentRepository();
     if (!repo) {
-      logForDebugging(
-        'Not in a GitHub repository, skipping path mapping update',
-      )
-      return
+      logForDebugging('Not in a GitHub repository, skipping path mapping update');
+      return;
     }
 
     // Use the git root as the canonical path for this repo clone.
     // This ensures we always store the repo root, not an arbitrary subdirectory.
-    const cwd = getOriginalCwd()
-    const gitRoot = findGitRoot(cwd)
-    const basePath = gitRoot ?? cwd
+    const cwd = getOriginalCwd();
+    const gitRoot = findGitRoot(cwd);
+    const basePath = gitRoot ?? cwd;
 
     // Resolve symlinks for canonical storage
-    let currentPath: string
+    let currentPath: string;
     try {
-      currentPath = (await realpath(basePath)).normalize('NFC')
+      currentPath = (await realpath(basePath)).normalize('NFC');
     } catch {
-      currentPath = basePath
+      currentPath = basePath;
     }
 
     // Normalize repo key to lowercase for case-insensitive matching
-    const repoKey = repo.toLowerCase()
+    const repoKey = repo.toLowerCase();
 
-    const config = getGlobalConfig()
-    const existingPaths = config.githubRepoPaths?.[repoKey] ?? []
+    const config = getGlobalConfig();
+    const existingPaths = config.githubRepoPaths?.[repoKey] ?? [];
 
     if (existingPaths[0] === currentPath) {
       // Already at the front — nothing to do
-      logForDebugging(`Path ${currentPath} already tracked for repo ${repoKey}`)
-      return
+      logForDebugging(`Path ${currentPath} already tracked for repo ${repoKey}`);
+      return;
     }
 
     // Remove if present elsewhere (to promote to front), then prepend
-    const withoutCurrent = existingPaths.filter(p => p !== currentPath)
-    const updatedPaths = [currentPath, ...withoutCurrent]
+    const withoutCurrent = existingPaths.filter((p) => p !== currentPath);
+    const updatedPaths = [currentPath, ...withoutCurrent];
 
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       githubRepoPaths: {
         ...current.githubRepoPaths,
         [repoKey]: updatedPaths,
       },
-    }))
+    }));
 
-    logForDebugging(`Added ${currentPath} to tracked paths for repo ${repoKey}`)
+    logForDebugging(`Added ${currentPath} to tracked paths for repo ${repoKey}`);
   } catch (error) {
-    logForDebugging(`Error updating repo path mapping: ${error}`)
+    logForDebugging(`Error updating repo path mapping: ${error}`);
     // Silently fail - this is non-blocking startup work
   }
 }
@@ -81,9 +76,9 @@ export async function updateGithubRepoPathMapping(): Promise<void> {
  * @returns Array of known absolute paths, or empty array if none
  */
 export function getKnownPathsForRepo(repo: string): string[] {
-  const config = getGlobalConfig()
-  const repoKey = repo.toLowerCase()
-  return config.githubRepoPaths?.[repoKey] ?? []
+  const config = getGlobalConfig();
+  const repoKey = repo.toLowerCase();
+  return config.githubRepoPaths?.[repoKey] ?? [];
 }
 
 /**
@@ -92,8 +87,8 @@ export function getKnownPathsForRepo(repo: string): string[] {
  * @returns Array of paths that exist
  */
 export async function filterExistingPaths(paths: string[]): Promise<string[]> {
-  const results = await Promise.all(paths.map(pathExists))
-  return paths.filter((_, i) => results[i])
+  const results = await Promise.all(paths.map(pathExists));
+  return paths.filter((_, i) => results[i]);
 }
 
 /**
@@ -102,25 +97,22 @@ export async function filterExistingPaths(paths: string[]): Promise<string[]> {
  * @param expectedRepo Expected repository in "owner/repo" format
  * @returns true if the path contains the expected repo, false otherwise
  */
-export async function validateRepoAtPath(
-  path: string,
-  expectedRepo: string,
-): Promise<boolean> {
+export async function validateRepoAtPath(path: string, expectedRepo: string): Promise<boolean> {
   try {
-    const remoteUrl = await getRemoteUrlForDir(path)
+    const remoteUrl = await getRemoteUrlForDir(path);
     if (!remoteUrl) {
-      return false
+      return false;
     }
 
-    const actualRepo = parseGitHubRepository(remoteUrl)
+    const actualRepo = parseGitHubRepository(remoteUrl);
     if (!actualRepo) {
-      return false
+      return false;
     }
 
     // Case-insensitive comparison
-    return actualRepo.toLowerCase() === expectedRepo.toLowerCase()
+    return actualRepo.toLowerCase() === expectedRepo.toLowerCase();
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -131,32 +123,30 @@ export async function validateRepoAtPath(
  * @param pathToRemove The path to remove from tracking
  */
 export function removePathFromRepo(repo: string, pathToRemove: string): void {
-  const config = getGlobalConfig()
-  const repoKey = repo.toLowerCase()
-  const existingPaths = config.githubRepoPaths?.[repoKey] ?? []
+  const config = getGlobalConfig();
+  const repoKey = repo.toLowerCase();
+  const existingPaths = config.githubRepoPaths?.[repoKey] ?? [];
 
-  const updatedPaths = existingPaths.filter(path => path !== pathToRemove)
+  const updatedPaths = existingPaths.filter((path) => path !== pathToRemove);
 
   if (updatedPaths.length === existingPaths.length) {
     // Path wasn't in the list, nothing to do
-    return
+    return;
   }
 
-  const updatedMapping = { ...config.githubRepoPaths }
+  const updatedMapping = { ...config.githubRepoPaths };
 
   if (updatedPaths.length === 0) {
     // Remove the repo key entirely if no paths remain
-    delete updatedMapping[repoKey]
+    delete updatedMapping[repoKey];
   } else {
-    updatedMapping[repoKey] = updatedPaths
+    updatedMapping[repoKey] = updatedPaths;
   }
 
-  saveGlobalConfig(current => ({
+  saveGlobalConfig((current) => ({
     ...current,
     githubRepoPaths: updatedMapping,
-  }))
+  }));
 
-  logForDebugging(
-    `Removed ${pathToRemove} from tracked paths for repo ${repoKey}`,
-  )
+  logForDebugging(`Removed ${pathToRemove} from tracked paths for repo ${repoKey}`);
 }

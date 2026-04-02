@@ -1,10 +1,10 @@
-import { TerminalEvent } from './terminal-event.js'
+import { TerminalEvent } from './terminal-event.js';
 
 export class PasteEvent extends TerminalEvent {
-  readonly text: string
+  readonly text: string;
 
   constructor(text: string) {
-    super('paste', { bubbles: true, cancelable: true })
-    this.text = text
+    super('paste', { bubbles: true, cancelable: true });
+    this.text = text;
   }
 }

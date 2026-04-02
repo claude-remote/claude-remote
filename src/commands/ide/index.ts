@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const ide = {
   type: 'local-jsx',
@@ -6,6 +6,6 @@ const ide = {
   description: 'Manage IDE integrations and show status',
   argumentHint: '[open]',
   load: () => import('./ide.js'),
-} satisfies Command
+} satisfies Command;
 
-export default ide
+export default ide;

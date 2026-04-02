@@ -56,9 +56,7 @@ export function ContextIndicator({ usage, modelName }: ContextIndicatorProps) {
           {/* Header */}
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs font-medium text-gray-400">Context Usage</span>
-            <span className={`text-xs font-bold ${usageTextColor(pct)}`}>
-              {pct.toFixed(1)}%
-            </span>
+            <span className={`text-xs font-bold ${usageTextColor(pct)}`}>{pct.toFixed(1)}%</span>
           </div>
 
           {/* Token summary */}
@@ -79,9 +77,7 @@ export function ContextIndicator({ usage, modelName }: ContextIndicatorProps) {
             <div className="space-y-1.5">
               <span className="text-xs font-medium text-gray-500">Breakdown</span>
               {usage.breakdown.map((item) => {
-                const itemPct = usage.maxTokens > 0
-                  ? (item.tokens / usage.maxTokens) * 100
-                  : 0;
+                const itemPct = usage.maxTokens > 0 ? (item.tokens / usage.maxTokens) * 100 : 0;
                 return (
                   <div key={item.label} className="flex items-center gap-2 text-xs">
                     <span className="w-20 truncate text-gray-400" title={item.label}>

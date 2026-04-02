@@ -1,32 +1,29 @@
-import { feature } from 'src/utils/feature.js'
-import { isReplBridgeActive } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import type { Tool } from '../../Tool.js'
-import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
+import { feature } from 'src/utils/feature.js';
+import type { Tool } from '../../Tool.js';
+import { isReplBridgeActive } from '../../bootstrap/state.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
+import { AGENT_TOOL_NAME } from '../AgentTool/constants.js';
 
 // Dead code elimination: Brief tool name only needed when KAIROS or KAIROS_BRIEF is on
 /* eslint-disable @typescript-eslint/no-require-imports */
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
-    ? (
-        require('../BriefTool/prompt.js') as typeof import('../BriefTool/prompt.js')
-      ).BRIEF_TOOL_NAME
-    : null
+    ? (require('../BriefTool/prompt.js') as typeof import('../BriefTool/prompt.js')).BRIEF_TOOL_NAME
+    : null;
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')
-  ? (
-      require('../SendUserFileTool/prompt.js') as typeof import('../SendUserFileTool/prompt.js')
-    ).SEND_USER_FILE_TOOL_NAME
-  : null
+  ? (require('../SendUserFileTool/prompt.js') as typeof import('../SendUserFileTool/prompt.js'))
+      .SEND_USER_FILE_TOOL_NAME
+  : null;
 
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-export { TOOL_SEARCH_TOOL_NAME } from './constants.js'
+export { TOOL_SEARCH_TOOL_NAME } from './constants.js';
 
-import { TOOL_SEARCH_TOOL_NAME } from './constants.js'
+import { TOOL_SEARCH_TOOL_NAME } from './constants.js';
 
 const PROMPT_HEAD = `Fetches full schema definitions for deferred tools so they can be called.
 
-`
+`;
 
 // Matches isDeferredToolsDeltaEnabled in toolSearch.ts (not imported —
 // toolSearch.ts imports from this file). When enabled: tools announced
@@ -35,10 +32,10 @@ const PROMPT_HEAD = `Fetches full schema definitions for deferred tools so they 
 function getToolLocationHint(): string {
   const deltaEnabled =
     process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_glacier_2xr', false)
+    getFeatureValue_CACHED_MAY_BE_STALE('tengu_glacier_2xr', false);
   return deltaEnabled
     ? 'Deferred tools appear by name in <system-reminder> messages.'
-    : 'Deferred tools appear by name in <available-deferred-tools> messages.'
+    : 'Deferred tools appear by name in <available-deferred-tools> messages.';
 }
 
 const PROMPT_TAIL = ` Until fetched, only the name is known — there is no parameter schema, so the tool cannot be invoked. This tool takes a query, matches it against the deferred tool list, and returns the matched tools' complete JSONSchema definitions inside a <functions> block. Once a tool's schema appears in that result, it is callable exactly like any tool defined at the top of the prompt.
@@ -48,7 +45,7 @@ Result format: each matched tool appears as one <function>{"description": "...",
 Query forms:
 - "select:Read,Edit,Grep" — fetch these exact tools by name
 - "notebook jupyter" — keyword search, up to max_results best matches
-- "+slack send" — require "slack" in the name, rank by remaining terms`
+- "+slack send" — require "slack" in the name, rank by remaining terms`;
 
 /**
  * Check if a tool should be deferred (requires ToolSearch to load).
@@ -62,22 +59,22 @@ Query forms:
 export function isDeferredTool(tool: Tool): boolean {
   // Explicit opt-out via _meta['anthropic/alwaysLoad'] — tool appears in the
   // initial prompt with full schema. Checked first so MCP tools can opt out.
-  if (tool.alwaysLoad === true) return false
+  if (tool.alwaysLoad === true) return false;
 
   // MCP tools are always deferred (workflow-specific)
-  if (tool.isMcp === true) return true
+  if (tool.isMcp === true) return true;
 
   // Never defer ToolSearch itself — the model needs it to load everything else
-  if (tool.name === TOOL_SEARCH_TOOL_NAME) return false
+  if (tool.name === TOOL_SEARCH_TOOL_NAME) return false;
 
   // Fork-first experiment: Agent must be available turn 1, not behind ToolSearch.
   // Lazy require: static import of forkSubagent → coordinatorMode creates a cycle
   // through constants/tools.ts at module init.
   if (feature('FORK_SUBAGENT') && tool.name === AGENT_TOOL_NAME) {
-    type ForkMod = typeof import('../AgentTool/forkSubagent.js')
+    type ForkMod = typeof import('../AgentTool/forkSubagent.js');
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const m = require('../AgentTool/forkSubagent.js') as ForkMod
-    if (m.isForkSubagentEnabled()) return false
+    const m = require('../AgentTool/forkSubagent.js') as ForkMod;
+    if (m.isForkSubagentEnabled()) return false;
   }
 
   // Brief is the primary communication channel whenever the tool is present.
@@ -90,7 +87,7 @@ export function isDeferredTool(tool: Tool): boolean {
     BRIEF_TOOL_NAME &&
     tool.name === BRIEF_TOOL_NAME
   ) {
-    return false
+    return false;
   }
 
   // SendUserFile is a file-delivery communication channel (sibling of Brief).
@@ -101,10 +98,10 @@ export function isDeferredTool(tool: Tool): boolean {
     tool.name === SEND_USER_FILE_TOOL_NAME &&
     isReplBridgeActive()
   ) {
-    return false
+    return false;
   }
 
-  return tool.shouldDefer === true
+  return tool.shouldDefer === true;
 }
 
 /**
@@ -113,9 +110,9 @@ export function isDeferredTool(tool: Tool): boolean {
  * hints A/B (exp_xenhnnmn0smrx4, stopped Mar 21) showed no benefit.
  */
 export function formatDeferredToolLine(tool: Tool): string {
-  return tool.name
+  return tool.name;
 }
 
 export function getPrompt(): string {
-  return PROMPT_HEAD + getToolLocationHint() + PROMPT_TAIL
+  return PROMPT_HEAD + getToolLocationHint() + PROMPT_TAIL;
 }

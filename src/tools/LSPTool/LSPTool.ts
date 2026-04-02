@@ -1,6 +1,6 @@
-import { open } from 'fs/promises'
-import * as path from 'path'
-import { pathToFileURL } from 'url'
+import { open } from 'node:fs/promises';
+import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type {
   CallHierarchyIncomingCall,
   CallHierarchyItem,
@@ -10,27 +10,33 @@ import type {
   Location,
   LocationLink,
   SymbolInformation,
-} from 'vscode-languageserver-types'
-import { z } from 'zod/v4'
+} from 'vscode-languageserver-types';
+import { z } from 'zod/v4';
+import type { ValidationResult } from '../../Tool.js';
+import { type ToolDef, buildTool } from '../../Tool.js';
 import {
   getInitializationStatus,
   getLspServerManager,
   isLspConnected,
   waitForInitialization,
-} from '../../services/lsp/manager.js'
-import type { ValidationResult } from '../../Tool.js'
-import { buildTool, type ToolDef } from '../../Tool.js'
-import { uniq } from '../../utils/array.js'
-import { getCwd } from '../../utils/cwd.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { isENOENT, toError } from '../../utils/errors.js'
-import { execFileNoThrowWithCwd } from '../../utils/execFileNoThrow.js'
-import { getFsImplementation } from '../../utils/fsOperations.js'
-import { lazySchema } from '../../utils/lazySchema.js'
-import { logError } from '../../utils/log.js'
-import { expandPath } from '../../utils/path.js'
-import { checkReadPermissionForTool } from '../../utils/permissions/filesystem.js'
-import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
+} from '../../services/lsp/manager.js';
+import { uniq } from '../../utils/array.js';
+import { getCwd } from '../../utils/cwd.js';
+import { logForDebugging } from '../../utils/debug.js';
+import { isENOENT, toError } from '../../utils/errors.js';
+import { execFileNoThrowWithCwd } from '../../utils/execFileNoThrow.js';
+import { getFsImplementation } from '../../utils/fsOperations.js';
+import { lazySchema } from '../../utils/lazySchema.js';
+import { logError } from '../../utils/log.js';
+import { expandPath } from '../../utils/path.js';
+import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js';
+import { checkReadPermissionForTool } from '../../utils/permissions/filesystem.js';
+import {
+  renderToolResultMessage,
+  renderToolUseErrorMessage,
+  renderToolUseMessage,
+  userFacingName,
+} from './UI.js';
 import {
   formatDocumentSymbolResult,
   formatFindReferencesResult,
@@ -40,17 +46,11 @@ import {
   formatOutgoingCallsResult,
   formatPrepareCallHierarchyResult,
   formatWorkspaceSymbolResult,
-} from './formatters.js'
-import { DESCRIPTION, LSP_TOOL_NAME } from './prompt.js'
-import { lspToolInputSchema } from './schemas.js'
-import {
-  renderToolResultMessage,
-  renderToolUseErrorMessage,
-  renderToolUseMessage,
-  userFacingName,
-} from './UI.js'
+} from './formatters.js';
+import { DESCRIPTION, LSP_TOOL_NAME } from './prompt.js';
+import { lspToolInputSchema } from './schemas.js';
 
-const MAX_LSP_FILE_SIZE_BYTES = 10_000_000
+const MAX_LSP_FILE_SIZE_BYTES = 10_000_000;
 
 /**
  * Tool-compatible input schema (regular ZodObject instead of discriminated union)
@@ -72,19 +72,15 @@ const inputSchema = lazySchema(() =>
       ])
       .describe('The LSP operation to perform'),
     filePath: z.string().describe('The absolute or relative path to the file'),
-    line: z
-      .number()
-      .int()
-      .positive()
-      .describe('The line number (1-based, as shown in editors)'),
+    line: z.number().int().positive().describe('The line number (1-based, as shown in editors)'),
     character: z
       .number()
       .int()
       .positive()
       .describe('The character offset (1-based, as shown in editors)'),
   }),
-)
-type InputSchema = ReturnType<typeof inputSchema>
+);
+type InputSchema = ReturnType<typeof inputSchema>;
 
 const outputSchema = lazySchema(() =>
   z.object({
@@ -102,9 +98,7 @@ const outputSchema = lazySchema(() =>
       ])
       .describe('The LSP operation that was performed'),
     result: z.string().describe('The formatted result of the LSP operation'),
-    filePath: z
-      .string()
-      .describe('The file path the operation was performed on'),
+    filePath: z.string().describe('The file path the operation was performed on'),
     resultCount: z
       .number()
       .int()
@@ -118,11 +112,11 @@ const outputSchema = lazySchema(() =>
       .optional()
       .describe('Number of files containing results'),
   }),
-)
-type OutputSchema = ReturnType<typeof outputSchema>
+);
+type OutputSchema = ReturnType<typeof outputSchema>;
 
-export type Output = z.infer<OutputSchema>
-export type Input = z.infer<InputSchema>
+export type Output = z.infer<OutputSchema>;
+export type Input = z.infer<InputSchema>;
 
 export const LSPTool = buildTool({
   name: LSP_TOOL_NAME,
@@ -130,71 +124,71 @@ export const LSPTool = buildTool({
   maxResultSizeChars: 100_000,
   isLsp: true,
   async description() {
-    return DESCRIPTION
+    return DESCRIPTION;
   },
   userFacingName,
   shouldDefer: true,
   isEnabled() {
-    return isLspConnected()
+    return isLspConnected();
   },
   get inputSchema(): InputSchema {
-    return inputSchema()
+    return inputSchema();
   },
   get outputSchema(): OutputSchema {
-    return outputSchema()
+    return outputSchema();
   },
   isConcurrencySafe() {
-    return true
+    return true;
   },
   isReadOnly() {
-    return true
+    return true;
   },
   getPath({ filePath }): string {
-    return expandPath(filePath)
+    return expandPath(filePath);
   },
   async validateInput(input: Input): Promise<ValidationResult> {
     // First validate against the discriminated union for better type safety
-    const parseResult = lspToolInputSchema().safeParse(input)
+    const parseResult = lspToolInputSchema().safeParse(input);
     if (!parseResult.success) {
       return {
         result: false,
         message: `Invalid input: ${parseResult.error.message}`,
         errorCode: 3,
-      }
+      };
     }
 
     // Validate file exists and is a regular file
-    const fs = getFsImplementation()
-    const absolutePath = expandPath(input.filePath)
+    const fs = getFsImplementation();
+    const absolutePath = expandPath(input.filePath);
 
     // SECURITY: Skip filesystem operations for UNC paths to prevent NTLM credential leaks.
     if (absolutePath.startsWith('\\\\') || absolutePath.startsWith('//')) {
-      return { result: true }
+      return { result: true };
     }
 
-    let stats
+    let stats;
     try {
-      stats = await fs.stat(absolutePath)
+      stats = await fs.stat(absolutePath);
     } catch (error) {
       if (isENOENT(error)) {
         return {
           result: false,
           message: `File does not exist: ${input.filePath}`,
           errorCode: 1,
-        }
+        };
       }
-      const err = toError(error)
+      const err = toError(error);
       // Log filesystem access errors for tracking
       logError(
         new Error(
           `Failed to access file stats for LSP operation on ${input.filePath}: ${err.message}`,
         ),
-      )
+      );
       return {
         result: false,
         message: `Cannot access file: ${input.filePath}. ${err.message}`,
         errorCode: 4,
-      }
+      };
     }
 
     if (!stats.isFile()) {
@@ -202,108 +196,98 @@ export const LSPTool = buildTool({
         result: false,
         message: `Path is not a file: ${input.filePath}`,
         errorCode: 2,
-      }
+      };
     }
 
-    return { result: true }
+    return { result: true };
   },
   async checkPermissions(input, context): Promise<PermissionDecision> {
-    const appState = context.getAppState()
-    return checkReadPermissionForTool(
-      LSPTool,
-      input,
-      appState.toolPermissionContext,
-    )
+    const appState = context.getAppState();
+    return checkReadPermissionForTool(LSPTool, input, appState.toolPermissionContext);
   },
   async prompt() {
-    return DESCRIPTION
+    return DESCRIPTION;
   },
   renderToolUseMessage,
   renderToolUseErrorMessage,
   renderToolResultMessage,
   async call(input: Input, _context) {
-    const absolutePath = expandPath(input.filePath)
-    const cwd = getCwd()
+    const absolutePath = expandPath(input.filePath);
+    const cwd = getCwd();
 
     // Wait for initialization if it's still pending
     // This prevents returning "no server available" before init completes
-    const status = getInitializationStatus()
+    const status = getInitializationStatus();
     if (status.status === 'pending') {
-      await waitForInitialization()
+      await waitForInitialization();
     }
 
     // Get the LSP server manager
-    const manager = getLspServerManager()
+    const manager = getLspServerManager();
     if (!manager) {
       // Log this system-level failure for tracking
-      logError(
-        new Error('LSP server manager not initialized when tool was called'),
-      )
+      logError(new Error('LSP server manager not initialized when tool was called'));
 
       const output: Output = {
         operation: input.operation,
-        result:
-          'LSP server manager not initialized. This may indicate a startup issue.',
+        result: 'LSP server manager not initialized. This may indicate a startup issue.',
         filePath: input.filePath,
-      }
+      };
       return {
         data: output,
-      }
+      };
     }
 
     // Map operation to LSP method and prepare params
-    const { method, params } = getMethodAndParams(input, absolutePath)
+    const { method, params } = getMethodAndParams(input, absolutePath);
 
     try {
       // Ensure file is open in LSP server before making requests
       // Most LSP servers require textDocument/didOpen before operations
       // Only read the file if it's not already open to avoid unnecessary I/O
       if (!manager.isFileOpen(absolutePath)) {
-        const handle = await open(absolutePath, 'r')
+        const handle = await open(absolutePath, 'r');
         try {
-          const stats = await handle.stat()
+          const stats = await handle.stat();
           if (stats.size > MAX_LSP_FILE_SIZE_BYTES) {
             const output: Output = {
               operation: input.operation,
               result: `File too large for LSP analysis (${Math.ceil(stats.size / 1_000_000)}MB exceeds 10MB limit)`,
               filePath: input.filePath,
-            }
-            return { data: output }
+            };
+            return { data: output };
           }
-          const fileContent = await handle.readFile({ encoding: 'utf-8' })
-          await manager.openFile(absolutePath, fileContent)
+          const fileContent = await handle.readFile({ encoding: 'utf-8' });
+          await manager.openFile(absolutePath, fileContent);
         } finally {
-          await handle.close()
+          await handle.close();
         }
       }
 
       // Send request to LSP server
-      let result = await manager.sendRequest(absolutePath, method, params)
+      let result = await manager.sendRequest(absolutePath, method, params);
 
       if (result === undefined) {
         // Log for diagnostic purposes - helps track usage patterns and potential bugs
         logForDebugging(
           `No LSP server available for file type ${path.extname(absolutePath)} for operation ${input.operation} on file ${input.filePath}`,
-        )
+        );
 
         const output: Output = {
           operation: input.operation,
           result: `No LSP server available for file type: ${path.extname(absolutePath)}`,
           filePath: input.filePath,
-        }
+        };
         return {
           data: output,
-        }
+        };
       }
 
       // For incomingCalls and outgoingCalls, we need a two-step process:
       // 1. First get CallHierarchyItem(s) from prepareCallHierarchy
       // 2. Then request the actual calls using that item
-      if (
-        input.operation === 'incomingCalls' ||
-        input.operation === 'outgoingCalls'
-      ) {
-        const callItems = result as CallHierarchyItem[]
+      if (input.operation === 'incomingCalls' || input.operation === 'outgoingCalls') {
+        const callItems = result as CallHierarchyItem[];
         if (!callItems || callItems.length === 0) {
           const output: Output = {
             operation: input.operation,
@@ -311,24 +295,22 @@ export const LSPTool = buildTool({
             filePath: input.filePath,
             resultCount: 0,
             fileCount: 0,
-          }
-          return { data: output }
+          };
+          return { data: output };
         }
 
         // Use the first call hierarchy item to request calls
         const callMethod =
           input.operation === 'incomingCalls'
             ? 'callHierarchy/incomingCalls'
-            : 'callHierarchy/outgoingCalls'
+            : 'callHierarchy/outgoingCalls';
 
         result = await manager.sendRequest(absolutePath, callMethod, {
           item: callItems[0],
-        })
+        });
 
         if (result === undefined) {
-          logForDebugging(
-            `LSP server returned undefined for ${callMethod} on ${input.filePath}`,
-          )
+          logForDebugging(`LSP server returned undefined for ${callMethod} on ${input.filePath}`);
           // Continue to formatter which will handle empty/null gracefully
         }
       }
@@ -344,41 +326,25 @@ export const LSPTool = buildTool({
       ) {
         if (input.operation === 'workspaceSymbol') {
           // SymbolInformation has location.uri — filter by extracting locations
-          const symbols = result as SymbolInformation[]
-          const locations = symbols
-            .filter(s => s?.location?.uri)
-            .map(s => s.location)
-          const filteredLocations = await filterGitIgnoredLocations(
-            locations,
-            cwd,
-          )
-          const filteredUris = new Set(filteredLocations.map(l => l.uri))
-          result = symbols.filter(
-            s => !s?.location?.uri || filteredUris.has(s.location.uri),
-          )
+          const symbols = result as SymbolInformation[];
+          const locations = symbols.filter((s) => s?.location?.uri).map((s) => s.location);
+          const filteredLocations = await filterGitIgnoredLocations(locations, cwd);
+          const filteredUris = new Set(filteredLocations.map((l) => l.uri));
+          result = symbols.filter((s) => !s?.location?.uri || filteredUris.has(s.location.uri));
         } else {
           // Location[] or (Location | LocationLink)[]
-          const locations = (result as (Location | LocationLink)[]).map(
-            toLocation,
-          )
-          const filteredLocations = await filterGitIgnoredLocations(
-            locations,
-            cwd,
-          )
-          const filteredUris = new Set(filteredLocations.map(l => l.uri))
-          result = (result as (Location | LocationLink)[]).filter(item => {
-            const loc = toLocation(item)
-            return !loc.uri || filteredUris.has(loc.uri)
-          })
+          const locations = (result as (Location | LocationLink)[]).map(toLocation);
+          const filteredLocations = await filterGitIgnoredLocations(locations, cwd);
+          const filteredUris = new Set(filteredLocations.map((l) => l.uri));
+          result = (result as (Location | LocationLink)[]).filter((item) => {
+            const loc = toLocation(item);
+            return !loc.uri || filteredUris.has(loc.uri);
+          });
         }
       }
 
       // Format the result based on operation type
-      const { formatted, resultCount, fileCount } = formatResult(
-        input.operation,
-        result,
-        cwd,
-      )
+      const { formatted, resultCount, fileCount } = formatResult(input.operation, result, cwd);
 
       const output: Output = {
         operation: input.operation,
@@ -386,30 +352,30 @@ export const LSPTool = buildTool({
         filePath: input.filePath,
         resultCount,
         fileCount,
-      }
+      };
 
       return {
         data: output,
-      }
+      };
     } catch (error) {
-      const err = toError(error)
-      const errorMessage = err.message
+      const err = toError(error);
+      const errorMessage = err.message;
 
       // Log error for tracking
       logError(
         new Error(
           `LSP tool request failed for ${input.operation} on ${input.filePath}: ${errorMessage}`,
         ),
-      )
+      );
 
       const output: Output = {
         operation: input.operation,
         result: `Error performing ${input.operation}: ${errorMessage}`,
         filePath: input.filePath,
-      }
+      };
       return {
         data: output,
-      }
+      };
     }
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {
@@ -417,9 +383,9 @@ export const LSPTool = buildTool({
       tool_use_id: toolUseID,
       type: 'tool_result',
       content: output.result,
-    }
+    };
   },
-} satisfies ToolDef<InputSchema, Output>)
+} satisfies ToolDef<InputSchema, Output>);
 
 /**
  * Maps LSPTool operation to LSP method and params
@@ -428,12 +394,12 @@ function getMethodAndParams(
   input: Input,
   absolutePath: string,
 ): { method: string; params: unknown } {
-  const uri = pathToFileURL(absolutePath).href
+  const uri = pathToFileURL(absolutePath).href;
   // Convert from 1-based (user-friendly) to 0-based (LSP protocol)
   const position = {
     line: input.line - 1,
     character: input.character - 1,
-  }
+  };
 
   switch (input.operation) {
     case 'goToDefinition':
@@ -443,7 +409,7 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
     case 'findReferences':
       return {
         method: 'textDocument/references',
@@ -452,7 +418,7 @@ function getMethodAndParams(
           position,
           context: { includeDeclaration: true },
         },
-      }
+      };
     case 'hover':
       return {
         method: 'textDocument/hover',
@@ -460,21 +426,21 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
     case 'documentSymbol':
       return {
         method: 'textDocument/documentSymbol',
         params: {
           textDocument: { uri },
         },
-      }
+      };
     case 'workspaceSymbol':
       return {
         method: 'workspace/symbol',
         params: {
           query: '', // Empty query returns all symbols
         },
-      }
+      };
     case 'goToImplementation':
       return {
         method: 'textDocument/implementation',
@@ -482,7 +448,7 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
     case 'prepareCallHierarchy':
       return {
         method: 'textDocument/prepareCallHierarchy',
@@ -490,7 +456,7 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
     case 'incomingCalls':
       // For incoming/outgoing calls, we first need to prepare the call hierarchy
       // The LSP server will return CallHierarchyItem(s) that we pass to the calls request
@@ -500,7 +466,7 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
     case 'outgoingCalls':
       return {
         method: 'textDocument/prepareCallHierarchy',
@@ -508,7 +474,7 @@ function getMethodAndParams(
           textDocument: { uri },
           position,
         },
-      }
+      };
   }
 }
 
@@ -516,37 +482,37 @@ function getMethodAndParams(
  * Counts the total number of symbols including nested children
  */
 function countSymbols(symbols: DocumentSymbol[]): number {
-  let count = symbols.length
+  let count = symbols.length;
   for (const symbol of symbols) {
     if (symbol.children && symbol.children.length > 0) {
-      count += countSymbols(symbol.children)
+      count += countSymbols(symbol.children);
     }
   }
-  return count
+  return count;
 }
 
 /**
  * Counts unique files from an array of locations
  */
 function countUniqueFiles(locations: Location[]): number {
-  return new Set(locations.map(loc => loc.uri)).size
+  return new Set(locations.map((loc) => loc.uri)).size;
 }
 
 /**
  * Extracts a file path from a file:// URI, decoding percent-encoded characters.
  */
 function uriToFilePath(uri: string): string {
-  let filePath = uri.replace(/^file:\/\//, '')
+  let filePath = uri.replace(/^file:\/\//, '');
   // On Windows, file:///C:/path becomes /C:/path — strip the leading slash
   if (/^\/[A-Za-z]:/.test(filePath)) {
-    filePath = filePath.slice(1)
+    filePath = filePath.slice(1);
   }
   try {
-    filePath = decodeURIComponent(filePath)
+    filePath = decodeURIComponent(filePath);
   } catch {
     // Use un-decoded path if malformed
   }
-  return filePath
+  return filePath;
 }
 
 /**
@@ -558,63 +524,59 @@ async function filterGitIgnoredLocations<T extends Location>(
   cwd: string,
 ): Promise<T[]> {
   if (locations.length === 0) {
-    return locations
+    return locations;
   }
 
   // Collect unique file paths from URIs
-  const uriToPath = new Map<string, string>()
+  const uriToPath = new Map<string, string>();
   for (const loc of locations) {
     if (loc.uri && !uriToPath.has(loc.uri)) {
-      uriToPath.set(loc.uri, uriToFilePath(loc.uri))
+      uriToPath.set(loc.uri, uriToFilePath(loc.uri));
     }
   }
 
-  const uniquePaths = uniq(uriToPath.values())
+  const uniquePaths = uniq(uriToPath.values());
   if (uniquePaths.length === 0) {
-    return locations
+    return locations;
   }
 
   // Batch check paths with git check-ignore
   // Exit code 0 = at least one path is ignored, 1 = none ignored, 128 = not a git repo
-  const ignoredPaths = new Set<string>()
-  const BATCH_SIZE = 50
+  const ignoredPaths = new Set<string>();
+  const BATCH_SIZE = 50;
   for (let i = 0; i < uniquePaths.length; i += BATCH_SIZE) {
-    const batch = uniquePaths.slice(i, i + BATCH_SIZE)
-    const result = await execFileNoThrowWithCwd(
-      'git',
-      ['check-ignore', ...batch],
-      {
-        cwd,
-        preserveOutputOnError: false,
-        timeout: 5_000,
-      },
-    )
+    const batch = uniquePaths.slice(i, i + BATCH_SIZE);
+    const result = await execFileNoThrowWithCwd('git', ['check-ignore', ...batch], {
+      cwd,
+      preserveOutputOnError: false,
+      timeout: 5_000,
+    });
 
     if (result.code === 0 && result.stdout) {
       for (const line of result.stdout.split('\n')) {
-        const trimmed = line.trim()
+        const trimmed = line.trim();
         if (trimmed) {
-          ignoredPaths.add(trimmed)
+          ignoredPaths.add(trimmed);
         }
       }
     }
   }
 
   if (ignoredPaths.size === 0) {
-    return locations
+    return locations;
   }
 
-  return locations.filter(loc => {
-    const filePath = uriToPath.get(loc.uri)
-    return !filePath || !ignoredPaths.has(filePath)
-  })
+  return locations.filter((loc) => {
+    const filePath = uriToPath.get(loc.uri);
+    return !filePath || !ignoredPaths.has(filePath);
+  });
 }
 
 /**
  * Checks if item is LocationLink (has targetUri) vs Location (has uri)
  */
 function isLocationLink(item: Location | LocationLink): item is LocationLink {
-  return 'targetUri' in item
+  return 'targetUri' in item;
 }
 
 /**
@@ -625,9 +587,9 @@ function toLocation(item: Location | LocationLink): Location {
     return {
       uri: item.targetUri,
       range: item.targetSelectionRange || item.targetRange,
-    }
+    };
   }
-  return item
+  return item;
 }
 
 /**
@@ -645,75 +607,65 @@ function formatResult(
         ? result
         : result
           ? [result as Location | LocationLink]
-          : []
+          : [];
 
       // Convert LocationLinks to Locations for uniform handling
-      const locations = rawResults.map(toLocation)
+      const locations = rawResults.map(toLocation);
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri);
       if (invalidLocations.length > 0) {
         logError(
           new Error(
-            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for goToDefinition on ${cwd}. ` +
-              `This indicates malformed data from the LSP server.`,
+            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for goToDefinition on ${cwd}. This indicates malformed data from the LSP server.`,
           ),
-        )
+        );
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc?.uri);
       return {
         formatted: formatGoToDefinitionResult(
-          result as
-            | Location
-            | Location[]
-            | LocationLink
-            | LocationLink[]
-            | null,
+          result as Location | Location[] | LocationLink | LocationLink[] | null,
           cwd,
         ),
         resultCount: validLocations.length,
         fileCount: countUniqueFiles(validLocations),
-      }
+      };
     }
     case 'findReferences': {
-      const locations = (result as Location[]) || []
+      const locations = (result as Location[]) || [];
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri);
       if (invalidLocations.length > 0) {
         logError(
           new Error(
-            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for findReferences on ${cwd}. ` +
-              `This indicates malformed data from the LSP server.`,
+            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for findReferences on ${cwd}. This indicates malformed data from the LSP server.`,
           ),
-        )
+        );
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc?.uri);
       return {
         formatted: formatFindReferencesResult(result as Location[] | null, cwd),
         resultCount: validLocations.length,
         fileCount: countUniqueFiles(validLocations),
-      }
+      };
     }
     case 'hover': {
       return {
         formatted: formatHoverResult(result as Hover | null, cwd),
         resultCount: result ? 1 : 0,
         fileCount: result ? 1 : 0,
-      }
+      };
     }
     case 'documentSymbol': {
       // LSP allows documentSymbol to return either DocumentSymbol[] or SymbolInformation[]
-      const symbols = (result as (DocumentSymbol | SymbolInformation)[]) || []
+      const symbols = (result as (DocumentSymbol | SymbolInformation)[]) || [];
       // Detect format: DocumentSymbol has 'range', SymbolInformation has 'location'
-      const isDocumentSymbol =
-        symbols.length > 0 && symbols[0] && 'range' in symbols[0]
+      const isDocumentSymbol = symbols.length > 0 && symbols[0] && 'range' in symbols[0];
       // Count symbols - DocumentSymbol can have nested children, SymbolInformation is flat
-      const count = isDocumentSymbol
-        ? countSymbols(symbols as DocumentSymbol[])
-        : symbols.length
+      const count = isDocumentSymbol ? countSymbols(symbols as DocumentSymbol[]) : symbols.length;
       return {
         formatted: formatDocumentSymbolResult(
           result as (DocumentSymbol[] | SymbolInformation[]) | null,
@@ -721,36 +673,28 @@ function formatResult(
         ),
         resultCount: count,
         fileCount: symbols.length > 0 ? 1 : 0,
-      }
+      };
     }
     case 'workspaceSymbol': {
-      const symbols = (result as SymbolInformation[]) || []
+      const symbols = (result as SymbolInformation[]) || [];
 
       // Log and filter out symbols with undefined location.uri
-      const invalidSymbols = symbols.filter(
-        sym => !sym || !sym.location || !sym.location.uri,
-      )
+      const invalidSymbols = symbols.filter((sym) => !sym || !sym.location || !sym.location.uri);
       if (invalidSymbols.length > 0) {
         logError(
           new Error(
-            `LSP server returned ${invalidSymbols.length} symbol(s) with undefined location URI for workspaceSymbol on ${cwd}. ` +
-              `This indicates malformed data from the LSP server.`,
+            `LSP server returned ${invalidSymbols.length} symbol(s) with undefined location URI for workspaceSymbol on ${cwd}. This indicates malformed data from the LSP server.`,
           ),
-        )
+        );
       }
 
-      const validSymbols = symbols.filter(
-        sym => sym && sym.location && sym.location.uri,
-      )
-      const locations = validSymbols.map(s => s.location)
+      const validSymbols = symbols.filter((sym) => sym?.location?.uri);
+      const locations = validSymbols.map((s) => s.location);
       return {
-        formatted: formatWorkspaceSymbolResult(
-          result as SymbolInformation[] | null,
-          cwd,
-        ),
+        formatted: formatWorkspaceSymbolResult(result as SymbolInformation[] | null, cwd),
         resultCount: validSymbols.length,
         fileCount: countUniqueFiles(locations),
-      }
+      };
     }
     case 'goToImplementation': {
       // Handle both Location and LocationLink formats (same as goToDefinition)
@@ -758,72 +702,55 @@ function formatResult(
         ? result
         : result
           ? [result as Location | LocationLink]
-          : []
+          : [];
 
       // Convert LocationLinks to Locations for uniform handling
-      const locations = rawResults.map(toLocation)
+      const locations = rawResults.map(toLocation);
 
       // Log and filter out locations with undefined uris
-      const invalidLocations = locations.filter(loc => !loc || !loc.uri)
+      const invalidLocations = locations.filter((loc) => !loc || !loc.uri);
       if (invalidLocations.length > 0) {
         logError(
           new Error(
-            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for goToImplementation on ${cwd}. ` +
-              `This indicates malformed data from the LSP server.`,
+            `LSP server returned ${invalidLocations.length} location(s) with undefined URI for goToImplementation on ${cwd}. This indicates malformed data from the LSP server.`,
           ),
-        )
+        );
       }
 
-      const validLocations = locations.filter(loc => loc && loc.uri)
+      const validLocations = locations.filter((loc) => loc?.uri);
       return {
         // Reuse goToDefinition formatter since the result format is identical
         formatted: formatGoToDefinitionResult(
-          result as
-            | Location
-            | Location[]
-            | LocationLink
-            | LocationLink[]
-            | null,
+          result as Location | Location[] | LocationLink | LocationLink[] | null,
           cwd,
         ),
         resultCount: validLocations.length,
         fileCount: countUniqueFiles(validLocations),
-      }
+      };
     }
     case 'prepareCallHierarchy': {
-      const items = (result as CallHierarchyItem[]) || []
+      const items = (result as CallHierarchyItem[]) || [];
       return {
-        formatted: formatPrepareCallHierarchyResult(
-          result as CallHierarchyItem[] | null,
-          cwd,
-        ),
+        formatted: formatPrepareCallHierarchyResult(result as CallHierarchyItem[] | null, cwd),
         resultCount: items.length,
         fileCount: items.length > 0 ? countUniqueFilesFromCallItems(items) : 0,
-      }
+      };
     }
     case 'incomingCalls': {
-      const calls = (result as CallHierarchyIncomingCall[]) || []
+      const calls = (result as CallHierarchyIncomingCall[]) || [];
       return {
-        formatted: formatIncomingCallsResult(
-          result as CallHierarchyIncomingCall[] | null,
-          cwd,
-        ),
+        formatted: formatIncomingCallsResult(result as CallHierarchyIncomingCall[] | null, cwd),
         resultCount: calls.length,
-        fileCount:
-          calls.length > 0 ? countUniqueFilesFromIncomingCalls(calls) : 0,
-      }
+        fileCount: calls.length > 0 ? countUniqueFilesFromIncomingCalls(calls) : 0,
+      };
     }
     case 'outgoingCalls': {
-      const calls = (result as CallHierarchyOutgoingCall[]) || []
+      const calls = (result as CallHierarchyOutgoingCall[]) || [];
       return {
-        formatted: formatOutgoingCallsResult(
-          result as CallHierarchyOutgoingCall[] | null,
-          cwd,
-        ),
+        formatted: formatOutgoingCallsResult(result as CallHierarchyOutgoingCall[] | null, cwd),
         resultCount: calls.length,
-        fileCount:
-          calls.length > 0 ? countUniqueFilesFromOutgoingCalls(calls) : 0,
-      }
+        fileCount: calls.length > 0 ? countUniqueFilesFromOutgoingCalls(calls) : 0,
+      };
     }
   }
 }
@@ -833,28 +760,24 @@ function formatResult(
  * Filters out items with undefined URIs
  */
 function countUniqueFilesFromCallItems(items: CallHierarchyItem[]): number {
-  const validUris = items.map(item => item.uri).filter(uri => uri)
-  return new Set(validUris).size
+  const validUris = items.map((item) => item.uri).filter((uri) => uri);
+  return new Set(validUris).size;
 }
 
 /**
  * Counts unique files from CallHierarchyIncomingCall array
  * Filters out calls with undefined URIs
  */
-function countUniqueFilesFromIncomingCalls(
-  calls: CallHierarchyIncomingCall[],
-): number {
-  const validUris = calls.map(call => call.from?.uri).filter(uri => uri)
-  return new Set(validUris).size
+function countUniqueFilesFromIncomingCalls(calls: CallHierarchyIncomingCall[]): number {
+  const validUris = calls.map((call) => call.from?.uri).filter((uri) => uri);
+  return new Set(validUris).size;
 }
 
 /**
  * Counts unique files from CallHierarchyOutgoingCall array
  * Filters out calls with undefined URIs
  */
-function countUniqueFilesFromOutgoingCalls(
-  calls: CallHierarchyOutgoingCall[],
-): number {
-  const validUris = calls.map(call => call.to?.uri).filter(uri => uri)
-  return new Set(validUris).size
+function countUniqueFilesFromOutgoingCalls(calls: CallHierarchyOutgoingCall[]): number {
+  const validUris = calls.map((call) => call.to?.uri).filter((uri) => uri);
+  return new Set(validUris).size;
 }

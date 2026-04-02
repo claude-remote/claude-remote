@@ -1,8 +1,8 @@
-import { randomUUID } from 'crypto'
-import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js'
-import type { Tool } from '../Tool.js'
-import type { AssistantMessage } from '../types/message.js'
-import { jsonStringify } from '../utils/slowOperations.js'
+import { randomUUID } from 'node:crypto';
+import type { Tool } from '../Tool.js';
+import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js';
+import type { AssistantMessage } from '../types/message.js';
+import { jsonStringify } from '../utils/slowOperations.js';
 
 /**
  * Create a synthetic AssistantMessage for remote permission requests.
@@ -42,7 +42,7 @@ export function createSyntheticAssistantMessage(
     } as AssistantMessage['message'],
     requestId: undefined,
     timestamp: new Date().toISOString(),
-  }
+  };
 }
 
 /**
@@ -57,16 +57,15 @@ export function createToolStub(toolName: string): Tool {
     isEnabled: () => true,
     userFacingName: () => toolName,
     renderToolUseMessage: (input: Record<string, unknown>) => {
-      const entries = Object.entries(input)
-      if (entries.length === 0) return ''
+      const entries = Object.entries(input);
+      if (entries.length === 0) return '';
       return entries
         .slice(0, 3)
         .map(([key, value]) => {
-          const valueStr =
-            typeof value === 'string' ? value : jsonStringify(value)
-          return `${key}: ${valueStr}`
+          const valueStr = typeof value === 'string' ? value : jsonStringify(value);
+          return `${key}: ${valueStr}`;
         })
-        .join(', ')
+        .join(', ');
     },
     call: async () => ({ data: '' }),
     description: async () => '',
@@ -74,5 +73,5 @@ export function createToolStub(toolName: string): Tool {
     isReadOnly: () => false,
     isMcp: false,
     needsPermissions: () => true,
-  } as unknown as Tool
+  } as unknown as Tool;
 }

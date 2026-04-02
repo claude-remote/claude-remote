@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { ConfigOptions, McpServerInfo, SessionConfig, SessionPermissionMode } from '@/shared/types';
+import type {
+  ConfigOptions,
+  McpServerInfo,
+  SessionConfig,
+  SessionPermissionMode,
+} from '@/shared/types';
 
 import { ModelSelector } from './ModelSelector';
 
@@ -77,7 +82,13 @@ export function SettingsDrawer({
             onClick={onClose}
             aria-label="Close settings"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -107,13 +118,18 @@ export function SettingsDrawer({
             <div className="space-y-5">
               {/* Model selector */}
               <div>
-                <label className="mb-2 block text-xs font-medium text-gray-400">Model & Effort</label>
+                <label className="mb-2 block text-xs font-medium text-gray-400">
+                  Model & Effort
+                </label>
                 <ModelSelector config={config} options={options} onConfigChange={onConfigChange} />
               </div>
 
               {/* System prompt */}
               <div>
-                <label htmlFor="system-prompt" className="mb-2 block text-xs font-medium text-gray-400">
+                <label
+                  htmlFor="system-prompt"
+                  className="mb-2 block text-xs font-medium text-gray-400"
+                >
                   System Prompt
                 </label>
                 <textarea
@@ -129,7 +145,8 @@ export function SettingsDrawer({
               {/* MCP servers summary */}
               <div>
                 <p className="text-xs text-gray-500">
-                  MCP servers: {servers.filter((s) => s.status === 'connected').length}/{servers.length} connected
+                  MCP servers: {servers.filter((s) => s.status === 'connected').length}/
+                  {servers.length} connected
                 </p>
               </div>
             </div>
@@ -138,7 +155,9 @@ export function SettingsDrawer({
           {activeTab === 'permissions' && (
             <div className="space-y-4">
               <div>
-                <label className="mb-3 block text-xs font-medium text-gray-400">Permission Mode</label>
+                <label className="mb-3 block text-xs font-medium text-gray-400">
+                  Permission Mode
+                </label>
                 <div className="space-y-2">
                   {(options.permissionModes ?? ['ask', 'approve', 'bypass']).map((mode) => (
                     <button
@@ -180,9 +199,7 @@ export function SettingsDrawer({
 
         {/* Footer */}
         <div className="border-t border-gray-800 px-4 py-3">
-          <p className="text-center text-[10px] text-gray-600">
-            Changes are applied immediately
-          </p>
+          <p className="text-center text-[10px] text-gray-600">Changes are applied immediately</p>
         </div>
       </aside>
     </>

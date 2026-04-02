@@ -1,5 +1,5 @@
-import type { Command } from '../../commands.js'
-import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js'
+import type { Command } from '../../commands.js';
+import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js';
 
 const keybindings = {
   name: 'keybindings',
@@ -8,6 +8,6 @@ const keybindings = {
   supportsNonInteractive: false,
   type: 'local',
   load: () => import('./keybindings.js'),
-} satisfies Command
+} satisfies Command;
 
-export default keybindings
+export default keybindings;

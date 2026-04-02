@@ -111,15 +111,11 @@ export class EventBus {
     const fullEvent = { ...event } as HubEvent;
 
     // Broadcast to all global listeners
-    await Promise.all(
-      [...this.globalListeners].map(async (listener) => listener(fullEvent)),
-    );
+    await Promise.all([...this.globalListeners].map(async (listener) => listener(fullEvent)));
 
     // Also broadcast to all session listeners across all sessions
     for (const [, set] of this.sessionListeners) {
-      await Promise.all(
-        [...set].map(async (listener) => listener(fullEvent)),
-      );
+      await Promise.all([...set].map(async (listener) => listener(fullEvent)));
     }
   }
 

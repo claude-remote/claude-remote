@@ -9,7 +9,7 @@
  * - outputLimits are in outputLimits.ts
  */
 
-import { getPlatform } from '../platform.js'
+import { getPlatform } from '../platform.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,21 +21,18 @@ export type FlagArgType =
   | 'string' // Any string argument (--relative=path)
   | 'char' // Single character (delimiter)
   | '{}' // Literal "{}" only
-  | 'EOF' // Literal "EOF" only
+  | 'EOF'; // Literal "EOF" only
 
 export type ExternalCommandConfig = {
-  safeFlags: Record<string, FlagArgType>
+  safeFlags: Record<string, FlagArgType>;
   // Returns true if the command is dangerous, false if safe.
   // args is the list of tokens AFTER the command name (e.g., after "git branch").
-  additionalCommandIsDangerousCallback?: (
-    rawCommand: string,
-    args: string[],
-  ) => boolean
+  additionalCommandIsDangerousCallback?: (rawCommand: string, args: string[]) => boolean;
   // When false, the tool does NOT respect POSIX `--` end-of-options.
   // validateFlags will continue checking flags after `--` instead of breaking.
   // Default: true (most tools respect `--`).
-  respectsDoubleDash?: boolean
-}
+  respectsDoubleDash?: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Shared git flag groups
@@ -46,14 +43,14 @@ const GIT_REF_SELECTION_FLAGS: Record<string, FlagArgType> = {
   '--branches': 'none',
   '--tags': 'none',
   '--remotes': 'none',
-}
+};
 
 const GIT_DATE_FILTER_FLAGS: Record<string, FlagArgType> = {
   '--since': 'string',
   '--after': 'string',
   '--until': 'string',
   '--before': 'string',
-}
+};
 
 const GIT_LOG_DISPLAY_FLAGS: Record<string, FlagArgType> = {
   '--oneline': 'none',
@@ -62,12 +59,12 @@ const GIT_LOG_DISPLAY_FLAGS: Record<string, FlagArgType> = {
   '--no-decorate': 'none',
   '--date': 'string',
   '--relative-date': 'none',
-}
+};
 
 const GIT_COUNT_FLAGS: Record<string, FlagArgType> = {
   '--max-count': 'number',
   '-n': 'number',
-}
+};
 
 // Stat output flags - used in git log, show, diff
 const GIT_STAT_FLAGS: Record<string, FlagArgType> = {
@@ -76,13 +73,13 @@ const GIT_STAT_FLAGS: Record<string, FlagArgType> = {
   '--shortstat': 'none',
   '--name-only': 'none',
   '--name-status': 'none',
-}
+};
 
 // Color output flags - used in git log, show, diff
 const GIT_COLOR_FLAGS: Record<string, FlagArgType> = {
   '--color': 'none',
   '--no-color': 'none',
-}
+};
 
 // Patch display flags - used in git log, show
 const GIT_PATCH_FLAGS: Record<string, FlagArgType> = {
@@ -91,14 +88,14 @@ const GIT_PATCH_FLAGS: Record<string, FlagArgType> = {
   '--no-patch': 'none',
   '--no-ext-diff': 'none',
   '-s': 'none',
-}
+};
 
 // Author/committer filter flags - used in git log, reflog
 const GIT_AUTHOR_FILTER_FLAGS: Record<string, FlagArgType> = {
   '--author': 'string',
   '--committer': 'string',
   '--grep': 'string',
-}
+};
 
 // ---------------------------------------------------------------------------
 // GIT_READ_ONLY_COMMANDS — complete map of all git subcommands
@@ -280,26 +277,23 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     // writes. Only `git reflog` (bare = show) and `git reflog show` are safe.
     // The positional-arg fallthrough at ~:1730 would otherwise accept `expire`
     // as a non-flag arg, and `--all` is in GIT_REF_SELECTION_FLAGS → passes.
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Block known write-capable subcommands: expire, delete, exists.
       // Allow: `show`, ref names (HEAD, refs/*, branch names).
       // The subcommand (if any) is the first positional arg. Subsequent
       // positionals after `show` or after flags are ref names (safe).
-      const DANGEROUS_SUBCOMMANDS = new Set(['expire', 'delete', 'exists'])
+      const DANGEROUS_SUBCOMMANDS = new Set(['expire', 'delete', 'exists']);
       for (const token of args) {
-        if (!token || token.startsWith('-')) continue
+        if (!token || token.startsWith('-')) continue;
         // First non-flag positional: check if it's a dangerous subcommand.
         // If it's `show` or a ref name like `HEAD`/`refs/...`, safe.
         if (DANGEROUS_SUBCOMMANDS.has(token)) {
-          return true // Dangerous subcommand — writes to .git/logs/**
+          return true; // Dangerous subcommand — writes to .git/logs/**
         }
         // First positional is safe (show/HEAD/ref) — subsequent are ref args
-        return false
+        return false;
       }
-      return false // No positional = bare `git reflog` = safe (shows reflog)
+      return false; // No positional = bare `git reflog` = safe (shows reflog)
     },
   },
   'git stash list': {
@@ -475,15 +469,12 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '-n': 'none',
     },
     // Only allow optional -n, then one alphanumeric remote name
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Filter out the known safe flag
-      const positional = args.filter(a => a !== '-n')
+      const positional = args.filter((a) => a !== '-n');
       // Must have exactly one positional arg that looks like a remote name
-      if (positional.length !== 1) return true
-      return !/^[a-zA-Z0-9_-]+$/.test(positional[0]!)
+      if (positional.length !== 1) return true;
+      return !/^[a-zA-Z0-9_-]+$/.test(positional[0]!);
     },
   },
   'git remote': {
@@ -492,12 +483,9 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--verbose': 'none',
     },
     // Only allow bare 'git remote' or 'git remote -v/--verbose'
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // All args must be known safe flags; no positional args allowed
-      return args.some(a => a !== '-v' && a !== '--verbose')
+      return args.some((a) => a !== '-v' && a !== '--verbose');
     },
   },
   // git merge-base is a read-only command for finding common ancestors
@@ -736,10 +724,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     // to .git/refs/tags/, content is fixed HEAD SHA), it violates the
     // read-only invariant and can pollute CI/CD tag-pattern matching or make
     // abandoned commits reachable via `git tag foo <commit>`.
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Safe uses: `git tag` (list), `git tag -l pattern` (list filtered),
       // `git tag --contains <ref>` (list containing). A bare positional arg
       // without -l/--list is a tag name to CREATE — dangerous.
@@ -752,29 +737,29 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
         '--sort',
         '--format',
         '-n',
-      ])
-      let i = 0
-      let seenListFlag = false
-      let seenDashDash = false
+      ]);
+      let i = 0;
+      let seenListFlag = false;
+      let seenDashDash = false;
       while (i < args.length) {
-        const token = args[i]
+        const token = args[i];
         if (!token) {
-          i++
-          continue
+          i++;
+          continue;
         }
         // `--` ends flag parsing. All subsequent tokens are positional args,
         // even if they start with `-`. `git tag -- -l` CREATES a tag named `-l`.
         if (token === '--' && !seenDashDash) {
-          seenDashDash = true
-          i++
-          continue
+          seenDashDash = true;
+          i++;
+          continue;
         }
         if (!seenDashDash && token.startsWith('-')) {
           // Check for -l/--list (exact or in a bundle). `-li` bundles -l and
           // -i — both 'none' type. Array.includes('-l') exact-matches, missing
           // bundles like `-li`, `-il`. Check individual chars for short bundles.
           if (token === '--list' || token === '-l') {
-            seenListFlag = true
+            seenListFlag = true;
           } else if (
             token[0] === '-' &&
             token[1] !== '-' &&
@@ -783,25 +768,25 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
             token.slice(1).includes('l')
           ) {
             // Short-flag bundle like -li, -il containing 'l'
-            seenListFlag = true
+            seenListFlag = true;
           }
           if (token.includes('=')) {
-            i++
+            i++;
           } else if (flagsWithArgs.has(token)) {
-            i += 2
+            i += 2;
           } else {
-            i++
+            i++;
           }
         } else {
           // Non-flag positional arg (or post-`--` positional). Safe only if
           // preceded by -l/--list (then it's a pattern, not a tag name).
           if (!seenListFlag) {
-            return true // Positional arg without --list = tag creation
+            return true; // Positional arg without --list = tag creation
           }
-          i++
+          i++;
         }
       }
-      return false
+      return false;
     },
   },
   'git branch': {
@@ -848,10 +833,7 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
     // Block branch creation via positional arguments (e.g., "git branch newbranch")
     // Flag validation is handled by safeFlags above
     // args is tokens after "git branch"
-    additionalCommandIsDangerousCallback: (
-      _rawCommand: string,
-      args: string[],
-    ) => {
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
       // Block branch creation: "git branch <name>" or "git branch <name> <start-point>"
       // Only safe uses are: "git branch" (list), "git branch -flags" (list with options),
       // or "git branch --contains/--merged/etc <ref>" (filtering)
@@ -862,30 +844,30 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
         '--points-at',
         '--sort',
         // --abbrev REMOVED: git does NOT consume detached arg (PARSE_OPT_OPTARG)
-      ])
+      ]);
       // Flags with optional arguments (don't require, but can take one)
-      const flagsWithOptionalArgs = new Set(['--merged', '--no-merged'])
-      let i = 0
-      let lastFlag = ''
-      let seenListFlag = false
-      let seenDashDash = false
+      const flagsWithOptionalArgs = new Set(['--merged', '--no-merged']);
+      let i = 0;
+      let lastFlag = '';
+      let seenListFlag = false;
+      let seenDashDash = false;
       while (i < args.length) {
-        const token = args[i]
+        const token = args[i];
         if (!token) {
-          i++
-          continue
+          i++;
+          continue;
         }
         // `--` ends flag parsing. `git branch -- -l` CREATES a branch named `-l`.
         if (token === '--' && !seenDashDash) {
-          seenDashDash = true
-          lastFlag = ''
-          i++
-          continue
+          seenDashDash = true;
+          lastFlag = '';
+          i++;
+          continue;
         }
         if (!seenDashDash && token.startsWith('-')) {
           // Check for -l/--list including short-flag bundles (-li, -la, etc.)
           if (token === '--list' || token === '-l') {
-            seenListFlag = true
+            seenListFlag = true;
           } else if (
             token[0] === '-' &&
             token[1] !== '-' &&
@@ -893,34 +875,34 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
             !token.includes('=') &&
             token.slice(1).includes('l')
           ) {
-            seenListFlag = true
+            seenListFlag = true;
           }
           if (token.includes('=')) {
-            lastFlag = token.split('=')[0] || ''
-            i++
+            lastFlag = token.split('=')[0] || '';
+            i++;
           } else if (flagsWithArgs.has(token)) {
-            lastFlag = token
-            i += 2
+            lastFlag = token;
+            i += 2;
           } else {
-            lastFlag = token
-            i++
+            lastFlag = token;
+            i++;
           }
         } else {
           // Non-flag argument (or post-`--` positional) - could be:
           // 1. A branch name (dangerous - creates a branch)
           // 2. A pattern after --list/-l (safe)
           // 3. An optional argument after --merged/--no-merged (safe)
-          const lastFlagHasOptionalArg = flagsWithOptionalArgs.has(lastFlag)
+          const lastFlagHasOptionalArg = flagsWithOptionalArgs.has(lastFlag);
           if (!seenListFlag && !lastFlagHasOptionalArg) {
-            return true // Positional arg without --list or filtering flag = branch creation
+            return true; // Positional arg without --list or filtering flag = branch creation
           }
-          i++
+          i++;
         }
       }
-      return false
+      return false;
     },
   },
-}
+};
 
 // ---------------------------------------------------------------------------
 // GH_READ_ONLY_COMMANDS — ant-only gh CLI commands (network-dependent)
@@ -943,42 +925,38 @@ export const GIT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
 // the equals-attached form `--repo=HOST/OWNER/REPO` (cobra accepts both forms).
 function ghIsDangerousCallback(_rawCommand: string, args: string[]): boolean {
   for (const token of args) {
-    if (!token) continue
+    if (!token) continue;
     // For flag tokens, extract the VALUE after `=` for inspection. Without this,
     // `--repo=evil.com/SECRET/x` (single token starting with `-`) gets skipped
     // entirely, bypassing the HOST check. Cobra treats `--flag=val` identically
     // to `--flag val`; we must inspect both forms.
-    let value = token
+    let value = token;
     if (token.startsWith('-')) {
-      const eqIdx = token.indexOf('=')
-      if (eqIdx === -1) continue // flag without inline value, nothing to inspect
-      value = token.slice(eqIdx + 1)
-      if (!value) continue
+      const eqIdx = token.indexOf('=');
+      if (eqIdx === -1) continue; // flag without inline value, nothing to inspect
+      value = token.slice(eqIdx + 1);
+      if (!value) continue;
     }
     // Skip values that are clearly not repo specs (no `/` at all, or pure numbers)
-    if (
-      !value.includes('/') &&
-      !value.includes('://') &&
-      !value.includes('@')
-    ) {
-      continue
+    if (!value.includes('/') && !value.includes('://') && !value.includes('@')) {
+      continue;
     }
     // URL schemes: https://, http://, git://, ssh://
     if (value.includes('://')) {
-      return true
+      return true;
     }
     // SSH-style: git@host:owner/repo
     if (value.includes('@')) {
-      return true
+      return true;
     }
     // 3+ segments = HOST/OWNER/REPO (normal gh format is OWNER/REPO, 1 slash)
     // Count slashes: 2+ slashes means 3+ segments
-    const slashCount = (value.match(/\//g) || []).length
+    const slashCount = (value.match(/\//g) || []).length;
     if (slashCount >= 2) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
@@ -1377,158 +1355,152 @@ export const GH_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
       '--size': 'string', // Filter by size range
     },
   },
-}
+};
 
 // ---------------------------------------------------------------------------
 // DOCKER_READ_ONLY_COMMANDS — docker inspect/logs read-only commands
 // ---------------------------------------------------------------------------
 
-export const DOCKER_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
-  {
-    'docker logs': {
-      safeFlags: {
-        '--follow': 'none',
-        '-f': 'none',
-        '--tail': 'string',
-        '-n': 'string',
-        '--timestamps': 'none',
-        '-t': 'none',
-        '--since': 'string',
-        '--until': 'string',
-        '--details': 'none',
-      },
+export const DOCKER_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
+  'docker logs': {
+    safeFlags: {
+      '--follow': 'none',
+      '-f': 'none',
+      '--tail': 'string',
+      '-n': 'string',
+      '--timestamps': 'none',
+      '-t': 'none',
+      '--since': 'string',
+      '--until': 'string',
+      '--details': 'none',
     },
-    'docker inspect': {
-      safeFlags: {
-        '--format': 'string',
-        '-f': 'string',
-        '--type': 'string',
-        '--size': 'none',
-        '-s': 'none',
-      },
+  },
+  'docker inspect': {
+    safeFlags: {
+      '--format': 'string',
+      '-f': 'string',
+      '--type': 'string',
+      '--size': 'none',
+      '-s': 'none',
     },
-  }
+  },
+};
 
 // ---------------------------------------------------------------------------
 // RIPGREP_READ_ONLY_COMMANDS — rg (ripgrep) read-only search
 // ---------------------------------------------------------------------------
 
-export const RIPGREP_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
-  {
-    rg: {
-      safeFlags: {
-        // Pattern flags
-        '-e': 'string', // Pattern to search for
-        '--regexp': 'string',
-        '-f': 'string', // Read patterns from file
+export const RIPGREP_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
+  rg: {
+    safeFlags: {
+      // Pattern flags
+      '-e': 'string', // Pattern to search for
+      '--regexp': 'string',
+      '-f': 'string', // Read patterns from file
 
-        // Common search options
-        '-i': 'none', // Case insensitive
-        '--ignore-case': 'none',
-        '-S': 'none', // Smart case
-        '--smart-case': 'none',
-        '-F': 'none', // Fixed strings
-        '--fixed-strings': 'none',
-        '-w': 'none', // Word regexp
-        '--word-regexp': 'none',
-        '-v': 'none', // Invert match
-        '--invert-match': 'none',
+      // Common search options
+      '-i': 'none', // Case insensitive
+      '--ignore-case': 'none',
+      '-S': 'none', // Smart case
+      '--smart-case': 'none',
+      '-F': 'none', // Fixed strings
+      '--fixed-strings': 'none',
+      '-w': 'none', // Word regexp
+      '--word-regexp': 'none',
+      '-v': 'none', // Invert match
+      '--invert-match': 'none',
 
-        // Output options
-        '-c': 'none', // Count matches
-        '--count': 'none',
-        '-l': 'none', // Files with matches
-        '--files-with-matches': 'none',
-        '--files-without-match': 'none',
-        '-n': 'none', // Line number
-        '--line-number': 'none',
-        '-o': 'none', // Only matching
-        '--only-matching': 'none',
-        '-A': 'number', // After context
-        '--after-context': 'number',
-        '-B': 'number', // Before context
-        '--before-context': 'number',
-        '-C': 'number', // Context
-        '--context': 'number',
-        '-H': 'none', // With filename
-        '-h': 'none', // No filename
-        '--heading': 'none',
-        '--no-heading': 'none',
-        '-q': 'none', // Quiet
-        '--quiet': 'none',
-        '--column': 'none',
+      // Output options
+      '-c': 'none', // Count matches
+      '--count': 'none',
+      '-l': 'none', // Files with matches
+      '--files-with-matches': 'none',
+      '--files-without-match': 'none',
+      '-n': 'none', // Line number
+      '--line-number': 'none',
+      '-o': 'none', // Only matching
+      '--only-matching': 'none',
+      '-A': 'number', // After context
+      '--after-context': 'number',
+      '-B': 'number', // Before context
+      '--before-context': 'number',
+      '-C': 'number', // Context
+      '--context': 'number',
+      '-H': 'none', // With filename
+      '-h': 'none', // No filename
+      '--heading': 'none',
+      '--no-heading': 'none',
+      '-q': 'none', // Quiet
+      '--quiet': 'none',
+      '--column': 'none',
 
-        // File filtering
-        '-g': 'string', // Glob
-        '--glob': 'string',
-        '-t': 'string', // Type
-        '--type': 'string',
-        '-T': 'string', // Type not
-        '--type-not': 'string',
-        '--type-list': 'none',
-        '--hidden': 'none',
-        '--no-ignore': 'none',
-        '-u': 'none', // Unrestricted
+      // File filtering
+      '-g': 'string', // Glob
+      '--glob': 'string',
+      '-t': 'string', // Type
+      '--type': 'string',
+      '-T': 'string', // Type not
+      '--type-not': 'string',
+      '--type-list': 'none',
+      '--hidden': 'none',
+      '--no-ignore': 'none',
+      '-u': 'none', // Unrestricted
 
-        // Common options
-        '-m': 'number', // Max count per file
-        '--max-count': 'number',
-        '-d': 'number', // Max depth
-        '--max-depth': 'number',
-        '-a': 'none', // Text (search binary files)
-        '--text': 'none',
-        '-z': 'none', // Search zip
-        '-L': 'none', // Follow symlinks
-        '--follow': 'none',
+      // Common options
+      '-m': 'number', // Max count per file
+      '--max-count': 'number',
+      '-d': 'number', // Max depth
+      '--max-depth': 'number',
+      '-a': 'none', // Text (search binary files)
+      '--text': 'none',
+      '-z': 'none', // Search zip
+      '-L': 'none', // Follow symlinks
+      '--follow': 'none',
 
-        // Display options
-        '--color': 'string',
-        '--json': 'none',
-        '--stats': 'none',
+      // Display options
+      '--color': 'string',
+      '--json': 'none',
+      '--stats': 'none',
 
-        // Help and version
-        '--help': 'none',
-        '--version': 'none',
-        '--debug': 'none',
+      // Help and version
+      '--help': 'none',
+      '--version': 'none',
+      '--debug': 'none',
 
-        // Special argument separator
-        '--': 'none',
-      },
+      // Special argument separator
+      '--': 'none',
     },
-  }
+  },
+};
 
 // ---------------------------------------------------------------------------
 // PYRIGHT_READ_ONLY_COMMANDS — pyright static type checker
 // ---------------------------------------------------------------------------
 
-export const PYRIGHT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> =
-  {
-    pyright: {
-      respectsDoubleDash: false, // pyright treats -- as a file path, not end-of-options
-      safeFlags: {
-        '--outputjson': 'none',
-        '--project': 'string',
-        '-p': 'string',
-        '--pythonversion': 'string',
-        '--pythonplatform': 'string',
-        '--typeshedpath': 'string',
-        '--venvpath': 'string',
-        '--level': 'string',
-        '--stats': 'none',
-        '--verbose': 'none',
-        '--version': 'none',
-        '--dependencies': 'none',
-        '--warnings': 'none',
-      },
-      additionalCommandIsDangerousCallback: (
-        _rawCommand: string,
-        args: string[],
-      ) => {
-        // Check if --watch or -w appears as a standalone token (flag)
-        return args.some(t => t === '--watch' || t === '-w')
-      },
+export const PYRIGHT_READ_ONLY_COMMANDS: Record<string, ExternalCommandConfig> = {
+  pyright: {
+    respectsDoubleDash: false, // pyright treats -- as a file path, not end-of-options
+    safeFlags: {
+      '--outputjson': 'none',
+      '--project': 'string',
+      '-p': 'string',
+      '--pythonversion': 'string',
+      '--pythonplatform': 'string',
+      '--typeshedpath': 'string',
+      '--venvpath': 'string',
+      '--level': 'string',
+      '--stats': 'none',
+      '--verbose': 'none',
+      '--version': 'none',
+      '--dependencies': 'none',
+      '--warnings': 'none',
     },
-  }
+    additionalCommandIsDangerousCallback: (_rawCommand: string, args: string[]) => {
+      // Check if --watch or -w appears as a standalone token (flag)
+      return args.some((t) => t === '--watch' || t === '-w');
+    },
+  },
+};
 
 // ---------------------------------------------------------------------------
 // EXTERNAL_READONLY_COMMANDS — cross-shell read-only commands
@@ -1540,7 +1512,7 @@ export const EXTERNAL_READONLY_COMMANDS: readonly string[] = [
   // Cross-platform external tools that work the same in bash and PowerShell on Windows
   'docker ps',
   'docker images',
-] as const
+] as const;
 
 // ---------------------------------------------------------------------------
 // UNC path detection (shared across Bash and PowerShell)
@@ -1562,16 +1534,16 @@ export const EXTERNAL_READONLY_COMMANDS: readonly string[] = [
 export function containsVulnerableUncPath(pathOrCommand: string): boolean {
   // Only check on Windows platform
   if (getPlatform() !== 'windows') {
-    return false
+    return false;
   }
 
   // 1. Check for general UNC paths with backslashes
   // Pattern matches: \\server, \\server\share, \\server/share, \\server@port\share
   // Uses [^\s\\/]+ for hostname to catch Unicode homoglyphs and other non-ASCII chars
   // Trailing accepts both \ and / since Windows treats both as path separators
-  const backslashUncPattern = /\\\\[^\s\\/]+(?:@(?:\d+|ssl))?(?:[\\/]|$|\s)/i
+  const backslashUncPattern = /\\\\[^\s\\/]+(?:@(?:\d+|ssl))?(?:[\\/]|$|\s)/i;
   if (backslashUncPattern.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 2. Check for forward-slash UNC paths
@@ -1581,9 +1553,9 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
   // Trailing accepts both / and \ since Windows treats both as path separators
   const forwardSlashUncPattern =
     // eslint-disable-next-line custom-rules/no-lookbehind-regex -- .test() on short command strings
-    /(?<!:)\/\/[^\s\\/]+(?:@(?:\d+|ssl))?(?:[\\/]|$|\s)/i
+    /(?<!:)\/\/[^\s\\/]+(?:@(?:\d+|ssl))?(?:[\\/]|$|\s)/i;
   if (forwardSlashUncPattern.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 3. Check for mixed-separator UNC paths (forward slash + backslashes)
@@ -1591,29 +1563,29 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
   // In bash, /\\server becomes /\server after escape processing, which is a UNC path.
   // Requires 2+ backslashes after / because a single backslash just escapes the next char
   // (e.g., /\a → /a after bash processing, which is NOT a UNC path).
-  const mixedSlashUncPattern = /\/\\{2,}[^\s\\/]/
+  const mixedSlashUncPattern = /\/\\{2,}[^\s\\/]/;
   if (mixedSlashUncPattern.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 4. Check for mixed-separator UNC paths (backslashes + forward slash)
   // \\/server in bash becomes \/server after escape processing, which is a UNC path
   // on Windows since both \ and / are path separators.
-  const reverseMixedSlashUncPattern = /\\{2,}\/[^\s\\/]/
+  const reverseMixedSlashUncPattern = /\\{2,}\/[^\s\\/]/;
   if (reverseMixedSlashUncPattern.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 5. Check for WebDAV SSL/port patterns
   // Examples: \\server@SSL@8443\path, \\server@8443@SSL\path
   if (/@SSL@\d+/i.test(pathOrCommand) || /@\d+@SSL/i.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 6. Check for DavWWWRoot marker (Windows WebDAV redirector)
   // Example: \\server\DavWWWRoot\path
   if (/DavWWWRoot/i.test(pathOrCommand)) {
-    return true
+    return true;
   }
 
   // 7. Check for UNC paths with IPv4 addresses (explicit check for defense-in-depth)
@@ -1622,7 +1594,7 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     /^\\\\(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\\/]/.test(pathOrCommand) ||
     /^\/\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\\/]/.test(pathOrCommand)
   ) {
-    return true
+    return true;
   }
 
   // 8. Check for UNC paths with bracketed IPv6 addresses (explicit check for defense-in-depth)
@@ -1631,10 +1603,10 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
     /^\\\\(\[[\da-fA-F:]+\])[\\/]/.test(pathOrCommand) ||
     /^\/\/(\[[\da-fA-F:]+\])[\\/]/.test(pathOrCommand)
   ) {
-    return true
+    return true;
   }
 
-  return false
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -1642,30 +1614,27 @@ export function containsVulnerableUncPath(pathOrCommand: string): boolean {
 // ---------------------------------------------------------------------------
 
 // Regex pattern to match valid flag names (letters, digits, underscores, hyphens)
-export const FLAG_PATTERN = /^-[a-zA-Z0-9_-]/
+export const FLAG_PATTERN = /^-[a-zA-Z0-9_-]/;
 
 /**
  * Validates flag arguments based on their expected type
  */
-export function validateFlagArgument(
-  value: string,
-  argType: FlagArgType,
-): boolean {
+export function validateFlagArgument(value: string, argType: FlagArgType): boolean {
   switch (argType) {
     case 'none':
-      return false // Should not have been called for 'none' type
+      return false; // Should not have been called for 'none' type
     case 'number':
-      return /^\d+$/.test(value)
+      return /^\d+$/.test(value);
     case 'string':
-      return true // Any string including empty is valid
+      return true; // Any string including empty is valid
     case 'char':
-      return value.length === 1
+      return value.length === 1;
     case '{}':
-      return value === '{}'
+      return value === '{}';
     case 'EOF':
-      return value === 'EOF'
+      return value === 'EOF';
     default:
-      return false
+      return false;
   }
 }
 
@@ -1686,18 +1655,18 @@ export function validateFlags(
   startIndex: number,
   config: ExternalCommandConfig,
   options?: {
-    commandName?: string
-    rawCommand?: string
-    xargsTargetCommands?: string[]
+    commandName?: string;
+    rawCommand?: string;
+    xargsTargetCommands?: string[];
   },
 ): boolean {
-  let i = startIndex
+  let i = startIndex;
 
   while (i < tokens.length) {
-    let token = tokens[i]
+    let token = tokens[i];
     if (!token) {
-      i++
-      continue
+      i++;
+      continue;
     }
 
     // Special handling for xargs: once we find the target command, stop validating flags
@@ -1707,13 +1676,13 @@ export function validateFlags(
       (!token.startsWith('-') || token === '--')
     ) {
       if (token === '--' && i + 1 < tokens.length) {
-        i++
-        token = tokens[i]
+        i++;
+        token = tokens[i];
       }
       if (token && options.xargsTargetCommands.includes(token)) {
-        break
+        break;
       }
-      return false
+      return false;
     }
 
     if (token === '--') {
@@ -1722,12 +1691,12 @@ export function validateFlags(
       // and continue processing subsequent tokens as flags. Breaking here
       // would let `pyright -- --createstub os` auto-approve a file-write flag.
       if (config.respectsDoubleDash !== false) {
-        i++
-        break // Everything after -- is arguments
+        i++;
+        break; // Everything after -- is arguments
       }
       // Tool doesn't respect --: treat as positional arg, keep validating
-      i++
-      continue
+      i++;
+      continue;
     }
 
     if (token.startsWith('-') && token.length > 1 && FLAG_PATTERN.test(token)) {
@@ -1749,22 +1718,22 @@ export function validateFlags(
       // provided arg. validateFlagArgument('', 'EOF') → false → rejected.
       // This is correct for all arg types: the user explicitly typed `=`,
       // indicating they provided a value (empty). Don't consume next token.
-      const hasEquals = token.includes('=')
-      const [flag, ...valueParts] = token.split('=')
-      const inlineValue = valueParts.join('=')
+      const hasEquals = token.includes('=');
+      const [flag, ...valueParts] = token.split('=');
+      const inlineValue = valueParts.join('=');
 
       if (!flag) {
-        return false
+        return false;
       }
 
-      const flagArgType = config.safeFlags[flag]
+      const flagArgType = config.safeFlags[flag];
 
       if (!flagArgType) {
         // Special case: git commands support -<number> as shorthand for -n <number>
         if (options?.commandName === 'git' && flag.match(/^-\d+$/)) {
           // This is equivalent to -n flag which is safe for git log/diff/show
-          i++
-          continue
+          i++;
+          continue;
         }
 
         // Handle flags with directly attached numeric arguments (e.g., -A20, -B10)
@@ -1775,20 +1744,19 @@ export function validateFlags(
           !flag.startsWith('--') &&
           flag.length > 2
         ) {
-          const potentialFlag = flag.substring(0, 2) // e.g., '-A' from '-A20'
-          const potentialValue = flag.substring(2) // e.g., '20' from '-A20'
+          const potentialFlag = flag.substring(0, 2); // e.g., '-A' from '-A20'
+          const potentialValue = flag.substring(2); // e.g., '20' from '-A20'
 
           if (config.safeFlags[potentialFlag] && /^\d+$/.test(potentialValue)) {
             // This is a flag with attached numeric argument
-            const flagArgType = config.safeFlags[potentialFlag]
+            const flagArgType = config.safeFlags[potentialFlag];
             if (flagArgType === 'number' || flagArgType === 'string') {
               // Validate the numeric value
               if (validateFlagArgument(potentialValue, flagArgType)) {
-                i++
-                continue
-              } else {
-                return false // Invalid attached value
+                i++;
+                continue;
               }
+              return false; // Invalid attached value
             }
           }
         }
@@ -1811,23 +1779,22 @@ export function validateFlags(
         // the safe direction. Users who need `-I` can use it unbundled: `-r -I {}`.
         if (flag.startsWith('-') && !flag.startsWith('--') && flag.length > 2) {
           for (let j = 1; j < flag.length; j++) {
-            const singleFlag = '-' + flag[j]
-            const flagType = config.safeFlags[singleFlag]
+            const singleFlag = `-${flag[j]}`;
+            const flagType = config.safeFlags[singleFlag];
             if (!flagType) {
-              return false // One of the combined flags is not safe
+              return false; // One of the combined flags is not safe
             }
             // SECURITY: Bundled flags must be no-arg type. An arg-taking flag
             // in a bundle consumes the NEXT token in GNU getopt, which our
             // handler doesn't model. Reject to avoid parser differential.
             if (flagType !== 'none') {
-              return false // Arg-taking flag in a bundle — cannot safely validate
+              return false; // Arg-taking flag in a bundle — cannot safely validate
             }
           }
-          i++
-          continue
-        } else {
-          return false // Unknown flag
+          i++;
+          continue;
         }
+        return false; // Unknown flag
       }
 
       // Validate flag arguments
@@ -1835,29 +1802,29 @@ export function validateFlags(
         // SECURITY: hasEquals covers `-FLAG=` (empty inline). Without it,
         // `-FLAG=` with 'none' type would pass (inlineValue='' is falsy).
         if (hasEquals) {
-          return false // Flag should not have a value
+          return false; // Flag should not have a value
         }
-        i++
+        i++;
       } else {
-        let argValue: string
+        let argValue: string;
         // SECURITY: Use hasEquals (not inlineValue truthiness). `-E=` must
         // NOT consume next token — the user explicitly provided empty value.
         if (hasEquals) {
-          argValue = inlineValue
-          i++
+          argValue = inlineValue;
+          i++;
         } else {
           // Check if next token is the argument
           if (
             i + 1 >= tokens.length ||
             (tokens[i + 1] &&
-              tokens[i + 1]!.startsWith('-') &&
-              tokens[i + 1]!.length > 1 &&
+              tokens[i + 1]?.startsWith('-') &&
+              tokens[i + 1]?.length > 1 &&
               FLAG_PATTERN.test(tokens[i + 1]!))
           ) {
-            return false // Missing required argument
+            return false; // Missing required argument
           }
-          argValue = tokens[i + 1] || ''
-          i += 2
+          argValue = tokens[i + 1] || '';
+          i += 2;
         }
 
         // Defense-in-depth: For string arguments, reject values that start with '-'
@@ -1866,28 +1833,24 @@ export function validateFlags(
         // Exception: git's --sort flag can have values starting with '-' for reverse sorting
         if (flagArgType === 'string' && argValue.startsWith('-')) {
           // Special case: git's --sort flag allows - prefix for reverse sorting
-          if (
-            flag === '--sort' &&
-            options?.commandName === 'git' &&
-            argValue.match(/^-[a-zA-Z]/)
-          ) {
+          if (flag === '--sort' && options?.commandName === 'git' && argValue.match(/^-[a-zA-Z]/)) {
             // This looks like a reverse sort (e.g., -refname, -version:refname)
             // Allow it if the rest looks like a valid sort key
           } else {
-            return false
+            return false;
           }
         }
 
         // Validate argument based on type
         if (!validateFlagArgument(argValue, flagArgType)) {
-          return false
+          return false;
         }
       }
     } else {
       // Non-flag argument (like revision specs, file paths, etc.) - this is allowed
-      i++
+      i++;
     }
   }
 
-  return true
+  return true;
 }

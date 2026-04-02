@@ -1,5 +1,5 @@
-import { getAgentColorMap } from '../../bootstrap/state.js'
-import type { Theme } from '../../utils/theme.js'
+import { getAgentColorMap } from '../../bootstrap/state.js';
+import type { Theme } from '../../utils/theme.js';
 
 export type AgentColorName =
   | 'red'
@@ -9,7 +9,7 @@ export type AgentColorName =
   | 'purple'
   | 'orange'
   | 'pink'
-  | 'cyan'
+  | 'cyan';
 
 export const AGENT_COLORS: readonly AgentColorName[] = [
   'red',
@@ -20,7 +20,7 @@ export const AGENT_COLORS: readonly AgentColorName[] = [
   'orange',
   'pink',
   'cyan',
-] as const
+] as const;
 
 export const AGENT_COLOR_TO_THEME_COLOR = {
   red: 'red_FOR_SUBAGENTS_ONLY',
@@ -31,36 +31,33 @@ export const AGENT_COLOR_TO_THEME_COLOR = {
   orange: 'orange_FOR_SUBAGENTS_ONLY',
   pink: 'pink_FOR_SUBAGENTS_ONLY',
   cyan: 'cyan_FOR_SUBAGENTS_ONLY',
-} as const satisfies Record<AgentColorName, keyof Theme>
+} as const satisfies Record<AgentColorName, keyof Theme>;
 
 export function getAgentColor(agentType: string): keyof Theme | undefined {
   if (agentType === 'general-purpose') {
-    return undefined
+    return undefined;
   }
 
-  const agentColorMap = getAgentColorMap()
+  const agentColorMap = getAgentColorMap();
 
   // Check if color already assigned
-  const existingColor = agentColorMap.get(agentType)
+  const existingColor = agentColorMap.get(agentType);
   if (existingColor && AGENT_COLORS.includes(existingColor)) {
-    return AGENT_COLOR_TO_THEME_COLOR[existingColor]
+    return AGENT_COLOR_TO_THEME_COLOR[existingColor];
   }
 
-  return undefined
+  return undefined;
 }
 
-export function setAgentColor(
-  agentType: string,
-  color: AgentColorName | undefined,
-): void {
-  const agentColorMap = getAgentColorMap()
+export function setAgentColor(agentType: string, color: AgentColorName | undefined): void {
+  const agentColorMap = getAgentColorMap();
 
   if (!color) {
-    agentColorMap.delete(agentType)
-    return
+    agentColorMap.delete(agentType);
+    return;
   }
 
   if (AGENT_COLORS.includes(color)) {
-    agentColorMap.set(agentType, color)
+    agentColorMap.set(agentType, color);
   }
 }

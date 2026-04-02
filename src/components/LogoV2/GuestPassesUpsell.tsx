@@ -1,9 +1,14 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../../ink.js';
 import { logEvent } from '../../services/analytics/index.js';
-import { checkCachedPassesEligibility, formatCreditAmount, getCachedReferrerReward, getCachedRemainingPasses } from '../../services/api/referral.js';
+import {
+  checkCachedPassesEligibility,
+  formatCreditAmount,
+  getCachedReferrerReward,
+  getCachedRemainingPasses,
+} from '../../services/api/referral.js';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js';
 function resetIfPassesRefreshed(): void {
   const remaining = getCachedRemainingPasses();
@@ -11,19 +16,16 @@ function resetIfPassesRefreshed(): void {
   const config = getGlobalConfig();
   const lastSeen = config.passesLastSeenRemaining ?? 0;
   if (remaining > lastSeen) {
-    saveGlobalConfig(prev => ({
+    saveGlobalConfig((prev) => ({
       ...prev,
       passesUpsellSeenCount: 0,
       hasVisitedPasses: false,
-      passesLastSeenRemaining: remaining
+      passesLastSeenRemaining: remaining,
     }));
   }
 }
 function shouldShowGuestPassesUpsell(): boolean {
-  const {
-    eligible,
-    hasCache
-  } = checkCachedPassesEligibility();
+  const { eligible, hasCache } = checkCachedPassesEligibility();
   // Only show if eligible and cache exists (don't block on fetch)
   if (!eligible || !hasCache) return false;
   // Reset upsell counters if passes were refreshed (covers both campaign change and pass refresh)
@@ -42,15 +44,15 @@ function _temp() {
 }
 export function incrementGuestPassesSeenCount(): void {
   let newCount = 0;
-  saveGlobalConfig(prev => {
+  saveGlobalConfig((prev) => {
     newCount = (prev.passesUpsellSeenCount ?? 0) + 1;
     return {
       ...prev,
-      passesUpsellSeenCount: newCount
+      passesUpsellSeenCount: newCount,
     };
   });
   logEvent('tengu_guest_passes_upsell_shown', {
-    seen_count: newCount
+    seen_count: newCount,
   });
 }
 
@@ -58,9 +60,17 @@ export function incrementGuestPassesSeenCount(): void {
 export function GuestPassesUpsell() {
   const $ = _c(1);
   let t0;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     const reward = getCachedReferrerReward();
-    t0 = <Text dimColor={true}><Text color="claude">[✻]</Text> <Text color="claude">[✻]</Text>{" "}<Text color="claude">[✻]</Text> ·{" "}{reward ? `Share Claude Code and earn ${formatCreditAmount(reward)} of extra usage · /passes` : "3 guest passes at /passes"}</Text>;
+    t0 = (
+      <Text dimColor={true}>
+        <Text color="claude">[✻]</Text> <Text color="claude">[✻]</Text>{' '}
+        <Text color="claude">[✻]</Text> ·{' '}
+        {reward
+          ? `Share Claude Code and earn ${formatCreditAmount(reward)} of extra usage · /passes`
+          : '3 guest passes at /passes'}
+      </Text>
+    );
     $[0] = t0;
   } else {
     t0 = $[0];

@@ -1,22 +1,18 @@
-import type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
-import type { SessionSnapshot, WriterStatus, ClientType } from '@/shared/types';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
+import type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
+import type { ClientType, SessionSnapshot, WriterStatus } from '@/shared/types';
 
 import type { EventBus } from '@/hub/EventBus';
 import type { SessionManager } from '@/hub/SessionManager';
+import type { Connection, ConnectionManager, WebSocketLike } from '@/server/ws/ConnectionManager';
 import {
-  type ConnectionManager,
-  type Connection,
-  type WebSocketLike,
-} from '@/server/ws/ConnectionManager';
-import {
-  parseClientCommand,
-  validateCommand,
   checkPermission,
-  serializeHello,
-  serializeSnapshot,
+  parseClientCommand,
   serializeEvent,
+  serializeHello,
   serializeResponse,
+  serializeSnapshot,
+  validateCommand,
 } from '@/server/ws/protocol';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -95,16 +91,11 @@ export class WebSocketHandler {
    * Handle a new incoming WebSocket upgrade.
    * Returns a clientId on success, or null if the ticket is invalid (caller should close the socket).
    */
-  handleUpgrade(
-    ws: WebSocketLike,
-    params: { ticket: string; sessionId?: string },
-  ): string | null {
+  handleUpgrade(ws: WebSocketLike, params: { ticket: string; sessionId?: string }): string | null {
     // 1. Validate ticket
     const payload = this.ticketValidator.validate(params.ticket);
     if (!payload) {
-      ws.send(
-        serializeResponse({ type: 'error', error: 'invalid or expired ticket' }),
-      );
+      ws.send(serializeResponse({ type: 'error', error: 'invalid or expired ticket' }));
       ws.close(4001, 'invalid ticket');
       return null;
     }
@@ -114,9 +105,7 @@ export class WebSocketHandler {
     // 2. Verify session exists
     const session = this.sessionManager.getSession(sessionId);
     if (!session) {
-      ws.send(
-        serializeResponse({ type: 'error', error: `session not found: ${sessionId}` }),
-      );
+      ws.send(serializeResponse({ type: 'error', error: `session not found: ${sessionId}` }));
       ws.close(4004, 'session not found');
       return null;
     }
@@ -192,9 +181,7 @@ export class WebSocketHandler {
     // Parse
     const command = parseClientCommand(raw);
     if (!command) {
-      conn.ws.send(
-        serializeResponse({ type: 'error', error: 'invalid command format' }),
-      );
+      conn.ws.send(serializeResponse({ type: 'error', error: 'invalid command format' }));
       return;
     }
 
@@ -274,9 +261,7 @@ export class WebSocketHandler {
 
       if (standbyConns.length > 0) {
         // Promote the earliest connected standby
-        const next = standbyConns.sort(
-          (a, b) => a.connectedAt - b.connectedAt,
-        )[0]!;
+        const next = standbyConns.sort((a, b) => a.connectedAt - b.connectedAt)[0]!;
         this.connectionManager.promoteToWriter(next.clientId);
         this.sessionManager.assignWriter(conn.sessionId, next.clientId);
 
@@ -299,10 +284,7 @@ export class WebSocketHandler {
 
   // ── Command routing ───────────────────────────────────────────────
 
-  private async routeCommand(
-    conn: Connection,
-    command: ClientCommand,
-  ): Promise<HubResponse> {
+  private async routeCommand(conn: Connection, command: ClientCommand): Promise<HubResponse> {
     const { sessionId } = conn;
 
     switch (command.cmd) {
@@ -388,9 +370,7 @@ export class WebSocketHandler {
           .filter((c) => c.role === 'standby' && c.clientId !== conn.clientId);
 
         if (standbyConns.length > 0) {
-          const next = standbyConns.sort(
-            (a, b) => a.connectedAt - b.connectedAt,
-          )[0]!;
+          const next = standbyConns.sort((a, b) => a.connectedAt - b.connectedAt)[0]!;
           this.connectionManager.promoteToWriter(next.clientId);
           this.sessionManager.assignWriter(sessionId, next.clientId);
         }
@@ -489,11 +469,7 @@ export class WebSocketHandler {
 
   // ── Snapshot builder ──────────────────────────────────────────────
 
-  private buildSnapshot(
-    sessionId: string,
-    _clientId: string,
-    role: WriterStatus,
-  ): SessionSnapshot {
+  private buildSnapshot(sessionId: string, _clientId: string, role: WriterStatus): SessionSnapshot {
     const session = this.sessionManager.getSession(sessionId)!;
     return {
       meta: {

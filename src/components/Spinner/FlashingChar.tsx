@@ -1,7 +1,7 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text, useTheme } from '../../ink.js';
-import { getTheme, type Theme } from '../../utils/theme.js';
+import { type Theme, getTheme } from '../../utils/theme.js';
 import { interpolateColor, parseRGB, toRGBColor } from './utils.js';
 type Props = {
   char: string;
@@ -11,16 +11,17 @@ type Props = {
 };
 export function FlashingChar(t0) {
   const $ = _c(9);
-  const {
-    char,
-    flashOpacity,
-    messageColor,
-    shimmerColor
-  } = t0;
+  const { char, flashOpacity, messageColor, shimmerColor } = t0;
   const [themeName] = useTheme();
   let t1;
-  if ($[0] !== char || $[1] !== flashOpacity || $[2] !== messageColor || $[3] !== shimmerColor || $[4] !== themeName) {
-    t1 = Symbol.for("react.early_return_sentinel");
+  if (
+    $[0] !== char ||
+    $[1] !== flashOpacity ||
+    $[2] !== messageColor ||
+    $[3] !== shimmerColor ||
+    $[4] !== themeName
+  ) {
+    t1 = Symbol.for('react.early_return_sentinel');
     bb0: {
       const theme = getTheme(themeName);
       const baseColorStr = theme[messageColor];
@@ -42,7 +43,7 @@ export function FlashingChar(t0) {
   } else {
     t1 = $[5];
   }
-  if (t1 !== Symbol.for("react.early_return_sentinel")) {
+  if (t1 !== Symbol.for('react.early_return_sentinel')) {
     return t1;
   }
   const shouldUseShimmer = flashOpacity > 0.5;

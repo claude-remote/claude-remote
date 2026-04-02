@@ -1,4 +1,4 @@
-export const DESCRIPTION = 'Get a task by ID from the task list'
+export const DESCRIPTION = 'Get a task by ID from the task list';
 
 export const PROMPT = `Use this tool to retrieve a task by its ID from the task list.
 
@@ -21,4 +21,4 @@ Returns full task details:
 
 - After fetching a task, verify its blockedBy list is empty before beginning work.
 - Use TaskList to see all tasks in summary form.
-`
+`;

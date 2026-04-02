@@ -1,9 +1,9 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
-import { WebSocketHandler } from '@/server/ws/handler';
-import type { WsTicketValidator, WsTicketPayload } from '@/server/ws/handler';
-import { ConnectionManager, type WebSocketLike } from '@/server/ws/ConnectionManager';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { EventBus } from '@/hub/EventBus';
 import { SessionManager } from '@/hub/SessionManager';
+import { ConnectionManager, type WebSocketLike } from '@/server/ws/ConnectionManager';
+import { WebSocketHandler } from '@/server/ws/handler';
+import type { WsTicketPayload, WsTicketValidator } from '@/server/ws/handler';
 import type { HubResponse } from '@/shared/protocol';
 
 // ── Mock helpers ────────────────────────────────────────────────────
@@ -38,9 +38,7 @@ function createMockWs(): WebSocketLike & {
   return ws;
 }
 
-function createValidTicketValidator(
-  payload?: Partial<WsTicketPayload>,
-): WsTicketValidator {
+function createValidTicketValidator(payload?: Partial<WsTicketPayload>): WsTicketValidator {
   return {
     validate: (_ticket: string) => ({
       sessionId: 'sess-1',
@@ -92,7 +90,7 @@ describe('WebSocketHandler connection', () => {
 
     expect(clientId).toBeNull();
     expect(ws.closeCalls.length).toBe(1);
-    expect(ws.closeCalls[0]!.code).toBe(4001);
+    expect(ws.closeCalls[0]?.code).toBe(4001);
   });
 
   test('rejects connection when session does not exist', () => {
@@ -112,7 +110,7 @@ describe('WebSocketHandler connection', () => {
 
     expect(clientId).toBeNull();
     expect(ws.closeCalls.length).toBe(1);
-    expect(ws.closeCalls[0]!.code).toBe(4004);
+    expect(ws.closeCalls[0]?.code).toBe(4004);
   });
 
   test('sends hello and snapshot on valid connection', () => {
@@ -166,7 +164,7 @@ describe('WebSocketHandler connection', () => {
 
     const conn = connectionManager.getByClientId(clientId!);
     expect(conn).not.toBeNull();
-    expect(conn!.role).toBe('active');
+    expect(conn?.role).toBe('active');
 
     handler.handleDisconnect(clientId!);
     handler.destroy();
@@ -188,8 +186,8 @@ describe('WebSocketHandler connection', () => {
     const clientId1 = handler.handleUpgrade(ws1, { ticket: 'valid1' });
     const clientId2 = handler.handleUpgrade(ws2, { ticket: 'valid2' });
 
-    expect(connectionManager.getByClientId(clientId1!)!.role).toBe('active');
-    expect(connectionManager.getByClientId(clientId2!)!.role).toBe('standby');
+    expect(connectionManager.getByClientId(clientId1!)?.role).toBe('active');
+    expect(connectionManager.getByClientId(clientId2!)?.role).toBe('standby');
 
     handler.handleDisconnect(clientId1!);
     handler.handleDisconnect(clientId2!);
@@ -215,10 +213,7 @@ describe('WebSocketHandler command routing', () => {
     const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
     ws.sentMessages.length = 0; // clear hello + snapshot
 
-    await handler.handleMessage(
-      clientId!,
-      JSON.stringify({ cmdId: 'c1', cmd: 'session:list' }),
-    );
+    await handler.handleMessage(clientId!, JSON.stringify({ cmdId: 'c1', cmd: 'session:list' }));
 
     expect(ws.sentMessages.length).toBe(1);
     const reply = parseSent(ws, 0);
@@ -309,10 +304,7 @@ describe('WebSocketHandler command routing', () => {
     const clientId2 = handler.handleUpgrade(ws2, { ticket: 'valid2' });
     ws2.sentMessages.length = 0;
 
-    await handler.handleMessage(
-      clientId2!,
-      JSON.stringify({ cmdId: 'c1', cmd: 'cost:get' }),
-    );
+    await handler.handleMessage(clientId2!, JSON.stringify({ cmdId: 'c1', cmd: 'cost:get' }));
 
     const reply = parseSent(ws2, 0);
     expect(reply.type).toBe('reply');
@@ -433,13 +425,13 @@ describe('WebSocketHandler disconnect', () => {
     const clientId1 = handler.handleUpgrade(ws1, { ticket: 'valid1' });
     const clientId2 = handler.handleUpgrade(ws2, { ticket: 'valid2' });
 
-    expect(connectionManager.getByClientId(clientId2!)!.role).toBe('standby');
+    expect(connectionManager.getByClientId(clientId2!)?.role).toBe('standby');
 
     // Disconnect writer
     handler.handleDisconnect(clientId1!);
 
     // Standby should be promoted
-    expect(connectionManager.getByClientId(clientId2!)!.role).toBe('active');
+    expect(connectionManager.getByClientId(clientId2!)?.role).toBe('active');
 
     handler.handleDisconnect(clientId2!);
     handler.destroy();

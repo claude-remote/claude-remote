@@ -3,34 +3,34 @@ import {
   DefaultEventPriority,
   DiscreteEventPriority,
   NoEventPriority,
-} from 'react-reconciler/constants.js'
-import { logError } from '../../utils/log.js'
-import { HANDLER_FOR_EVENT } from './event-handlers.js'
-import type { EventTarget, TerminalEvent } from './terminal-event.js'
+} from 'react-reconciler/constants.js';
+import { logError } from '../../utils/log.js';
+import { HANDLER_FOR_EVENT } from './event-handlers.js';
+import type { EventTarget, TerminalEvent } from './terminal-event.js';
 
 // --
 
 type DispatchListener = {
-  node: EventTarget
-  handler: (event: TerminalEvent) => void
-  phase: 'capturing' | 'at_target' | 'bubbling'
-}
+  node: EventTarget;
+  handler: (event: TerminalEvent) => void;
+  phase: 'capturing' | 'at_target' | 'bubbling';
+};
 
 function getHandler(
   node: EventTarget,
   eventType: string,
   capture: boolean,
 ): ((event: TerminalEvent) => void) | undefined {
-  const handlers = node._eventHandlers
-  if (!handlers) return undefined
+  const handlers = node._eventHandlers;
+  if (!handlers) return undefined;
 
-  const mapping = HANDLER_FOR_EVENT[eventType]
-  if (!mapping) return undefined
+  const mapping = HANDLER_FOR_EVENT[eventType];
+  if (!mapping) return undefined;
 
-  const propName = capture ? mapping.capture : mapping.bubble
-  if (!propName) return undefined
+  const propName = capture ? mapping.capture : mapping.bubble;
+  if (!propName) return undefined;
 
-  return handlers[propName] as ((event: TerminalEvent) => void) | undefined
+  return handlers[propName] as ((event: TerminalEvent) => void) | undefined;
 }
 
 /**
@@ -43,25 +43,22 @@ function getHandler(
  *
  * Result: [root-cap, ..., parent-cap, target-cap, target-bub, parent-bub, ..., root-bub]
  */
-function collectListeners(
-  target: EventTarget,
-  event: TerminalEvent,
-): DispatchListener[] {
-  const listeners: DispatchListener[] = []
+function collectListeners(target: EventTarget, event: TerminalEvent): DispatchListener[] {
+  const listeners: DispatchListener[] = [];
 
-  let node: EventTarget | undefined = target
+  let node: EventTarget | undefined = target;
   while (node) {
-    const isTarget = node === target
+    const isTarget = node === target;
 
-    const captureHandler = getHandler(node, event.type, true)
-    const bubbleHandler = getHandler(node, event.type, false)
+    const captureHandler = getHandler(node, event.type, true);
+    const bubbleHandler = getHandler(node, event.type, false);
 
     if (captureHandler) {
       listeners.unshift({
         node,
         handler: captureHandler,
         phase: isTarget ? 'at_target' : 'capturing',
-      })
+      });
     }
 
     if (bubbleHandler && (event.bubbles || isTarget)) {
@@ -69,13 +66,13 @@ function collectListeners(
         node,
         handler: bubbleHandler,
         phase: isTarget ? 'at_target' : 'bubbling',
-      })
+      });
     }
 
-    node = node.parentNode
+    node = node.parentNode;
   }
 
-  return listeners
+  return listeners;
 }
 
 /**
@@ -84,32 +81,29 @@ function collectListeners(
  * Before each handler, calls event._prepareForTarget(node) so event
  * subclasses can do per-node setup.
  */
-function processDispatchQueue(
-  listeners: DispatchListener[],
-  event: TerminalEvent,
-): void {
-  let previousNode: EventTarget | undefined
+function processDispatchQueue(listeners: DispatchListener[], event: TerminalEvent): void {
+  let previousNode: EventTarget | undefined;
 
   for (const { node, handler, phase } of listeners) {
     if (event._isImmediatePropagationStopped()) {
-      break
+      break;
     }
 
     if (event._isPropagationStopped() && node !== previousNode) {
-      break
+      break;
     }
 
-    event._setEventPhase(phase)
-    event._setCurrentTarget(node)
-    event._prepareForTarget(node)
+    event._setEventPhase(phase);
+    event._setCurrentTarget(node);
+    event._prepareForTarget(node);
 
     try {
-      handler(event)
+      handler(event);
     } catch (error) {
-      logError(error)
+      logError(error);
     }
 
-    previousNode = node
+    previousNode = node;
   }
 }
 
@@ -127,13 +121,13 @@ function getEventPriority(eventType: string): number {
     case 'focus':
     case 'blur':
     case 'paste':
-      return DiscreteEventPriority as number
+      return DiscreteEventPriority as number;
     case 'resize':
     case 'scroll':
     case 'mousemove':
-      return ContinuousEventPriority as number
+      return ContinuousEventPriority as number;
     default:
-      return DefaultEventPriority as number
+      return DefaultEventPriority as number;
   }
 }
 
@@ -145,7 +139,7 @@ type DiscreteUpdates = <A, B>(
   b: B,
   c: undefined,
   d: undefined,
-) => boolean
+) => boolean;
 
 /**
  * Owns event dispatch state and the capture/bubble dispatch loop.
@@ -159,9 +153,9 @@ type DiscreteUpdates = <A, B>(
  * to break the import cycle.
  */
 export class Dispatcher {
-  currentEvent: TerminalEvent | null = null
-  currentUpdatePriority: number = DefaultEventPriority as number
-  discreteUpdates: DiscreteUpdates | null = null
+  currentEvent: TerminalEvent | null = null;
+  currentUpdatePriority: number = DefaultEventPriority as number;
+  discreteUpdates: DiscreteUpdates | null = null;
 
   /**
    * Infer event priority from the currently-dispatching event.
@@ -170,12 +164,12 @@ export class Dispatcher {
    */
   resolveEventPriority(): number {
     if (this.currentUpdatePriority !== (NoEventPriority as number)) {
-      return this.currentUpdatePriority
+      return this.currentUpdatePriority;
     }
     if (this.currentEvent) {
-      return getEventPriority(this.currentEvent.type)
+      return getEventPriority(this.currentEvent.type);
     }
-    return DefaultEventPriority as number
+    return DefaultEventPriority as number;
   }
 
   /**
@@ -183,20 +177,20 @@ export class Dispatcher {
    * Returns true if preventDefault() was NOT called.
    */
   dispatch(target: EventTarget, event: TerminalEvent): boolean {
-    const previousEvent = this.currentEvent
-    this.currentEvent = event
+    const previousEvent = this.currentEvent;
+    this.currentEvent = event;
     try {
-      event._setTarget(target)
+      event._setTarget(target);
 
-      const listeners = collectListeners(target, event)
-      processDispatchQueue(listeners, event)
+      const listeners = collectListeners(target, event);
+      processDispatchQueue(listeners, event);
 
-      event._setEventPhase('none')
-      event._setCurrentTarget(null)
+      event._setEventPhase('none');
+      event._setCurrentTarget(null);
 
-      return !event.defaultPrevented
+      return !event.defaultPrevented;
     } finally {
-      this.currentEvent = previousEvent
+      this.currentEvent = previousEvent;
     }
   }
 
@@ -206,15 +200,9 @@ export class Dispatcher {
    */
   dispatchDiscrete(target: EventTarget, event: TerminalEvent): boolean {
     if (!this.discreteUpdates) {
-      return this.dispatch(target, event)
+      return this.dispatch(target, event);
     }
-    return this.discreteUpdates(
-      (t, e) => this.dispatch(t, e),
-      target,
-      event,
-      undefined,
-      undefined,
-    )
+    return this.discreteUpdates((t, e) => this.dispatch(t, e), target, event, undefined, undefined);
   }
 
   /**
@@ -222,12 +210,12 @@ export class Dispatcher {
    * For high-frequency events: resize, scroll, mouse move.
    */
   dispatchContinuous(target: EventTarget, event: TerminalEvent): boolean {
-    const previousPriority = this.currentUpdatePriority
+    const previousPriority = this.currentUpdatePriority;
     try {
-      this.currentUpdatePriority = ContinuousEventPriority as number
-      return this.dispatch(target, event)
+      this.currentUpdatePriority = ContinuousEventPriority as number;
+      return this.dispatch(target, event);
     } finally {
-      this.currentUpdatePriority = previousPriority
+      this.currentUpdatePriority = previousPriority;
     }
   }
 }

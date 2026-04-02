@@ -30,18 +30,12 @@ interface PlanStep {
 export function PlanViewer({ tasks, messages, onExitPlanMode }: PlanViewerProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const planTask = useMemo(
-    () => tasks.find((t) => t.activeForm === 'plan'),
-    [tasks],
-  );
+  const planTask = useMemo(() => tasks.find((t) => t.activeForm === 'plan'), [tasks]);
 
   const planContent = useMemo(() => extractPlanContent(messages), [messages]);
   const planSteps = useMemo(() => parsePlanSteps(planContent), [planContent]);
 
-  const completedCount = useMemo(
-    () => planSteps.filter((s) => s.completed).length,
-    [planSteps],
-  );
+  const completedCount = useMemo(() => planSteps.filter((s) => s.completed).length, [planSteps]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => !prev);
@@ -210,7 +204,7 @@ function parsePlanSteps(content: string | null): PlanStep[] {
     if (checkboxMatch) {
       const indent = Math.floor((checkboxMatch[1]?.length ?? 0) / 2);
       steps.push({
-        text: checkboxMatch[3]!.trim(),
+        text: checkboxMatch[3]?.trim(),
         completed: checkboxMatch[2] !== ' ',
         indent,
       });
@@ -222,11 +216,10 @@ function parsePlanSteps(content: string | null): PlanStep[] {
     if (numberedMatch) {
       const indent = Math.floor((numberedMatch[1]?.length ?? 0) / 2);
       steps.push({
-        text: numberedMatch[2]!.trim(),
+        text: numberedMatch[2]?.trim(),
         completed: false,
         indent,
       });
-      continue;
     }
   }
 

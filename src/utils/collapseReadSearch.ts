@@ -1,68 +1,67 @@
-import { feature } from 'src/utils/feature.js'
-import type { UUID } from 'crypto'
-import { findToolByName, type Tools } from '../Tool.js'
-import { extractBashCommentLabel } from '../tools/BashTool/commentLabel.js'
-import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
-import { REPL_TOOL_NAME } from '../tools/REPLTool/constants.js'
-import { getReplPrimitiveTools } from '../tools/REPLTool/primitiveTools.js'
+import type { UUID } from 'node:crypto';
+import { feature } from 'src/utils/feature.js';
+import { type Tools, findToolByName } from '../Tool.js';
+import { extractBashCommentLabel } from '../tools/BashTool/commentLabel.js';
+import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js';
+import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js';
+import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js';
+import { REPL_TOOL_NAME } from '../tools/REPLTool/constants.js';
+import { getReplPrimitiveTools } from '../tools/REPLTool/primitiveTools.js';
+import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js';
 import {
   type BranchAction,
   type CommitKind,
-  detectGitOperation,
   type PrAction,
-} from '../tools/shared/gitOperationTracking.js'
-import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js'
+  detectGitOperation,
+} from '../tools/shared/gitOperationTracking.js';
 import type {
   CollapsedReadSearchGroup,
   CollapsibleMessage,
   RenderableMessage,
   StopHookInfo,
   SystemStopHookSummaryMessage,
-} from '../types/message.js'
-import { getDisplayPath } from './file.js'
-import { isFullscreenEnvEnabled } from './fullscreen.js'
+} from '../types/message.js';
+import { getDisplayPath } from './file.js';
+import { isFullscreenEnvEnabled } from './fullscreen.js';
 import {
   isAutoManagedMemoryFile,
   isAutoManagedMemoryPattern,
   isMemoryDirectory,
   isShellCommandTargetingMemory,
-} from './memoryFileDetection.js'
+} from './memoryFileDetection.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemOps = feature('TEAMMEM')
   ? (require('./teamMemoryOps.js') as typeof import('./teamMemoryOps.js'))
-  : null
+  : null;
 const SNIP_TOOL_NAME = feature('HISTORY_SNIP')
-  ? (
-      require('../tools/SnipTool/prompt.js') as typeof import('../tools/SnipTool/prompt.js')
-    ).SNIP_TOOL_NAME
-  : null
+  ? (require('../tools/SnipTool/prompt.js') as typeof import('../tools/SnipTool/prompt.js'))
+      .SNIP_TOOL_NAME
+  : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * Result of checking if a tool use is a search or read operation.
  */
 export type SearchOrReadResult = {
-  isCollapsible: boolean
-  isSearch: boolean
-  isRead: boolean
-  isList: boolean
-  isREPL: boolean
+  isCollapsible: boolean;
+  isSearch: boolean;
+  isRead: boolean;
+  isList: boolean;
+  isREPL: boolean;
   /** True if this is a Write/Edit targeting a memory file */
-  isMemoryWrite: boolean
+  isMemoryWrite: boolean;
   /**
    * True for meta-operations that should be absorbed into a collapse group
    * without incrementing any count (Snip, ToolSearch). They remain visible
    * in verbose mode via the groupMessages iteration.
    */
-  isAbsorbedSilently: boolean
+  isAbsorbedSilently: boolean;
   /** MCP server name when this is an MCP tool */
-  mcpServerName?: string
+  mcpServerName?: string;
   /** Bash command that is NOT a search/read (under fullscreen mode) */
-  isBash?: boolean
-}
+  isBash?: boolean;
+};
 
 /**
  * Extract the primary file/directory path from a tool_use input.
@@ -71,8 +70,8 @@ export type SearchOrReadResult = {
 function getFilePathFromToolInput(toolInput: unknown): string | undefined {
   const input = toolInput as
     | { file_path?: string; path?: string; pattern?: string; glob?: string }
-    | undefined
-  return input?.file_path ?? input?.path
+    | undefined;
+  return input?.file_path ?? input?.path;
 }
 
 /**
@@ -81,26 +80,26 @@ function getFilePathFromToolInput(toolInput: unknown): string | undefined {
 function isMemorySearch(toolInput: unknown): boolean {
   const input = toolInput as
     | { path?: string; pattern?: string; glob?: string; command?: string }
-    | undefined
+    | undefined;
   if (!input) {
-    return false
+    return false;
   }
   // Check if the search path targets a memory file or directory (Grep/Glob tools)
   if (input.path) {
     if (isAutoManagedMemoryFile(input.path) || isMemoryDirectory(input.path)) {
-      return true
+      return true;
     }
   }
   // Check glob patterns that indicate memory file access
   if (input.glob && isAutoManagedMemoryPattern(input.glob)) {
-    return true
+    return true;
   }
   // For shell commands (bash grep/rg, PowerShell Select-String, etc.),
   // check if the command targets memory paths
   if (input.command && isShellCommandTargetingMemory(input.command)) {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
@@ -108,14 +107,14 @@ function isMemorySearch(toolInput: unknown): boolean {
  */
 function isMemoryWriteOrEdit(toolName: string, toolInput: unknown): boolean {
   if (toolName !== FILE_WRITE_TOOL_NAME && toolName !== FILE_EDIT_TOOL_NAME) {
-    return false
+    return false;
   }
-  const filePath = getFilePathFromToolInput(toolInput)
-  return filePath !== undefined && isAutoManagedMemoryFile(filePath)
+  const filePath = getFilePathFromToolInput(toolInput);
+  return filePath !== undefined && isAutoManagedMemoryFile(filePath);
 }
 
 // ~5 lines × ~60 cols. Generous static cap — the renderer lets Ink wrap.
-const MAX_HINT_CHARS = 300
+const MAX_HINT_CHARS = 300;
 
 /**
  * Format a bash command for the ⎿ hint. Drops blank lines, collapses runs of
@@ -123,16 +122,12 @@ const MAX_HINT_CHARS = 300
  * renderer can indent continuation lines under ⎿.
  */
 function commandAsHint(command: string): string {
-  const cleaned =
-    '$ ' +
-    command
-      .split('\n')
-      .map(l => l.replace(/\s+/g, ' ').trim())
-      .filter(l => l !== '')
-      .join('\n')
-  return cleaned.length > MAX_HINT_CHARS
-    ? cleaned.slice(0, MAX_HINT_CHARS - 1) + '…'
-    : cleaned
+  const cleaned = `$ ${command
+    .split('\n')
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .filter((l) => l !== '')
+    .join('\n')}`;
+  return cleaned.length > MAX_HINT_CHARS ? `${cleaned.slice(0, MAX_HINT_CHARS - 1)}…` : cleaned;
 }
 
 /**
@@ -158,7 +153,7 @@ export function getToolSearchOrReadInfo(
       isREPL: true,
       isMemoryWrite: false,
       isAbsorbedSilently: true,
-    }
+    };
   }
 
   // Memory file writes/edits are collapsible
@@ -171,7 +166,7 @@ export function getToolSearchOrReadInfo(
       isREPL: false,
       isMemoryWrite: true,
       isAbsorbedSilently: false,
-    }
+    };
   }
 
   // Meta-operations absorbed silently: Snip (context cleanup) and ToolSearch
@@ -189,16 +184,14 @@ export function getToolSearchOrReadInfo(
       isREPL: false,
       isMemoryWrite: false,
       isAbsorbedSilently: true,
-    }
+    };
   }
 
   // Fallback to REPL primitives: in REPL mode, Bash/Read/Grep/etc. are
   // stripped from the execution tools list, but REPL emits them as virtual
   // messages. Without the fallback they'd return isCollapsible: false and
   // vanish from the summary line.
-  const tool =
-    findToolByName(tools, toolName) ??
-    findToolByName(getReplPrimitiveTools(), toolName)
+  const tool = findToolByName(tools, toolName) ?? findToolByName(getReplPrimitiveTools(), toolName);
   if (!tool?.isSearchOrReadCommand) {
     return {
       isCollapsible: false,
@@ -208,22 +201,19 @@ export function getToolSearchOrReadInfo(
       isREPL: false,
       isMemoryWrite: false,
       isAbsorbedSilently: false,
-    }
+    };
   }
   // The tool's isSearchOrReadCommand method handles its own input validation via safeParse,
   // so passing the raw input is safe. The type assertion is necessary because Tool[] uses
   // the default generic which expects { [x: string]: any }, but we receive unknown at runtime.
-  const result = tool.isSearchOrReadCommand(
-    toolInput as { [x: string]: unknown },
-  )
-  const isList = result.isList ?? false
-  const isCollapsible = result.isSearch || result.isRead || isList
+  const result = tool.isSearchOrReadCommand(toolInput as { [x: string]: unknown });
+  const isList = result.isList ?? false;
+  const isCollapsible = result.isSearch || result.isRead || isList;
   // Under fullscreen mode, non-search/read Bash commands are also collapsible
   // as their own category — "Ran N bash commands" instead of breaking the group.
   return {
     isCollapsible:
-      isCollapsible ||
-      (isFullscreenEnvEnabled() ? toolName === BASH_TOOL_NAME : false),
+      isCollapsible || (isFullscreenEnvEnabled() ? toolName === BASH_TOOL_NAME : false),
     isSearch: result.isSearch,
     isRead: result.isRead,
     isList,
@@ -231,10 +221,8 @@ export function getToolSearchOrReadInfo(
     isMemoryWrite: false,
     isAbsorbedSilently: false,
     ...(tool.isMcp && { mcpServerName: tool.mcpInfo?.serverName }),
-    isBash: isFullscreenEnvEnabled()
-      ? !isCollapsible && toolName === BASH_TOOL_NAME
-      : undefined,
-  }
+    isBash: isFullscreenEnvEnabled() ? !isCollapsible && toolName === BASH_TOOL_NAME : undefined,
+  };
 }
 
 /**
@@ -245,17 +233,17 @@ export function getSearchOrReadFromContent(
   content: { type: string; name?: string; input?: unknown } | undefined,
   tools: Tools,
 ): {
-  isSearch: boolean
-  isRead: boolean
-  isList: boolean
-  isREPL: boolean
-  isMemoryWrite: boolean
-  isAbsorbedSilently: boolean
-  mcpServerName?: string
-  isBash?: boolean
+  isSearch: boolean;
+  isRead: boolean;
+  isList: boolean;
+  isREPL: boolean;
+  isMemoryWrite: boolean;
+  isAbsorbedSilently: boolean;
+  mcpServerName?: string;
+  isBash?: boolean;
 } | null {
   if (content?.type === 'tool_use' && content.name) {
-    const info = getToolSearchOrReadInfo(content.name, content.input, tools)
+    const info = getToolSearchOrReadInfo(content.name, content.input, tools);
     if (info.isCollapsible || info.isREPL) {
       return {
         isSearch: info.isSearch,
@@ -266,21 +254,17 @@ export function getSearchOrReadFromContent(
         isAbsorbedSilently: info.isAbsorbedSilently,
         mcpServerName: info.mcpServerName,
         isBash: info.isBash,
-      }
+      };
     }
   }
-  return null
+  return null;
 }
 
 /**
  * Checks if a tool is a search/read operation (for backwards compatibility).
  */
-function isToolSearchOrRead(
-  toolName: string,
-  toolInput: unknown,
-  tools: Tools,
-): boolean {
-  return getToolSearchOrReadInfo(toolName, toolInput, tools).isCollapsible
+function isToolSearchOrRead(toolName: string, toolInput: unknown, tools: Tools): boolean {
+  return getToolSearchOrReadInfo(toolName, toolInput, tools).isCollapsible;
 }
 
 /**
@@ -291,38 +275,38 @@ function getCollapsibleToolInfo(
   msg: RenderableMessage,
   tools: Tools,
 ): {
-  name: string
-  input: unknown
-  isSearch: boolean
-  isRead: boolean
-  isList: boolean
-  isREPL: boolean
-  isMemoryWrite: boolean
-  isAbsorbedSilently: boolean
-  mcpServerName?: string
-  isBash?: boolean
+  name: string;
+  input: unknown;
+  isSearch: boolean;
+  isRead: boolean;
+  isList: boolean;
+  isREPL: boolean;
+  isMemoryWrite: boolean;
+  isAbsorbedSilently: boolean;
+  mcpServerName?: string;
+  isBash?: boolean;
 } | null {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
-    const info = getSearchOrReadFromContent(content, tools)
+    const content = msg.message.content[0];
+    const info = getSearchOrReadFromContent(content, tools);
     if (info && content?.type === 'tool_use') {
-      return { name: content.name, input: content.input, ...info }
+      return { name: content.name, input: content.input, ...info };
     }
   }
   if (msg.type === 'grouped_tool_use') {
     // For grouped tool uses, check the first message's input
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0];
     const info = getSearchOrReadFromContent(
       firstContent
         ? { type: 'tool_use', name: msg.toolName, input: firstContent.input }
         : undefined,
       tools,
-    )
+    );
     if (info && firstContent?.type === 'tool_use') {
-      return { name: msg.toolName, input: firstContent.input, ...info }
+      return { name: msg.toolName, input: firstContent.input, ...info };
     }
   }
-  return null
+  return null;
 }
 
 /**
@@ -330,51 +314,41 @@ function getCollapsibleToolInfo(
  */
 function isTextBreaker(msg: RenderableMessage): boolean {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
+    const content = msg.message.content[0];
     if (content?.type === 'text' && content.text.trim().length > 0) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 /**
  * Check if a message is a non-collapsible tool use that should break a group.
  * This includes tool uses like Edit, Write, etc.
  */
-function isNonCollapsibleToolUse(
-  msg: RenderableMessage,
-  tools: Tools,
-): boolean {
+function isNonCollapsibleToolUse(msg: RenderableMessage, tools: Tools): boolean {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
-    if (
-      content?.type === 'tool_use' &&
-      !isToolSearchOrRead(content.name, content.input, tools)
-    ) {
-      return true
+    const content = msg.message.content[0];
+    if (content?.type === 'tool_use' && !isToolSearchOrRead(content.name, content.input, tools)) {
+      return true;
     }
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0];
     if (
       firstContent?.type === 'tool_use' &&
       !isToolSearchOrRead(msg.toolName, firstContent.input, tools)
     ) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
-function isPreToolHookSummary(
-  msg: RenderableMessage,
-): msg is SystemStopHookSummaryMessage {
+function isPreToolHookSummary(msg: RenderableMessage): msg is SystemStopHookSummaryMessage {
   return (
-    msg.type === 'system' &&
-    msg.subtype === 'stop_hook_summary' &&
-    msg.hookLabel === 'PreToolUse'
-  )
+    msg.type === 'system' && msg.subtype === 'stop_hook_summary' && msg.hookLabel === 'PreToolUse'
+  );
 }
 
 /**
@@ -383,45 +357,39 @@ function isPreToolHookSummary(
  */
 function shouldSkipMessage(msg: RenderableMessage): boolean {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
+    const content = msg.message.content[0];
     // Skip thinking blocks and other non-text, non-tool content
     if (content?.type === 'thinking' || content?.type === 'redacted_thinking') {
-      return true
+      return true;
     }
   }
   // Skip attachment messages
   if (msg.type === 'attachment') {
-    return true
+    return true;
   }
   // Skip system messages
   if (msg.type === 'system') {
-    return true
+    return true;
   }
-  return false
+  return false;
 }
 
 /**
  * Type predicate: Check if a message is a collapsible tool use.
  */
-function isCollapsibleToolUse(
-  msg: RenderableMessage,
-  tools: Tools,
-): msg is CollapsibleMessage {
+function isCollapsibleToolUse(msg: RenderableMessage, tools: Tools): msg is CollapsibleMessage {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
-    return (
-      content?.type === 'tool_use' &&
-      isToolSearchOrRead(content.name, content.input, tools)
-    )
+    const content = msg.message.content[0];
+    return content?.type === 'tool_use' && isToolSearchOrRead(content.name, content.input, tools);
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0];
     return (
       firstContent?.type === 'tool_use' &&
       isToolSearchOrRead(msg.toolName, firstContent.input, tools)
-    )
+    );
   }
-  return false
+  return false;
 }
 
 /**
@@ -434,16 +402,14 @@ function isCollapsibleToolResult(
 ): msg is CollapsibleMessage {
   if (msg.type === 'user') {
     const toolResults = msg.message.content.filter(
-      (c): c is { type: 'tool_result'; tool_use_id: string } =>
-        c.type === 'tool_result',
-    )
+      (c): c is { type: 'tool_result'; tool_use_id: string } => c.type === 'tool_result',
+    );
     // Only return true if there are tool results AND all of them are for collapsible tools
     return (
-      toolResults.length > 0 &&
-      toolResults.every(r => collapsibleToolUseIds.has(r.tool_use_id))
-    )
+      toolResults.length > 0 && toolResults.every((r) => collapsibleToolUseIds.has(r.tool_use_id))
+    );
   }
-  return false
+  return false;
 }
 
 /**
@@ -451,33 +417,31 @@ function isCollapsibleToolResult(
  */
 function getToolUseIdsFromMessage(msg: RenderableMessage): string[] {
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
+    const content = msg.message.content[0];
     if (content?.type === 'tool_use') {
-      return [content.id]
+      return [content.id];
     }
   }
   if (msg.type === 'grouped_tool_use') {
     return msg.messages
-      .map(m => {
-        const content = m.message.content[0]
-        return content.type === 'tool_use' ? content.id : ''
+      .map((m) => {
+        const content = m.message.content[0];
+        return content.type === 'tool_use' ? content.id : '';
       })
-      .filter(Boolean)
+      .filter(Boolean);
   }
-  return []
+  return [];
 }
 
 /**
  * Get all tool use IDs from a collapsed read/search group.
  */
-export function getToolUseIdsFromCollapsedGroup(
-  message: CollapsedReadSearchGroup,
-): string[] {
-  const ids: string[] = []
+export function getToolUseIdsFromCollapsedGroup(message: CollapsedReadSearchGroup): string[] {
+  const ids: string[] = [];
   for (const msg of message.messages) {
-    ids.push(...getToolUseIdsFromMessage(msg))
+    ids.push(...getToolUseIdsFromMessage(msg));
   }
-  return ids
+  return ids;
 }
 
 /**
@@ -487,9 +451,7 @@ export function hasAnyToolInProgress(
   message: CollapsedReadSearchGroup,
   inProgressToolUseIDs: Set<string>,
 ): boolean {
-  return getToolUseIdsFromCollapsedGroup(message).some(id =>
-    inProgressToolUseIDs.has(id),
-  )
+  return getToolUseIdsFromCollapsedGroup(message).some((id) => inProgressToolUseIDs.has(id));
 }
 
 /**
@@ -500,11 +462,11 @@ export function hasAnyToolInProgress(
 export function getDisplayMessageFromCollapsed(
   message: CollapsedReadSearchGroup,
 ): Exclude<CollapsibleMessage, { type: 'grouped_tool_use' }> {
-  const firstMsg = message.displayMessage
+  const firstMsg = message.displayMessage;
   if (firstMsg.type === 'grouped_tool_use') {
-    return firstMsg.displayMessage
+    return firstMsg.displayMessage;
   }
-  return firstMsg
+  return firstMsg;
 }
 
 /**
@@ -512,9 +474,9 @@ export function getDisplayMessageFromCollapsed(
  */
 function countToolUses(msg: RenderableMessage): number {
   if (msg.type === 'grouped_tool_use') {
-    return msg.messages.length
+    return msg.messages.length;
   }
-  return 1
+  return 1;
 }
 
 /**
@@ -522,29 +484,29 @@ function countToolUses(msg: RenderableMessage): number {
  * Returns an array of file paths (may have duplicates if same file is read multiple times in one grouped message).
  */
 function getFilePathsFromReadMessage(msg: RenderableMessage): string[] {
-  const paths: string[] = []
+  const paths: string[] = [];
 
   if (msg.type === 'assistant') {
-    const content = msg.message.content[0]
+    const content = msg.message.content[0];
     if (content?.type === 'tool_use') {
-      const input = content.input as { file_path?: string } | undefined
+      const input = content.input as { file_path?: string } | undefined;
       if (input?.file_path) {
-        paths.push(input.file_path)
+        paths.push(input.file_path);
       }
     }
   } else if (msg.type === 'grouped_tool_use') {
     for (const m of msg.messages) {
-      const content = m.message.content[0]
+      const content = m.message.content[0];
       if (content?.type === 'tool_use') {
-        const input = content.input as { file_path?: string } | undefined
+        const input = content.input as { file_path?: string } | undefined;
         if (input?.file_path) {
-          paths.push(input.file_path)
+          paths.push(input.file_path);
         }
       }
     }
   }
 
-  return paths
+  return paths;
 }
 
 /**
@@ -552,75 +514,70 @@ function getFilePathsFromReadMessage(msg: RenderableMessage): string[] {
  * group accumulator. Called only for results whose tool_use_id was recorded
  * in bashCommands (non-search/read bash).
  */
-function scanBashResultForGitOps(
-  msg: CollapsibleMessage,
-  group: GroupAccumulator,
-): void {
-  if (msg.type !== 'user') return
-  const out = msg.toolUseResult as
-    | { stdout?: string; stderr?: string }
-    | undefined
-  if (!out?.stdout && !out?.stderr) return
+function scanBashResultForGitOps(msg: CollapsibleMessage, group: GroupAccumulator): void {
+  if (msg.type !== 'user') return;
+  const out = msg.toolUseResult as { stdout?: string; stderr?: string } | undefined;
+  if (!out?.stdout && !out?.stderr) return;
   // git push writes the ref update to stderr — scan both streams.
-  const combined = (out.stdout ?? '') + '\n' + (out.stderr ?? '')
+  const combined = `${out.stdout ?? ''}\n${out.stderr ?? ''}`;
   for (const c of msg.message.content) {
-    if (c.type !== 'tool_result') continue
-    const command = group.bashCommands?.get(c.tool_use_id)
-    if (!command) continue
-    const { commit, push, branch, pr } = detectGitOperation(command, combined)
-    if (commit) group.commits?.push(commit)
-    if (push) group.pushes?.push(push)
-    if (branch) group.branches?.push(branch)
-    if (pr) group.prs?.push(pr)
+    if (c.type !== 'tool_result') continue;
+    const command = group.bashCommands?.get(c.tool_use_id);
+    if (!command) continue;
+    const { commit, push, branch, pr } = detectGitOperation(command, combined);
+    if (commit) group.commits?.push(commit);
+    if (push) group.pushes?.push(push);
+    if (branch) group.branches?.push(branch);
+    if (pr) group.prs?.push(pr);
     if (commit || push || branch || pr) {
-      group.gitOpBashCount = (group.gitOpBashCount ?? 0) + 1
+      group.gitOpBashCount = (group.gitOpBashCount ?? 0) + 1;
     }
   }
 }
 
 type GroupAccumulator = {
-  messages: CollapsibleMessage[]
-  searchCount: number
-  readFilePaths: Set<string>
+  messages: CollapsibleMessage[];
+  searchCount: number;
+  readFilePaths: Set<string>;
   // Count of read operations that don't have file paths (e.g., Bash cat commands)
-  readOperationCount: number
+  readOperationCount: number;
   // Count of directory-listing operations (ls, tree, du)
-  listCount: number
-  toolUseIds: Set<string>
+  listCount: number;
+  toolUseIds: Set<string>;
   // Memory file operation counts (tracked separately from regular counts)
-  memorySearchCount: number
-  memoryReadFilePaths: Set<string>
-  memoryWriteCount: number
+  memorySearchCount: number;
+  memoryReadFilePaths: Set<string>;
+  memoryWriteCount: number;
   // Team memory file operation counts (tracked separately)
-  teamMemorySearchCount?: number
-  teamMemoryReadFilePaths?: Set<string>
-  teamMemoryWriteCount?: number
+  teamMemorySearchCount?: number;
+  teamMemoryReadFilePaths?: Set<string>;
+  teamMemoryWriteCount?: number;
   // Non-memory search patterns for display beneath the collapsed summary
-  nonMemSearchArgs: string[]
+  nonMemSearchArgs: string[];
   /** Most recently added non-memory operation, pre-formatted for display */
-  latestDisplayHint: string | undefined
+  latestDisplayHint: string | undefined;
   // MCP tool calls (tracked separately so display says "Queried slack" not "Read N files")
-  mcpCallCount?: number
-  mcpServerNames?: Set<string>
+  mcpCallCount?: number;
+  mcpServerNames?: Set<string>;
   // Bash commands that aren't search/read (tracked separately for "Ran N bash commands")
-  bashCount?: number
+  bashCount?: number;
   // Bash tool_use_id → command string, so tool results can be scanned for
   // commit SHAs / PR URLs (surfaced as "committed abc123, created PR #42")
-  bashCommands?: Map<string, string>
-  commits?: { sha: string; kind: CommitKind }[]
-  pushes?: { branch: string }[]
-  branches?: { ref: string; action: BranchAction }[]
-  prs?: { number: number; url?: string; action: PrAction }[]
-  gitOpBashCount?: number
+  bashCommands?: Map<string, string>;
+  commits?: { sha: string; kind: CommitKind }[];
+  pushes?: { branch: string }[];
+  branches?: { ref: string; action: BranchAction }[];
+  prs?: { number: number; url?: string; action: PrAction }[];
+  gitOpBashCount?: number;
   // PreToolUse hook timing absorbed from hook summary messages
-  hookTotalMs: number
-  hookCount: number
-  hookInfos: StopHookInfo[]
+  hookTotalMs: number;
+  hookCount: number;
+  hookInfos: StopHookInfo[];
   // relevant_memories attachments absorbed into this group (auto-injected
   // memories, not explicit Read calls). Paths mirrored into readFilePaths +
   // memoryReadFilePaths so the inline "recalled N memories" text is accurate.
-  relevantMemories?: { path: string; content: string; mtimeMs: number }[]
-}
+  relevantMemories?: { path: string; content: string; mtimeMs: number }[];
+};
 
 function createEmptyGroup(): GroupAccumulator {
   const group: GroupAccumulator = {
@@ -638,73 +595,53 @@ function createEmptyGroup(): GroupAccumulator {
     hookTotalMs: 0,
     hookCount: 0,
     hookInfos: [],
-  }
+  };
   if (feature('TEAMMEM')) {
-    group.teamMemorySearchCount = 0
-    group.teamMemoryReadFilePaths = new Set()
-    group.teamMemoryWriteCount = 0
+    group.teamMemorySearchCount = 0;
+    group.teamMemoryReadFilePaths = new Set();
+    group.teamMemoryWriteCount = 0;
   }
-  group.mcpCallCount = 0
-  group.mcpServerNames = new Set()
+  group.mcpCallCount = 0;
+  group.mcpServerNames = new Set();
   if (isFullscreenEnvEnabled()) {
-    group.bashCount = 0
-    group.bashCommands = new Map()
-    group.commits = []
-    group.pushes = []
-    group.branches = []
-    group.prs = []
-    group.gitOpBashCount = 0
+    group.bashCount = 0;
+    group.bashCommands = new Map();
+    group.commits = [];
+    group.pushes = [];
+    group.branches = [];
+    group.prs = [];
+    group.gitOpBashCount = 0;
   }
-  return group
+  return group;
 }
 
-function createCollapsedGroup(
-  group: GroupAccumulator,
-): CollapsedReadSearchGroup {
-  const firstMsg = group.messages[0]!
+function createCollapsedGroup(group: GroupAccumulator): CollapsedReadSearchGroup {
+  const firstMsg = group.messages[0]!;
   // When file-path-based reads exist, use unique file count (Set.size) only.
   // Adding bash operation count on top would double-count — e.g. Read(README.md)
   // followed by Bash(wc -l README.md) should still show as 1 file, not 2.
   // Fall back to operation count only when there are no file-path reads (bash-only).
   const totalReadCount =
-    group.readFilePaths.size > 0
-      ? group.readFilePaths.size
-      : group.readOperationCount
+    group.readFilePaths.size > 0 ? group.readFilePaths.size : group.readOperationCount;
   // memoryReadFilePaths ⊆ readFilePaths (both populated from Read tool calls),
   // so this count is safe to subtract from totalReadCount at readCount below.
   // Absorbed relevant_memories attachments are NOT in readFilePaths — added
   // separately after the subtraction so readCount stays correct.
-  const toolMemoryReadCount = group.memoryReadFilePaths.size
-  const memoryReadCount =
-    toolMemoryReadCount + (group.relevantMemories?.length ?? 0)
+  const toolMemoryReadCount = group.memoryReadFilePaths.size;
+  const memoryReadCount = toolMemoryReadCount + (group.relevantMemories?.length ?? 0);
   // Non-memory read file paths: exclude memory and team memory paths
-  const teamMemReadPaths = feature('TEAMMEM')
-    ? group.teamMemoryReadFilePaths
-    : undefined
+  const teamMemReadPaths = feature('TEAMMEM') ? group.teamMemoryReadFilePaths : undefined;
   const nonMemReadFilePaths = [...group.readFilePaths].filter(
-    p =>
-      !group.memoryReadFilePaths.has(p) && !(teamMemReadPaths?.has(p) ?? false),
-  )
-  const teamMemSearchCount = feature('TEAMMEM')
-    ? (group.teamMemorySearchCount ?? 0)
-    : 0
-  const teamMemReadCount = feature('TEAMMEM')
-    ? (group.teamMemoryReadFilePaths?.size ?? 0)
-    : 0
-  const teamMemWriteCount = feature('TEAMMEM')
-    ? (group.teamMemoryWriteCount ?? 0)
-    : 0
+    (p) => !group.memoryReadFilePaths.has(p) && !(teamMemReadPaths?.has(p) ?? false),
+  );
+  const teamMemSearchCount = feature('TEAMMEM') ? (group.teamMemorySearchCount ?? 0) : 0;
+  const teamMemReadCount = feature('TEAMMEM') ? (group.teamMemoryReadFilePaths?.size ?? 0) : 0;
+  const teamMemWriteCount = feature('TEAMMEM') ? (group.teamMemoryWriteCount ?? 0) : 0;
   const result: CollapsedReadSearchGroup = {
     type: 'collapsed_read_search',
     // Subtract memory + team memory counts so regular counts only reflect non-memory operations
-    searchCount: Math.max(
-      0,
-      group.searchCount - group.memorySearchCount - teamMemSearchCount,
-    ),
-    readCount: Math.max(
-      0,
-      totalReadCount - toolMemoryReadCount - teamMemReadCount,
-    ),
+    searchCount: Math.max(0, group.searchCount - group.memorySearchCount - teamMemSearchCount),
+    readCount: Math.max(0, totalReadCount - toolMemoryReadCount - teamMemReadCount),
     listCount: group.listCount,
     // REPL operations are intentionally not collapsed (see isCollapsible: false at line 32),
     // so replCount in collapsed groups is always 0. The replCount field is kept for
@@ -720,35 +657,35 @@ function createCollapsedGroup(
     displayMessage: firstMsg,
     uuid: `collapsed-${firstMsg.uuid}` as UUID,
     timestamp: firstMsg.timestamp,
-  }
+  };
   if (feature('TEAMMEM')) {
-    result.teamMemorySearchCount = teamMemSearchCount
-    result.teamMemoryReadCount = teamMemReadCount
-    result.teamMemoryWriteCount = teamMemWriteCount
+    result.teamMemorySearchCount = teamMemSearchCount;
+    result.teamMemoryReadCount = teamMemReadCount;
+    result.teamMemoryWriteCount = teamMemWriteCount;
   }
   if ((group.mcpCallCount ?? 0) > 0) {
-    result.mcpCallCount = group.mcpCallCount
-    result.mcpServerNames = [...(group.mcpServerNames ?? [])]
+    result.mcpCallCount = group.mcpCallCount;
+    result.mcpServerNames = [...(group.mcpServerNames ?? [])];
   }
   if (isFullscreenEnvEnabled()) {
     if ((group.bashCount ?? 0) > 0) {
-      result.bashCount = group.bashCount
-      result.gitOpBashCount = group.gitOpBashCount
+      result.bashCount = group.bashCount;
+      result.gitOpBashCount = group.gitOpBashCount;
     }
-    if ((group.commits?.length ?? 0) > 0) result.commits = group.commits
-    if ((group.pushes?.length ?? 0) > 0) result.pushes = group.pushes
-    if ((group.branches?.length ?? 0) > 0) result.branches = group.branches
-    if ((group.prs?.length ?? 0) > 0) result.prs = group.prs
+    if ((group.commits?.length ?? 0) > 0) result.commits = group.commits;
+    if ((group.pushes?.length ?? 0) > 0) result.pushes = group.pushes;
+    if ((group.branches?.length ?? 0) > 0) result.branches = group.branches;
+    if ((group.prs?.length ?? 0) > 0) result.prs = group.prs;
   }
   if (group.hookCount > 0) {
-    result.hookTotalMs = group.hookTotalMs
-    result.hookCount = group.hookCount
-    result.hookInfos = group.hookInfos
+    result.hookTotalMs = group.hookTotalMs;
+    result.hookCount = group.hookCount;
+    result.hookInfos = group.hookInfos;
   }
   if (group.relevantMemories && group.relevantMemories.length > 0) {
-    result.relevantMemories = group.relevantMemories
+    result.relevantMemories = group.relevantMemories;
   }
-  return result
+  return result;
 }
 
 /**
@@ -763,38 +700,37 @@ export function collapseReadSearchGroups(
   messages: RenderableMessage[],
   tools: Tools,
 ): RenderableMessage[] {
-  const result: RenderableMessage[] = []
-  let currentGroup = createEmptyGroup()
-  let deferredSkippable: RenderableMessage[] = []
+  const result: RenderableMessage[] = [];
+  let currentGroup = createEmptyGroup();
+  let deferredSkippable: RenderableMessage[] = [];
 
   function flushGroup(): void {
     if (currentGroup.messages.length === 0) {
-      return
+      return;
     }
-    result.push(createCollapsedGroup(currentGroup))
+    result.push(createCollapsedGroup(currentGroup));
     for (const deferred of deferredSkippable) {
-      result.push(deferred)
+      result.push(deferred);
     }
-    deferredSkippable = []
-    currentGroup = createEmptyGroup()
+    deferredSkippable = [];
+    currentGroup = createEmptyGroup();
   }
 
   for (const msg of messages) {
     if (isCollapsibleToolUse(msg, tools)) {
       // This is a collapsible tool use - type predicate narrows to CollapsibleMessage
-      const toolInfo = getCollapsibleToolInfo(msg, tools)!
+      const toolInfo = getCollapsibleToolInfo(msg, tools)!;
 
       if (toolInfo.isMemoryWrite) {
         // Memory file write/edit — check if it's team memory
-        const count = countToolUses(msg)
+        const count = countToolUses(msg);
         if (
           feature('TEAMMEM') &&
           teamMemOps?.isTeamMemoryWriteOrEdit(toolInfo.name, toolInfo.input)
         ) {
-          currentGroup.teamMemoryWriteCount =
-            (currentGroup.teamMemoryWriteCount ?? 0) + count
+          currentGroup.teamMemoryWriteCount = (currentGroup.teamMemoryWriteCount ?? 0) + count;
         } else {
-          currentGroup.memoryWriteCount += count
+          currentGroup.memoryWriteCount += count;
         }
       } else if (toolInfo.isAbsorbedSilently) {
         // Snip/ToolSearch absorbed silently — no count, no summary text.
@@ -803,111 +739,106 @@ export function collapseReadSearchGroups(
       } else if (toolInfo.mcpServerName) {
         // MCP search/read — counted separately so the summary says
         // "Queried slack N times" instead of "Read N files".
-        const count = countToolUses(msg)
-        currentGroup.mcpCallCount = (currentGroup.mcpCallCount ?? 0) + count
-        currentGroup.mcpServerNames?.add(toolInfo.mcpServerName)
-        const input = toolInfo.input as { query?: string } | undefined
+        const count = countToolUses(msg);
+        currentGroup.mcpCallCount = (currentGroup.mcpCallCount ?? 0) + count;
+        currentGroup.mcpServerNames?.add(toolInfo.mcpServerName);
+        const input = toolInfo.input as { query?: string } | undefined;
         if (input?.query) {
-          currentGroup.latestDisplayHint = `"${input.query}"`
+          currentGroup.latestDisplayHint = `"${input.query}"`;
         }
       } else if (isFullscreenEnvEnabled() && toolInfo.isBash) {
         // Non-search/read Bash command — counted separately so the summary
         // says "Ran N bash commands" instead of breaking the group.
-        const count = countToolUses(msg)
-        currentGroup.bashCount = (currentGroup.bashCount ?? 0) + count
-        const input = toolInfo.input as { command?: string } | undefined
+        const count = countToolUses(msg);
+        currentGroup.bashCount = (currentGroup.bashCount ?? 0) + count;
+        const input = toolInfo.input as { command?: string } | undefined;
         if (input?.command) {
           // Prefer the stripped `# comment` if present (it's what Claude wrote
           // for the human — same trigger as the comment-as-label tool-use render).
           currentGroup.latestDisplayHint =
-            extractBashCommentLabel(input.command) ??
-            commandAsHint(input.command)
+            extractBashCommentLabel(input.command) ?? commandAsHint(input.command);
           // Remember tool_use_id → command so the result (arriving next) can
           // be scanned for commit SHA / PR URL.
           for (const id of getToolUseIdsFromMessage(msg)) {
-            currentGroup.bashCommands?.set(id, input.command)
+            currentGroup.bashCommands?.set(id, input.command);
           }
         }
       } else if (toolInfo.isList) {
         // Directory-listing bash commands (ls, tree, du) — counted separately
         // so the summary says "Listed N directories" instead of "Read N files".
-        currentGroup.listCount += countToolUses(msg)
-        const input = toolInfo.input as { command?: string } | undefined
+        currentGroup.listCount += countToolUses(msg);
+        const input = toolInfo.input as { command?: string } | undefined;
         if (input?.command) {
-          currentGroup.latestDisplayHint = commandAsHint(input.command)
+          currentGroup.latestDisplayHint = commandAsHint(input.command);
         }
       } else if (toolInfo.isSearch) {
         // Use the isSearch flag from the tool to properly categorize bash search commands
-        const count = countToolUses(msg)
-        currentGroup.searchCount += count
+        const count = countToolUses(msg);
+        currentGroup.searchCount += count;
         // Check if the search targets memory files (via path or glob pattern)
-        if (
-          feature('TEAMMEM') &&
-          teamMemOps?.isTeamMemorySearch(toolInfo.input)
-        ) {
-          currentGroup.teamMemorySearchCount =
-            (currentGroup.teamMemorySearchCount ?? 0) + count
+        if (feature('TEAMMEM') && teamMemOps?.isTeamMemorySearch(toolInfo.input)) {
+          currentGroup.teamMemorySearchCount = (currentGroup.teamMemorySearchCount ?? 0) + count;
         } else if (isMemorySearch(toolInfo.input)) {
-          currentGroup.memorySearchCount += count
+          currentGroup.memorySearchCount += count;
         } else {
           // Regular (non-memory) search — collect pattern for display
-          const input = toolInfo.input as { pattern?: string } | undefined
+          const input = toolInfo.input as { pattern?: string } | undefined;
           if (input?.pattern) {
-            currentGroup.nonMemSearchArgs.push(input.pattern)
-            currentGroup.latestDisplayHint = `"${input.pattern}"`
+            currentGroup.nonMemSearchArgs.push(input.pattern);
+            currentGroup.latestDisplayHint = `"${input.pattern}"`;
           }
         }
       } else {
         // For reads, track unique file paths instead of counting operations
-        const filePaths = getFilePathsFromReadMessage(msg)
+        const filePaths = getFilePathsFromReadMessage(msg);
         for (const filePath of filePaths) {
-          currentGroup.readFilePaths.add(filePath)
+          currentGroup.readFilePaths.add(filePath);
           if (feature('TEAMMEM') && teamMemOps?.isTeamMemFile(filePath)) {
-            currentGroup.teamMemoryReadFilePaths?.add(filePath)
+            currentGroup.teamMemoryReadFilePaths?.add(filePath);
           } else if (isAutoManagedMemoryFile(filePath)) {
-            currentGroup.memoryReadFilePaths.add(filePath)
+            currentGroup.memoryReadFilePaths.add(filePath);
           } else {
             // Non-memory file read — update display hint
-            currentGroup.latestDisplayHint = getDisplayPath(filePath)
+            currentGroup.latestDisplayHint = getDisplayPath(filePath);
           }
         }
         // If no file paths found (e.g., Bash read commands like ls, cat), count the operations
         if (filePaths.length === 0) {
-          currentGroup.readOperationCount += countToolUses(msg)
+          currentGroup.readOperationCount += countToolUses(msg);
           // Use the Bash command as the display hint (truncated for readability)
-          const input = toolInfo.input as { command?: string } | undefined
+          const input = toolInfo.input as { command?: string } | undefined;
           if (input?.command) {
-            currentGroup.latestDisplayHint = commandAsHint(input.command)
+            currentGroup.latestDisplayHint = commandAsHint(input.command);
           }
         }
       }
 
       // Track tool use IDs for matching results
       for (const id of getToolUseIdsFromMessage(msg)) {
-        currentGroup.toolUseIds.add(id)
+        currentGroup.toolUseIds.add(id);
       }
 
-      currentGroup.messages.push(msg)
+      currentGroup.messages.push(msg);
     } else if (isCollapsibleToolResult(msg, currentGroup.toolUseIds)) {
-      currentGroup.messages.push(msg)
+      currentGroup.messages.push(msg);
       // Scan bash results for commit SHAs / PR URLs to surface in the summary
       if (isFullscreenEnvEnabled() && currentGroup.bashCommands?.size) {
-        scanBashResultForGitOps(msg, currentGroup)
+        scanBashResultForGitOps(msg, currentGroup);
       }
     } else if (currentGroup.messages.length > 0 && isPreToolHookSummary(msg)) {
-      const hookSummary = msg as any
+      const hookSummary = msg as any;
       // Absorb PreToolUse hook summaries into the group instead of deferring
-      currentGroup.hookCount += hookSummary.hookCount
+      currentGroup.hookCount += hookSummary.hookCount;
       currentGroup.hookTotalMs +=
         hookSummary.totalDurationMs ??
-        hookSummary.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
-      currentGroup.hookInfos.push(...hookSummary.hookInfos)
+        hookSummary.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0);
+      currentGroup.hookInfos.push(...hookSummary.hookInfos);
     } else if (
       currentGroup.messages.length > 0 &&
       (msg as any).type === 'attachment' &&
       (msg as any).attachment.type === 'relevant_memories'
     ) {
-      const current = msg as any
+      const current = msg as any;
       // Absorb auto-injected memory attachments so "recalled N memories"
       // renders inline with "ran N bash commands" instead of as a separate
       // ⏺ block. Do NOT add paths to readFilePaths/memoryReadFilePaths —
@@ -915,8 +846,8 @@ export function collapseReadSearchGroups(
       // have no paths; adding memory paths makes readFilePaths.size > 0 and
       // suppresses the fallback). createCollapsedGroup adds .length to
       // memoryReadCount after the readCount subtraction instead.
-      currentGroup.relevantMemories ??= []
-      currentGroup.relevantMemories.push(...current.attachment.memories)
+      currentGroup.relevantMemories ??= [];
+      currentGroup.relevantMemories.push(...current.attachment.memories);
     } else if (shouldSkipMessage(msg)) {
       // Don't flush the group for skippable messages (thinking, attachments, system)
       // If a group is in progress, defer these messages to output after the collapsed group
@@ -928,27 +859,27 @@ export function collapseReadSearchGroups(
         currentGroup.messages.length > 0 &&
         !((msg as any).type === 'attachment' && (msg as any).attachment.type === 'nested_memory')
       ) {
-        deferredSkippable.push(msg)
+        deferredSkippable.push(msg);
       } else {
-        result.push(msg)
+        result.push(msg);
       }
     } else if (isTextBreaker(msg)) {
       // Assistant text breaks the group
-      flushGroup()
-      result.push(msg)
+      flushGroup();
+      result.push(msg);
     } else if (isNonCollapsibleToolUse(msg, tools)) {
       // Non-collapsible tool use breaks the group
-      flushGroup()
-      result.push(msg)
+      flushGroup();
+      result.push(msg);
     } else {
       // User messages with non-collapsible tool results break the group
-      flushGroup()
-      result.push(msg)
+      flushGroup();
+      result.push(msg);
     }
   }
 
-  flushGroup()
-  return result
+  flushGroup();
+  return result;
 }
 
 /**
@@ -964,23 +895,22 @@ export function getSearchReadSummaryText(
   searchCount: number,
   readCount: number,
   isActive: boolean,
-  replCount: number = 0,
+  replCount = 0,
   memoryCounts?: {
-    memorySearchCount: number
-    memoryReadCount: number
-    memoryWriteCount: number
-    teamMemorySearchCount?: number
-    teamMemoryReadCount?: number
-    teamMemoryWriteCount?: number
+    memorySearchCount: number;
+    memoryReadCount: number;
+    memoryWriteCount: number;
+    teamMemorySearchCount?: number;
+    teamMemoryReadCount?: number;
+    teamMemoryWriteCount?: number;
   },
-  listCount: number = 0,
+  listCount = 0,
 ): string {
-  const parts: string[] = []
+  const parts: string[] = [];
 
   // Memory operations first
   if (memoryCounts) {
-    const { memorySearchCount, memoryReadCount, memoryWriteCount } =
-      memoryCounts
+    const { memorySearchCount, memoryReadCount, memoryWriteCount } = memoryCounts;
     if (memoryReadCount > 0) {
       const verb = isActive
         ? parts.length === 0
@@ -988,10 +918,8 @@ export function getSearchReadSummaryText(
           : 'recalling'
         : parts.length === 0
           ? 'Recalled'
-          : 'recalled'
-      parts.push(
-        `${verb} ${memoryReadCount} ${memoryReadCount === 1 ? 'memory' : 'memories'}`,
-      )
+          : 'recalled';
+      parts.push(`${verb} ${memoryReadCount} ${memoryReadCount === 1 ? 'memory' : 'memories'}`);
     }
     if (memorySearchCount > 0) {
       const verb = isActive
@@ -1000,8 +928,8 @@ export function getSearchReadSummaryText(
           : 'searching'
         : parts.length === 0
           ? 'Searched'
-          : 'searched'
-      parts.push(`${verb} memories`)
+          : 'searched';
+      parts.push(`${verb} memories`);
     }
     if (memoryWriteCount > 0) {
       const verb = isActive
@@ -1010,14 +938,12 @@ export function getSearchReadSummaryText(
           : 'writing'
         : parts.length === 0
           ? 'Wrote'
-          : 'wrote'
-      parts.push(
-        `${verb} ${memoryWriteCount} ${memoryWriteCount === 1 ? 'memory' : 'memories'}`,
-      )
+          : 'wrote';
+      parts.push(`${verb} ${memoryWriteCount} ${memoryWriteCount === 1 ? 'memory' : 'memories'}`);
     }
     // Team memory operations
     if (feature('TEAMMEM') && teamMemOps) {
-      teamMemOps.appendTeamMemorySummaryParts(memoryCounts, isActive, parts)
+      teamMemOps.appendTeamMemorySummaryParts(memoryCounts, isActive, parts);
     }
   }
 
@@ -1028,10 +954,8 @@ export function getSearchReadSummaryText(
         : 'searching for'
       : parts.length === 0
         ? 'Searched for'
-        : 'searched for'
-    parts.push(
-      `${searchVerb} ${searchCount} ${searchCount === 1 ? 'pattern' : 'patterns'}`,
-    )
+        : 'searched for';
+    parts.push(`${searchVerb} ${searchCount} ${searchCount === 1 ? 'pattern' : 'patterns'}`);
   }
 
   if (readCount > 0) {
@@ -1041,8 +965,8 @@ export function getSearchReadSummaryText(
         : 'reading'
       : parts.length === 0
         ? 'Read'
-        : 'read'
-    parts.push(`${readVerb} ${readCount} ${readCount === 1 ? 'file' : 'files'}`)
+        : 'read';
+    parts.push(`${readVerb} ${readCount} ${readCount === 1 ? 'file' : 'files'}`);
   }
 
   if (listCount > 0) {
@@ -1052,19 +976,17 @@ export function getSearchReadSummaryText(
         : 'listing'
       : parts.length === 0
         ? 'Listed'
-        : 'listed'
-    parts.push(
-      `${listVerb} ${listCount} ${listCount === 1 ? 'directory' : 'directories'}`,
-    )
+        : 'listed';
+    parts.push(`${listVerb} ${listCount} ${listCount === 1 ? 'directory' : 'directories'}`);
   }
 
   if (replCount > 0) {
-    const replVerb = isActive ? "REPL'ing" : "REPL'd"
-    parts.push(`${replVerb} ${replCount} ${replCount === 1 ? 'time' : 'times'}`)
+    const replVerb = isActive ? "REPL'ing" : "REPL'd";
+    parts.push(`${replVerb} ${replCount} ${replCount === 1 ? 'time' : 'times'}`);
   }
 
-  const text = parts.join(', ')
-  return isActive ? `${text}…` : text
+  const text = parts.join(', ');
+  return isActive ? `${text}…` : text;
 }
 
 /**
@@ -1075,37 +997,37 @@ export function getSearchReadSummaryText(
  */
 export function summarizeRecentActivities(
   activities: readonly {
-    activityDescription?: string
-    isSearch?: boolean
-    isRead?: boolean
+    activityDescription?: string;
+    isSearch?: boolean;
+    isRead?: boolean;
   }[],
 ): string | undefined {
   if (activities.length === 0) {
-    return undefined
+    return undefined;
   }
   // Count trailing search/read activities from the end of the list
-  let searchCount = 0
-  let readCount = 0
+  let searchCount = 0;
+  let readCount = 0;
   for (let i = activities.length - 1; i >= 0; i--) {
-    const activity = activities[i]!
+    const activity = activities[i]!;
     if (activity.isSearch) {
-      searchCount++
+      searchCount++;
     } else if (activity.isRead) {
-      readCount++
+      readCount++;
     } else {
-      break
+      break;
     }
   }
-  const collapsibleCount = searchCount + readCount
+  const collapsibleCount = searchCount + readCount;
   if (collapsibleCount >= 2) {
-    return getSearchReadSummaryText(searchCount, readCount, true)
+    return getSearchReadSummaryText(searchCount, readCount, true);
   }
   // Fall back to most recent activity with a description (some tools like
   // SendMessage don't implement getActivityDescription, so search backward)
   for (let i = activities.length - 1; i >= 0; i--) {
     if (activities[i]?.activityDescription) {
-      return activities[i]!.activityDescription
+      return activities[i]?.activityDescription;
     }
   }
-  return undefined
+  return undefined;
 }

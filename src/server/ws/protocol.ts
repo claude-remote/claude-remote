@@ -61,9 +61,7 @@ const WRITER_ONLY_COMMANDS = new Set<string>([
 
 // ── Standby-only commands ────────────────────────────────────────────
 
-const STANDBY_ONLY_COMMANDS = new Set<string>([
-  'session:takeOver',
-]);
+const STANDBY_ONLY_COMMANDS = new Set<string>(['session:takeOver']);
 
 // ── Required fields per command ──────────────────────────────────────
 
@@ -174,10 +172,7 @@ export function validateCommand(cmd: ClientCommand): ValidationResult {
  * Check whether the given writer status is allowed to execute the command.
  * Returns an error string if denied, or null if allowed.
  */
-export function checkPermission(
-  cmd: ClientCommand,
-  role: WriterStatus,
-): string | null {
+export function checkPermission(cmd: ClientCommand, role: WriterStatus): string | null {
   if (role === 'standby' && WRITER_ONLY_COMMANDS.has(cmd.cmd)) {
     return `command "${cmd.cmd}" requires active writer role`;
   }

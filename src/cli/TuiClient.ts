@@ -1,4 +1,6 @@
-import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
+import { type Interface as ReadlineInterface, createInterface } from 'node:readline';
+import { TuiRenderer } from '@/cli/TuiRenderer';
+import { DEFAULT_PORT } from '@/shared/constants';
 import type {
   ClientCommand,
   HubEvent,
@@ -7,8 +9,6 @@ import type {
   SDKMessage,
 } from '@/shared/protocol';
 import type { PermissionRequest, SessionSnapshot } from '@/shared/types';
-import { DEFAULT_PORT } from '@/shared/constants';
-import { TuiRenderer } from '@/cli/TuiRenderer';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -153,7 +153,7 @@ export class TuiClient {
     this.rl.prompt();
 
     return new Promise<void>((resolve) => {
-      this.rl!.on('line', (line: string) => {
+      this.rl?.on('line', (line: string) => {
         const trimmed = line.trim();
 
         if (!trimmed) {
@@ -182,7 +182,7 @@ export class TuiClient {
         this.rl?.prompt();
       });
 
-      this.rl!.on('close', () => {
+      this.rl?.on('close', () => {
         this.disconnect();
         resolve();
       });
@@ -201,8 +201,7 @@ export class TuiClient {
       });
     } catch {
       throw new Error(
-        `Could not reach hub at ${this.hubUrl}. Is it running?\n` +
-          'Start it with: claude-remote serve',
+        `Could not reach hub at ${this.hubUrl}. Is it running?\nStart it with: claude-remote serve`,
       );
     }
 
@@ -230,7 +229,9 @@ export class TuiClient {
 
     switch (response.type) {
       case 'hello':
-        this.renderer.info(`Connected to hub v${response.hubVersion} (protocol ${response.version})`);
+        this.renderer.info(
+          `Connected to hub v${response.hubVersion} (protocol ${response.version})`,
+        );
         break;
 
       case 'snapshot':
@@ -297,9 +298,7 @@ export class TuiClient {
 
       case 'hub:client:left':
         if (this.snapshot) {
-          this.snapshot.clients = this.snapshot.clients.filter(
-            (c) => c.id !== event.clientId,
-          );
+          this.snapshot.clients = this.snapshot.clients.filter((c) => c.id !== event.clientId);
         }
         break;
 
@@ -445,7 +444,6 @@ export function createTuiClient(options: {
   hubUrl?: string;
   sessionId?: string;
 }): TuiClient {
-  const hubUrl =
-    options.hubUrl ?? `http://localhost:${options.port ?? DEFAULT_PORT}`;
+  const hubUrl = options.hubUrl ?? `http://localhost:${options.port ?? DEFAULT_PORT}`;
   return new TuiClient({ hubUrl, sessionId: options.sessionId });
 }

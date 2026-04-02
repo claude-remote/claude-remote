@@ -1,6 +1,3 @@
-import type { MiddlewareHandler } from 'hono';
-import type { SessionMeta } from '@/shared/types';
-import { SESSION_COOKIE_NAME, DEFAULT_SESSION_TOKEN_TTL_MS } from '@/shared/constants';
 import {
   isIpBanned,
   recordAuthFailure,
@@ -8,6 +5,9 @@ import {
   signSessionToken,
   verifySessionToken,
 } from '@/server/auth/token';
+import { DEFAULT_SESSION_TOKEN_TTL_MS, SESSION_COOKIE_NAME } from '@/shared/constants';
+import type { SessionMeta } from '@/shared/types';
+import type { MiddlewareHandler } from 'hono';
 
 export interface AuthenticatedVariables {
   session?: Pick<SessionMeta, 'id'>;

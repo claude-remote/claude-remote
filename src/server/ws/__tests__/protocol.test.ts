@@ -1,14 +1,14 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
-  parseClientCommand,
-  validateCommand,
+  STANDBY_ONLY_COMMANDS,
+  WRITER_ONLY_COMMANDS,
   checkPermission,
+  parseClientCommand,
   serializeEvent,
   serializeHello,
-  serializeSnapshot,
   serializeResponse,
-  WRITER_ONLY_COMMANDS,
-  STANDBY_ONLY_COMMANDS,
+  serializeSnapshot,
+  validateCommand,
 } from '@/server/ws/protocol';
 import type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
 import type { SessionSnapshot, WriterStatus } from '@/shared/types';
@@ -20,8 +20,8 @@ describe('parseClientCommand', () => {
     const raw = JSON.stringify({ cmdId: 'c1', cmd: 'chat', text: 'hello' });
     const result = parseClientCommand(raw);
     expect(result).not.toBeNull();
-    expect(result!.cmd).toBe('chat');
-    expect(result!.cmdId).toBe('c1');
+    expect(result?.cmd).toBe('chat');
+    expect(result?.cmdId).toBe('c1');
   });
 
   test('parses session:create command', () => {
@@ -33,21 +33,21 @@ describe('parseClientCommand', () => {
     });
     const result = parseClientCommand(raw);
     expect(result).not.toBeNull();
-    expect(result!.cmd).toBe('session:create');
+    expect(result?.cmd).toBe('session:create');
   });
 
   test('parses session:list command', () => {
     const raw = JSON.stringify({ cmdId: 'c3', cmd: 'session:list' });
     const result = parseClientCommand(raw);
     expect(result).not.toBeNull();
-    expect(result!.cmd).toBe('session:list');
+    expect(result?.cmd).toBe('session:list');
   });
 
   test('parses chat:abort command', () => {
     const raw = JSON.stringify({ cmdId: 'c4', cmd: 'chat:abort' });
     const result = parseClientCommand(raw);
     expect(result).not.toBeNull();
-    expect(result!.cmd).toBe('chat:abort');
+    expect(result?.cmd).toBe('chat:abort');
   });
 
   test('parses history:search command', () => {
@@ -60,7 +60,7 @@ describe('parseClientCommand', () => {
     });
     const result = parseClientCommand(raw);
     expect(result).not.toBeNull();
-    expect(result!.cmd).toBe('history:search');
+    expect(result?.cmd).toBe('history:search');
   });
 
   test('returns null for invalid JSON', () => {
@@ -213,9 +213,7 @@ describe('serialization', () => {
     const serialized = serializeEvent(event);
     const parsed = JSON.parse(serialized) as HubResponse;
     expect(parsed.type).toBe('event');
-    expect((parsed as { event: HubEvent }).event.type).toBe(
-      'hub:session:statusChanged',
-    );
+    expect((parsed as { event: HubEvent }).event.type).toBe('hub:session:statusChanged');
   });
 
   test('serializeHello produces correct structure', () => {
@@ -294,9 +292,13 @@ describe('serialization', () => {
     };
     const serialized = serializeEvent(event);
     const parsed = JSON.parse(serialized) as { type: string; event: HubEvent };
-    expect((parsed.event as HubEvent & {
-      seq: number;
-    }).seq).toBe(42);
+    expect(
+      (
+        parsed.event as HubEvent & {
+          seq: number;
+        }
+      ).seq,
+    ).toBe(42);
     expect(parsed.event.type).toBe('hub:client:joined');
     if (parsed.event.type === 'hub:client:joined') {
       expect(parsed.event.client.id).toBe('c1');

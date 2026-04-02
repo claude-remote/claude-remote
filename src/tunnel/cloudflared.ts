@@ -30,7 +30,9 @@ export class CloudflaredManager {
   async startQuickTunnel(_session?: Pick<SessionMeta, 'id'>): Promise<CloudflaredTunnel> {
     const installed = await this.ensureInstalled();
     if (!installed) {
-      throw new Error('cloudflared is not installed. Install it first: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/');
+      throw new Error(
+        'cloudflared is not installed. Install it first: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/',
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -71,7 +73,11 @@ export class CloudflaredManager {
         }
 
         settled = true;
-        reject(new Error(`cloudflared exited before tunnel URL was available (code: ${code ?? 'unknown'}).`));
+        reject(
+          new Error(
+            `cloudflared exited before tunnel URL was available (code: ${code ?? 'unknown'}).`,
+          ),
+        );
       });
     });
   }

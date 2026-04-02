@@ -13,10 +13,10 @@
  */
 
 import {
-  logEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS as SafeString,
-} from '../../services/analytics/index.js'
-import { OFFICIAL_MARKETPLACE_NAME } from './officialMarketplace.js'
+  logEvent,
+} from '../../services/analytics/index.js';
+import { OFFICIAL_MARKETPLACE_NAME } from './officialMarketplace.js';
 
 export type PluginFetchSource =
   | 'install_counts'
@@ -24,9 +24,9 @@ export type PluginFetchSource =
   | 'marketplace_pull'
   | 'marketplace_url'
   | 'plugin_clone'
-  | 'mcpb'
+  | 'mcpb';
 
-export type PluginFetchOutcome = 'success' | 'failure' | 'cache_hit'
+export type PluginFetchOutcome = 'success' | 'failure' | 'cache_hit';
 
 // Allowlist of public hosts we report by name. Anything else (enterprise
 // git, self-hosted, internal) is bucketed as 'other' — we don't want
@@ -43,7 +43,7 @@ const KNOWN_PUBLIC_HOSTS = new Set([
   'dev.azure.com',
   'ssh.dev.azure.com',
   'storage.googleapis.com', // GCS — where Dickson's migration points
-])
+]);
 
 /**
  * Extract hostname from a URL or git spec and bucket to the allowlist.
@@ -52,19 +52,19 @@ const KNOWN_PUBLIC_HOSTS = new Set([
  * don't leak private hostnames), or 'unknown' (unparseable / local path).
  */
 function extractHost(urlOrSpec: string): string {
-  let host: string
-  const scpMatch = /^[^@/]+@([^:/]+):/.exec(urlOrSpec)
+  let host: string;
+  const scpMatch = /^[^@/]+@([^:/]+):/.exec(urlOrSpec);
   if (scpMatch) {
-    host = scpMatch[1]!
+    host = scpMatch[1]!;
   } else {
     try {
-      host = new URL(urlOrSpec).hostname
+      host = new URL(urlOrSpec).hostname;
     } catch {
-      return 'unknown'
+      return 'unknown';
     }
   }
-  const normalized = host.toLowerCase()
-  return KNOWN_PUBLIC_HOSTS.has(normalized) ? normalized : 'other'
+  const normalized = host.toLowerCase();
+  return KNOWN_PUBLIC_HOSTS.has(normalized) ? normalized : 'other';
 }
 
 /**
@@ -73,7 +73,7 @@ function extractHost(urlOrSpec: string): string {
  * traffic from user-configured marketplaces.
  */
 function isOfficialRepo(urlOrSpec: string): boolean {
-  return urlOrSpec.includes(`anthropics/${OFFICIAL_MARKETPLACE_NAME}`)
+  return urlOrSpec.includes(`anthropics/${OFFICIAL_MARKETPLACE_NAME}`);
 }
 
 export function logPluginFetch(
@@ -92,7 +92,7 @@ export function logPluginFetch(
     outcome: outcome as SafeString,
     duration_ms: Math.round(durationMs),
     ...(errorKind && { error_kind: errorKind as SafeString }),
-  })
+  });
 }
 
 /**
@@ -106,30 +106,22 @@ export function logPluginFetch(
  * "timeout" — ordering the other way would misclassify git DNS as timeout.
  */
 export function classifyFetchError(error: unknown): string {
-  const msg = String((error as { message?: unknown })?.message ?? error)
-  if (
-    /ENOTFOUND|ECONNREFUSED|EAI_AGAIN|Could not resolve host|Connection refused/i.test(
-      msg,
-    )
-  ) {
-    return 'dns_or_refused'
+  const msg = String((error as { message?: unknown })?.message ?? error);
+  if (/ENOTFOUND|ECONNREFUSED|EAI_AGAIN|Could not resolve host|Connection refused/i.test(msg)) {
+    return 'dns_or_refused';
   }
-  if (/ETIMEDOUT|timed out|timeout/i.test(msg)) return 'timeout'
-  if (
-    /ECONNRESET|socket hang up|Connection reset by peer|remote end hung up/i.test(
-      msg,
-    )
-  ) {
-    return 'conn_reset'
+  if (/ETIMEDOUT|timed out|timeout/i.test(msg)) return 'timeout';
+  if (/ECONNRESET|socket hang up|Connection reset by peer|remote end hung up/i.test(msg)) {
+    return 'conn_reset';
   }
-  if (/403|401|authentication|permission denied/i.test(msg)) return 'auth'
-  if (/404|not found|repository not found/i.test(msg)) return 'not_found'
-  if (/certificate|SSL|TLS|unable to get local issuer/i.test(msg)) return 'tls'
+  if (/403|401|authentication|permission denied/i.test(msg)) return 'auth';
+  if (/404|not found|repository not found/i.test(msg)) return 'not_found';
+  if (/certificate|SSL|TLS|unable to get local issuer/i.test(msg)) return 'tls';
   // Schema validation throws "Invalid response format" (install_counts) —
   // distinguish from true unknowns so the dashboard can
   // see "server sent garbage" separately.
   if (/Invalid response format|Invalid marketplace schema/i.test(msg)) {
-    return 'invalid_schema'
+    return 'invalid_schema';
   }
-  return 'other'
+  return 'other';
 }

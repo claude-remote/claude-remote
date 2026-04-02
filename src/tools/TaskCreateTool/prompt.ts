@@ -1,17 +1,15 @@
-import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
+import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
 
-export const DESCRIPTION = 'Create a new task in the task list'
+export const DESCRIPTION = 'Create a new task in the task list';
 
 export function getPrompt(): string {
-  const teammateContext = isAgentSwarmsEnabled()
-    ? ' and potentially assigned to teammates'
-    : ''
+  const teammateContext = isAgentSwarmsEnabled() ? ' and potentially assigned to teammates' : '';
 
   const teammateTips = isAgentSwarmsEnabled()
     ? `- Include enough detail in the description for another agent to understand and complete the task
 - New tasks are created with status 'pending' and no owner - use TaskUpdate with the \`owner\` parameter to assign them
 `
-    : ''
+    : '';
 
   return `Use this tool to create a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
 It also helps the user understand the progress of the task and overall progress of their requests.
@@ -52,5 +50,5 @@ All tasks are created with status \`pending\`.
 - Create tasks with clear, specific subjects that describe the outcome
 - After creating tasks, use TaskUpdate to set up dependencies (blocks/blockedBy) if needed
 ${teammateTips}- Check TaskList first to avoid creating duplicate tasks
-`
+`;
 }

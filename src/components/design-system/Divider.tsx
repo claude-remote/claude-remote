@@ -1,8 +1,8 @@
-import { c as _c } from "react/compiler-runtime";
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
-import { stringWidth } from '../../ink/stringWidth.js';
 import { Ansi, Text } from '../../ink.js';
+import { stringWidth } from '../../ink/stringWidth.js';
 import type { Theme } from '../../utils/theme.js';
 type DividerProps = {
   /**
@@ -65,18 +65,10 @@ type DividerProps = {
  */
 export function Divider(t0) {
   const $ = _c(21);
-  const {
-    width,
-    color,
-    char: t1,
-    padding: t2,
-    title
-  } = t0;
-  const char = t1 === undefined ? "\u2500" : t1;
+  const { width, color, char: t1, padding: t2, title } = t0;
+  const char = t1 === undefined ? '\u2500' : t1;
   const padding = t2 === undefined ? 0 : t2;
-  const {
-    columns: terminalWidth
-  } = useTerminalSize();
+  const { columns: terminalWidth } = useTerminalSize();
   const effectiveWidth = Math.max(0, (width ?? terminalWidth) - padding);
   if (title) {
     const titleWidth = stringWidth(title) + 2;
@@ -95,7 +87,11 @@ export function Divider(t0) {
     }
     let t5;
     if ($[3] !== title) {
-      t5 = <Text dimColor={true}><Ansi>{title}</Ansi></Text>;
+      t5 = (
+        <Text dimColor={true}>
+          <Ansi>{title}</Ansi>
+        </Text>
+      );
       $[3] = title;
       $[4] = t5;
     } else {
@@ -112,7 +108,11 @@ export function Divider(t0) {
     }
     let t7;
     if ($[8] !== color || $[9] !== t3 || $[10] !== t4 || $[11] !== t5 || $[12] !== t6) {
-      t7 = <Text color={color} dimColor={t3}>{t4}{" "}{t5}{" "}{t6}</Text>;
+      t7 = (
+        <Text color={color} dimColor={t3}>
+          {t4} {t5} {t6}
+        </Text>
+      );
       $[8] = color;
       $[9] = t3;
       $[10] = t4;
@@ -136,7 +136,11 @@ export function Divider(t0) {
   }
   let t5;
   if ($[17] !== color || $[18] !== t3 || $[19] !== t4) {
-    t5 = <Text color={color} dimColor={t3}>{t4}</Text>;
+    t5 = (
+      <Text color={color} dimColor={t3}>
+        {t4}
+      </Text>
+    );
     $[17] = color;
     $[18] = t3;
     $[19] = t4;

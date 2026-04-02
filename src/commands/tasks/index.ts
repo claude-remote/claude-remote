@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const tasks = {
   type: 'local-jsx',
@@ -6,6 +6,6 @@ const tasks = {
   aliases: ['bashes'],
   description: 'List and manage background tasks',
   load: () => import('./tasks.js'),
-} satisfies Command
+} satisfies Command;
 
-export default tasks
+export default tasks;

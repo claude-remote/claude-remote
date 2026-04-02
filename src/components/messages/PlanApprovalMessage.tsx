@@ -1,9 +1,16 @@
-import { c as _c } from "react/compiler-runtime";
-import * as React from 'react';
+import type * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Markdown } from '../../components/Markdown.js';
 import { Box, Text } from '../../ink.js';
 import { jsonParse } from '../../utils/slowOperations.js';
-import { type IdleNotificationMessage, isIdleNotification, isPlanApprovalRequest, isPlanApprovalResponse, type PlanApprovalRequestMessage, type PlanApprovalResponseMessage } from '../../utils/teammateMailbox.js';
+import {
+  type IdleNotificationMessage,
+  type PlanApprovalRequestMessage,
+  type PlanApprovalResponseMessage,
+  isIdleNotification,
+  isPlanApprovalRequest,
+  isPlanApprovalResponse,
+} from '../../utils/teammateMailbox.js';
 import { getShutdownMessageSummary } from './ShutdownMessage.js';
 import { getTaskAssignmentSummary } from './TaskAssignmentMessage.js';
 type PlanApprovalRequestProps = {
@@ -16,12 +23,16 @@ type PlanApprovalRequestProps = {
  */
 export function PlanApprovalRequestDisplay(t0) {
   const $ = _c(10);
-  const {
-    request
-  } = t0;
+  const { request } = t0;
   let t1;
   if ($[0] !== request.from) {
-    t1 = <Box marginBottom={1}><Text color="planMode" bold={true}>Plan Approval Request from {request.from}</Text></Box>;
+    t1 = (
+      <Box marginBottom={1}>
+        <Text color="planMode" bold={true}>
+          Plan Approval Request from {request.from}
+        </Text>
+      </Box>
+    );
     $[0] = request.from;
     $[1] = t1;
   } else {
@@ -29,7 +40,19 @@ export function PlanApprovalRequestDisplay(t0) {
   }
   let t2;
   if ($[2] !== request.planContent) {
-    t2 = <Box borderStyle="dashed" borderColor="subtle" borderLeft={false} borderRight={false} flexDirection="column" paddingX={1} marginBottom={1}><Markdown>{request.planContent}</Markdown></Box>;
+    t2 = (
+      <Box
+        borderStyle="dashed"
+        borderColor="subtle"
+        borderLeft={false}
+        borderRight={false}
+        flexDirection="column"
+        paddingX={1}
+        marginBottom={1}
+      >
+        <Markdown>{request.planContent}</Markdown>
+      </Box>
+    );
     $[2] = request.planContent;
     $[3] = t2;
   } else {
@@ -45,7 +68,15 @@ export function PlanApprovalRequestDisplay(t0) {
   }
   let t4;
   if ($[6] !== t1 || $[7] !== t2 || $[8] !== t3) {
-    t4 = <Box flexDirection="column" marginY={1}><Box borderStyle="round" borderColor="planMode" flexDirection="column" paddingX={1}>{t1}{t2}{t3}</Box></Box>;
+    t4 = (
+      <Box flexDirection="column" marginY={1}>
+        <Box borderStyle="round" borderColor="planMode" flexDirection="column" paddingX={1}>
+          {t1}
+          {t2}
+          {t3}
+        </Box>
+      </Box>
+    );
     $[6] = t1;
     $[7] = t2;
     $[8] = t3;
@@ -65,29 +96,51 @@ type PlanApprovalResponseProps = {
  */
 export function PlanApprovalResponseDisplay(t0) {
   const $ = _c(13);
-  const {
-    response,
-    senderName
-  } = t0;
+  const { response, senderName } = t0;
   if (response.approved) {
     let t1;
     if ($[0] !== senderName) {
-      t1 = <Box><Text color="success" bold={true}>✓ Plan Approved by {senderName}</Text></Box>;
+      t1 = (
+        <Box>
+          <Text color="success" bold={true}>
+            ✓ Plan Approved by {senderName}
+          </Text>
+        </Box>
+      );
       $[0] = senderName;
       $[1] = t1;
     } else {
       t1 = $[1];
     }
     let t2;
-    if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
-      t2 = <Box marginTop={1}><Text>You can now proceed with implementation. Your plan mode restrictions have been lifted.</Text></Box>;
+    if ($[2] === Symbol.for('react.memo_cache_sentinel')) {
+      t2 = (
+        <Box marginTop={1}>
+          <Text>
+            You can now proceed with implementation. Your plan mode restrictions have been lifted.
+          </Text>
+        </Box>
+      );
       $[2] = t2;
     } else {
       t2 = $[2];
     }
     let t3;
     if ($[3] !== t1) {
-      t3 = <Box flexDirection="column" marginY={1}><Box borderStyle="round" borderColor="success" flexDirection="column" paddingX={1} paddingY={1}>{t1}{t2}</Box></Box>;
+      t3 = (
+        <Box flexDirection="column" marginY={1}>
+          <Box
+            borderStyle="round"
+            borderColor="success"
+            flexDirection="column"
+            paddingX={1}
+            paddingY={1}
+          >
+            {t1}
+            {t2}
+          </Box>
+        </Box>
+      );
       $[3] = t1;
       $[4] = t3;
     } else {
@@ -97,7 +150,13 @@ export function PlanApprovalResponseDisplay(t0) {
   }
   let t1;
   if ($[5] !== senderName) {
-    t1 = <Box><Text color="error" bold={true}>✗ Plan Rejected by {senderName}</Text></Box>;
+    t1 = (
+      <Box>
+        <Text color="error" bold={true}>
+          ✗ Plan Rejected by {senderName}
+        </Text>
+      </Box>
+    );
     $[5] = senderName;
     $[6] = t1;
   } else {
@@ -105,22 +164,53 @@ export function PlanApprovalResponseDisplay(t0) {
   }
   let t2;
   if ($[7] !== response.feedback) {
-    t2 = response.feedback && <Box marginTop={1} borderStyle="dashed" borderColor="subtle" borderLeft={false} borderRight={false} paddingX={1}><Text>Feedback: {response.feedback}</Text></Box>;
+    t2 = response.feedback && (
+      <Box
+        marginTop={1}
+        borderStyle="dashed"
+        borderColor="subtle"
+        borderLeft={false}
+        borderRight={false}
+        paddingX={1}
+      >
+        <Text>Feedback: {response.feedback}</Text>
+      </Box>
+    );
     $[7] = response.feedback;
     $[8] = t2;
   } else {
     t2 = $[8];
   }
   let t3;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
-    t3 = <Box marginTop={1}><Text dimColor={true}>Please revise your plan based on the feedback and call ExitPlanMode again.</Text></Box>;
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
+    t3 = (
+      <Box marginTop={1}>
+        <Text dimColor={true}>
+          Please revise your plan based on the feedback and call ExitPlanMode again.
+        </Text>
+      </Box>
+    );
     $[9] = t3;
   } else {
     t3 = $[9];
   }
   let t4;
   if ($[10] !== t1 || $[11] !== t2) {
-    t4 = <Box flexDirection="column" marginY={1}><Box borderStyle="round" borderColor="error" flexDirection="column" paddingX={1} paddingY={1}>{t1}{t2}{t3}</Box></Box>;
+    t4 = (
+      <Box flexDirection="column" marginY={1}>
+        <Box
+          borderStyle="round"
+          borderColor="error"
+          flexDirection="column"
+          paddingX={1}
+          paddingY={1}
+        >
+          {t1}
+          {t2}
+          {t3}
+        </Box>
+      </Box>
+    );
     $[10] = t1;
     $[11] = t2;
     $[12] = t4;
@@ -134,7 +224,10 @@ export function PlanApprovalResponseDisplay(t0) {
  * Try to parse and render a plan approval message from raw content.
  * Returns the rendered component if it's a plan approval message, null otherwise.
  */
-export function tryRenderPlanApprovalMessage(content: string, senderName: string): React.ReactNode | null {
+export function tryRenderPlanApprovalMessage(
+  content: string,
+  senderName: string,
+): React.ReactNode | null {
   const request = isPlanApprovalRequest(content);
   if (request) {
     return <PlanApprovalRequestDisplay request={request} />;
@@ -160,9 +253,8 @@ function getPlanApprovalSummary(content: string): string | null {
   if (response) {
     if (response.approved) {
       return '[Plan Approved] You can now proceed with implementation';
-    } else {
-      return `[Plan Rejected] ${response.feedback || 'Please revise your plan'}`;
     }
+    return `[Plan Rejected] ${response.feedback || 'Please revise your plan'}`;
   }
   return null;
 }

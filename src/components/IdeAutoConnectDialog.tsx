@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { useCallback } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Text } from '../ink.js';
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js';
 import { isSupportedTerminal } from '../utils/ide.js';
@@ -10,17 +10,15 @@ type IdeAutoConnectDialogProps = {
 };
 export function IdeAutoConnectDialog(t0) {
   const $ = _c(9);
-  const {
-    onComplete
-  } = t0;
+  const { onComplete } = t0;
   let t1;
   if ($[0] !== onComplete) {
-    t1 = async value => {
-      const autoConnect = value === "yes";
-      saveGlobalConfig(current => ({
+    t1 = async (value) => {
+      const autoConnect = value === 'yes';
+      saveGlobalConfig((current) => ({
         ...current,
         autoConnectIde: autoConnect,
-        hasIdeAutoConnectDialogBeenShown: true
+        hasIdeAutoConnectDialogBeenShown: true,
       }));
       onComplete();
     };
@@ -31,14 +29,17 @@ export function IdeAutoConnectDialog(t0) {
   }
   const handleSelect = t1;
   let t2;
-  if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
-    t2 = [{
-      label: "Yes",
-      value: "yes"
-    }, {
-      label: "No",
-      value: "no"
-    }];
+  if ($[2] === Symbol.for('react.memo_cache_sentinel')) {
+    t2 = [
+      {
+        label: 'Yes',
+        value: 'yes',
+      },
+      {
+        label: 'No',
+        value: 'no',
+      },
+    ];
     $[2] = t2;
   } else {
     t2 = $[2];
@@ -53,7 +54,7 @@ export function IdeAutoConnectDialog(t0) {
     t3 = $[4];
   }
   let t4;
-  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[5] === Symbol.for('react.memo_cache_sentinel')) {
     t4 = <Text dimColor={true}>You can also configure this in /config or with the --ide flag</Text>;
     $[5] = t4;
   } else {
@@ -61,7 +62,12 @@ export function IdeAutoConnectDialog(t0) {
   }
   let t5;
   if ($[6] !== onComplete || $[7] !== t3) {
-    t5 = <Dialog title="Do you wish to enable auto-connect to IDE?" color="ide" onCancel={onComplete}>{t3}{t4}</Dialog>;
+    t5 = (
+      <Dialog title="Do you wish to enable auto-connect to IDE?" color="ide" onCancel={onComplete}>
+        {t3}
+        {t4}
+      </Dialog>
+    );
     $[6] = onComplete;
     $[7] = t3;
     $[8] = t5;
@@ -72,20 +78,22 @@ export function IdeAutoConnectDialog(t0) {
 }
 export function shouldShowAutoConnectDialog(): boolean {
   const config = getGlobalConfig();
-  return !isSupportedTerminal() && config.autoConnectIde !== true && config.hasIdeAutoConnectDialogBeenShown !== true;
+  return (
+    !isSupportedTerminal() &&
+    config.autoConnectIde !== true &&
+    config.hasIdeAutoConnectDialogBeenShown !== true
+  );
 }
 type IdeDisableAutoConnectDialogProps = {
   onComplete: (disableAutoConnect: boolean) => void;
 };
 export function IdeDisableAutoConnectDialog(t0) {
   const $ = _c(10);
-  const {
-    onComplete
-  } = t0;
+  const { onComplete } = t0;
   let t1;
   if ($[0] !== onComplete) {
-    t1 = value => {
-      const disableAutoConnect = value === "yes";
+    t1 = (value) => {
+      const disableAutoConnect = value === 'yes';
       if (disableAutoConnect) {
         saveGlobalConfig(_temp);
       }
@@ -109,14 +117,17 @@ export function IdeDisableAutoConnectDialog(t0) {
   }
   const handleCancel = t2;
   let t3;
-  if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
-    t3 = [{
-      label: "No",
-      value: "no"
-    }, {
-      label: "Yes",
-      value: "yes"
-    }];
+  if ($[4] === Symbol.for('react.memo_cache_sentinel')) {
+    t3 = [
+      {
+        label: 'No',
+        value: 'no',
+      },
+      {
+        label: 'Yes',
+        value: 'yes',
+      },
+    ];
     $[4] = t3;
   } else {
     t3 = $[4];
@@ -132,7 +143,16 @@ export function IdeDisableAutoConnectDialog(t0) {
   }
   let t5;
   if ($[7] !== handleCancel || $[8] !== t4) {
-    t5 = <Dialog title="Do you wish to disable auto-connect to IDE?" subtitle="You can also configure this in /config" onCancel={handleCancel} color="ide">{t4}</Dialog>;
+    t5 = (
+      <Dialog
+        title="Do you wish to disable auto-connect to IDE?"
+        subtitle="You can also configure this in /config"
+        onCancel={handleCancel}
+        color="ide"
+      >
+        {t4}
+      </Dialog>
+    );
     $[7] = handleCancel;
     $[8] = t4;
     $[9] = t5;
@@ -144,7 +164,7 @@ export function IdeDisableAutoConnectDialog(t0) {
 function _temp(current) {
   return {
     ...current,
-    autoConnectIde: false
+    autoConnectIde: false,
   };
 }
 export function shouldShowDisableAutoConnectDialog(): boolean {

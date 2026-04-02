@@ -1,21 +1,21 @@
-import { z } from 'zod/v4'
-import { buildTool, type ToolDef } from '../../Tool.js'
-import { cronToHuman } from '../../utils/cron.js'
-import { listAllCronTasks } from '../../utils/cronTasks.js'
-import { truncate } from '../../utils/format.js'
-import { lazySchema } from '../../utils/lazySchema.js'
-import { getTeammateContext } from '../../utils/teammateContext.js'
+import { z } from 'zod/v4';
+import { type ToolDef, buildTool } from '../../Tool.js';
+import { cronToHuman } from '../../utils/cron.js';
+import { listAllCronTasks } from '../../utils/cronTasks.js';
+import { truncate } from '../../utils/format.js';
+import { lazySchema } from '../../utils/lazySchema.js';
+import { getTeammateContext } from '../../utils/teammateContext.js';
+import { renderListResultMessage, renderListToolUseMessage } from './UI.js';
 import {
-  buildCronListPrompt,
   CRON_LIST_DESCRIPTION,
   CRON_LIST_TOOL_NAME,
+  buildCronListPrompt,
   isDurableCronEnabled,
   isKairosCronEnabled,
-} from './prompt.js'
-import { renderListResultMessage, renderListToolUseMessage } from './UI.js'
+} from './prompt.js';
 
-const inputSchema = lazySchema(() => z.strictObject({}))
-type InputSchema = ReturnType<typeof inputSchema>
+const inputSchema = lazySchema(() => z.strictObject({}));
+type InputSchema = ReturnType<typeof inputSchema>;
 
 const outputSchema = lazySchema(() =>
   z.object({
@@ -30,9 +30,9 @@ const outputSchema = lazySchema(() =>
       }),
     ),
   }),
-)
-type OutputSchema = ReturnType<typeof outputSchema>
-export type ListOutput = z.infer<OutputSchema>
+);
+type OutputSchema = ReturnType<typeof outputSchema>;
+export type ListOutput = z.infer<OutputSchema>;
 
 export const CronListTool = buildTool({
   name: CRON_LIST_TOOL_NAME,
@@ -40,42 +40,40 @@ export const CronListTool = buildTool({
   maxResultSizeChars: 100_000,
   shouldDefer: true,
   get inputSchema(): InputSchema {
-    return inputSchema()
+    return inputSchema();
   },
   get outputSchema(): OutputSchema {
-    return outputSchema()
+    return outputSchema();
   },
   isEnabled() {
-    return isKairosCronEnabled()
+    return isKairosCronEnabled();
   },
   isConcurrencySafe() {
-    return true
+    return true;
   },
   isReadOnly() {
-    return true
+    return true;
   },
   async description() {
-    return CRON_LIST_DESCRIPTION
+    return CRON_LIST_DESCRIPTION;
   },
   async prompt() {
-    return buildCronListPrompt(isDurableCronEnabled())
+    return buildCronListPrompt(isDurableCronEnabled());
   },
   async call() {
-    const allTasks = await listAllCronTasks()
+    const allTasks = await listAllCronTasks();
     // Teammates only see their own crons; team lead (no ctx) sees all.
-    const ctx = getTeammateContext()
-    const tasks = ctx
-      ? allTasks.filter(t => t.agentId === ctx.agentId)
-      : allTasks
-    const jobs = tasks.map(t => ({
+    const ctx = getTeammateContext();
+    const tasks = ctx ? allTasks.filter((t) => t.agentId === ctx.agentId) : allTasks;
+    const jobs = tasks.map((t) => ({
       id: t.id,
       cron: t.cron,
       humanSchedule: cronToHuman(t.cron),
       prompt: t.prompt,
       ...(t.recurring ? { recurring: true } : {}),
       ...(t.durable === false ? { durable: false } : {}),
-    }))
-    return { data: { jobs } }
+    }));
+    return { data: { jobs } };
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {
     return {
@@ -85,13 +83,13 @@ export const CronListTool = buildTool({
         output.jobs.length > 0
           ? output.jobs
               .map(
-                j =>
+                (j) =>
                   `${j.id} — ${j.humanSchedule}${j.recurring ? ' (recurring)' : ' (one-shot)'}${j.durable === false ? ' [session-only]' : ''}: ${truncate(j.prompt, 80, true)}`,
               )
               .join('\n')
           : 'No scheduled jobs.',
-    }
+    };
   },
   renderToolUseMessage: renderListToolUseMessage,
   renderToolResultMessage: renderListResultMessage,
-} satisfies ToolDef<InputSchema, ListOutput>)
+} satisfies ToolDef<InputSchema, ListOutput>);

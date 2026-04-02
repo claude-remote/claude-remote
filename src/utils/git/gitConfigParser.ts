@@ -8,8 +8,8 @@
  *   - Values: optional quoting, inline comments (# or ;), backslash escapes
  */
 
-import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 /**
  * Parse a single value from .git/config.
@@ -22,10 +22,10 @@ export async function parseGitConfigValue(
   key: string,
 ): Promise<string | null> {
   try {
-    const config = await readFile(join(gitDir, 'config'), 'utf-8')
-    return parseConfigString(config, section, subsection, key)
+    const config = await readFile(join(gitDir, 'config'), 'utf-8');
+    return parseConfigString(config, section, subsection, key);
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -39,37 +39,37 @@ export function parseConfigString(
   subsection: string | null,
   key: string,
 ): string | null {
-  const lines = config.split('\n')
-  const sectionLower = section.toLowerCase()
-  const keyLower = key.toLowerCase()
+  const lines = config.split('\n');
+  const sectionLower = section.toLowerCase();
+  const keyLower = key.toLowerCase();
 
-  let inSection = false
+  let inSection = false;
   for (const line of lines) {
-    const trimmed = line.trim()
+    const trimmed = line.trim();
 
     // Skip empty lines and comment-only lines
     if (trimmed.length === 0 || trimmed[0] === '#' || trimmed[0] === ';') {
-      continue
+      continue;
     }
 
     // Section header
     if (trimmed[0] === '[') {
-      inSection = matchesSectionHeader(trimmed, sectionLower, subsection)
-      continue
+      inSection = matchesSectionHeader(trimmed, sectionLower, subsection);
+      continue;
     }
 
     if (!inSection) {
-      continue
+      continue;
     }
 
     // Key-value line: find the key name
-    const parsed = parseKeyValue(trimmed)
+    const parsed = parseKeyValue(trimmed);
     if (parsed && parsed.key.toLowerCase() === keyLower) {
-      return parsed.value
+      return parsed.value;
     }
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -77,34 +77,34 @@ export function parseConfigString(
  */
 function parseKeyValue(line: string): { key: string; value: string } | null {
   // Read key: alphanumeric + hyphen, starting with alpha
-  let i = 0
+  let i = 0;
   while (i < line.length && isKeyChar(line[i]!)) {
-    i++
+    i++;
   }
   if (i === 0) {
-    return null
+    return null;
   }
-  const key = line.slice(0, i)
+  const key = line.slice(0, i);
 
   // Skip whitespace
   while (i < line.length && (line[i] === ' ' || line[i] === '\t')) {
-    i++
+    i++;
   }
 
   // Must have '='
   if (i >= line.length || line[i] !== '=') {
     // Boolean key with no value — not relevant for our use cases
-    return null
+    return null;
   }
-  i++ // skip '='
+  i++; // skip '='
 
   // Skip whitespace after '='
   while (i < line.length && (line[i] === ' ' || line[i] === '\t')) {
-    i++
+    i++;
   }
 
-  const value = parseValue(line, i)
-  return { key, value }
+  const value = parseValue(line, i);
+  return { key, value };
 }
 
 /**
@@ -112,64 +112,64 @@ function parseKeyValue(line: string): { key: string; value: string } | null {
  * Handles quoted strings, escape sequences, and inline comments.
  */
 function parseValue(line: string, start: number): string {
-  let result = ''
-  let inQuote = false
-  let i = start
+  let result = '';
+  let inQuote = false;
+  let i = start;
 
   while (i < line.length) {
-    const ch = line[i]!
+    const ch = line[i]!;
 
     // Inline comments outside quotes end the value
     if (!inQuote && (ch === '#' || ch === ';')) {
-      break
+      break;
     }
 
     if (ch === '"') {
-      inQuote = !inQuote
-      i++
-      continue
+      inQuote = !inQuote;
+      i++;
+      continue;
     }
 
     if (ch === '\\' && i + 1 < line.length) {
-      const next = line[i + 1]!
+      const next = line[i + 1]!;
       if (inQuote) {
         // Inside quotes: recognize escape sequences
         switch (next) {
           case 'n':
-            result += '\n'
-            break
+            result += '\n';
+            break;
           case 't':
-            result += '\t'
-            break
+            result += '\t';
+            break;
           case 'b':
-            result += '\b'
-            break
+            result += '\b';
+            break;
           case '"':
-            result += '"'
-            break
+            result += '"';
+            break;
           case '\\':
-            result += '\\'
-            break
+            result += '\\';
+            break;
           default:
             // Git silently drops the backslash for unknown escapes
-            result += next
-            break
+            result += next;
+            break;
         }
-        i += 2
-        continue
+        i += 2;
+        continue;
       }
       // Outside quotes: backslash at end of line = continuation (we don't
       // handle multi-line since we split on \n, but handle \\ and others)
       if (next === '\\') {
-        result += '\\'
-        i += 2
-        continue
+        result += '\\';
+        i += 2;
+        continue;
       }
       // Fallthrough — treat backslash literally outside quotes
     }
 
-    result += ch
-    i++
+    result += ch;
+    i++;
   }
 
   // Trim trailing whitespace from unquoted portions.
@@ -177,18 +177,18 @@ function parseValue(line: string, start: number): string {
   // process char-by-char and quotes toggle, the simplest correct approach
   // for single-line values is to trim the result when not ending in a quote.
   if (!inQuote) {
-    result = trimTrailingWhitespace(result)
+    result = trimTrailingWhitespace(result);
   }
 
-  return result
+  return result;
 }
 
 function trimTrailingWhitespace(s: string): string {
-  let end = s.length
+  let end = s.length;
   while (end > 0 && (s[end - 1] === ' ' || s[end - 1] === '\t')) {
-    end--
+    end--;
   }
-  return s.slice(0, end)
+  return s.slice(0, end);
 }
 
 /**
@@ -201,7 +201,7 @@ function matchesSectionHeader(
   subsection: string | null,
 ): boolean {
   // line starts with '['
-  let i = 1
+  let i = 1;
 
   // Read section name
   while (
@@ -211,67 +211,64 @@ function matchesSectionHeader(
     line[i] !== '\t' &&
     line[i] !== '"'
   ) {
-    i++
+    i++;
   }
-  const foundSection = line.slice(1, i).toLowerCase()
+  const foundSection = line.slice(1, i).toLowerCase();
 
   if (foundSection !== sectionLower) {
-    return false
+    return false;
   }
 
   if (subsection === null) {
     // Simple section: must end with ']'
-    return i < line.length && line[i] === ']'
+    return i < line.length && line[i] === ']';
   }
 
   // Skip whitespace before subsection quote
   while (i < line.length && (line[i] === ' ' || line[i] === '\t')) {
-    i++
+    i++;
   }
 
   // Must have opening quote
   if (i >= line.length || line[i] !== '"') {
-    return false
+    return false;
   }
-  i++ // skip opening quote
+  i++; // skip opening quote
 
   // Read subsection — case-sensitive, handle \\ and \" escapes
-  let foundSubsection = ''
+  let foundSubsection = '';
   while (i < line.length && line[i] !== '"') {
     if (line[i] === '\\' && i + 1 < line.length) {
-      const next = line[i + 1]!
+      const next = line[i + 1]!;
       if (next === '\\' || next === '"') {
-        foundSubsection += next
-        i += 2
-        continue
+        foundSubsection += next;
+        i += 2;
+        continue;
       }
       // Git drops the backslash for other escapes in subsections
-      foundSubsection += next
-      i += 2
-      continue
+      foundSubsection += next;
+      i += 2;
+      continue;
     }
-    foundSubsection += line[i]
-    i++
+    foundSubsection += line[i];
+    i++;
   }
 
   // Must have closing quote followed by ']'
   if (i >= line.length || line[i] !== '"') {
-    return false
+    return false;
   }
-  i++ // skip closing quote
+  i++; // skip closing quote
 
   if (i >= line.length || line[i] !== ']') {
-    return false
+    return false;
   }
 
-  return foundSubsection === subsection
+  return foundSubsection === subsection;
 }
 
 function isKeyChar(ch: string): boolean {
   return (
-    (ch >= 'a' && ch <= 'z') ||
-    (ch >= 'A' && ch <= 'Z') ||
-    (ch >= '0' && ch <= '9') ||
-    ch === '-'
-  )
+    (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch === '-'
+  );
 }

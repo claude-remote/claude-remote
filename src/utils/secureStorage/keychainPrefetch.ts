@@ -21,29 +21,29 @@
  * startupProfiler.ts at main.tsx:5, so no new module-init cost lands here.
  */
 
-import { execFile } from 'child_process'
-import { isBareMode } from '../envUtils.js'
+import { execFile } from 'node:child_process';
+import { isBareMode } from '../envUtils.js';
 import {
   CREDENTIALS_SERVICE_SUFFIX,
   getMacOsKeychainStorageServiceName,
   getUsername,
   primeKeychainCacheFromPrefetch,
-} from './macOsKeychainHelpers.js'
+} from './macOsKeychainHelpers.js';
 
-const KEYCHAIN_PREFETCH_TIMEOUT_MS = 10_000
+const KEYCHAIN_PREFETCH_TIMEOUT_MS = 10_000;
 
 // Shared with auth.ts getApiKeyFromConfigOrMacOSKeychain() so it can skip its
 // sync spawn when the prefetch already landed. Distinguishing "not started" (null)
 // from "completed with no key" ({ stdout: null }) lets the sync reader only
 // trust a completed prefetch.
-let legacyApiKeyPrefetch: { stdout: string | null } | null = null
+let legacyApiKeyPrefetch: { stdout: string | null } | null = null;
 
-let prefetchPromise: Promise<void> | null = null
+let prefetchPromise: Promise<void> | null = null;
 
-type SpawnResult = { stdout: string | null; timedOut: boolean }
+type SpawnResult = { stdout: string | null; timedOut: boolean };
 
 function spawnSecurity(serviceName: string): Promise<SpawnResult> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     execFile(
       'security',
       ['find-generic-password', '-a', getUsername(), '-w', '-s', serviceName],
@@ -52,14 +52,13 @@ function spawnSecurity(serviceName: string): Promise<SpawnResult> {
         // Exit 44 (entry not found) is a valid "no key" result and safe to
         // prime as null. But timeout (err.killed) means the keychain MAY have
         // a key we couldn't fetch — don't prime, let sync spawn retry.
-        // biome-ignore lint/nursery/noFloatingPromises: resolve() is not a floating promise
         resolve({
           stdout: err ? null : stdout?.trim() || null,
           timedOut: Boolean(err && 'killed' in err && err.killed),
-        })
+        });
       },
-    )
-  })
+    );
+  });
 }
 
 /**
@@ -67,25 +66,21 @@ function spawnSecurity(serviceName: string): Promise<SpawnResult> {
  * immediately after startMdmRawRead(). Non-darwin is a no-op.
  */
 export function startKeychainPrefetch(): void {
-  if (process.platform !== 'darwin' || prefetchPromise || isBareMode()) return
+  if (process.platform !== 'darwin' || prefetchPromise || isBareMode()) return;
 
   // Fire both subprocesses immediately (non-blocking). They run in parallel
   // with each other AND with main.tsx imports. The await in Promise.all
   // happens later via ensureKeychainPrefetchCompleted().
-  const oauthSpawn = spawnSecurity(
-    getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX),
-  )
-  const legacySpawn = spawnSecurity(getMacOsKeychainStorageServiceName())
+  const oauthSpawn = spawnSecurity(getMacOsKeychainStorageServiceName(CREDENTIALS_SERVICE_SUFFIX));
+  const legacySpawn = spawnSecurity(getMacOsKeychainStorageServiceName());
 
-  prefetchPromise = Promise.all([oauthSpawn, legacySpawn]).then(
-    ([oauth, legacy]) => {
-      // Timed-out prefetch: don't prime. Sync read/spawn will retry with its
-      // own (longer) timeout. Priming null here would shadow a key that the
-      // sync path might successfully fetch.
-      if (!oauth.timedOut) primeKeychainCacheFromPrefetch(oauth.stdout)
-      if (!legacy.timedOut) legacyApiKeyPrefetch = { stdout: legacy.stdout }
-    },
-  )
+  prefetchPromise = Promise.all([oauthSpawn, legacySpawn]).then(([oauth, legacy]) => {
+    // Timed-out prefetch: don't prime. Sync read/spawn will retry with its
+    // own (longer) timeout. Priming null here would shadow a key that the
+    // sync path might successfully fetch.
+    if (!oauth.timedOut) primeKeychainCacheFromPrefetch(oauth.stdout);
+    if (!legacy.timedOut) legacyApiKeyPrefetch = { stdout: legacy.stdout };
+  });
 }
 
 /**
@@ -94,7 +89,7 @@ export function startKeychainPrefetch(): void {
  * the ~65ms of main.tsx imports. Resolves immediately on non-darwin.
  */
 export async function ensureKeychainPrefetchCompleted(): Promise<void> {
-  if (prefetchPromise) await prefetchPromise
+  if (prefetchPromise) await prefetchPromise;
 }
 
 /**
@@ -102,9 +97,9 @@ export async function ensureKeychainPrefetchCompleted(): Promise<void> {
  * falls through to sync execSync. Returns null if prefetch hasn't completed.
  */
 export function getLegacyApiKeyPrefetchResult(): {
-  stdout: string | null
+  stdout: string | null;
 } | null {
-  return legacyApiKeyPrefetch
+  return legacyApiKeyPrefetch;
 }
 
 /**
@@ -112,5 +107,5 @@ export function getLegacyApiKeyPrefetchResult(): {
  * cache invalidation so a stale prefetch doesn't shadow a fresh write.
  */
 export function clearLegacyApiKeyPrefetch(): void {
-  legacyApiKeyPrefetch = null
+  legacyApiKeyPrefetch = null;
 }

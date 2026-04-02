@@ -1,1 +1,1 @@
-export const TASK_GET_TOOL_NAME = 'TaskGet'
+export const TASK_GET_TOOL_NAME = 'TaskGet';

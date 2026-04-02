@@ -1,10 +1,14 @@
-import React from 'react';
-import { Text } from '../../ink.js';
+import type React from 'react';
 import type { Tools } from '../../Tool.js';
 import { findToolByName } from '../../Tool.js';
+import { Text } from '../../ink.js';
 import type { ToolActivity } from '../../tasks/LocalAgentTask/LocalAgentTask.js';
 import type { ThemeName } from '../../utils/theme.js';
-export function renderToolActivity(activity: ToolActivity, tools: Tools, theme: ThemeName): React.ReactNode {
+export function renderToolActivity(
+  activity: ToolActivity,
+  tools: Tools,
+  theme: ThemeName,
+): React.ReactNode {
   const tool = findToolByName(tools, activity.toolName);
   if (!tool) {
     return activity.toolName;
@@ -18,12 +22,14 @@ export function renderToolActivity(activity: ToolActivity, tools: Tools, theme: 
     }
     const toolArgs = tool.renderToolUseMessage(parsedInput, {
       theme,
-      verbose: false
+      verbose: false,
     });
     if (toolArgs) {
-      return <Text>
+      return (
+        <Text>
           {userFacingName}({toolArgs})
-        </Text>;
+        </Text>
+      );
     }
     return userFacingName;
   } catch {

@@ -1,34 +1,27 @@
-import { constants as fsConstants } from 'fs'
-import {
-  type FileHandle,
-  mkdir,
-  open,
-  stat,
-  symlink,
-  unlink,
-} from 'fs/promises'
-import { join } from 'path'
-import { getSessionId } from '../../bootstrap/state.js'
-import { getErrnoCode } from '../errors.js'
-import { readFileRange, tailFile } from '../fsOperations.js'
-import { logError } from '../log.js'
-import { getProjectTempDir } from '../permissions/filesystem.js'
+import { constants as fsConstants } from 'node:fs';
+import { type FileHandle, mkdir, open, stat, symlink, unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { getSessionId } from '../../bootstrap/state.js';
+import { getErrnoCode } from '../errors.js';
+import { readFileRange, tailFile } from '../fsOperations.js';
+import { logError } from '../log.js';
+import { getProjectTempDir } from '../permissions/filesystem.js';
 
 // SECURITY: O_NOFOLLOW prevents following symlinks when opening task output files.
 // Without this, an attacker in the sandbox could create symlinks in the tasks directory
 // pointing to arbitrary files, causing Claude Code on the host to write to those files.
 // O_NOFOLLOW is not available on Windows, but the sandbox attack vector is Unix-only.
-const O_NOFOLLOW = fsConstants.O_NOFOLLOW ?? 0
+const O_NOFOLLOW = fsConstants.O_NOFOLLOW ?? 0;
 
-const DEFAULT_MAX_READ_BYTES = 8 * 1024 * 1024 // 8MB
+const DEFAULT_MAX_READ_BYTES = 8 * 1024 * 1024; // 8MB
 
 /**
  * Disk cap for task output files. In file mode (bash), a watchdog polls
  * file size and kills the process. In pipe mode (hooks), DiskTaskOutput
  * drops chunks past this limit. Shared so both caps stay in sync.
  */
-export const MAX_TASK_OUTPUT_BYTES = 5 * 1024 * 1024 * 1024
-export const MAX_TASK_OUTPUT_BYTES_DISPLAY = '5GB'
+export const MAX_TASK_OUTPUT_BYTES = 5 * 1024 * 1024 * 1024;
+export const MAX_TASK_OUTPUT_BYTES_DISPLAY = '5GB';
 
 /**
  * Get the task output directory for this session.
@@ -46,31 +39,31 @@ export const MAX_TASK_OUTPUT_BYTES_DISPLAY = '5GB'
  * instances still hold old-session paths — open() would ENOENT. Background
  * bash tasks surviving /clear need their output files to stay reachable.
  */
-let _taskOutputDir: string | undefined
+let _taskOutputDir: string | undefined;
 export function getTaskOutputDir(): string {
   if (_taskOutputDir === undefined) {
-    _taskOutputDir = join(getProjectTempDir(), getSessionId(), 'tasks')
+    _taskOutputDir = join(getProjectTempDir(), getSessionId(), 'tasks');
   }
-  return _taskOutputDir
+  return _taskOutputDir;
 }
 
 /** Test helper — clears the memoized dir. */
 export function _resetTaskOutputDirForTest(): void {
-  _taskOutputDir = undefined
+  _taskOutputDir = undefined;
 }
 
 /**
  * Ensure the task output directory exists
  */
 async function ensureOutputDir(): Promise<void> {
-  await mkdir(getTaskOutputDir(), { recursive: true })
+  await mkdir(getTaskOutputDir(), { recursive: true });
 }
 
 /**
  * Get the output file path for a task
  */
 export function getTaskOutputPath(taskId: string): string {
-  return join(getTaskOutputDir(), `${taskId}.output`)
+  return join(getTaskOutputDir(), `${taskId}.output`);
 }
 
 // Tracks fire-and-forget promises (initTaskOutput, initTaskOutputAsSymlink,
@@ -79,11 +72,11 @@ export function getTaskOutputPath(taskId: string): string {
 // resumes after preload's afterEach nuked the temp dir → ENOENT → unhandled
 // rejection → flaky test failure. allSettled so a rejection doesn't short-
 // circuit the drain and leave other ops racing the rmSync.
-const _pendingOps = new Set<Promise<unknown>>()
+const _pendingOps = new Set<Promise<unknown>>();
 function track<T>(p: Promise<T>): Promise<T> {
-  _pendingOps.add(p)
-  void p.finally(() => _pendingOps.delete(p)).catch(() => {})
-  return p
+  _pendingOps.add(p);
+  void p.finally(() => _pendingOps.delete(p)).catch(() => {});
+  return p;
 }
 
 /**
@@ -95,83 +88,80 @@ function track<T>(p: Promise<T>): Promise<T> {
  * where every reaction captures its data until the whole chain resolves.
  */
 export class DiskTaskOutput {
-  #path: string
-  #fileHandle: FileHandle | null = null
-  #queue: string[] = []
-  #bytesWritten = 0
-  #capped = false
-  #flushPromise: Promise<void> | null = null
-  #flushResolve: (() => void) | null = null
+  #path: string;
+  #fileHandle: FileHandle | null = null;
+  #queue: string[] = [];
+  #bytesWritten = 0;
+  #capped = false;
+  #flushPromise: Promise<void> | null = null;
+  #flushResolve: (() => void) | null = null;
 
   constructor(taskId: string) {
-    this.#path = getTaskOutputPath(taskId)
+    this.#path = getTaskOutputPath(taskId);
   }
 
   append(content: string): void {
     if (this.#capped) {
-      return
+      return;
     }
     // content.length (UTF-16 code units) undercounts UTF-8 bytes by at most ~3×.
     // Acceptable for a coarse disk-fill guard — avoids re-scanning every chunk.
-    this.#bytesWritten += content.length
+    this.#bytesWritten += content.length;
     if (this.#bytesWritten > MAX_TASK_OUTPUT_BYTES) {
-      this.#capped = true
+      this.#capped = true;
       this.#queue.push(
         `\n[output truncated: exceeded ${MAX_TASK_OUTPUT_BYTES_DISPLAY} disk cap]\n`,
-      )
+      );
     } else {
-      this.#queue.push(content)
+      this.#queue.push(content);
     }
     if (!this.#flushPromise) {
-      this.#flushPromise = new Promise<void>(resolve => {
-        this.#flushResolve = resolve
-      })
-      void track(this.#drain())
+      this.#flushPromise = new Promise<void>((resolve) => {
+        this.#flushResolve = resolve;
+      });
+      void track(this.#drain());
     }
   }
 
   flush(): Promise<void> {
-    return this.#flushPromise ?? Promise.resolve()
+    return this.#flushPromise ?? Promise.resolve();
   }
 
   cancel(): void {
-    this.#queue.length = 0
+    this.#queue.length = 0;
   }
 
   async #drainAllChunks(): Promise<void> {
     while (true) {
       try {
         if (!this.#fileHandle) {
-          await ensureOutputDir()
+          await ensureOutputDir();
           this.#fileHandle = await open(
             this.#path,
             process.platform === 'win32'
               ? 'a'
-              : fsConstants.O_WRONLY |
-                  fsConstants.O_APPEND |
-                  fsConstants.O_CREAT |
-                  O_NOFOLLOW,
-          )
+              : fsConstants.O_WRONLY | fsConstants.O_APPEND | fsConstants.O_CREAT | O_NOFOLLOW,
+          );
         }
         while (true) {
-          await this.#writeAllChunks()
+          await this.#writeAllChunks();
           if (this.#queue.length === 0) {
-            break
+            break;
           }
         }
       } finally {
         if (this.#fileHandle) {
-          const fileHandle = this.#fileHandle
-          this.#fileHandle = null
-          await fileHandle.close()
+          const fileHandle = this.#fileHandle;
+          this.#fileHandle = null;
+          await fileHandle.close();
         }
       }
       // you could have another .append() while we're waiting for the file to close, so we check the queue again before fully exiting
       if (this.#queue.length) {
-        continue
+        continue;
       }
 
-      break
+      break;
     }
   }
 
@@ -179,58 +169,58 @@ export class DiskTaskOutput {
     // This code is extremely precise.
     // You **must not** add an await here!! That will cause memory to balloon as the queue grows.
     // It's okay to add an `await` to the caller of this method (e.g. #drainAllChunks) because that won't cause Buffer[] to be kept alive in memory.
-    return this.#fileHandle!.appendFile(
+    return this.#fileHandle?.appendFile(
       // This variable needs to get GC'd ASAP.
       this.#queueToBuffers(),
-    )
+    );
   }
 
   /** Keep this in a separate method so that GC doesn't keep it alive for any longer than it should. */
   #queueToBuffers(): Buffer {
     // Use .splice to in-place mutate the array, informing the GC it can free it.
-    const queue = this.#queue.splice(0, this.#queue.length)
+    const queue = this.#queue.splice(0, this.#queue.length);
 
-    let totalLength = 0
+    let totalLength = 0;
     for (const str of queue) {
-      totalLength += Buffer.byteLength(str, 'utf8')
+      totalLength += Buffer.byteLength(str, 'utf8');
     }
 
-    const buffer = Buffer.allocUnsafe(totalLength)
-    let offset = 0
+    const buffer = Buffer.allocUnsafe(totalLength);
+    let offset = 0;
     for (const str of queue) {
-      offset += buffer.write(str, offset, 'utf8')
+      offset += buffer.write(str, offset, 'utf8');
     }
 
-    return buffer
+    return buffer;
   }
 
   async #drain(): Promise<void> {
     try {
-      await this.#drainAllChunks()
+      await this.#drainAllChunks();
     } catch (e) {
       // Transient fs errors (EMFILE on busy CI, EPERM on Windows pending-
       // delete) previously rode up through `void this.#drain()` as an
       // unhandled rejection while the flush promise resolved anyway — callers
       // saw an empty file with no error. Retry once for the transient case
       // (queue is intact if open() failed), then log and give up.
-      logError(e)
+      logError(e);
       if (this.#queue.length > 0) {
         try {
-          await this.#drainAllChunks()
+          await this.#drainAllChunks();
         } catch (e2) {
-          logError(e2)
+          logError(e2);
         }
       }
     } finally {
-      const resolve = this.#flushResolve!
-      this.#flushPromise = null
-      this.#flushResolve = null
-      resolve()
+      const resolve = this.#flushResolve!;
+      this.#flushPromise = null;
+      this.#flushResolve = null;
+      resolve();
     }
   }
 }
 
-const outputs = new Map<string, DiskTaskOutput>()
+const outputs = new Map<string, DiskTaskOutput>();
 
 /**
  * Test helper — cancel pending writes, await in-flight ops, clear the map.
@@ -244,21 +234,21 @@ const outputs = new Map<string, DiskTaskOutput>()
  */
 export async function _clearOutputsForTest(): Promise<void> {
   for (const output of outputs.values()) {
-    output.cancel()
+    output.cancel();
   }
   while (_pendingOps.size > 0) {
-    await Promise.allSettled([..._pendingOps])
+    await Promise.allSettled([..._pendingOps]);
   }
-  outputs.clear()
+  outputs.clear();
 }
 
 function getOrCreateOutput(taskId: string): DiskTaskOutput {
-  let output = outputs.get(taskId)
+  let output = outputs.get(taskId);
   if (!output) {
-    output = new DiskTaskOutput(taskId)
-    outputs.set(taskId, output)
+    output = new DiskTaskOutput(taskId);
+    outputs.set(taskId, output);
   }
-  return output
+  return output;
 }
 
 /**
@@ -266,7 +256,7 @@ function getOrCreateOutput(taskId: string): DiskTaskOutput {
  * Creates the file if it doesn't exist.
  */
 export function appendTaskOutput(taskId: string, content: string): void {
-  getOrCreateOutput(taskId).append(content)
+  getOrCreateOutput(taskId).append(content);
 }
 
 /**
@@ -274,9 +264,9 @@ export function appendTaskOutput(taskId: string, content: string): void {
  * Useful before reading output to ensure all data is flushed.
  */
 export async function flushTaskOutput(taskId: string): Promise<void> {
-  const output = outputs.get(taskId)
+  const output = outputs.get(taskId);
   if (output) {
-    await output.flush()
+    await output.flush();
   }
 }
 
@@ -288,13 +278,13 @@ export async function flushTaskOutput(taskId: string): Promise<void> {
 export function evictTaskOutput(taskId: string): Promise<void> {
   return track(
     (async () => {
-      const output = outputs.get(taskId)
+      const output = outputs.get(taskId);
       if (output) {
-        await output.flush()
-        outputs.delete(taskId)
+        await output.flush();
+        outputs.delete(taskId);
       }
     })(),
-  )
+  );
 }
 
 /**
@@ -307,25 +297,21 @@ export async function getTaskOutputDelta(
   maxBytes: number = DEFAULT_MAX_READ_BYTES,
 ): Promise<{ content: string; newOffset: number }> {
   try {
-    const result = await readFileRange(
-      getTaskOutputPath(taskId),
-      fromOffset,
-      maxBytes,
-    )
+    const result = await readFileRange(getTaskOutputPath(taskId), fromOffset, maxBytes);
     if (!result) {
-      return { content: '', newOffset: fromOffset }
+      return { content: '', newOffset: fromOffset };
     }
     return {
       content: result.content,
       newOffset: fromOffset + result.bytesRead,
-    }
+    };
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return { content: '', newOffset: fromOffset }
+      return { content: '', newOffset: fromOffset };
     }
-    logError(e)
-    return { content: '', newOffset: fromOffset }
+    logError(e);
+    return { content: '', newOffset: fromOffset };
   }
 }
 
@@ -338,21 +324,18 @@ export async function getTaskOutput(
   maxBytes: number = DEFAULT_MAX_READ_BYTES,
 ): Promise<string> {
   try {
-    const { content, bytesTotal, bytesRead } = await tailFile(
-      getTaskOutputPath(taskId),
-      maxBytes,
-    )
+    const { content, bytesTotal, bytesRead } = await tailFile(getTaskOutputPath(taskId), maxBytes);
     if (bytesTotal > bytesRead) {
-      return `[${Math.round((bytesTotal - bytesRead) / 1024)}KB of earlier output omitted]\n${content}`
+      return `[${Math.round((bytesTotal - bytesRead) / 1024)}KB of earlier output omitted]\n${content}`;
     }
-    return content
+    return content;
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return ''
+      return '';
     }
-    logError(e)
-    return ''
+    logError(e);
+    return '';
   }
 }
 
@@ -361,14 +344,14 @@ export async function getTaskOutput(
  */
 export async function getTaskOutputSize(taskId: string): Promise<number> {
   try {
-    return (await stat(getTaskOutputPath(taskId))).size
+    return (await stat(getTaskOutputPath(taskId))).size;
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return 0
+      return 0;
     }
-    logError(e)
-    return 0
+    logError(e);
+    return 0;
   }
 }
 
@@ -376,20 +359,20 @@ export async function getTaskOutputSize(taskId: string): Promise<number> {
  * Clean up a task's output file and write queue.
  */
 export async function cleanupTaskOutput(taskId: string): Promise<void> {
-  const output = outputs.get(taskId)
+  const output = outputs.get(taskId);
   if (output) {
-    output.cancel()
-    outputs.delete(taskId)
+    output.cancel();
+    outputs.delete(taskId);
   }
 
   try {
-    await unlink(getTaskOutputPath(taskId))
+    await unlink(getTaskOutputPath(taskId));
   } catch (e) {
-    const code = getErrnoCode(e)
+    const code = getErrnoCode(e);
     if (code === 'ENOENT') {
-      return
+      return;
     }
-    logError(e)
+    logError(e);
   }
 }
 
@@ -400,8 +383,8 @@ export async function cleanupTaskOutput(taskId: string): Promise<void> {
 export function initTaskOutput(taskId: string): Promise<string> {
   return track(
     (async () => {
-      await ensureOutputDir()
-      const outputPath = getTaskOutputPath(taskId)
+      await ensureOutputDir();
+      const outputPath = getTaskOutputPath(taskId);
       // SECURITY: O_NOFOLLOW prevents symlink-following attacks from the sandbox.
       // O_EXCL ensures we create a new file and fail if something already exists at this path.
       // On Windows, use string flags — numeric O_EXCL can produce EINVAL through libuv.
@@ -409,43 +392,37 @@ export function initTaskOutput(taskId: string): Promise<string> {
         outputPath,
         process.platform === 'win32'
           ? 'wx'
-          : fsConstants.O_WRONLY |
-              fsConstants.O_CREAT |
-              fsConstants.O_EXCL |
-              O_NOFOLLOW,
-      )
-      await fh.close()
-      return outputPath
+          : fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | O_NOFOLLOW,
+      );
+      await fh.close();
+      return outputPath;
     })(),
-  )
+  );
 }
 
 /**
  * Initialize output file as a symlink to another file (e.g., agent transcript).
  * Tries to create the symlink first; if a file already exists, removes it and retries.
  */
-export function initTaskOutputAsSymlink(
-  taskId: string,
-  targetPath: string,
-): Promise<string> {
+export function initTaskOutputAsSymlink(taskId: string, targetPath: string): Promise<string> {
   return track(
     (async () => {
       try {
-        await ensureOutputDir()
-        const outputPath = getTaskOutputPath(taskId)
+        await ensureOutputDir();
+        const outputPath = getTaskOutputPath(taskId);
 
         try {
-          await symlink(targetPath, outputPath)
+          await symlink(targetPath, outputPath);
         } catch {
-          await unlink(outputPath)
-          await symlink(targetPath, outputPath)
+          await unlink(outputPath);
+          await symlink(targetPath, outputPath);
         }
 
-        return outputPath
+        return outputPath;
       } catch (error) {
-        logError(error)
-        return initTaskOutput(taskId)
+        logError(error);
+        return initTaskOutput(taskId);
       }
     })(),
-  )
+  );
 }

@@ -2,34 +2,34 @@
 // Extracted so runAgent.ts can kill agent-scoped bash tasks without pulling
 // React/Ink into its module graph (same rationale as guards.ts).
 
-import type { AppState } from '../../state/AppState.js'
-import type { AgentId } from '../../types/ids.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { logError } from '../../utils/log.js'
-import { dequeueAllMatching } from '../../utils/messageQueueManager.js'
-import { evictTaskOutput } from '../../utils/task/diskOutput.js'
-import { updateTaskState } from '../../utils/task/framework.js'
-import { isLocalShellTask, type LocalShellTaskState } from './guards.js'
+import type { AppState } from '../../state/AppState.js';
+import type { AgentId } from '../../types/ids.js';
+import { logForDebugging } from '../../utils/debug.js';
+import { logError } from '../../utils/log.js';
+import { dequeueAllMatching } from '../../utils/messageQueueManager.js';
+import { evictTaskOutput } from '../../utils/task/diskOutput.js';
+import { updateTaskState } from '../../utils/task/framework.js';
+import { type LocalShellTaskState, isLocalShellTask } from './guards.js';
 
-type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
+type SetAppStateFn = (updater: (prev: AppState) => AppState) => void;
 
 export function killTask(taskId: string, setAppState: SetAppStateFn): void {
-  updateTaskState<LocalShellTaskState>(taskId, setAppState, task => {
+  updateTaskState<LocalShellTaskState>(taskId, setAppState, (task) => {
     if (task.status !== 'running' || !isLocalShellTask(task)) {
-      return task
+      return task;
     }
 
     try {
-      logForDebugging(`LocalShellTask ${taskId} kill requested`)
-      task.shellCommand?.kill()
-      task.shellCommand?.cleanup()
+      logForDebugging(`LocalShellTask ${taskId} kill requested`);
+      task.shellCommand?.kill();
+      task.shellCommand?.cleanup();
     } catch (error) {
-      logError(error)
+      logError(error);
     }
 
-    task.unregisterCleanup?.()
+    task.unregisterCleanup?.();
     if (task.cleanupTimeoutId) {
-      clearTimeout(task.cleanupTimeoutId)
+      clearTimeout(task.cleanupTimeoutId);
     }
 
     return {
@@ -40,9 +40,9 @@ export function killTask(taskId: string, setAppState: SetAppStateFn): void {
       unregisterCleanup: undefined,
       cleanupTimeoutId: undefined,
       endTime: Date.now(),
-    }
-  })
-  void evictTaskOutput(taskId)
+    };
+  });
+  void evictTaskOutput(taskId);
 }
 
 /**
@@ -55,22 +55,18 @@ export function killShellTasksForAgent(
   getAppState: () => AppState,
   setAppState: SetAppStateFn,
 ): void {
-  const tasks = getAppState().tasks ?? {}
+  const tasks = getAppState().tasks ?? {};
   for (const [taskId, task] of Object.entries(tasks)) {
-    if (
-      isLocalShellTask(task) &&
-      task.agentId === agentId &&
-      task.status === 'running'
-    ) {
+    if (isLocalShellTask(task) && task.agentId === agentId && task.status === 'running') {
       logForDebugging(
         `killShellTasksForAgent: killing orphaned shell task ${taskId} (agent ${agentId} exiting)`,
-      )
-      killTask(taskId, setAppState)
+      );
+      killTask(taskId, setAppState);
     }
   }
   // Purge any queued notifications addressed to this agent — its query loop
   // has exited and won't drain them. killTask fires 'killed' notifications
   // asynchronously; drop the ones already queued and any that land later sit
   // harmlessly (no consumer matches a dead agentId).
-  dequeueAllMatching(cmd => cmd.agentId === agentId)
+  dequeueAllMatching((cmd) => cmd.agentId === agentId);
 }

@@ -6,24 +6,24 @@
  * affect the teammate mode for the current session.
  */
 
-import { getGlobalConfig } from '../../../utils/config.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { logError } from '../../../utils/log.js'
+import { getGlobalConfig } from '../../../utils/config.js';
+import { logForDebugging } from '../../../utils/debug.js';
+import { logError } from '../../../utils/log.js';
 
-export type TeammateMode = 'auto' | 'tmux' | 'in-process'
+export type TeammateMode = 'auto' | 'tmux' | 'in-process';
 
 // Module-level variable to hold the captured mode at startup
-let initialTeammateMode: TeammateMode | null = null
+let initialTeammateMode: TeammateMode | null = null;
 
 // CLI override (set before capture if --teammate-mode is provided)
-let cliTeammateModeOverride: TeammateMode | null = null
+let cliTeammateModeOverride: TeammateMode | null = null;
 
 /**
  * Set the CLI override for teammate mode.
  * Must be called before captureTeammateModeSnapshot().
  */
 export function setCliTeammateModeOverride(mode: TeammateMode): void {
-  cliTeammateModeOverride = mode
+  cliTeammateModeOverride = mode;
 }
 
 /**
@@ -31,7 +31,7 @@ export function setCliTeammateModeOverride(mode: TeammateMode): void {
  * Returns null if no CLI override was set.
  */
 export function getCliTeammateModeOverride(): TeammateMode | null {
-  return cliTeammateModeOverride
+  return cliTeammateModeOverride;
 }
 
 /**
@@ -41,11 +41,9 @@ export function getCliTeammateModeOverride(): TeammateMode | null {
  * @param newMode - The new mode the user selected (passed directly to avoid race condition)
  */
 export function clearCliTeammateModeOverride(newMode: TeammateMode): void {
-  cliTeammateModeOverride = null
-  initialTeammateMode = newMode
-  logForDebugging(
-    `[TeammateModeSnapshot] CLI override cleared, new mode: ${newMode}`,
-  )
+  cliTeammateModeOverride = null;
+  initialTeammateMode = newMode;
+  logForDebugging(`[TeammateModeSnapshot] CLI override cleared, new mode: ${newMode}`);
 }
 
 /**
@@ -55,16 +53,12 @@ export function clearCliTeammateModeOverride(newMode: TeammateMode): void {
  */
 export function captureTeammateModeSnapshot(): void {
   if (cliTeammateModeOverride) {
-    initialTeammateMode = cliTeammateModeOverride
-    logForDebugging(
-      `[TeammateModeSnapshot] Captured from CLI override: ${initialTeammateMode}`,
-    )
+    initialTeammateMode = cliTeammateModeOverride;
+    logForDebugging(`[TeammateModeSnapshot] Captured from CLI override: ${initialTeammateMode}`);
   } else {
-    const config = getGlobalConfig()
-    initialTeammateMode = config.teammateMode ?? 'auto'
-    logForDebugging(
-      `[TeammateModeSnapshot] Captured from config: ${initialTeammateMode}`,
-    )
+    const config = getGlobalConfig();
+    initialTeammateMode = config.teammateMode ?? 'auto';
+    logForDebugging(`[TeammateModeSnapshot] Captured from config: ${initialTeammateMode}`);
   }
 }
 
@@ -79,9 +73,9 @@ export function getTeammateModeFromSnapshot(): TeammateMode {
       new Error(
         'getTeammateModeFromSnapshot called before capture - this indicates an initialization bug',
       ),
-    )
-    captureTeammateModeSnapshot()
+    );
+    captureTeammateModeSnapshot();
   }
   // Fallback to 'auto' if somehow still null (shouldn't happen, but safe)
-  return initialTeammateMode ?? 'auto'
+  return initialTeammateMode ?? 'auto';
 }

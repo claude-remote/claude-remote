@@ -143,9 +143,7 @@ export class TuiRenderer {
 
     // Overwrite the current incomplete line
     if (this.currentStreamLine) {
-      process.stdout.write(
-        `\r${this.rolePrefix('assistant')} ${this.currentStreamLine}`,
-      );
+      process.stdout.write(`\r${this.rolePrefix('assistant')} ${this.currentStreamLine}`);
     }
   }
 
@@ -161,11 +159,7 @@ export class TuiRenderer {
 
   // ── Tool cards ────────────────────────────────────────────────────
 
-  renderToolStatus(
-    toolName: string,
-    status: 'running' | 'done' | 'error',
-    detail?: string,
-  ): void {
+  renderToolStatus(toolName: string, status: 'running' | 'done' | 'error', detail?: string): void {
     this.writeLn(`  ${this.formatToolCard(toolName, status, detail ? { detail } : undefined)}`);
   }
 
@@ -176,9 +170,7 @@ export class TuiRenderer {
   ): string {
     const statusIcon =
       status === 'running' ? yellow('*') : status === 'done' ? green('+') : red('!');
-    const inputSummary = input
-      ? dim(` ${JSON.stringify(input).slice(0, 80)}`)
-      : '';
+    const inputSummary = input ? dim(` ${JSON.stringify(input).slice(0, 80)}`) : '';
     return `[${statusIcon} ${bold(name)}]${inputSummary}`;
   }
 

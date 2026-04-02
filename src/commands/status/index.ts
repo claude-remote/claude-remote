@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const status = {
   type: 'local-jsx',
@@ -7,6 +7,6 @@ const status = {
     'Show Claude Code status including version, model, account, API connectivity, and tool statuses',
   immediate: true,
   load: () => import('./status.js'),
-} satisfies Command
+} satisfies Command;
 
-export default status
+export default status;

@@ -1,26 +1,21 @@
-import memoize from 'lodash-es/memoize.js'
-import { join } from 'path'
-import {
-  getCurrentProjectConfig,
-  saveCurrentProjectConfig,
-} from './utils/config.js'
-import { getCwd } from './utils/cwd.js'
-import { isDirEmpty } from './utils/file.js'
-import { getFsImplementation } from './utils/fsOperations.js'
+import { join } from 'node:path';
+import memoize from 'lodash-es/memoize.js';
+import { getCurrentProjectConfig, saveCurrentProjectConfig } from './utils/config.js';
+import { getCwd } from './utils/cwd.js';
+import { isDirEmpty } from './utils/file.js';
+import { getFsImplementation } from './utils/fsOperations.js';
 
 export type Step = {
-  key: string
-  text: string
-  isComplete: boolean
-  isCompletable: boolean
-  isEnabled: boolean
-}
+  key: string;
+  text: string;
+  isComplete: boolean;
+  isCompletable: boolean;
+  isEnabled: boolean;
+};
 
 export function getSteps(): Step[] {
-  const hasClaudeMd = getFsImplementation().existsSync(
-    join(getCwd(), 'CLAUDE.md'),
-  )
-  const isWorkspaceDirEmpty = isDirEmpty(getCwd())
+  const hasClaudeMd = getFsImplementation().existsSync(join(getCwd(), 'CLAUDE.md'));
+  const isWorkspaceDirEmpty = isDirEmpty(getCwd());
 
   return [
     {
@@ -37,31 +32,31 @@ export function getSteps(): Step[] {
       isCompletable: true,
       isEnabled: !isWorkspaceDirEmpty,
     },
-  ]
+  ];
 }
 
 export function isProjectOnboardingComplete(): boolean {
   return getSteps()
     .filter(({ isCompletable, isEnabled }) => isCompletable && isEnabled)
-    .every(({ isComplete }) => isComplete)
+    .every(({ isComplete }) => isComplete);
 }
 
 export function maybeMarkProjectOnboardingComplete(): void {
   // Short-circuit on cached config — isProjectOnboardingComplete() hits
   // the filesystem, and REPL.tsx calls this on every prompt submit.
   if (getCurrentProjectConfig().hasCompletedProjectOnboarding) {
-    return
+    return;
   }
   if (isProjectOnboardingComplete()) {
-    saveCurrentProjectConfig(current => ({
+    saveCurrentProjectConfig((current) => ({
       ...current,
       hasCompletedProjectOnboarding: true,
-    }))
+    }));
   }
 }
 
 export const shouldShowProjectOnboarding = memoize((): boolean => {
-  const projectConfig = getCurrentProjectConfig()
+  const projectConfig = getCurrentProjectConfig();
   // Short-circuit on cached config before isProjectOnboardingComplete()
   // hits the filesystem — this runs during first render.
   if (
@@ -69,15 +64,15 @@ export const shouldShowProjectOnboarding = memoize((): boolean => {
     projectConfig.projectOnboardingSeenCount >= 4 ||
     process.env.IS_DEMO
   ) {
-    return false
+    return false;
   }
 
-  return !isProjectOnboardingComplete()
-})
+  return !isProjectOnboardingComplete();
+});
 
 export function incrementProjectOnboardingSeenCount(): void {
-  saveCurrentProjectConfig(current => ({
+  saveCurrentProjectConfig((current) => ({
     ...current,
     projectOnboardingSeenCount: current.projectOnboardingSeenCount + 1,
-  }))
+  }));
 }

@@ -1,17 +1,14 @@
-import { useEffect, useSyncExternalStore } from 'react'
-import type { QueuedCommand } from '../types/textInputTypes.js'
-import {
-  getCommandQueueSnapshot,
-  subscribeToCommandQueue,
-} from '../utils/messageQueueManager.js'
-import type { QueryGuard } from '../utils/QueryGuard.js'
-import { processQueueIfReady } from '../utils/queueProcessor.js'
+import { useEffect, useSyncExternalStore } from 'react';
+import type { QueuedCommand } from '../types/textInputTypes.js';
+import type { QueryGuard } from '../utils/QueryGuard.js';
+import { getCommandQueueSnapshot, subscribeToCommandQueue } from '../utils/messageQueueManager.js';
+import { processQueueIfReady } from '../utils/queueProcessor.js';
 
 type UseQueueProcessorParams = {
-  executeQueuedInput: (commands: QueuedCommand[]) => Promise<void>
-  hasActiveLocalJsxUI: boolean
-  queryGuard: QueryGuard
-}
+  executeQueuedInput: (commands: QueuedCommand[]) => Promise<void>;
+  hasActiveLocalJsxUI: boolean;
+  queryGuard: QueryGuard;
+};
 
 /**
  * Hook that processes queued commands when conditions are met.
@@ -32,23 +29,17 @@ export function useQueueProcessor({
 }: UseQueueProcessorParams): void {
   // Subscribe to the query guard. Re-renders when a query starts or ends
   // (or when reserve/cancelReservation transitions dispatching state).
-  const isQueryActive = useSyncExternalStore(
-    queryGuard.subscribe,
-    queryGuard.getSnapshot,
-  )
+  const isQueryActive = useSyncExternalStore(queryGuard.subscribe, queryGuard.getSnapshot);
 
   // Subscribe to the unified command queue via useSyncExternalStore.
   // This guarantees re-render when the store changes, bypassing
   // React context propagation delays that cause missed notifications in Ink.
-  const queueSnapshot = useSyncExternalStore(
-    subscribeToCommandQueue,
-    getCommandQueueSnapshot,
-  )
+  const queueSnapshot = useSyncExternalStore(subscribeToCommandQueue, getCommandQueueSnapshot);
 
   useEffect(() => {
-    if (isQueryActive) return
-    if (hasActiveLocalJsxUI) return
-    if (queueSnapshot.length === 0) return
+    if (isQueryActive) return;
+    if (hasActiveLocalJsxUI) return;
+    if (queueSnapshot.length === 0) return;
 
     // Reservation is now owned by handlePromptSubmit (inside executeUserInput's
     // try block). The sync chain executeQueuedInput → handlePromptSubmit →
@@ -57,12 +48,6 @@ export function useQueueProcessor({
     // snapshot change), isQueryActive is already true (dispatching) and the
     // guard above returns early. handlePromptSubmit's finally releases the
     // reservation via cancelReservation() (no-op if onQuery already ran end()).
-    processQueueIfReady({ executeInput: executeQueuedInput })
-  }, [
-    queueSnapshot,
-    isQueryActive,
-    executeQueuedInput,
-    hasActiveLocalJsxUI,
-    queryGuard,
-  ])
+    processQueueIfReady({ executeInput: executeQueuedInput });
+  }, [queueSnapshot, isQueryActive, executeQueuedInput, hasActiveLocalJsxUI, queryGuard]);
 }

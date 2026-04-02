@@ -1,6 +1,9 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { useEffect } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { c as _c } from 'react/compiler-runtime';
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from 'src/services/analytics/index.js';
 import type { TeleportRemoteResponse } from 'src/utils/conversationRecovery.js';
 import type { CodeSession } from 'src/utils/teleport/api.js';
 import { type TeleportSource, useTeleportResume } from '../hooks/useTeleportResume.js';
@@ -22,26 +25,15 @@ interface TeleportResumeWrapperProps {
  */
 export function TeleportResumeWrapper(t0) {
   const $ = _c(25);
-  const {
-    onComplete,
-    onCancel,
-    onError,
-    isEmbedded: t1,
-    source
-  } = t0;
+  const { onComplete, onCancel, onError, isEmbedded: t1, source } = t0;
   const isEmbedded = t1 === undefined ? false : t1;
-  const {
-    resumeSession,
-    isResuming,
-    error,
-    selectedSession
-  } = useTeleportResume(source);
+  const { resumeSession, isResuming, error, selectedSession } = useTeleportResume(source);
   let t2;
   let t3;
   if ($[0] !== source) {
     t2 = () => {
-      logEvent("tengu_teleport_started", {
-        source: source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      logEvent('tengu_teleport_started', {
+        source: source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       });
     };
     t3 = [source];
@@ -55,7 +47,7 @@ export function TeleportResumeWrapper(t0) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== error || $[4] !== onComplete || $[5] !== onError || $[6] !== resumeSession) {
-    t4 = async session => {
+    t4 = async (session) => {
       const result = await resumeSession(session);
       if (result) {
         onComplete(result);
@@ -79,7 +71,7 @@ export function TeleportResumeWrapper(t0) {
   let t5;
   if ($[8] !== onCancel) {
     t5 = () => {
-      logEvent("tengu_teleport_cancelled", {});
+      logEvent('tengu_teleport_cancelled', {});
       onCancel();
     };
     $[8] = onCancel;
@@ -92,26 +84,36 @@ export function TeleportResumeWrapper(t0) {
   let t7;
   if ($[10] !== t6) {
     t7 = {
-      context: "Global",
-      isActive: t6
+      context: 'Global',
+      isActive: t6,
     };
     $[10] = t6;
     $[11] = t7;
   } else {
     t7 = $[11];
   }
-  useKeybinding("app:interrupt", handleCancel, t7);
+  useKeybinding('app:interrupt', handleCancel, t7);
   if (isResuming && selectedSession) {
     let t8;
-    if ($[12] === Symbol.for("react.memo_cache_sentinel")) {
-      t8 = <Box flexDirection="row"><Spinner /><Text bold={true}>Resuming session…</Text></Box>;
+    if ($[12] === Symbol.for('react.memo_cache_sentinel')) {
+      t8 = (
+        <Box flexDirection="row">
+          <Spinner />
+          <Text bold={true}>Resuming session…</Text>
+        </Box>
+      );
       $[12] = t8;
     } else {
       t8 = $[12];
     }
     let t9;
     if ($[13] !== selectedSession.title) {
-      t9 = <Box flexDirection="column" padding={1}>{t8}<Text dimColor={true}>Loading "{selectedSession.title}"…</Text></Box>;
+      t9 = (
+        <Box flexDirection="column" padding={1}>
+          {t8}
+          <Text dimColor={true}>Loading "{selectedSession.title}"…</Text>
+        </Box>
+      );
       $[13] = selectedSession.title;
       $[14] = t9;
     } else {
@@ -121,8 +123,12 @@ export function TeleportResumeWrapper(t0) {
   }
   if (error && !onError) {
     let t8;
-    if ($[15] === Symbol.for("react.memo_cache_sentinel")) {
-      t8 = <Text bold={true} color="error">Failed to resume session</Text>;
+    if ($[15] === Symbol.for('react.memo_cache_sentinel')) {
+      t8 = (
+        <Text bold={true} color="error">
+          Failed to resume session
+        </Text>
+      );
       $[15] = t8;
     } else {
       t8 = $[15];
@@ -136,15 +142,27 @@ export function TeleportResumeWrapper(t0) {
       t9 = $[17];
     }
     let t10;
-    if ($[18] === Symbol.for("react.memo_cache_sentinel")) {
-      t10 = <Box marginTop={1}><Text dimColor={true}>Press <Text bold={true}>Esc</Text> to cancel</Text></Box>;
+    if ($[18] === Symbol.for('react.memo_cache_sentinel')) {
+      t10 = (
+        <Box marginTop={1}>
+          <Text dimColor={true}>
+            Press <Text bold={true}>Esc</Text> to cancel
+          </Text>
+        </Box>
+      );
       $[18] = t10;
     } else {
       t10 = $[18];
     }
     let t11;
     if ($[19] !== t9) {
-      t11 = <Box flexDirection="column" padding={1}>{t8}{t9}{t10}</Box>;
+      t11 = (
+        <Box flexDirection="column" padding={1}>
+          {t8}
+          {t9}
+          {t10}
+        </Box>
+      );
       $[19] = t9;
       $[20] = t11;
     } else {

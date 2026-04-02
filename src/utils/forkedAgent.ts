@@ -8,40 +8,33 @@
  * 4. Isolate mutable state to prevent interference with the main agent loop
  */
 
-import type { UUID } from 'crypto'
-import { randomUUID } from 'crypto'
-import type { PromptCommand } from '../commands.js'
-import type { QuerySource } from '../constants/querySource.js'
-import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
-import { query } from '../query.js'
+import type { UUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import type { ToolUseContext } from '../Tool.js';
+import type { PromptCommand } from '../commands.js';
+import type { QuerySource } from '../constants/querySource.js';
+import type { CanUseToolFn } from '../hooks/useCanUseTool.js';
+import { query } from '../query.js';
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../services/analytics/index.js'
-import { accumulateUsage, updateUsage } from '../services/api/claude.js'
-import { EMPTY_USAGE, type NonNullableUsage } from '../services/api/logging.js'
-import type { ToolUseContext } from '../Tool.js'
-import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js'
-import type { AgentId } from '../types/ids.js'
-import type { Message } from '../types/message.js'
-import { createChildAbortController } from './abortController.js'
-import { logForDebugging } from './debug.js'
-import { cloneFileStateCache } from './fileStateCache.js'
-import type { REPLHookContext } from './hooks/postSamplingHooks.js'
-import {
-  createUserMessage,
-  extractTextContent,
-  getLastAssistantMessage,
-} from './messages.js'
-import { createDenialTrackingState } from './permissions/denialTracking.js'
-import { parseToolListFromCLI } from './permissions/permissionSetup.js'
-import { recordSidechainTranscript } from './sessionStorage.js'
-import type { SystemPrompt } from './systemPromptType.js'
-import {
-  type ContentReplacementState,
-  cloneContentReplacementState,
-} from './toolResultStorage.js'
-import { createAgentId } from './uuid.js'
+} from '../services/analytics/index.js';
+import { accumulateUsage, updateUsage } from '../services/api/claude.js';
+import { EMPTY_USAGE, type NonNullableUsage } from '../services/api/logging.js';
+import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js';
+import type { AgentId } from '../types/ids.js';
+import type { Message } from '../types/message.js';
+import { createChildAbortController } from './abortController.js';
+import { logForDebugging } from './debug.js';
+import { cloneFileStateCache } from './fileStateCache.js';
+import type { REPLHookContext } from './hooks/postSamplingHooks.js';
+import { createUserMessage, extractTextContent, getLastAssistantMessage } from './messages.js';
+import { createDenialTrackingState } from './permissions/denialTracking.js';
+import { parseToolListFromCLI } from './permissions/permissionSetup.js';
+import { recordSidechainTranscript } from './sessionStorage.js';
+import type { SystemPrompt } from './systemPromptType.js';
+import { type ContentReplacementState, cloneContentReplacementState } from './toolResultStorage.js';
+import { createAgentId } from './uuid.js';
 
 /**
  * Parameters that must be identical between the fork and parent API requests
@@ -56,43 +49,43 @@ import { createAgentId } from './uuid.js'
  */
 export type CacheSafeParams = {
   /** System prompt - must match parent for cache hits */
-  systemPrompt: SystemPrompt
+  systemPrompt: SystemPrompt;
   /** User context - prepended to messages, affects cache */
-  userContext: { [k: string]: string }
+  userContext: { [k: string]: string };
   /** System context - appended to system prompt, affects cache */
-  systemContext: { [k: string]: string }
+  systemContext: { [k: string]: string };
   /** Tool use context containing tools, model, and other options */
-  toolUseContext: ToolUseContext
+  toolUseContext: ToolUseContext;
   /** Parent context messages for prompt cache sharing */
-  forkContextMessages: Message[]
-}
+  forkContextMessages: Message[];
+};
 
 // Slot written by handleStopHooks after each turn so post-turn forks
 // (promptSuggestion, postTurnSummary, /btw) can share the main loop's
 // prompt cache without each caller threading params through.
-let lastCacheSafeParams: CacheSafeParams | null = null
+let lastCacheSafeParams: CacheSafeParams | null = null;
 
 export function saveCacheSafeParams(params: CacheSafeParams | null): void {
-  lastCacheSafeParams = params
+  lastCacheSafeParams = params;
 }
 
 export function getLastCacheSafeParams(): CacheSafeParams | null {
-  return lastCacheSafeParams
+  return lastCacheSafeParams;
 }
 
 export type ForkedAgentParams = {
   /** Messages to start the forked query loop with */
-  promptMessages: Message[]
+  promptMessages: Message[];
   /** Cache-safe parameters that must match the parent query */
-  cacheSafeParams: CacheSafeParams
+  cacheSafeParams: CacheSafeParams;
   /** Permission check function for the forked agent */
-  canUseTool: CanUseToolFn
+  canUseTool: CanUseToolFn;
   /** Source identifier for tracking */
-  querySource: QuerySource
+  querySource: QuerySource;
   /** Label for analytics (e.g., 'session_memory', 'supervisor') */
-  forkLabel: string
+  forkLabel: string;
   /** Optional overrides for the subagent context (e.g., readFileState from setup phase) */
-  overrides?: SubagentContextOverrides
+  overrides?: SubagentContextOverrides;
   /**
    * Optional cap on output tokens. CAUTION: setting this changes both max_tokens
    * AND budget_tokens (via clamping in claude.ts). If the fork uses cacheSafeParams
@@ -100,24 +93,24 @@ export type ForkedAgentParams = {
    * the cache — thinking config is part of the cache key. Only set this when cache
    * sharing is not a goal (e.g., compact summaries).
    */
-  maxOutputTokens?: number
+  maxOutputTokens?: number;
   /** Optional cap on number of turns (API round-trips) */
-  maxTurns?: number
+  maxTurns?: number;
   /** Optional callback invoked for each message as it arrives (for streaming UI) */
-  onMessage?: (message: Message) => void
+  onMessage?: (message: Message) => void;
   /** Skip sidechain transcript recording (e.g., for ephemeral work like speculation) */
-  skipTranscript?: boolean
+  skipTranscript?: boolean;
   /** Skip writing new prompt cache entries on the last message. For
    *  fire-and-forget forks where no future request will read from this prefix. */
-  skipCacheWrite?: boolean
-}
+  skipCacheWrite?: boolean;
+};
 
 export type ForkedAgentResult = {
   /** All messages yielded during the query loop */
-  messages: Message[]
+  messages: Message[];
   /** Accumulated usage across all API calls in the loop */
-  totalUsage: NonNullableUsage
-}
+  totalUsage: NonNullableUsage;
+};
 
 /**
  * Creates CacheSafeParams from REPLHookContext.
@@ -128,16 +121,14 @@ export type ForkedAgentResult = {
  *
  * @param context - The REPLHookContext from the post-sampling hook
  */
-export function createCacheSafeParams(
-  context: REPLHookContext,
-): CacheSafeParams {
+export function createCacheSafeParams(context: REPLHookContext): CacheSafeParams {
   return {
     systemPrompt: context.systemPrompt,
     userContext: context.userContext,
     systemContext: context.systemContext,
     toolUseContext: context.toolUseContext,
     forkContextMessages: context.messages,
-  }
+  };
 }
 
 /**
@@ -148,9 +139,9 @@ export function createGetAppStateWithAllowedTools(
   baseGetAppState: ToolUseContext['getAppState'],
   allowedTools: string[],
 ): ToolUseContext['getAppState'] {
-  if (allowedTools.length === 0) return baseGetAppState
+  if (allowedTools.length === 0) return baseGetAppState;
   return () => {
-    const appState = baseGetAppState()
+    const appState = baseGetAppState();
     return {
       ...appState,
       toolPermissionContext: {
@@ -159,15 +150,14 @@ export function createGetAppStateWithAllowedTools(
           ...appState.toolPermissionContext.alwaysAllowRules,
           command: [
             ...new Set([
-              ...(appState.toolPermissionContext.alwaysAllowRules.command ||
-                []),
+              ...(appState.toolPermissionContext.alwaysAllowRules.command || []),
               ...allowedTools,
             ]),
           ],
         },
       },
-    }
-  }
+    };
+  };
 }
 
 /**
@@ -175,14 +165,14 @@ export function createGetAppStateWithAllowedTools(
  */
 export type PreparedForkedContext = {
   /** Skill content with args replaced */
-  skillContent: string
+  skillContent: string;
   /** Modified getAppState with allowed tools */
-  modifiedGetAppState: ToolUseContext['getAppState']
+  modifiedGetAppState: ToolUseContext['getAppState'];
   /** The general-purpose agent to use */
-  baseAgent: AgentDefinition
+  baseAgent: AgentDefinition;
   /** Initial prompt messages */
-  promptMessages: Message[]
-}
+  promptMessages: Message[];
+};
 
 /**
  * Prepares the context for executing a forked command/skill.
@@ -194,41 +184,38 @@ export async function prepareForkedCommandContext(
   context: ToolUseContext,
 ): Promise<PreparedForkedContext> {
   // Get skill content with $ARGUMENTS replaced
-  const skillPrompt = await command.getPromptForCommand(args, context)
+  const skillPrompt = await command.getPromptForCommand(args, context);
   const skillContent = skillPrompt
-    .map(block => (block.type === 'text' ? block.text : ''))
-    .join('\n')
+    .map((block) => (block.type === 'text' ? block.text : ''))
+    .join('\n');
 
   // Parse and prepare allowed tools
-  const allowedTools = parseToolListFromCLI(command.allowedTools ?? [])
+  const allowedTools = parseToolListFromCLI(command.allowedTools ?? []);
 
   // Create modified context with allowed tools
-  const modifiedGetAppState = createGetAppStateWithAllowedTools(
-    context.getAppState,
-    allowedTools,
-  )
+  const modifiedGetAppState = createGetAppStateWithAllowedTools(context.getAppState, allowedTools);
 
   // Use command.agent if specified, otherwise 'general-purpose'
-  const agentTypeName = command.agent ?? 'general-purpose'
-  const agents = context.options.agentDefinitions.activeAgents
+  const agentTypeName = command.agent ?? 'general-purpose';
+  const agents = context.options.agentDefinitions.activeAgents;
   const baseAgent =
-    agents.find(a => a.agentType === agentTypeName) ??
-    agents.find(a => a.agentType === 'general-purpose') ??
-    agents[0]
+    agents.find((a) => a.agentType === agentTypeName) ??
+    agents.find((a) => a.agentType === 'general-purpose') ??
+    agents[0];
 
   if (!baseAgent) {
-    throw new Error('No agent available for forked execution')
+    throw new Error('No agent available for forked execution');
   }
 
   // Prepare prompt messages
-  const promptMessages = [createUserMessage({ content: skillContent })]
+  const promptMessages = [createUserMessage({ content: skillContent })];
 
   return {
     skillContent,
     modifiedGetAppState,
     baseAgent,
     promptMessages,
-  }
+  };
 }
 
 /**
@@ -238,15 +225,12 @@ export function extractResultText(
   agentMessages: Message[],
   defaultText = 'Execution completed',
 ): string {
-  const lastAssistantMessage = getLastAssistantMessage(agentMessages)
-  if (!lastAssistantMessage) return defaultText
+  const lastAssistantMessage = getLastAssistantMessage(agentMessages);
+  if (!lastAssistantMessage) return defaultText;
 
-  const textContent = extractTextContent(
-    lastAssistantMessage.message.content,
-    '\n',
-  )
+  const textContent = extractTextContent(lastAssistantMessage.message.content, '\n');
 
-  return textContent || defaultText
+  return textContent || defaultText;
 }
 
 /**
@@ -259,49 +243,49 @@ export function extractResultText(
  */
 export type SubagentContextOverrides = {
   /** Override the options object (e.g., custom tools, model) */
-  options?: ToolUseContext['options']
+  options?: ToolUseContext['options'];
   /** Override the agentId (for subagents with their own ID) */
-  agentId?: AgentId
+  agentId?: AgentId;
   /** Override the agentType (for subagents with a specific type) */
-  agentType?: string
+  agentType?: string;
   /** Override the messages array */
-  messages?: Message[]
+  messages?: Message[];
   /** Override the readFileState (e.g., fresh cache instead of clone) */
-  readFileState?: ToolUseContext['readFileState']
+  readFileState?: ToolUseContext['readFileState'];
   /** Override the abortController */
-  abortController?: AbortController
+  abortController?: AbortController;
   /** Override the getAppState function */
-  getAppState?: ToolUseContext['getAppState']
+  getAppState?: ToolUseContext['getAppState'];
 
   /**
    * Explicit opt-in to share parent's setAppState callback.
    * Use for interactive subagents that need to update shared state.
    * @default false (isolated no-op)
    */
-  shareSetAppState?: boolean
+  shareSetAppState?: boolean;
   /**
    * Explicit opt-in to share parent's setResponseLength callback.
    * Use for subagents that contribute to parent's response metrics.
    * @default false (isolated no-op)
    */
-  shareSetResponseLength?: boolean
+  shareSetResponseLength?: boolean;
   /**
    * Explicit opt-in to share parent's abortController.
    * Use for interactive subagents that should abort with parent.
    * Note: Only applies if abortController override is not provided.
    * @default false (new controller linked to parent)
    */
-  shareAbortController?: boolean
+  shareAbortController?: boolean;
   /** Critical system reminder to re-inject at every user turn */
-  criticalSystemReminder_EXPERIMENTAL?: string
+  criticalSystemReminder_EXPERIMENTAL?: string;
   /** When true, canUseTool must always be called even when hooks auto-approve.
    *  Used by speculation for overlay file path rewriting. */
-  requireCanUseTool?: boolean
+  requireCanUseTool?: boolean;
   /** Override replacement state — used by resumeAgentBackground to thread
    * state reconstructed from the resumed sidechain so the same results
    * are re-replaced (prompt cache stability). */
-  contentReplacementState?: ContentReplacementState
-}
+  contentReplacementState?: ContentReplacementState;
+};
 
 /**
  * Creates an isolated ToolUseContext for subagents.
@@ -351,7 +335,7 @@ export function createSubagentContext(
     overrides?.abortController ??
     (overrides?.shareAbortController
       ? parentContext.abortController
-      : createChildAbortController(parentContext.abortController))
+      : createChildAbortController(parentContext.abortController));
 
   // Determine getAppState - wrap to set shouldAvoidPermissionPrompts unless sharing abortController
   // (if sharing abortController, it's an interactive agent that CAN show UI)
@@ -360,9 +344,9 @@ export function createSubagentContext(
     : overrides?.shareAbortController
       ? parentContext.getAppState
       : () => {
-          const state = parentContext.getAppState()
+          const state = parentContext.getAppState();
           if (state.toolPermissionContext.shouldAvoidPermissionPrompts) {
-            return state
+            return state;
           }
           return {
             ...state,
@@ -370,15 +354,13 @@ export function createSubagentContext(
               ...state.toolPermissionContext,
               shouldAvoidPermissionPrompts: true,
             },
-          }
-        }
+          };
+        };
 
   return {
     // Mutable state - cloned by default to maintain isolation
     // Clone overrides.readFileState if provided, otherwise clone from parent
-    readFileState: cloneFileStateCache(
-      overrides?.readFileState ?? parentContext.readFileState,
-    ),
+    readFileState: cloneFileStateCache(overrides?.readFileState ?? parentContext.readFileState),
     nestedMemoryAttachmentTriggers: new Set<string>(),
     loadedNestedMemoryPaths: new Set<string>(),
     dynamicSkillDirTriggers: new Set<string>(),
@@ -407,14 +389,11 @@ export function createSubagentContext(
 
     // AppState access
     getAppState,
-    setAppState: overrides?.shareSetAppState
-      ? parentContext.setAppState
-      : () => {},
+    setAppState: overrides?.shareSetAppState ? parentContext.setAppState : () => {},
     // Task registration/kill must always reach the root store, even when
     // setAppState is a no-op — otherwise async agents' background bash tasks
     // are never registered and never killed (PPID=1 zombie).
-    setAppStateForTasks:
-      parentContext.setAppStateForTasks ?? parentContext.setAppState,
+    setAppStateForTasks: parentContext.setAppStateForTasks ?? parentContext.setAppState,
     // Async subagents whose setAppState is a no-op need local denial tracking
     // so the denial counter actually accumulates across retries.
     localDenialTracking: overrides?.shareSetAppState
@@ -455,10 +434,9 @@ export function createSubagentContext(
     },
     fileReadingLimits: parentContext.fileReadingLimits,
     userModified: parentContext.userModified,
-    criticalSystemReminder_EXPERIMENTAL:
-      overrides?.criticalSystemReminder_EXPERIMENTAL,
+    criticalSystemReminder_EXPERIMENTAL: overrides?.criticalSystemReminder_EXPERIMENTAL,
     requireCanUseTool: overrides?.requireCanUseTool,
-  }
+  };
 }
 
 /**
@@ -499,45 +477,33 @@ export async function runForkedAgent({
   skipTranscript,
   skipCacheWrite,
 }: ForkedAgentParams): Promise<ForkedAgentResult> {
-  const startTime = Date.now()
-  const outputMessages: Message[] = []
-  let totalUsage: NonNullableUsage = { ...EMPTY_USAGE }
+  const startTime = Date.now();
+  const outputMessages: Message[] = [];
+  let totalUsage: NonNullableUsage = { ...EMPTY_USAGE };
 
-  const {
-    systemPrompt,
-    userContext,
-    systemContext,
-    toolUseContext,
-    forkContextMessages,
-  } = cacheSafeParams
+  const { systemPrompt, userContext, systemContext, toolUseContext, forkContextMessages } =
+    cacheSafeParams;
 
   // Create isolated context to prevent mutation of parent state
-  const isolatedToolUseContext = createSubagentContext(
-    toolUseContext,
-    overrides,
-  )
+  const isolatedToolUseContext = createSubagentContext(toolUseContext, overrides);
 
   // Do NOT filterIncompleteToolCalls here — it drops the whole assistant on
   // partial tool batches, orphaning the paired results (API 400). Dangling
   // tool_uses are repaired downstream by ensureToolResultPairing in claude.ts,
   // same as the main thread — identical post-repair prefix keeps the cache hit.
-  const initialMessages: Message[] = [...forkContextMessages, ...promptMessages]
+  const initialMessages: Message[] = [...forkContextMessages, ...promptMessages];
 
   // Generate agent ID and record initial messages for transcript
   // When skipTranscript is set, skip agent ID creation and all transcript I/O
-  const agentId = skipTranscript ? undefined : createAgentId(forkLabel)
-  let lastRecordedUuid: UUID | null = null
+  const agentId = skipTranscript ? undefined : createAgentId(forkLabel);
+  let lastRecordedUuid: UUID | null = null;
   if (agentId) {
-    await recordSidechainTranscript(initialMessages, agentId).catch(err =>
-      logForDebugging(
-        `Forked agent [${forkLabel}] failed to record initial transcript: ${err}`,
-      ),
-    )
+    await recordSidechainTranscript(initialMessages, agentId).catch((err) =>
+      logForDebugging(`Forked agent [${forkLabel}] failed to record initial transcript: ${err}`),
+    );
     // Track the last recorded message UUID for parent chain continuity
     lastRecordedUuid =
-      initialMessages.length > 0
-        ? initialMessages[initialMessages.length - 1]!.uuid
-        : null
+      initialMessages.length > 0 ? initialMessages[initialMessages.length - 1]?.uuid : null;
   }
 
   // Run the query loop with isolated context (cache-safe params preserved)
@@ -556,58 +522,44 @@ export async function runForkedAgent({
     })) {
       // Extract real usage from message_delta stream events (final usage per API call)
       if (message.type === 'stream_event') {
-        if (
-          'event' in message &&
-          message.event?.type === 'message_delta' &&
-          message.event.usage
-        ) {
-          const turnUsage = updateUsage({ ...EMPTY_USAGE }, message.event.usage)
-          totalUsage = accumulateUsage(totalUsage, turnUsage)
+        if ('event' in message && message.event?.type === 'message_delta' && message.event.usage) {
+          const turnUsage = updateUsage({ ...EMPTY_USAGE }, message.event.usage);
+          totalUsage = accumulateUsage(totalUsage, turnUsage);
         }
-        continue
+        continue;
       }
       if (message.type === 'stream_request_start') {
-        continue
+        continue;
       }
 
-      logForDebugging(
-        `Forked agent [${forkLabel}] received message: type=${message.type}`,
-      )
+      logForDebugging(`Forked agent [${forkLabel}] received message: type=${message.type}`);
 
-      outputMessages.push(message as Message)
-      onMessage?.(message as Message)
+      outputMessages.push(message as Message);
+      onMessage?.(message as Message);
 
       // Record transcript for recordable message types (same pattern as runAgent.ts)
-      const msg = message as Message
-      if (
-        agentId &&
-        (msg.type === 'assistant' ||
-          msg.type === 'user' ||
-          msg.type === 'progress')
-      ) {
-        await recordSidechainTranscript([msg], agentId, lastRecordedUuid).catch(
-          err =>
-            logForDebugging(
-              `Forked agent [${forkLabel}] failed to record transcript: ${err}`,
-            ),
-        )
+      const msg = message as Message;
+      if (agentId && (msg.type === 'assistant' || msg.type === 'user' || msg.type === 'progress')) {
+        await recordSidechainTranscript([msg], agentId, lastRecordedUuid).catch((err) =>
+          logForDebugging(`Forked agent [${forkLabel}] failed to record transcript: ${err}`),
+        );
         if (msg.type !== 'progress') {
-          lastRecordedUuid = msg.uuid
+          lastRecordedUuid = msg.uuid;
         }
       }
     }
   } finally {
     // Release cloned file state cache memory (same pattern as runAgent.ts)
-    isolatedToolUseContext.readFileState.clear()
+    isolatedToolUseContext.readFileState.clear();
     // Release the cloned fork context messages
-    initialMessages.length = 0
+    initialMessages.length = 0;
   }
 
   logForDebugging(
-    `Forked agent [${forkLabel}] finished: ${outputMessages.length} messages, types=[${outputMessages.map(m => m.type).join(', ')}], totalUsage: input=${totalUsage.input_tokens} output=${totalUsage.output_tokens} cacheRead=${totalUsage.cache_read_input_tokens} cacheCreate=${totalUsage.cache_creation_input_tokens}`,
-  )
+    `Forked agent [${forkLabel}] finished: ${outputMessages.length} messages, types=[${outputMessages.map((m) => m.type).join(', ')}], totalUsage: input=${totalUsage.input_tokens} output=${totalUsage.output_tokens} cacheRead=${totalUsage.cache_read_input_tokens} cacheCreate=${totalUsage.cache_creation_input_tokens}`,
+  );
 
-  const durationMs = Date.now() - startTime
+  const durationMs = Date.now() - startTime;
 
   // Log the fork query metrics with full NonNullableUsage
   logForkAgentQueryEvent({
@@ -617,12 +569,12 @@ export async function runForkedAgent({
     messageCount: outputMessages.length,
     totalUsage,
     queryTracking: toolUseContext.queryTracking,
-  })
+  });
 
   return {
     messages: outputMessages,
     totalUsage,
-  }
+  };
 }
 
 /**
@@ -636,29 +588,25 @@ function logForkAgentQueryEvent({
   totalUsage,
   queryTracking,
 }: {
-  forkLabel: string
-  querySource: QuerySource
-  durationMs: number
-  messageCount: number
-  totalUsage: NonNullableUsage
-  queryTracking?: { chainId: string; depth: number }
+  forkLabel: string;
+  querySource: QuerySource;
+  durationMs: number;
+  messageCount: number;
+  totalUsage: NonNullableUsage;
+  queryTracking?: { chainId: string; depth: number };
 }): void {
   // Calculate cache hit rate
   const totalInputTokens =
     totalUsage.input_tokens +
     totalUsage.cache_creation_input_tokens +
-    totalUsage.cache_read_input_tokens
+    totalUsage.cache_read_input_tokens;
   const cacheHitRate =
-    totalInputTokens > 0
-      ? totalUsage.cache_read_input_tokens / totalInputTokens
-      : 0
+    totalInputTokens > 0 ? totalUsage.cache_read_input_tokens / totalInputTokens : 0;
 
   logEvent('tengu_fork_agent_query', {
     // Metadata
-    forkLabel:
-      forkLabel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    querySource:
-      querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    forkLabel: forkLabel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    querySource: querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
     durationMs,
     messageCount,
 
@@ -669,10 +617,8 @@ function logForkAgentQueryEvent({
     cacheCreationInputTokens: totalUsage.cache_creation_input_tokens,
     serviceTier:
       totalUsage.service_tier as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    cacheCreationEphemeral1hTokens:
-      totalUsage.cache_creation.ephemeral_1h_input_tokens,
-    cacheCreationEphemeral5mTokens:
-      totalUsage.cache_creation.ephemeral_5m_input_tokens,
+    cacheCreationEphemeral1hTokens: totalUsage.cache_creation.ephemeral_1h_input_tokens,
+    cacheCreationEphemeral5mTokens: totalUsage.cache_creation.ephemeral_5m_input_tokens,
 
     // Derived metrics
     cacheHitRate,
@@ -685,5 +631,5 @@ function logForkAgentQueryEvent({
           queryDepth: queryTracking.depth,
         }
       : {}),
-  })
+  });
 }

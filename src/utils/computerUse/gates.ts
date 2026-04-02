@@ -1,13 +1,13 @@
-import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
+import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types';
 
-import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
-import { getSubscriptionType } from '../auth.js'
-import { isEnvTruthy } from '../envUtils.js'
+import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
+import { getSubscriptionType } from '../auth.js';
+import { isEnvTruthy } from '../envUtils.js';
 
 type ChicagoConfig = CuSubGates & {
-  enabled: boolean
-  coordinateMode: CoordinateMode
-}
+  enabled: boolean;
+  coordinateMode: CoordinateMode;
+};
 
 const DEFAULTS: ChicagoConfig = {
   enabled: false,
@@ -18,7 +18,7 @@ const DEFAULTS: ChicagoConfig = {
   autoTargetDisplay: true,
   clipboardGuard: true,
   coordinateMode: 'pixels',
-}
+};
 
 // Spread over defaults so a partial JSON ({"enabled": true} alone) inherits the
 // rest. The generic on getDynamicConfig is a type assertion, not a validator —
@@ -30,16 +30,16 @@ function readConfig(): ChicagoConfig {
       'tengu_malort_pedway',
       DEFAULTS,
     ),
-  }
+  };
 }
 
 // Max/Pro only for external rollout. Ant bypass so dogfooding continues
 // regardless of subscription tier — not all ants are max/pro, and per
 // CLAUDE.md:281, USER_TYPE !== 'ant' branches get zero antfooding.
 function hasRequiredSubscription(): boolean {
-  if (process.env.USER_TYPE === 'ant') return true
-  const tier = getSubscriptionType()
-  return tier === 'max' || tier === 'pro'
+  if (process.env.USER_TYPE === 'ant') return true;
+  const tier = getSubscriptionType();
+  return tier === 'max' || tier === 'pro';
 }
 
 export function getChicagoEnabled(): boolean {
@@ -52,21 +52,21 @@ export function getChicagoEnabled(): boolean {
     process.env.MONOREPO_ROOT_DIR &&
     !isEnvTruthy(process.env.ALLOW_ANT_COMPUTER_USE_MCP)
   ) {
-    return false
+    return false;
   }
-  return hasRequiredSubscription() && readConfig().enabled
+  return hasRequiredSubscription() && readConfig().enabled;
 }
 
 export function getChicagoSubGates(): CuSubGates {
-  const { enabled: _e, coordinateMode: _c, ...subGates } = readConfig()
-  return subGates
+  const { enabled: _e, coordinateMode: _c, ...subGates } = readConfig();
+  return subGates;
 }
 
 // Frozen at first read — setup.ts builds tool descriptions and executor.ts
 // scales coordinates off the same value. A live read here lets a mid-session
 // GB flip tell the model "pixels" while transforming clicks as normalized.
-let frozenCoordinateMode: CoordinateMode | undefined
+let frozenCoordinateMode: CoordinateMode | undefined;
 export function getChicagoCoordinateMode(): CoordinateMode {
-  frozenCoordinateMode ??= readConfig().coordinateMode
-  return frozenCoordinateMode
+  frozenCoordinateMode ??= readConfig().coordinateMode;
+  return frozenCoordinateMode;
 }

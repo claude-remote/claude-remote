@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useContext } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 
 /**
  * Context to indicate that shell output should be shown in full (not truncated).
@@ -12,12 +12,12 @@ import { useContext } from 'react';
 const ExpandShellOutputContext = React.createContext(false);
 export function ExpandShellOutputProvider(t0) {
   const $ = _c(2);
-  const {
-    children
-  } = t0;
+  const { children } = t0;
   let t1;
   if ($[0] !== children) {
-    t1 = <ExpandShellOutputContext.Provider value={true}>{children}</ExpandShellOutputContext.Provider>;
+    t1 = (
+      <ExpandShellOutputContext.Provider value={true}>{children}</ExpandShellOutputContext.Provider>
+    );
     $[0] = children;
     $[1] = t1;
   } else {

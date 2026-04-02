@@ -53,7 +53,8 @@ export function BranchMenu({ messageId, message, position, onBranch, onClose }: 
   }, [message]);
 
   const getMarkdownText = useCallback((): string => {
-    const role = message.role === 'assistant' ? 'Assistant' : message.role === 'user' ? 'User' : 'System';
+    const role =
+      message.role === 'assistant' ? 'Assistant' : message.role === 'user' ? 'User' : 'System';
     const text = getPlainText();
     return `**${role}:**\n\n${text}`;
   }, [message, getPlainText]);
@@ -92,7 +93,11 @@ export function BranchMenu({ messageId, message, position, onBranch, onClose }: 
   }, [messageId, onBranch, onClose]);
 
   return (
-    <div ref={menuRef} style={style} className="min-w-[180px] rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+    <div
+      ref={menuRef}
+      style={style}
+      className="min-w-[180px] rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl"
+    >
       <button
         type="button"
         onClick={handleBranch}

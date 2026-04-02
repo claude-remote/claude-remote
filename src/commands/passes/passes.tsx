@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type * as React from 'react';
 import { Passes } from '../../components/Passes/Passes.js';
 import { logEvent } from '../../services/analytics/index.js';
 import { getCachedRemainingPasses } from '../../services/api/referral.js';
@@ -10,14 +10,14 @@ export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNo
   const isFirstVisit = !config.hasVisitedPasses;
   if (isFirstVisit) {
     const remaining = getCachedRemainingPasses();
-    saveGlobalConfig(current => ({
+    saveGlobalConfig((current) => ({
       ...current,
       hasVisitedPasses: true,
-      passesLastSeenRemaining: remaining ?? current.passesLastSeenRemaining
+      passesLastSeenRemaining: remaining ?? current.passesLastSeenRemaining,
     }));
   }
   logEvent('tengu_guest_passes_visited', {
-    is_first_visit: isFirstVisit
+    is_first_visit: isFirstVisit,
   });
   return <Passes onDone={onDone} />;
 }

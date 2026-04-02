@@ -1,5 +1,5 @@
-import { feature } from 'src/utils/feature.js'
-import type { Command } from '../../commands.js'
+import { feature } from 'src/utils/feature.js';
+import type { Command } from '../../commands.js';
 
 const branch = {
   type: 'local-jsx',
@@ -9,6 +9,6 @@ const branch = {
   description: 'Create a branch of the current conversation at this point',
   argumentHint: '[name]',
   load: () => import('./branch.js'),
-} satisfies Command
+} satisfies Command;
 
-export default branch
+export default branch;

@@ -10,7 +10,9 @@ if (process.env.CLAUDE_CODE_REMOTE === 'true') {
   // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
   const existing = process.env.NODE_OPTIONS || '';
   // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
-  process.env.NODE_OPTIONS = existing ? `${existing} --max-old-space-size=8192` : '--max-old-space-size=8192';
+  process.env.NODE_OPTIONS = existing
+    ? `${existing} --max-old-space-size=8192`
+    : '--max-old-space-size=8192';
 }
 
 // Harness-science L0 ablation baseline. Inlined here (not init.ts) because
@@ -19,7 +21,15 @@ if (process.env.CLAUDE_CODE_REMOTE === 'true') {
 // DCEs this entire block from external builds.
 // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
 if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
-  for (const k of ['CLAUDE_CODE_SIMPLE', 'CLAUDE_CODE_DISABLE_THINKING', 'DISABLE_INTERLEAVED_THINKING', 'DISABLE_COMPACT', 'DISABLE_AUTO_COMPACT', 'CLAUDE_CODE_DISABLE_AUTO_MEMORY', 'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS']) {
+  for (const k of [
+    'CLAUDE_CODE_SIMPLE',
+    'CLAUDE_CODE_DISABLE_THINKING',
+    'DISABLE_INTERLEAVED_THINKING',
+    'DISABLE_COMPACT',
+    'DISABLE_AUTO_COMPACT',
+    'CLAUDE_CODE_DISABLE_AUTO_MEMORY',
+    'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS',
+  ]) {
     // eslint-disable-next-line custom-rules/no-top-level-side-effects, custom-rules/no-process-env-top-level
     process.env[k] ??= '1';
   }
@@ -33,10 +43,7 @@ if (feature('ABLATION_BASELINE') && process.env.CLAUDE_CODE_ABLATION_BASELINE) {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
-  const {
-    resolveLocalHubCommand,
-    runLocalHubCommand
-  } = await import('./localHubCli.js');
+  const { resolveLocalHubCommand, runLocalHubCommand } = await import('./localHubCli.js');
   const localHubCommand = resolveLocalHubCommand(args);
   if (localHubCommand) {
     await runLocalHubCommand(localHubCommand);
@@ -46,15 +53,12 @@ async function main(): Promise<void> {
   // Fast-path for --version/-v: zero module loading needed
   if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
     // MACRO.VERSION is inlined at build time
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(`${MACRO.VERSION} (Claude Code)`);
     return;
   }
 
   // For all other paths, load the startup profiler
-  const {
-    profileCheckpoint
-  } = await import('../utils/startupProfiler.js');
+  const { profileCheckpoint } = await import('../utils/startupProfiler.js');
   profileCheckpoint('cli_entry');
 
   // Fast-path for --dump-system-prompt: output the rendered system prompt and exit.
@@ -62,42 +66,31 @@ async function main(): Promise<void> {
   // Ant-only: eliminated from external builds via feature flag.
   if (feature('DUMP_SYSTEM_PROMPT') && args[0] === '--dump-system-prompt') {
     profileCheckpoint('cli_dump_system_prompt_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
+    const { enableConfigs } = await import('../utils/config.js');
     enableConfigs();
-    const {
-      getMainLoopModel
-    } = await import('../utils/model/model.js');
+    const { getMainLoopModel } = await import('../utils/model/model.js');
     const modelIdx = args.indexOf('--model');
-    const model = modelIdx !== -1 && args[modelIdx + 1] || getMainLoopModel();
-    const {
-      getSystemPrompt
-    } = await import('../constants/prompts.js');
+    const model = (modelIdx !== -1 && args[modelIdx + 1]) || getMainLoopModel();
+    const { getSystemPrompt } = await import('../constants/prompts.js');
     const prompt = await getSystemPrompt([], model);
-    // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(prompt.join('\n'));
     return;
   }
   if (process.argv[2] === '--claude-in-chrome-mcp') {
     profileCheckpoint('cli_claude_in_chrome_mcp_path');
-    const {
-      runClaudeInChromeMcpServer
-    } = await import('../utils/claudeInChrome/mcpServer.js');
+    const { runClaudeInChromeMcpServer } = await import('../utils/claudeInChrome/mcpServer.js');
     await runClaudeInChromeMcpServer();
     return;
-  } else if (process.argv[2] === '--chrome-native-host') {
+  }
+  if (process.argv[2] === '--chrome-native-host') {
     profileCheckpoint('cli_chrome_native_host_path');
-    const {
-      runChromeNativeHost
-    } = await import('../utils/claudeInChrome/chromeNativeHost.js');
+    const { runChromeNativeHost } = await import('../utils/claudeInChrome/chromeNativeHost.js');
     await runChromeNativeHost();
     return;
-  } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
+  }
+  if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
     profileCheckpoint('cli_computer_use_mcp_path');
-    const {
-      runComputerUseMcpServer
-    } = await import('../utils/computerUse/mcpServer.js');
+    const { runComputerUseMcpServer } = await import('../utils/computerUse/mcpServer.js');
     await runComputerUseMcpServer();
     return;
   }
@@ -126,33 +119,29 @@ async function main(): Promise<void> {
   // serve local machine as bridge environment.
   // feature() must stay inline for build-time dead code elimination;
   // isBridgeEnabled() checks the runtime GrowthBook gate.
-  if (feature('BRIDGE_MODE') && (args[0] === 'remote-control' || args[0] === 'rc' || args[0] === 'remote' || args[0] === 'sync' || args[0] === 'bridge')) {
+  if (
+    feature('BRIDGE_MODE') &&
+    (args[0] === 'remote-control' ||
+      args[0] === 'rc' ||
+      args[0] === 'remote' ||
+      args[0] === 'sync' ||
+      args[0] === 'bridge')
+  ) {
     profileCheckpoint('cli_bridge_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
+    const { enableConfigs } = await import('../utils/config.js');
     enableConfigs();
-    const {
-      getBridgeDisabledReason,
-      checkBridgeMinVersion
-    } = await import('../bridge/bridgeEnabled.js');
-    const {
-      BRIDGE_LOGIN_ERROR
-    } = await import('../bridge/types.js');
-    const {
-      bridgeMain
-    } = await import('../bridge/bridgeMain.js');
-    const {
-      exitWithError
-    } = await import('../utils/process.js');
+    const { getBridgeDisabledReason, checkBridgeMinVersion } = await import(
+      '../bridge/bridgeEnabled.js'
+    );
+    const { BRIDGE_LOGIN_ERROR } = await import('../bridge/types.js');
+    const { bridgeMain } = await import('../bridge/bridgeMain.js');
+    const { exitWithError } = await import('../utils/process.js');
 
     // Auth check must come before the GrowthBook gate check — without auth,
     // GrowthBook has no user context and would return a stale/default false.
     // getBridgeDisabledReason awaits GB init, so the returned value is fresh
     // (not the stale disk cache), but init still needs auth headers to work.
-    const {
-      getClaudeAIOAuthTokens
-    } = await import('../utils/auth.js');
+    const { getClaudeAIOAuthTokens } = await import('../utils/auth.js');
     if (!getClaudeAIOAuthTokens()?.accessToken) {
       exitWithError(BRIDGE_LOGIN_ERROR);
     }
@@ -166,10 +155,9 @@ async function main(): Promise<void> {
     }
 
     // Bridge is a remote control feature - check policy limits
-    const {
-      waitForPolicyLimitsToLoad,
-      isPolicyAllowed
-    } = await import('../services/policyLimits/index.js');
+    const { waitForPolicyLimitsToLoad, isPolicyAllowed } = await import(
+      '../services/policyLimits/index.js'
+    );
     await waitForPolicyLimitsToLoad();
     if (!isPolicyAllowed('allow_remote_control')) {
       exitWithError("Error: Remote Control is disabled by your organization's policy.");
@@ -181,13 +169,9 @@ async function main(): Promise<void> {
   // Fast-path for `claude daemon [subcommand]`: long-running supervisor.
   if (feature('DAEMON') && args[0] === 'daemon') {
     profileCheckpoint('cli_daemon_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
+    const { enableConfigs } = await import('../utils/config.js');
     enableConfigs();
-    const {
-      initSinks
-    } = await import('../utils/sinks.js');
+    const { initSinks } = await import('../utils/sinks.js');
     initSinks();
     const { daemonMain } = require('../daemon/main.js') as any;
     await daemonMain(args.slice(1));
@@ -197,11 +181,17 @@ async function main(): Promise<void> {
   // Fast-path for `claude ps|logs|attach|kill` and `--bg`/`--background`.
   // Session management against the ~/.claude/sessions/ registry. Flag
   // literals are inlined so bg.js only loads when actually dispatching.
-  if (feature('BG_SESSIONS') && (args[0] === 'ps' || args[0] === 'logs' || args[0] === 'attach' || args[0] === 'kill' || args.includes('--bg') || args.includes('--background'))) {
+  if (
+    feature('BG_SESSIONS') &&
+    (args[0] === 'ps' ||
+      args[0] === 'logs' ||
+      args[0] === 'attach' ||
+      args[0] === 'kill' ||
+      args.includes('--bg') ||
+      args.includes('--background'))
+  ) {
     profileCheckpoint('cli_bg_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
+    const { enableConfigs } = await import('../utils/config.js');
     enableConfigs();
     const bg = await import('../cli/bg.js');
     switch (args[0]) {
@@ -226,9 +216,7 @@ async function main(): Promise<void> {
   // Fast-path for template job commands.
   if (feature('TEMPLATES') && (args[0] === 'new' || args[0] === 'list' || args[0] === 'reply')) {
     profileCheckpoint('cli_templates_path');
-    const {
-      templatesMain
-    } = await import('../cli/handlers/templateJobs.js');
+    const { templatesMain } = await import('../cli/handlers/templateJobs.js');
     await templatesMain(args);
     // process.exit (not return) — mountFleetView's Ink TUI can leave event
     // loop handles that prevent natural exit.
@@ -257,28 +245,25 @@ async function main(): Promise<void> {
 
   // Fast-path for --worktree --tmux: exec into tmux before loading full CLI
   const hasTmuxFlag = args.includes('--tmux') || args.includes('--tmux=classic');
-  if (hasTmuxFlag && (args.includes('-w') || args.includes('--worktree') || args.some(a => a.startsWith('--worktree=')))) {
+  if (
+    hasTmuxFlag &&
+    (args.includes('-w') ||
+      args.includes('--worktree') ||
+      args.some((a) => a.startsWith('--worktree=')))
+  ) {
     profileCheckpoint('cli_tmux_worktree_fast_path');
-    const {
-      enableConfigs
-    } = await import('../utils/config.js');
+    const { enableConfigs } = await import('../utils/config.js');
     enableConfigs();
-    const {
-      isWorktreeModeEnabled
-    } = await import('../utils/worktreeModeEnabled.js');
+    const { isWorktreeModeEnabled } = await import('../utils/worktreeModeEnabled.js');
     if (isWorktreeModeEnabled()) {
-      const {
-        execIntoTmuxWorktree
-      } = await import('../utils/worktree.js');
+      const { execIntoTmuxWorktree } = await import('../utils/worktree.js');
       const result = await execIntoTmuxWorktree(args);
       if (result.handled) {
         return;
       }
       // If not handled (e.g., error), fall through to normal CLI
       if (result.error) {
-        const {
-          exitWithError
-        } = await import('../utils/process.js');
+        const { exitWithError } = await import('../utils/process.js');
         exitWithError(result.error);
       }
     }
@@ -296,14 +281,10 @@ async function main(): Promise<void> {
   }
 
   // No special flags detected, load and run the full CLI
-  const {
-    startCapturingEarlyInput
-  } = await import('../utils/earlyInput.js');
+  const { startCapturingEarlyInput } = await import('../utils/earlyInput.js');
   startCapturingEarlyInput();
   profileCheckpoint('cli_before_main_import');
-  const {
-    main: cliMain
-  } = await import('../main.js');
+  const { main: cliMain } = await import('../main.js');
   profileCheckpoint('cli_after_main_import');
   await cliMain();
   profileCheckpoint('cli_after_main_complete');

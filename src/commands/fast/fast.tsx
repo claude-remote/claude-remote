@@ -1,65 +1,79 @@
-import { c as _c } from "react/compiler-runtime";
-import * as React from 'react';
+import type * as React from 'react';
 import { useState } from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands.js';
-import { Dialog } from '../../components/design-system/Dialog.js';
 import { FastIcon, getFastIconString } from '../../components/FastIcon.js';
+import { Dialog } from '../../components/design-system/Dialog.js';
 import { Box, Link, Text } from '../../ink.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
+import {
+  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logEvent,
+} from '../../services/analytics/index.js';
 import { type AppState, useAppState, useSetAppState } from '../../state/AppState.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
-import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, getFastModeModel, getFastModeRuntimeState, getFastModeUnavailableReason, isFastModeEnabled, isFastModeSupportedByModel, prefetchFastModeStatus } from '../../utils/fastMode.js';
+import {
+  FAST_MODE_MODEL_DISPLAY,
+  clearFastModeCooldown,
+  getFastModeModel,
+  getFastModeRuntimeState,
+  getFastModeUnavailableReason,
+  isFastModeEnabled,
+  isFastModeSupportedByModel,
+  prefetchFastModeStatus,
+} from '../../utils/fastMode.js';
 import { formatDuration } from '../../utils/format.js';
 import { formatModelPricing, getOpus46CostTier } from '../../utils/modelCost.js';
 import { updateSettingsForSource } from '../../utils/settings/settings.js';
-function applyFastMode(enable: boolean, setAppState: (f: (prev: AppState) => AppState) => void): void {
+function applyFastMode(
+  enable: boolean,
+  setAppState: (f: (prev: AppState) => AppState) => void,
+): void {
   clearFastModeCooldown();
   updateSettingsForSource('userSettings', {
-    fastMode: enable ? true : undefined
+    fastMode: enable ? true : undefined,
   });
   if (enable) {
-    setAppState(prev => {
+    setAppState((prev) => {
       // Only switch model if current model doesn't support fast mode
       const needsModelSwitch = !isFastModeSupportedByModel(prev.mainLoopModel);
       return {
         ...prev,
-        ...(needsModelSwitch ? {
-          mainLoopModel: getFastModeModel(),
-          mainLoopModelForSession: null
-        } : {}),
-        fastMode: true
+        ...(needsModelSwitch
+          ? {
+              mainLoopModel: getFastModeModel(),
+              mainLoopModelForSession: null,
+            }
+          : {}),
+        fastMode: true,
       };
     });
   } else {
-    setAppState(prev => ({
+    setAppState((prev) => ({
       ...prev,
-      fastMode: false
+      fastMode: false,
     }));
   }
 }
 export function FastModePicker(t0) {
   const $ = _c(30);
-  const {
-    onDone,
-    unavailableReason
-  } = t0;
+  const { onDone, unavailableReason } = t0;
   const model = useAppState(_temp);
   const initialFastMode = useAppState(_temp2);
   const setAppState = useSetAppState();
   const [enableFastMode, setEnableFastMode] = useState(initialFastMode ?? false);
   let t1;
-  if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[0] === Symbol.for('react.memo_cache_sentinel')) {
     t1 = getFastModeRuntimeState();
     $[0] = t1;
   } else {
     t1 = $[0];
   }
   const runtimeState = t1;
-  const isCooldown = runtimeState.status === "cooldown";
+  const isCooldown = runtimeState.status === 'cooldown';
   const isUnavailable = unavailableReason !== null;
   let t2;
-  if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[1] === Symbol.for('react.memo_cache_sentinel')) {
     t2 = formatModelPricing(getOpus46CostTier(true));
     $[1] = t2;
   } else {
@@ -67,23 +81,31 @@ export function FastModePicker(t0) {
   }
   const pricing = t2;
   let t3;
-  if ($[2] !== enableFastMode || $[3] !== isUnavailable || $[4] !== model || $[5] !== onDone || $[6] !== setAppState) {
+  if (
+    $[2] !== enableFastMode ||
+    $[3] !== isUnavailable ||
+    $[4] !== model ||
+    $[5] !== onDone ||
+    $[6] !== setAppState
+  ) {
     t3 = function handleConfirm() {
       if (isUnavailable) {
         return;
       }
       applyFastMode(enableFastMode, setAppState);
-      logEvent("tengu_fast_mode_toggled", {
+      logEvent('tengu_fast_mode_toggled', {
         enabled: enableFastMode,
-        source: "picker" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        source: 'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
       });
       if (enableFastMode) {
         const fastIcon = getFastIconString(enableFastMode);
-        const modelUpdated = !isFastModeSupportedByModel(model) ? ` · model set to ${FAST_MODE_MODEL_DISPLAY}` : "";
+        const modelUpdated = !isFastModeSupportedByModel(model)
+          ? ` · model set to ${FAST_MODE_MODEL_DISPLAY}`
+          : '';
         onDone(`${fastIcon} Fast mode ON${modelUpdated} · ${pricing}`);
       } else {
         setAppState(_temp3);
-        onDone("Fast mode OFF");
+        onDone('Fast mode OFF');
       }
     };
     $[2] = enableFastMode;
@@ -97,20 +119,27 @@ export function FastModePicker(t0) {
   }
   const handleConfirm = t3;
   let t4;
-  if ($[8] !== initialFastMode || $[9] !== isUnavailable || $[10] !== onDone || $[11] !== setAppState) {
+  if (
+    $[8] !== initialFastMode ||
+    $[9] !== isUnavailable ||
+    $[10] !== onDone ||
+    $[11] !== setAppState
+  ) {
     t4 = function handleCancel() {
       if (isUnavailable) {
         if (initialFastMode) {
           applyFastMode(false, setAppState);
         }
-        onDone("Fast mode OFF", {
-          display: "system"
+        onDone('Fast mode OFF', {
+          display: 'system',
         });
         return;
       }
-      const message = initialFastMode ? `${getFastIconString()} Kept Fast mode ON` : "Kept Fast mode OFF";
+      const message = initialFastMode
+        ? `${getFastIconString()} Kept Fast mode ON`
+        : 'Kept Fast mode OFF';
       onDone(message, {
-        display: "system"
+        display: 'system',
       });
     };
     $[8] = initialFastMode;
@@ -139,12 +168,12 @@ export function FastModePicker(t0) {
   let t6;
   if ($[15] !== handleConfirm || $[16] !== handleToggle) {
     t6 = {
-      "confirm:yes": handleConfirm,
-      "confirm:nextField": handleToggle,
-      "confirm:next": handleToggle,
-      "confirm:previous": handleToggle,
-      "confirm:cycleMode": handleToggle,
-      "confirm:toggle": handleToggle
+      'confirm:yes': handleConfirm,
+      'confirm:nextField': handleToggle,
+      'confirm:next': handleToggle,
+      'confirm:previous': handleToggle,
+      'confirm:cycleMode': handleToggle,
+      'confirm:toggle': handleToggle,
     };
     $[15] = handleConfirm;
     $[16] = handleToggle;
@@ -153,9 +182,9 @@ export function FastModePicker(t0) {
     t6 = $[17];
   }
   let t7;
-  if ($[18] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[18] === Symbol.for('react.memo_cache_sentinel')) {
     t7 = {
-      context: "Confirmation"
+      context: 'Confirmation',
     };
     $[18] = t7;
   } else {
@@ -163,8 +192,12 @@ export function FastModePicker(t0) {
   }
   useKeybindings(t6, t7);
   let t8;
-  if ($[19] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <Text><FastIcon cooldown={isCooldown} /> Fast mode (research preview)</Text>;
+  if ($[19] === Symbol.for('react.memo_cache_sentinel')) {
+    t8 = (
+      <Text>
+        <FastIcon cooldown={isCooldown} /> Fast mode (research preview)
+      </Text>
+    );
     $[19] = t8;
   } else {
     t8 = $[19];
@@ -172,7 +205,14 @@ export function FastModePicker(t0) {
   const title = t8;
   let t9;
   if ($[20] !== isUnavailable) {
-    t9 = exitState => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : isUnavailable ? <Text>Esc to cancel</Text> : <Text>Tab to toggle · Enter to confirm · Esc to cancel</Text>;
+    t9 = (exitState) =>
+      exitState.pending ? (
+        <Text>Press {exitState.keyName} again to exit</Text>
+      ) : isUnavailable ? (
+        <Text>Esc to cancel</Text>
+      ) : (
+        <Text>Tab to toggle · Enter to confirm · Esc to cancel</Text>
+      );
     $[20] = isUnavailable;
     $[21] = t9;
   } else {
@@ -180,9 +220,36 @@ export function FastModePicker(t0) {
   }
   let t10;
   if ($[22] !== enableFastMode || $[23] !== unavailableReason) {
-    t10 = unavailableReason ? <Box marginLeft={2}><Text color="error">{unavailableReason}</Text></Box> : <><Box flexDirection="column" gap={0} marginLeft={2}><Box flexDirection="row" gap={2}><Text bold={true}>Fast mode</Text><Text color={enableFastMode ? "fastMode" : undefined} bold={enableFastMode}>{enableFastMode ? "ON " : "OFF"}</Text><Text dimColor={true}>{pricing}</Text></Box></Box>{isCooldown && runtimeState.status === "cooldown" && <Box marginLeft={2}><Text color="warning">{runtimeState.reason === "overloaded" ? "Fast mode overloaded and is temporarily unavailable" : "You've hit your fast limit"}{" \xB7 resets in "}{formatDuration(runtimeState.resetAt - Date.now(), {
-            hideTrailingZeros: true
-          })}</Text></Box>}</>;
+    t10 = unavailableReason ? (
+      <Box marginLeft={2}>
+        <Text color="error">{unavailableReason}</Text>
+      </Box>
+    ) : (
+      <>
+        <Box flexDirection="column" gap={0} marginLeft={2}>
+          <Box flexDirection="row" gap={2}>
+            <Text bold={true}>Fast mode</Text>
+            <Text color={enableFastMode ? 'fastMode' : undefined} bold={enableFastMode}>
+              {enableFastMode ? 'ON ' : 'OFF'}
+            </Text>
+            <Text dimColor={true}>{pricing}</Text>
+          </Box>
+        </Box>
+        {isCooldown && runtimeState.status === 'cooldown' && (
+          <Box marginLeft={2}>
+            <Text color="warning">
+              {runtimeState.reason === 'overloaded'
+                ? 'Fast mode overloaded and is temporarily unavailable'
+                : "You've hit your fast limit"}
+              {' \xB7 resets in '}
+              {formatDuration(runtimeState.resetAt - Date.now(), {
+                hideTrailingZeros: true,
+              })}
+            </Text>
+          </Box>
+        )}
+      </>
+    );
     $[22] = enableFastMode;
     $[23] = unavailableReason;
     $[24] = t10;
@@ -190,15 +257,33 @@ export function FastModePicker(t0) {
     t10 = $[24];
   }
   let t11;
-  if ($[25] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text dimColor={true}>Learn more:{" "}<Link url="https://code.claude.com/docs/en/fast-mode">https://code.claude.com/docs/en/fast-mode</Link></Text>;
+  if ($[25] === Symbol.for('react.memo_cache_sentinel')) {
+    t11 = (
+      <Text dimColor={true}>
+        Learn more:{' '}
+        <Link url="https://code.claude.com/docs/en/fast-mode">
+          https://code.claude.com/docs/en/fast-mode
+        </Link>
+      </Text>
+    );
     $[25] = t11;
   } else {
     t11 = $[25];
   }
   let t12;
   if ($[26] !== handleCancel || $[27] !== t10 || $[28] !== t9) {
-    t12 = <Dialog title={title} subtitle={`High-speed mode for ${FAST_MODE_MODEL_DISPLAY}. Billed as extra usage at a premium rate. Separate rate limits apply.`} onCancel={handleCancel} color="fastMode" inputGuide={t9}>{t10}{t11}</Dialog>;
+    t12 = (
+      <Dialog
+        title={title}
+        subtitle={`High-speed mode for ${FAST_MODE_MODEL_DISPLAY}. Billed as extra usage at a premium rate. Separate rate limits apply.`}
+        onCancel={handleCancel}
+        color="fastMode"
+        inputGuide={t9}
+      >
+        {t10}
+        {t11}
+      </Dialog>
+    );
     $[26] = handleCancel;
     $[27] = t10;
     $[28] = t9;
@@ -214,7 +299,7 @@ function _temp4(prev_0) {
 function _temp3(prev) {
   return {
     ...prev,
-    fastMode: false
+    fastMode: false,
   };
 }
 function _temp2(s_0) {
@@ -223,29 +308,36 @@ function _temp2(s_0) {
 function _temp(s) {
   return s.mainLoopModel;
 }
-async function handleFastModeShortcut(enable: boolean, getAppState: () => AppState, setAppState: (f: (prev: AppState) => AppState) => void): Promise<string> {
+async function handleFastModeShortcut(
+  enable: boolean,
+  getAppState: () => AppState,
+  setAppState: (f: (prev: AppState) => AppState) => void,
+): Promise<string> {
   const unavailableReason = getFastModeUnavailableReason();
   if (unavailableReason) {
     return `Fast mode unavailable: ${unavailableReason}`;
   }
-  const {
-    mainLoopModel
-  } = getAppState();
+  const { mainLoopModel } = getAppState();
   applyFastMode(enable, setAppState);
   logEvent('tengu_fast_mode_toggled', {
     enabled: enable,
-    source: 'shortcut' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    source: 'shortcut' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   });
   if (enable) {
     const fastIcon = getFastIconString(true);
-    const modelUpdated = !isFastModeSupportedByModel(mainLoopModel) ? ` · model set to ${FAST_MODE_MODEL_DISPLAY}` : '';
+    const modelUpdated = !isFastModeSupportedByModel(mainLoopModel)
+      ? ` · model set to ${FAST_MODE_MODEL_DISPLAY}`
+      : '';
     const pricing = formatModelPricing(getOpus46CostTier(true));
     return `${fastIcon} Fast mode ON${modelUpdated} · ${pricing}`;
-  } else {
-    return `Fast mode OFF`;
   }
+  return 'Fast mode OFF';
 }
-export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext, args?: string): Promise<React.ReactNode | null> {
+export async function call(
+  onDone: LocalJSXCommandOnDone,
+  context: LocalJSXCommandContext,
+  args?: string,
+): Promise<React.ReactNode | null> {
   if (!isFastModeEnabled()) {
     return null;
   }
@@ -256,13 +348,18 @@ export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXComma
   await prefetchFastModeStatus();
   const arg = args?.trim().toLowerCase();
   if (arg === 'on' || arg === 'off') {
-    const result = await handleFastModeShortcut(arg === 'on', context.getAppState, context.setAppState);
+    const result = await handleFastModeShortcut(
+      arg === 'on',
+      context.getAppState,
+      context.setAppState,
+    );
     onDone(result);
     return null;
   }
   const unavailableReason = getFastModeUnavailableReason();
   logEvent('tengu_fast_mode_picker_shown', {
-    unavailable_reason: (unavailableReason ?? '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    unavailable_reason: (unavailableReason ??
+      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   });
   return <FastModePicker onDone={onDone} unavailableReason={unavailableReason} />;
 }

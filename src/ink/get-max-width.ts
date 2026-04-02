@@ -1,4 +1,4 @@
-import { LayoutEdge, type LayoutNode } from './layout/node.js'
+import { LayoutEdge, type LayoutNode } from './layout/node.js';
 
 /**
  * Returns the yoga node's content width (computed width minus padding and
@@ -21,7 +21,7 @@ const getMaxWidth = (yogaNode: LayoutNode): number => {
     yogaNode.getComputedPadding(LayoutEdge.Right) -
     yogaNode.getComputedBorder(LayoutEdge.Left) -
     yogaNode.getComputedBorder(LayoutEdge.Right)
-  )
-}
+  );
+};
 
-export default getMaxWidth
+export default getMaxWidth;

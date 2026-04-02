@@ -1,5 +1,5 @@
-import { c as _c } from "react/compiler-runtime";
-import React from 'react';
+import type React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { FpsMetricsProvider } from '../context/fpsMetrics.js';
 import { StatsProvider, type StatsStore } from '../context/stats.js';
 import { type AppState, AppStateProvider } from '../state/AppState.js';
@@ -18,15 +18,14 @@ type Props = {
  */
 export function App(t0) {
   const $ = _c(9);
-  const {
-    getFpsMetrics,
-    stats,
-    initialState,
-    children
-  } = t0;
+  const { getFpsMetrics, stats, initialState, children } = t0;
   let t1;
   if ($[0] !== children || $[1] !== initialState) {
-    t1 = <AppStateProvider initialState={initialState} onChangeAppState={onChangeAppState}>{children}</AppStateProvider>;
+    t1 = (
+      <AppStateProvider initialState={initialState} onChangeAppState={onChangeAppState}>
+        {children}
+      </AppStateProvider>
+    );
     $[0] = children;
     $[1] = initialState;
     $[2] = t1;

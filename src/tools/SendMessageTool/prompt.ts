@@ -1,12 +1,12 @@
-import { feature } from 'src/utils/feature.js'
+import { feature } from 'src/utils/feature.js';
 
-export const DESCRIPTION = 'Send a message to another agent'
+export const DESCRIPTION = 'Send a message to another agent';
 
 export function getPrompt(): string {
   const udsRow = feature('UDS_INBOX')
     ? `\n| \`"uds:/path/to.sock"\` | Local Claude session's socket (same machine; use \`ListPeers\`) |
 | \`"bridge:session_..."\` | Remote Control peer session (cross-machine; use \`ListPeers\`) |`
-    : ''
+    : '';
   const udsSection = feature('UDS_INBOX')
     ? `\n\n## Cross-session
 
@@ -18,7 +18,7 @@ Use \`ListPeers\` to discover targets, then:
 \`\`\`
 
 A listed peer is alive and will process your message — no "busy" state; messages enqueue and drain at the receiver's next tool round. Your message arrives wrapped as \`<cross-session-message from="...">\`. **To reply to an incoming message, copy its \`from\` attribute as your \`to\`.**`
-    : ''
+    : '';
   return `
 # SendMessage
 
@@ -45,5 +45,5 @@ If you receive a JSON message with \`type: "shutdown_request"\` or \`type: "plan
 \`\`\`
 
 Approving shutdown terminates your process. Rejecting plan sends the teammate back to revise. Don't originate \`shutdown_request\` unless asked. Don't send structured JSON status messages — use TaskUpdate.
-`.trim()
+`.trim();
 }

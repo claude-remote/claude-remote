@@ -1,18 +1,18 @@
-import { DEFAULT_BINDINGS } from '../../keybindings/defaultBindings.js'
-import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js'
+import { DEFAULT_BINDINGS } from '../../keybindings/defaultBindings.js';
+import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js';
 import {
   MACOS_RESERVED,
   NON_REBINDABLE,
   TERMINAL_RESERVED,
-} from '../../keybindings/reservedShortcuts.js'
-import type { KeybindingsSchemaType } from '../../keybindings/schema.js'
+} from '../../keybindings/reservedShortcuts.js';
+import type { KeybindingsSchemaType } from '../../keybindings/schema.js';
 import {
   KEYBINDING_ACTIONS,
-  KEYBINDING_CONTEXT_DESCRIPTIONS,
   KEYBINDING_CONTEXTS,
-} from '../../keybindings/schema.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+  KEYBINDING_CONTEXT_DESCRIPTIONS,
+} from '../../keybindings/schema.js';
+import { jsonStringify } from '../../utils/slowOperations.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 /**
  * Build a markdown table of all contexts.
@@ -20,11 +20,8 @@ import { registerBundledSkill } from '../bundledSkills.js'
 function generateContextsTable(): string {
   return markdownTable(
     ['Context', 'Description'],
-    KEYBINDING_CONTEXTS.map(ctx => [
-      `\`${ctx}\``,
-      KEYBINDING_CONTEXT_DESCRIPTIONS[ctx],
-    ]),
-  )
+    KEYBINDING_CONTEXTS.map((ctx) => [`\`${ctx}\``, KEYBINDING_CONTEXT_DESCRIPTIONS[ctx]]),
+  );
 }
 
 /**
@@ -32,34 +29,34 @@ function generateContextsTable(): string {
  */
 function generateActionsTable(): string {
   // Build a lookup: action -> { keys, context }
-  const actionInfo: Record<string, { keys: string[]; context: string }> = {}
+  const actionInfo: Record<string, { keys: string[]; context: string }> = {};
   for (const block of DEFAULT_BINDINGS) {
     for (const [key, action] of Object.entries(block.bindings)) {
       if (action) {
         if (!actionInfo[action]) {
-          actionInfo[action] = { keys: [], context: block.context }
+          actionInfo[action] = { keys: [], context: block.context };
         }
-        actionInfo[action].keys.push(key)
+        actionInfo[action].keys.push(key);
       }
     }
   }
 
   return markdownTable(
     ['Action', 'Default Key(s)', 'Context'],
-    KEYBINDING_ACTIONS.map(action => {
-      const info = actionInfo[action]
-      const keys = info ? info.keys.map(k => `\`${k}\``).join(', ') : '(none)'
-      const context = info ? info.context : inferContextFromAction(action)
-      return [`\`${action}\``, keys, context]
+    KEYBINDING_ACTIONS.map((action) => {
+      const info = actionInfo[action];
+      const keys = info ? info.keys.map((k) => `\`${k}\``).join(', ') : '(none)';
+      const context = info ? info.context : inferContextFromAction(action);
+      return [`\`${action}\``, keys, context];
     }),
-  )
+  );
 }
 
 /**
  * Infer context from action prefix when not in DEFAULT_BINDINGS.
  */
 function inferContextFromAction(action: string): string {
-  const prefix = action.split(':')[0]
+  const prefix = action.split(':')[0];
   const prefixToContext: Record<string, string> = {
     app: 'Global',
     history: 'Global or Chat',
@@ -79,36 +76,36 @@ function inferContextFromAction(action: string): string {
     modelPicker: 'ModelPicker',
     select: 'Select',
     permission: 'Confirmation',
-  }
-  return prefixToContext[prefix ?? ''] ?? 'Unknown'
+  };
+  return prefixToContext[prefix ?? ''] ?? 'Unknown';
 }
 
 /**
  * Build a list of reserved shortcuts.
  */
 function generateReservedShortcuts(): string {
-  const lines: string[] = []
+  const lines: string[] = [];
 
-  lines.push('### Non-rebindable (errors)')
+  lines.push('### Non-rebindable (errors)');
   for (const s of NON_REBINDABLE) {
-    lines.push(`- \`${s.key}\` — ${s.reason}`)
+    lines.push(`- \`${s.key}\` — ${s.reason}`);
   }
 
-  lines.push('')
-  lines.push('### Terminal reserved (errors/warnings)')
+  lines.push('');
+  lines.push('### Terminal reserved (errors/warnings)');
   for (const s of TERMINAL_RESERVED) {
     lines.push(
       `- \`${s.key}\` — ${s.reason} (${s.severity === 'error' ? 'will not work' : 'may conflict'})`,
-    )
+    );
   }
 
-  lines.push('')
-  lines.push('### macOS reserved (errors)')
+  lines.push('');
+  lines.push('### macOS reserved (errors)');
   for (const s of MACOS_RESERVED) {
-    lines.push(`- \`${s.key}\` — ${s.reason}`)
+    lines.push(`- \`${s.key}\` — ${s.reason}`);
   }
 
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
 const FILE_FORMAT_EXAMPLE: KeybindingsSchemaType = {
@@ -122,14 +119,14 @@ const FILE_FORMAT_EXAMPLE: KeybindingsSchemaType = {
       },
     },
   ],
-}
+};
 
 const UNBIND_EXAMPLE: KeybindingsSchemaType['bindings'][number] = {
   context: 'Chat',
   bindings: {
     'ctrl+s': null,
   },
-}
+};
 
 const REBIND_EXAMPLE: KeybindingsSchemaType['bindings'][number] = {
   context: 'Chat',
@@ -137,14 +134,14 @@ const REBIND_EXAMPLE: KeybindingsSchemaType['bindings'][number] = {
     'ctrl+g': null,
     'ctrl+e': 'chat:externalEditor',
   },
-}
+};
 
 const CHORD_EXAMPLE: KeybindingsSchemaType['bindings'][number] = {
   context: 'Global',
   bindings: {
     'ctrl+k ctrl+t': 'app:toggleTodos',
   },
-}
+};
 
 const SECTION_INTRO = [
   '# Keybindings Skill',
@@ -157,7 +154,7 @@ const SECTION_INTRO = [
   '',
   '- Use **Edit** tool for modifications to existing files',
   '- Use **Write** tool only if the file does not exist yet',
-].join('\n')
+].join('\n');
 
 const SECTION_FILE_FORMAT = [
   '## File Format',
@@ -167,7 +164,7 @@ const SECTION_FILE_FORMAT = [
   '```',
   '',
   'Always include the `$schema` and `$docs` fields.',
-].join('\n')
+].join('\n');
 
 const SECTION_KEYSTROKE_SYNTAX = [
   '## Keystroke Syntax',
@@ -183,7 +180,7 @@ const SECTION_KEYSTROKE_SYNTAX = [
   '**Chords**: Space-separated keystrokes, e.g. `ctrl+k ctrl+s` (1-second timeout between keystrokes)',
   '',
   '**Examples**: `ctrl+shift+p`, `alt+enter`, `ctrl+k ctrl+n`',
-].join('\n')
+].join('\n');
 
 const SECTION_UNBINDING = [
   '## Unbinding Default Shortcuts',
@@ -193,7 +190,7 @@ const SECTION_UNBINDING = [
   '```json',
   jsonStringify(UNBIND_EXAMPLE, null, 2),
   '```',
-].join('\n')
+].join('\n');
 
 const SECTION_INTERACTION = [
   '## How User Bindings Interact with Defaults',
@@ -201,7 +198,7 @@ const SECTION_INTERACTION = [
   '- User bindings are **additive** — they are appended after the default bindings',
   '- To **move** a binding to a different key: unbind the old key (`null`) AND add the new binding',
   "- A context only needs to appear in the user's file if they want to change something in that context",
-].join('\n')
+].join('\n');
 
 const SECTION_COMMON_PATTERNS = [
   '## Common Patterns',
@@ -216,7 +213,7 @@ const SECTION_COMMON_PATTERNS = [
   '```json',
   jsonStringify(CHORD_EXAMPLE, null, 2),
   '```',
-].join('\n')
+].join('\n');
 
 const SECTION_BEHAVIORAL_RULES = [
   '## Behavioral Rules',
@@ -226,7 +223,7 @@ const SECTION_BEHAVIORAL_RULES = [
   '3. Warn the user proactively if they choose a key that conflicts with reserved shortcuts or common tools like tmux (`ctrl+b`) and screen (`ctrl+a`)',
   '4. When adding a new binding for an existing action, the new binding is additive (existing default still works unless explicitly unbound)',
   '5. To fully replace a default binding, unbind the old key AND add the new one',
-].join('\n')
+].join('\n');
 
 const SECTION_DOCTOR = [
   '## Validation with /doctor',
@@ -287,7 +284,7 @@ const SECTION_DOCTOR = [
   '```',
   '',
   '**Errors** prevent bindings from working and must be fixed. **Warnings** indicate potential conflicts but the binding may still work.',
-].join('\n')
+].join('\n');
 
 export function registerKeybindingsSkill(): void {
   registerBundledSkill({
@@ -299,9 +296,9 @@ export function registerKeybindingsSkill(): void {
     isEnabled: isKeybindingCustomizationEnabled,
     async getPromptForCommand(args) {
       // Generate reference tables dynamically from source-of-truth arrays
-      const contextsTable = generateContextsTable()
-      const actionsTable = generateActionsTable()
-      const reservedShortcuts = generateReservedShortcuts()
+      const contextsTable = generateContextsTable();
+      const actionsTable = generateActionsTable();
+      const reservedShortcuts = generateReservedShortcuts();
 
       const sections = [
         SECTION_INTRO,
@@ -315,25 +312,25 @@ export function registerKeybindingsSkill(): void {
         `## Reserved Shortcuts\n\n${reservedShortcuts}`,
         `## Available Contexts\n\n${contextsTable}`,
         `## Available Actions\n\n${actionsTable}`,
-      ]
+      ];
 
       if (args) {
-        sections.push(`## User Request\n\n${args}`)
+        sections.push(`## User Request\n\n${args}`);
       }
 
-      return [{ type: 'text', text: sections.join('\n\n') }]
+      return [{ type: 'text', text: sections.join('\n\n') }];
     },
-  })
+  });
 }
 
 /**
  * Build a markdown table from headers and rows.
  */
 function markdownTable(headers: string[], rows: string[][]): string {
-  const separator = headers.map(() => '---')
+  const separator = headers.map(() => '---');
   return [
     `| ${headers.join(' | ')} |`,
     `| ${separator.join(' | ')} |`,
-    ...rows.map(row => `| ${row.join(' | ')} |`),
-  ].join('\n')
+    ...rows.map((row) => `| ${row.join(' | ')} |`),
+  ].join('\n');
 }

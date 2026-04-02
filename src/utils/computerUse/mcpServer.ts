@@ -1,21 +1,18 @@
-import {
-  buildComputerUseTools,
-  createComputerUseMcpServer,
-} from '@ant/computer-use-mcp'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { homedir } from 'os'
+import { homedir } from 'node:os';
+import { buildComputerUseTools, createComputerUseMcpServer } from '@ant/computer-use-mcp';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
-import { shutdownDatadog } from '../../services/analytics/datadog.js'
-import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
-import { initializeAnalyticsSink } from '../../services/analytics/sink.js'
-import { enableConfigs } from '../config.js'
-import { logForDebugging } from '../debug.js'
-import { filterAppsForDescription } from './appNames.js'
-import { getChicagoCoordinateMode } from './gates.js'
-import { getComputerUseHostAdapter } from './hostAdapter.js'
+import { shutdownDatadog } from '../../services/analytics/datadog.js';
+import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js';
+import { initializeAnalyticsSink } from '../../services/analytics/sink.js';
+import { enableConfigs } from '../config.js';
+import { logForDebugging } from '../debug.js';
+import { filterAppsForDescription } from './appNames.js';
+import { getChicagoCoordinateMode } from './gates.js';
+import { getComputerUseHostAdapter } from './hostAdapter.js';
 
-const APP_ENUM_TIMEOUT_MS = 1000
+const APP_ENUM_TIMEOUT_MS = 1000;
 
 /**
  * Enumerate installed apps, timed. Fails soft — if Spotlight is slow or
@@ -23,24 +20,24 @@ const APP_ENUM_TIMEOUT_MS = 1000
  * happens at call time regardless; the model just doesn't get hints.
  */
 async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
-  const adapter = getComputerUseHostAdapter()
-  const enumP = adapter.executor.listInstalledApps()
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeoutP = new Promise<undefined>(resolve => {
-    timer = setTimeout(resolve, APP_ENUM_TIMEOUT_MS, undefined)
-  })
+  const adapter = getComputerUseHostAdapter();
+  const enumP = adapter.executor.listInstalledApps();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutP = new Promise<undefined>((resolve) => {
+    timer = setTimeout(resolve, APP_ENUM_TIMEOUT_MS, undefined);
+  });
   const installed = await Promise.race([enumP, timeoutP])
     .catch(() => undefined)
-    .finally(() => clearTimeout(timer))
+    .finally(() => clearTimeout(timer));
   if (!installed) {
     // The enumeration continues in the background — swallow late rejections.
-    void enumP.catch(() => {})
+    void enumP.catch(() => {});
     logForDebugging(
       `[Computer Use MCP] app enumeration exceeded ${APP_ENUM_TIMEOUT_MS}ms or failed; tool description omits list`,
-    )
-    return undefined
+    );
+    return undefined;
   }
-  return filterAppsForDescription(installed, homedir())
+  return filterAppsForDescription(installed, homedir());
 }
 
 /**
@@ -60,21 +57,21 @@ async function tryGetInstalledAppNames(): Promise<string[] | undefined> {
 export async function createComputerUseMcpServerForCli(): Promise<
   ReturnType<typeof createComputerUseMcpServer>
 > {
-  const adapter = getComputerUseHostAdapter()
-  const coordinateMode = getChicagoCoordinateMode()
-  const server = createComputerUseMcpServer(adapter, coordinateMode)
+  const adapter = getComputerUseHostAdapter();
+  const coordinateMode = getChicagoCoordinateMode();
+  const server = createComputerUseMcpServer(adapter, coordinateMode);
 
-  const installedAppNames = await tryGetInstalledAppNames()
+  const installedAppNames = await tryGetInstalledAppNames();
   const tools = buildComputerUseTools(
     adapter.executor.capabilities,
     coordinateMode,
     installedAppNames,
-  )
+  );
   server.setRequestHandler(ListToolsRequestSchema, async () =>
     adapter.isDisabled() ? { tools: [] } : { tools },
-  )
+  );
 
-  return server
+  return server;
 }
 
 /**
@@ -83,24 +80,24 @@ export async function createComputerUseMcpServerForCli(): Promise<
  * flush analytics before exit.
  */
 export async function runComputerUseMcpServer(): Promise<void> {
-  enableConfigs()
-  initializeAnalyticsSink()
+  enableConfigs();
+  initializeAnalyticsSink();
 
-  const server = await createComputerUseMcpServerForCli()
-  const transport = new StdioServerTransport()
+  const server = await createComputerUseMcpServerForCli();
+  const transport = new StdioServerTransport();
 
-  let exiting = false
+  let exiting = false;
   const shutdownAndExit = async (): Promise<void> => {
-    if (exiting) return
-    exiting = true
-    await Promise.all([shutdown1PEventLogging(), shutdownDatadog()])
+    if (exiting) return;
+    exiting = true;
+    await Promise.all([shutdown1PEventLogging(), shutdownDatadog()]);
     // eslint-disable-next-line custom-rules/no-process-exit
-    process.exit(0)
-  }
-  process.stdin.on('end', () => void shutdownAndExit())
-  process.stdin.on('error', () => void shutdownAndExit())
+    process.exit(0);
+  };
+  process.stdin.on('end', () => void shutdownAndExit());
+  process.stdin.on('error', () => void shutdownAndExit());
 
-  logForDebugging('[Computer Use MCP] Starting MCP server')
-  await server.connect(transport)
-  logForDebugging('[Computer Use MCP] MCP server started')
+  logForDebugging('[Computer Use MCP] Starting MCP server');
+  await server.connect(transport);
+  logForDebugging('[Computer Use MCP] MCP server started');
 }

@@ -1,14 +1,14 @@
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js'
-import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
-import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from '../GrepTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from '../NotebookEditTool/constants.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils.js';
+import { AGENT_TOOL_NAME } from '../AgentTool/constants.js';
+import { BASH_TOOL_NAME } from '../BashTool/toolName.js';
+import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants.js';
+import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt.js';
+import { FILE_WRITE_TOOL_NAME } from '../FileWriteTool/prompt.js';
+import { GLOB_TOOL_NAME } from '../GlobTool/prompt.js';
+import { GREP_TOOL_NAME } from '../GrepTool/prompt.js';
+import { NOTEBOOK_EDIT_TOOL_NAME } from '../NotebookEditTool/constants.js';
 
-export const REPL_TOOL_NAME = 'REPL'
+export const REPL_TOOL_NAME = 'REPL';
 
 /**
  * REPL mode is default-on for ants in the interactive CLI (opt out with
@@ -21,12 +21,9 @@ export const REPL_TOOL_NAME = 'REPL'
  * of the env the caller passes.
  */
 export function isReplModeEnabled(): boolean {
-  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_REPL)) return false
-  if (isEnvTruthy(process.env.CLAUDE_REPL_MODE)) return true
-  return (
-    process.env.USER_TYPE === 'ant' &&
-    process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
-  )
+  if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_REPL)) return false;
+  if (isEnvTruthy(process.env.CLAUDE_REPL_MODE)) return true;
+  return process.env.USER_TYPE === 'ant' && process.env.CLAUDE_CODE_ENTRYPOINT === 'cli';
 }
 
 /**
@@ -43,4 +40,4 @@ export const REPL_ONLY_TOOLS = new Set([
   BASH_TOOL_NAME,
   NOTEBOOK_EDIT_TOOL_NAME,
   AGENT_TOOL_NAME,
-])
+]);

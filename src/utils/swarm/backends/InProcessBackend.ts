@@ -1,26 +1,20 @@
-import type { ToolUseContext } from '../../../Tool.js'
+import type { ToolUseContext } from '../../../Tool.js';
 import {
   findTeammateTaskByAgentId,
   requestTeammateShutdown,
-} from '../../../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
-import { parseAgentId } from '../../../utils/agentId.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
-import {
-  createShutdownRequestMessage,
-  writeToMailbox,
-} from '../../../utils/teammateMailbox.js'
-import { startInProcessTeammate } from '../inProcessRunner.js'
-import {
-  killInProcessTeammate,
-  spawnInProcessTeammate,
-} from '../spawnInProcess.js'
+} from '../../../tasks/InProcessTeammateTask/InProcessTeammateTask.js';
+import { parseAgentId } from '../../../utils/agentId.js';
+import { logForDebugging } from '../../../utils/debug.js';
+import { jsonStringify } from '../../../utils/slowOperations.js';
+import { createShutdownRequestMessage, writeToMailbox } from '../../../utils/teammateMailbox.js';
+import { startInProcessTeammate } from '../inProcessRunner.js';
+import { killInProcessTeammate, spawnInProcessTeammate } from '../spawnInProcess.js';
 import type {
   TeammateExecutor,
   TeammateMessage,
   TeammateSpawnConfig,
   TeammateSpawnResult,
-} from './types.js'
+} from './types.js';
 
 /**
  * InProcessBackend implements TeammateExecutor for in-process teammates.
@@ -36,27 +30,27 @@ import type {
  * abstraction (getTeammateExecutor() in registry.ts).
  */
 export class InProcessBackend implements TeammateExecutor {
-  readonly type = 'in-process' as const
+  readonly type = 'in-process' as const;
 
   /**
    * Tool use context for AppState access.
    * Must be set via setContext() before spawn() is called.
    */
-  private context: ToolUseContext | null = null
+  private context: ToolUseContext | null = null;
 
   /**
    * Sets the ToolUseContext for this backend.
    * Called by TeammateTool before spawning to provide AppState access.
    */
   setContext(context: ToolUseContext): void {
-    this.context = context
+    this.context = context;
   }
 
   /**
    * In-process backend is always available (no external dependencies).
    */
   async isAvailable(): Promise<boolean> {
-    return true
+    return true;
   }
 
   /**
@@ -71,18 +65,15 @@ export class InProcessBackend implements TeammateExecutor {
    */
   async spawn(config: TeammateSpawnConfig): Promise<TeammateSpawnResult> {
     if (!this.context) {
-      logForDebugging(
-        `[InProcessBackend] spawn() called without context for ${config.name}`,
-      )
+      logForDebugging(`[InProcessBackend] spawn() called without context for ${config.name}`);
       return {
         success: false,
         agentId: `${config.name}@${config.teamName}`,
-        error:
-          'InProcessBackend not initialized. Call setContext() before spawn().',
-      }
+        error: 'InProcessBackend not initialized. Call setContext() before spawn().',
+      };
     }
 
-    logForDebugging(`[InProcessBackend] spawn() called for ${config.name}`)
+    logForDebugging(`[InProcessBackend] spawn() called for ${config.name}`);
 
     const result = await spawnInProcessTeammate(
       {
@@ -93,15 +84,10 @@ export class InProcessBackend implements TeammateExecutor {
         planModeRequired: config.planModeRequired ?? false,
       },
       this.context,
-    )
+    );
 
     // If spawn succeeded, start the agent execution loop
-    if (
-      result.success &&
-      result.taskId &&
-      result.teammateContext &&
-      result.abortController
-    ) {
+    if (result.success && result.taskId && result.teammateContext && result.abortController) {
       // Start the agent loop in the background (fire-and-forget)
       // The prompt is passed through the task state and config
       startInProcessTeammate({
@@ -126,11 +112,9 @@ export class InProcessBackend implements TeammateExecutor {
         systemPromptMode: config.systemPromptMode,
         allowedTools: config.permissions,
         allowPermissionPrompts: config.allowPermissionPrompts,
-      })
+      });
 
-      logForDebugging(
-        `[InProcessBackend] Started agent execution for ${result.agentId}`,
-      )
+      logForDebugging(`[InProcessBackend] Started agent execution for ${result.agentId}`);
     }
 
     return {
@@ -139,7 +123,7 @@ export class InProcessBackend implements TeammateExecutor {
       taskId: result.taskId,
       abortController: result.abortController,
       error: result.error,
-    }
+    };
   }
 
   /**
@@ -150,19 +134,17 @@ export class InProcessBackend implements TeammateExecutor {
   async sendMessage(agentId: string, message: TeammateMessage): Promise<void> {
     logForDebugging(
       `[InProcessBackend] sendMessage() to ${agentId}: ${message.text.substring(0, 50)}...`,
-    )
+    );
 
     // Parse agentId to get agentName and teamName
     // agentId format: "agentName@teamName" (e.g., "researcher@my-team")
-    const parsed = parseAgentId(agentId)
+    const parsed = parseAgentId(agentId);
     if (!parsed) {
-      logForDebugging(`[InProcessBackend] Invalid agentId format: ${agentId}`)
-      throw new Error(
-        `Invalid agentId format: ${agentId}. Expected format: agentName@teamName`,
-      )
+      logForDebugging(`[InProcessBackend] Invalid agentId format: ${agentId}`);
+      throw new Error(`Invalid agentId format: ${agentId}. Expected format: agentName@teamName`);
     }
 
-    const { agentName, teamName } = parsed
+    const { agentName, teamName } = parsed;
 
     // Write to file-based mailbox
     await writeToMailbox(
@@ -174,9 +156,9 @@ export class InProcessBackend implements TeammateExecutor {
         timestamp: message.timestamp ?? new Date().toISOString(),
       },
       teamName,
-    )
+    );
 
-    logForDebugging(`[InProcessBackend] sendMessage() completed for ${agentId}`)
+    logForDebugging(`[InProcessBackend] sendMessage() completed for ${agentId}`);
   }
 
   /**
@@ -190,48 +172,40 @@ export class InProcessBackend implements TeammateExecutor {
    * exit via the shutdown flow - no external killPane() is needed.
    */
   async terminate(agentId: string, reason?: string): Promise<boolean> {
-    logForDebugging(
-      `[InProcessBackend] terminate() called for ${agentId}: ${reason}`,
-    )
+    logForDebugging(`[InProcessBackend] terminate() called for ${agentId}: ${reason}`);
 
     if (!this.context) {
-      logForDebugging(
-        `[InProcessBackend] terminate() failed: no context set for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] terminate() failed: no context set for ${agentId}`);
+      return false;
     }
 
     // Get current AppState to find the task
-    const state = this.context.getAppState()
-    const task = findTeammateTaskByAgentId(agentId, state.tasks)
+    const state = this.context.getAppState();
+    const task = findTeammateTaskByAgentId(agentId, state.tasks);
 
     if (!task) {
-      logForDebugging(
-        `[InProcessBackend] terminate() failed: task not found for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] terminate() failed: task not found for ${agentId}`);
+      return false;
     }
 
     // Don't send another shutdown request if one is already pending
     if (task.shutdownRequested) {
-      logForDebugging(
-        `[InProcessBackend] terminate(): shutdown already requested for ${agentId}`,
-      )
-      return true
+      logForDebugging(`[InProcessBackend] terminate(): shutdown already requested for ${agentId}`);
+      return true;
     }
 
     // Generate deterministic request ID
-    const requestId = `shutdown-${agentId}-${Date.now()}`
+    const requestId = `shutdown-${agentId}-${Date.now()}`;
 
     // Create shutdown request message
     const shutdownRequest = createShutdownRequestMessage({
       requestId,
       from: 'team-lead', // Terminate is always called by the leader
       reason,
-    })
+    });
 
     // Send to teammate's mailbox
-    const teammateAgentName = task.identity.agentName
+    const teammateAgentName = task.identity.agentName;
     await writeToMailbox(
       teammateAgentName,
       {
@@ -240,16 +214,14 @@ export class InProcessBackend implements TeammateExecutor {
         timestamp: new Date().toISOString(),
       },
       task.identity.teamName,
-    )
+    );
 
     // Mark the task as shutdown requested
-    requestTeammateShutdown(task.id, this.context.setAppState)
+    requestTeammateShutdown(task.id, this.context.setAppState);
 
-    logForDebugging(
-      `[InProcessBackend] terminate() sent shutdown request to ${agentId}`,
-    )
+    logForDebugging(`[InProcessBackend] terminate() sent shutdown request to ${agentId}`);
 
-    return true
+    return true;
   }
 
   /**
@@ -259,34 +231,28 @@ export class InProcessBackend implements TeammateExecutor {
    * and updates the task state to 'killed'.
    */
   async kill(agentId: string): Promise<boolean> {
-    logForDebugging(`[InProcessBackend] kill() called for ${agentId}`)
+    logForDebugging(`[InProcessBackend] kill() called for ${agentId}`);
 
     if (!this.context) {
-      logForDebugging(
-        `[InProcessBackend] kill() failed: no context set for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] kill() failed: no context set for ${agentId}`);
+      return false;
     }
 
     // Get current AppState to find the task
-    const state = this.context.getAppState()
-    const task = findTeammateTaskByAgentId(agentId, state.tasks)
+    const state = this.context.getAppState();
+    const task = findTeammateTaskByAgentId(agentId, state.tasks);
 
     if (!task) {
-      logForDebugging(
-        `[InProcessBackend] kill() failed: task not found for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] kill() failed: task not found for ${agentId}`);
+      return false;
     }
 
     // Kill the teammate via the existing helper function
-    const killed = killInProcessTeammate(task.id, this.context.setAppState)
+    const killed = killInProcessTeammate(task.id, this.context.setAppState);
 
-    logForDebugging(
-      `[InProcessBackend] kill() ${killed ? 'succeeded' : 'failed'} for ${agentId}`,
-    )
+    logForDebugging(`[InProcessBackend] kill() ${killed ? 'succeeded' : 'failed'} for ${agentId}`);
 
-    return killed
+    return killed;
   }
 
   /**
@@ -296,37 +262,33 @@ export class InProcessBackend implements TeammateExecutor {
    * and its AbortController has not been aborted.
    */
   async isActive(agentId: string): Promise<boolean> {
-    logForDebugging(`[InProcessBackend] isActive() called for ${agentId}`)
+    logForDebugging(`[InProcessBackend] isActive() called for ${agentId}`);
 
     if (!this.context) {
-      logForDebugging(
-        `[InProcessBackend] isActive() failed: no context set for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] isActive() failed: no context set for ${agentId}`);
+      return false;
     }
 
     // Get current AppState to find the task
-    const state = this.context.getAppState()
-    const task = findTeammateTaskByAgentId(agentId, state.tasks)
+    const state = this.context.getAppState();
+    const task = findTeammateTaskByAgentId(agentId, state.tasks);
 
     if (!task) {
-      logForDebugging(
-        `[InProcessBackend] isActive(): task not found for ${agentId}`,
-      )
-      return false
+      logForDebugging(`[InProcessBackend] isActive(): task not found for ${agentId}`);
+      return false;
     }
 
     // Check if task is running and not aborted
-    const isRunning = task.status === 'running'
-    const isAborted = task.abortController?.signal.aborted ?? true
+    const isRunning = task.status === 'running';
+    const isAborted = task.abortController?.signal.aborted ?? true;
 
-    const active = isRunning && !isAborted
+    const active = isRunning && !isAborted;
 
     logForDebugging(
       `[InProcessBackend] isActive() for ${agentId}: ${active} (running=${isRunning}, aborted=${isAborted})`,
-    )
+    );
 
-    return active
+    return active;
   }
 }
 
@@ -335,5 +297,5 @@ export class InProcessBackend implements TeammateExecutor {
  * Used by the registry (Task #8) to get backend instances.
  */
 export function createInProcessBackend(): InProcessBackend {
-  return new InProcessBackend()
+  return new InProcessBackend();
 }

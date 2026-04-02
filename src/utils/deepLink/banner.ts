@@ -12,14 +12,14 @@
  * notice which directory — and therefore which CLAUDE.md — was loaded.
  */
 
-import { stat } from 'fs/promises'
-import { homedir } from 'os'
-import { join, sep } from 'path'
-import { formatNumber, formatRelativeTimeAgo } from '../format.js'
-import { getCommonDir } from '../git/gitFilesystem.js'
-import { getGitDir } from '../git.js'
+import { stat } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, sep } from 'node:path';
+import { formatNumber, formatRelativeTimeAgo } from '../format.js';
+import { getGitDir } from '../git.js';
+import { getCommonDir } from '../git/gitFilesystem.js';
 
-const STALE_FETCH_WARN_MS = 7 * 24 * 60 * 60 * 1000
+const STALE_FETCH_WARN_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Above this length, a pre-filled prompt no longer fits on one screen
@@ -27,18 +27,18 @@ const STALE_FETCH_WARN_MS = 7 * 24 * 60 * 60 * 1000
  * carefully" to an explicit "scroll to review the entire prompt" so a
  * malicious tail buried past line 60 isn't silently off-screen.
  */
-const LONG_PREFILL_THRESHOLD = 1000
+const LONG_PREFILL_THRESHOLD = 1000;
 
 export type DeepLinkBannerInfo = {
   /** Resolved working directory the session launched in. */
-  cwd: string
+  cwd: string;
   /** Length of the ?q= prompt pre-filled in the input box. Undefined = no prefill. */
-  prefillLength?: number
+  prefillLength?: number;
   /** The ?repo= slug if the cwd was resolved from the githubRepoPaths MRU. */
-  repo?: string
+  repo?: string;
   /** Last-fetch timestamp for the repo (FETCH_HEAD mtime). Undefined = never fetched or not a git repo. */
-  lastFetch?: Date
-}
+  lastFetch?: Date;
+};
 
 /**
  * Build the multi-line warning banner for a deep-link-originated session.
@@ -52,26 +52,22 @@ export type DeepLinkBannerInfo = {
  * and whether its CLAUDE.md may be stale relative to upstream.
  */
 export function buildDeepLinkBanner(info: DeepLinkBannerInfo): string {
-  const lines = [
-    `This session was opened by an external deep link in ${tildify(info.cwd)}`,
-  ]
+  const lines = [`This session was opened by an external deep link in ${tildify(info.cwd)}`];
   if (info.repo) {
-    const age = info.lastFetch ? formatRelativeTimeAgo(info.lastFetch) : 'never'
-    const stale =
-      !info.lastFetch ||
-      Date.now() - info.lastFetch.getTime() > STALE_FETCH_WARN_MS
+    const age = info.lastFetch ? formatRelativeTimeAgo(info.lastFetch) : 'never';
+    const stale = !info.lastFetch || Date.now() - info.lastFetch.getTime() > STALE_FETCH_WARN_MS;
     lines.push(
       `Resolved ${info.repo} from local clones · last fetched ${age}${stale ? ' — CLAUDE.md may be stale' : ''}`,
-    )
+    );
   }
   if (info.prefillLength) {
     lines.push(
       info.prefillLength > LONG_PREFILL_THRESHOLD
         ? `The prompt below (${formatNumber(info.prefillLength)} chars) was supplied by the link — scroll to review the entire prompt before pressing Enter.`
         : 'The prompt below was supplied by the link — review carefully before pressing Enter.',
-    )
+    );
   }
-  return lines.join('\n')
+  return lines.join('\n');
 }
 
 /**
@@ -85,28 +81,24 @@ export function buildDeepLinkBanner(info: DeepLinkBannerInfo): string {
  * doesn't read as "never fetched" just because the deep link landed in
  * a worktree.
  */
-export async function readLastFetchTime(
-  cwd: string,
-): Promise<Date | undefined> {
-  const gitDir = await getGitDir(cwd)
-  if (!gitDir) return undefined
-  const commonDir = await getCommonDir(gitDir)
+export async function readLastFetchTime(cwd: string): Promise<Date | undefined> {
+  const gitDir = await getGitDir(cwd);
+  if (!gitDir) return undefined;
+  const commonDir = await getCommonDir(gitDir);
   const [local, common] = await Promise.all([
     mtimeOrUndefined(join(gitDir, 'FETCH_HEAD')),
-    commonDir
-      ? mtimeOrUndefined(join(commonDir, 'FETCH_HEAD'))
-      : Promise.resolve(undefined),
-  ])
-  if (local && common) return local > common ? local : common
-  return local ?? common
+    commonDir ? mtimeOrUndefined(join(commonDir, 'FETCH_HEAD')) : Promise.resolve(undefined),
+  ]);
+  if (local && common) return local > common ? local : common;
+  return local ?? common;
 }
 
 async function mtimeOrUndefined(p: string): Promise<Date | undefined> {
   try {
-    const { mtime } = await stat(p)
-    return mtime
+    const { mtime } = await stat(p);
+    return mtime;
   } catch {
-    return undefined
+    return undefined;
   }
 }
 
@@ -116,8 +108,8 @@ async function mtimeOrUndefined(p: string): Promise<Date | undefined> {
  * so the relative-path branch would collapse it to the empty string.
  */
 function tildify(p: string): string {
-  const home = homedir()
-  if (p === home) return '~'
-  if (p.startsWith(home + sep)) return '~' + p.slice(home.length)
-  return p
+  const home = homedir();
+  if (p === home) return '~';
+  if (p.startsWith(home + sep)) return `~${p.slice(home.length)}`;
+  return p;
 }

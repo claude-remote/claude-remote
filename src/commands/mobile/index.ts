@@ -1,4 +1,4 @@
-import type { Command } from '../../commands.js'
+import type { Command } from '../../commands.js';
 
 const mobile = {
   type: 'local-jsx',
@@ -6,6 +6,6 @@ const mobile = {
   aliases: ['ios', 'android'],
   description: 'Show QR code to download the Claude mobile app',
   load: () => import('./mobile.js'),
-} satisfies Command
+} satisfies Command;
 
-export default mobile
+export default mobile;

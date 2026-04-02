@@ -1,22 +1,20 @@
-import { getSessionMemoryContent } from '../../services/SessionMemory/sessionMemoryUtils.js'
-import type { Message } from '../../types/message.js'
-import { getMessagesAfterCompactBoundary } from '../../utils/messages.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+import { getSessionMemoryContent } from '../../services/SessionMemory/sessionMemoryUtils.js';
+import type { Message } from '../../types/message.js';
+import { getMessagesAfterCompactBoundary } from '../../utils/messages.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
 function extractUserMessages(messages: Message[]): string[] {
   return messages
     .filter((m): m is Extract<typeof m, { type: 'user' }> => m.type === 'user')
-    .map(m => {
-      const content = m.message.content
-      if (typeof content === 'string') return content
+    .map((m) => {
+      const content = m.message.content;
+      if (typeof content === 'string') return content;
       return content
-        .filter(
-          (b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text',
-        )
-        .map(b => b.text)
-        .join('\n')
+        .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+        .map((b) => b.text)
+        .join('\n');
     })
-    .filter(text => text.trim().length > 0)
+    .filter((text) => text.trim().length > 0);
 }
 
 const SKILLIFY_PROMPT = `# Skillify {{userDescriptionBlock}}
@@ -153,45 +151,32 @@ After writing, tell the user:
 - Where the skill was saved
 - How to invoke it: \`/{{skill-name}} [arguments]\`
 - That they can edit the SKILL.md directly to refine it
-`
+`;
 
 export function registerSkillifySkill(): void {
   if (process.env.USER_TYPE !== 'ant') {
-    return
+    return;
   }
 
   registerBundledSkill({
     name: 'skillify',
     description:
       "Capture this session's repeatable process into a skill. Call at end of the process you want to capture with an optional description.",
-    allowedTools: [
-      'Read',
-      'Write',
-      'Edit',
-      'Glob',
-      'Grep',
-      'AskUserQuestion',
-      'Bash(mkdir:*)',
-    ],
+    allowedTools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'AskUserQuestion', 'Bash(mkdir:*)'],
     userInvocable: true,
     disableModelInvocation: true,
     argumentHint: '[description of the process you want to capture]',
     async getPromptForCommand(args, context) {
-      const sessionMemory =
-        (await getSessionMemoryContent()) ?? 'No session memory available.'
-      const userMessages = extractUserMessages(
-        getMessagesAfterCompactBoundary(context.messages),
-      )
+      const sessionMemory = (await getSessionMemoryContent()) ?? 'No session memory available.';
+      const userMessages = extractUserMessages(getMessagesAfterCompactBoundary(context.messages));
 
-      const userDescriptionBlock = args
-        ? `The user described this process as: "${args}"`
-        : ''
+      const userDescriptionBlock = args ? `The user described this process as: "${args}"` : '';
 
       const prompt = SKILLIFY_PROMPT.replace('{{sessionMemory}}', sessionMemory)
         .replace('{{userMessages}}', userMessages.join('\n\n---\n\n'))
-        .replace('{{userDescriptionBlock}}', userDescriptionBlock)
+        .replace('{{userDescriptionBlock}}', userDescriptionBlock);
 
-      return [{ type: 'text', text: prompt }]
+      return [{ type: 'text', text: prompt }];
     },
-  })
+  });
 }

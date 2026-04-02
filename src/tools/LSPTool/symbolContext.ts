@@ -1,9 +1,9 @@
-import { logForDebugging } from '../../utils/debug.js'
-import { truncate } from '../../utils/format.js'
-import { getFsImplementation } from '../../utils/fsOperations.js'
-import { expandPath } from '../../utils/path.js'
+import { logForDebugging } from '../../utils/debug.js';
+import { truncate } from '../../utils/format.js';
+import { getFsImplementation } from '../../utils/fsOperations.js';
+import { expandPath } from '../../utils/path.js';
 
-const MAX_READ_BYTES = 64 * 1024
+const MAX_READ_BYTES = 64 * 1024;
 
 /**
  * Extracts the symbol/word at a specific position in a file.
@@ -24,8 +24,8 @@ export function getSymbolAtPosition(
   character: number,
 ): string | null {
   try {
-    const fs = getFsImplementation()
-    const absolutePath = expandPath(filePath)
+    const fs = getFsImplementation();
+    const absolutePath = expandPath(filePath);
 
     // Read only the first 64KB instead of the whole file. Most LSP hover/goto
     // targets are near recent edits; 64KB covers ~1000 lines of typical code.
@@ -34,22 +34,22 @@ export function getSymbolAtPosition(
     // eslint-disable-next-line custom-rules/no-sync-fs -- called from sync React render (renderToolUseMessage)
     const { buffer, bytesRead } = fs.readSync(absolutePath, {
       length: MAX_READ_BYTES,
-    })
-    const content = buffer.toString('utf-8', 0, bytesRead)
-    const lines = content.split('\n')
+    });
+    const content = buffer.toString('utf-8', 0, bytesRead);
+    const lines = content.split('\n');
 
     if (line < 0 || line >= lines.length) {
-      return null
+      return null;
     }
     // If we filled the full buffer the file continues past our window,
     // so the last split element may be truncated mid-line.
     if (bytesRead === MAX_READ_BYTES && line === lines.length - 1) {
-      return null
+      return null;
     }
 
-    const lineContent = lines[line]
+    const lineContent = lines[line];
     if (!lineContent || character < 0 || character >= lineContent.length) {
-      return null
+      return null;
     }
 
     // Extract the word/symbol at the character position
@@ -59,22 +59,22 @@ export function getSymbolAtPosition(
     // - Rust macros: macro_name!
     // - Operators and special symbols: +, -, *, etc.
     // This is more inclusive to handle various programming languages
-    const symbolPattern = /[\w$'!]+|[+\-*/%&|^~<>=]+/g
-    let match: RegExpExecArray | null
+    const symbolPattern = /[\w$'!]+|[+\-*/%&|^~<>=]+/g;
+    let match: RegExpExecArray | null;
 
     while ((match = symbolPattern.exec(lineContent)) !== null) {
-      const start = match.index
-      const end = start + match[0].length
+      const start = match.index;
+      const end = start + match[0].length;
 
       // Check if the character position falls within this match
       if (character >= start && character < end) {
-        const symbol = match[0]
+        const symbol = match[0];
         // Limit length to 30 characters to avoid overly long symbols
-        return truncate(symbol, 30)
+        return truncate(symbol, 30);
       }
     }
 
-    return null
+    return null;
   } catch (error) {
     // Log unexpected errors for debugging (permission issues, encoding problems, etc.)
     // Use logForDebugging since this is a display enhancement, not a critical error
@@ -82,9 +82,9 @@ export function getSymbolAtPosition(
       logForDebugging(
         `Symbol extraction failed for ${filePath}:${line}:${character}: ${error.message}`,
         { level: 'warn' },
-      )
+      );
     }
     // Still return null for graceful fallback to position display
-    return null
+    return null;
   }
 }

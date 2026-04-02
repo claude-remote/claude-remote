@@ -19,7 +19,10 @@ function renderMarkdown(source: string): string {
   });
 
   // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code class="rounded bg-gray-800 px-1 py-0.5 text-xs">$1</code>');
+  html = html.replace(
+    /`([^`]+)`/g,
+    '<code class="rounded bg-gray-800 px-1 py-0.5 text-xs">$1</code>',
+  );
 
   // Bold
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');

@@ -1,6 +1,6 @@
-import { c as _c } from "react/compiler-runtime";
-import { basename } from 'path';
+import { basename } from 'node:path';
 import React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import type { z } from 'zod/v4';
 import { Text } from '../../../ink.js';
 import { NotebookEditTool } from '../../../tools/NotebookEditTool/NotebookEditTool.js';
@@ -29,27 +29,34 @@ export function NotebookEditPermissionRequest(props) {
   let t7;
   let t8;
   let t9;
-  if ($[0] !== props.onDone || $[1] !== props.onReject || $[2] !== props.toolUseConfirm || $[3] !== props.toolUseContext || $[4] !== props.workerBadge) {
+  if (
+    $[0] !== props.onDone ||
+    $[1] !== props.onReject ||
+    $[2] !== props.toolUseConfirm ||
+    $[3] !== props.toolUseContext ||
+    $[4] !== props.workerBadge
+  ) {
     parsed = parseInput(props.toolUseConfirm.input);
-    const {
-      notebook_path: t11,
-      edit_mode,
-      cell_type
-    } = parsed;
+    const { notebook_path: t11, edit_mode, cell_type } = parsed;
     notebook_path = t11;
-    language = cell_type === "markdown" ? "markdown" : "python";
-    const editTypeText = edit_mode === "insert" ? "insert this cell into" : edit_mode === "delete" ? "delete this cell from" : "make this edit to";
+    language = cell_type === 'markdown' ? 'markdown' : 'python';
+    const editTypeText =
+      edit_mode === 'insert'
+        ? 'insert this cell into'
+        : edit_mode === 'delete'
+          ? 'delete this cell from'
+          : 'make this edit to';
     T2 = FilePermissionDialog;
     t5 = props.toolUseConfirm;
     t6 = props.toolUseContext;
     t7 = props.onDone;
     t8 = props.onReject;
     t9 = props.workerBadge;
-    t10 = "Edit notebook";
+    t10 = 'Edit notebook';
     T1 = Text;
-    t2 = "Do you want to ";
+    t2 = 'Do you want to ';
     t3 = editTypeText;
-    t4 = " ";
+    t4 = ' ';
     T0 = Text;
     t0 = true;
     t1 = basename(notebook_path);
@@ -106,7 +113,14 @@ export function NotebookEditPermissionRequest(props) {
   }
   let t12;
   if ($[26] !== T1 || $[27] !== t11 || $[28] !== t2 || $[29] !== t3 || $[30] !== t4) {
-    t12 = <T1>{t2}{t3}{t4}{t11}?</T1>;
+    t12 = (
+      <T1>
+        {t2}
+        {t3}
+        {t4}
+        {t11}?
+      </T1>
+    );
     $[26] = T1;
     $[27] = t11;
     $[28] = t2;
@@ -118,8 +132,26 @@ export function NotebookEditPermissionRequest(props) {
   }
   const t13 = props.verbose ? 120 : 80;
   let t14;
-  if ($[32] !== parsed.cell_id || $[33] !== parsed.cell_type || $[34] !== parsed.edit_mode || $[35] !== parsed.new_source || $[36] !== parsed.notebook_path || $[37] !== props.verbose || $[38] !== t13) {
-    t14 = <NotebookEditToolDiff notebook_path={parsed.notebook_path} cell_id={parsed.cell_id} new_source={parsed.new_source} cell_type={parsed.cell_type} edit_mode={parsed.edit_mode} verbose={props.verbose} width={t13} />;
+  if (
+    $[32] !== parsed.cell_id ||
+    $[33] !== parsed.cell_type ||
+    $[34] !== parsed.edit_mode ||
+    $[35] !== parsed.new_source ||
+    $[36] !== parsed.notebook_path ||
+    $[37] !== props.verbose ||
+    $[38] !== t13
+  ) {
+    t14 = (
+      <NotebookEditToolDiff
+        notebook_path={parsed.notebook_path}
+        cell_id={parsed.cell_id}
+        new_source={parsed.new_source}
+        cell_type={parsed.cell_type}
+        edit_mode={parsed.edit_mode}
+        verbose={props.verbose}
+        width={t13}
+      />
+    );
     $[32] = parsed.cell_id;
     $[33] = parsed.cell_type;
     $[34] = parsed.edit_mode;
@@ -132,8 +164,35 @@ export function NotebookEditPermissionRequest(props) {
     t14 = $[39];
   }
   let t15;
-  if ($[40] !== T2 || $[41] !== language || $[42] !== notebook_path || $[43] !== t10 || $[44] !== t12 || $[45] !== t14 || $[46] !== t5 || $[47] !== t6 || $[48] !== t7 || $[49] !== t8 || $[50] !== t9) {
-    t15 = <T2 toolUseConfirm={t5} toolUseContext={t6} onDone={t7} onReject={t8} workerBadge={t9} title={t10} question={t12} content={t14} path={notebook_path} completionType="tool_use_single" languageName={language} parseInput={parseInput} />;
+  if (
+    $[40] !== T2 ||
+    $[41] !== language ||
+    $[42] !== notebook_path ||
+    $[43] !== t10 ||
+    $[44] !== t12 ||
+    $[45] !== t14 ||
+    $[46] !== t5 ||
+    $[47] !== t6 ||
+    $[48] !== t7 ||
+    $[49] !== t8 ||
+    $[50] !== t9
+  ) {
+    t15 = (
+      <T2
+        toolUseConfirm={t5}
+        toolUseContext={t6}
+        onDone={t7}
+        onReject={t8}
+        workerBadge={t9}
+        title={t10}
+        question={t12}
+        content={t14}
+        path={notebook_path}
+        completionType="tool_use_single"
+        languageName={language}
+        parseInput={parseInput}
+      />
+    );
     $[40] = T2;
     $[41] = language;
     $[42] = notebook_path;
@@ -156,9 +215,9 @@ function _temp(input) {
   if (!result.success) {
     logError(new Error(`Failed to parse notebook edit input: ${result.error.message}`));
     return {
-      notebook_path: "",
-      new_source: "",
-      cell_id: ""
+      notebook_path: '',
+      new_source: '',
+      cell_id: '',
     } as NotebookEditInput;
   }
   return result.data;

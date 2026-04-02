@@ -1,12 +1,15 @@
-import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useEffect, useState } from 'react';
-import { checkIsGitClean, checkNeedsClaudeAiLogin } from 'src/utils/background/remote/preconditions.js';
+import { c as _c } from 'react/compiler-runtime';
+import {
+  checkIsGitClean,
+  checkNeedsClaudeAiLogin,
+} from 'src/utils/background/remote/preconditions.js';
 import { gracefulShutdownSync } from 'src/utils/gracefulShutdown.js';
 import { Box, Text } from '../ink.js';
 import { ConsoleOAuthFlow } from './ConsoleOAuthFlow.js';
 import { Select } from './CustomSelect/index.js';
-import { Dialog } from './design-system/Dialog.js';
 import { TeleportStash } from './TeleportStash.js';
+import { Dialog } from './design-system/Dialog.js';
 export type TeleportLocalErrorType = 'needsLogin' | 'needsGitStash';
 type TeleportErrorProps = {
   onComplete: () => void;
@@ -20,10 +23,7 @@ type TeleportErrorProps = {
 const EMPTY_ERRORS_TO_IGNORE: ReadonlySet<TeleportLocalErrorType> = new Set();
 export function TeleportError(t0) {
   const $ = _c(18);
-  const {
-    onComplete,
-    errorsToIgnore: t1
-  } = t0;
+  const { onComplete, errorsToIgnore: t1 } = t0;
   const errorsToIgnore = t1 === undefined ? EMPTY_ERRORS_TO_IGNORE : t1;
   const [currentError, setCurrentError] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -31,16 +31,18 @@ export function TeleportError(t0) {
   if ($[0] !== errorsToIgnore || $[1] !== onComplete) {
     t2 = async () => {
       const currentErrors = await getTeleportErrors();
-      const filteredErrors = new Set(Array.from(currentErrors).filter(error => !errorsToIgnore.has(error)));
+      const filteredErrors = new Set(
+        Array.from(currentErrors).filter((error) => !errorsToIgnore.has(error)),
+      );
       if (filteredErrors.size === 0) {
         onComplete();
         return;
       }
-      if (filteredErrors.has("needsLogin")) {
-        setCurrentError("needsLogin");
+      if (filteredErrors.has('needsLogin')) {
+        setCurrentError('needsLogin');
       } else {
-        if (filteredErrors.has("needsGitStash")) {
-          setCurrentError("needsGitStash");
+        if (filteredErrors.has('needsGitStash')) {
+          setCurrentError('needsGitStash');
         }
       }
     };
@@ -80,7 +82,7 @@ export function TeleportError(t0) {
   }
   const handleLoginComplete = t5;
   let t6;
-  if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[8] === Symbol.for('react.memo_cache_sentinel')) {
     t6 = () => {
       setIsLoggingIn(true);
     };
@@ -90,9 +92,9 @@ export function TeleportError(t0) {
   }
   const handleLoginWithClaudeAI = t6;
   let t7;
-  if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
-    t7 = value => {
-      if (value === "login") {
+  if ($[9] === Symbol.for('react.memo_cache_sentinel')) {
+    t7 = (value) => {
+      if (value === 'login') {
         handleLoginWithClaudeAI();
       } else {
         onCancel();
@@ -118,53 +120,75 @@ export function TeleportError(t0) {
     return null;
   }
   switch (currentError) {
-    case "needsGitStash":
-      {
+    case 'needsGitStash': {
+      let t9;
+      if ($[12] !== handleStashComplete) {
+        t9 = <TeleportStash onStashAndContinue={handleStashComplete} onCancel={onCancel} />;
+        $[12] = handleStashComplete;
+        $[13] = t9;
+      } else {
+        t9 = $[13];
+      }
+      return t9;
+    }
+    case 'needsLogin': {
+      if (isLoggingIn) {
         let t9;
-        if ($[12] !== handleStashComplete) {
-          t9 = <TeleportStash onStashAndContinue={handleStashComplete} onCancel={onCancel} />;
-          $[12] = handleStashComplete;
-          $[13] = t9;
+        if ($[14] !== handleLoginComplete) {
+          t9 = (
+            <ConsoleOAuthFlow
+              onDone={handleLoginComplete}
+              mode="login"
+              forceLoginMethod="claudeai"
+            />
+          );
+          $[14] = handleLoginComplete;
+          $[15] = t9;
         } else {
-          t9 = $[13];
+          t9 = $[15];
         }
         return t9;
       }
-    case "needsLogin":
-      {
-        if (isLoggingIn) {
-          let t9;
-          if ($[14] !== handleLoginComplete) {
-            t9 = <ConsoleOAuthFlow onDone={handleLoginComplete} mode="login" forceLoginMethod="claudeai" />;
-            $[14] = handleLoginComplete;
-            $[15] = t9;
-          } else {
-            t9 = $[15];
-          }
-          return t9;
-        }
-        let t9;
-        if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
-          t9 = <Box flexDirection="column"><Text dimColor={true}>Teleport requires a Claude.ai account.</Text><Text dimColor={true}>Your Claude Pro/Max subscription will be used by Claude Code.</Text></Box>;
-          $[16] = t9;
-        } else {
-          t9 = $[16];
-        }
-        let t10;
-        if ($[17] === Symbol.for("react.memo_cache_sentinel")) {
-          t10 = <Dialog title="Log in to Claude" onCancel={onCancel}>{t9}<Select options={[{
-              label: "Login with Claude account",
-              value: "login"
-            }, {
-              label: "Exit",
-              value: "exit"
-            }]} onChange={handleLoginDialogSelect} /></Dialog>;
-          $[17] = t10;
-        } else {
-          t10 = $[17];
-        }
-        return t10;
+      let t9;
+      if ($[16] === Symbol.for('react.memo_cache_sentinel')) {
+        t9 = (
+          <Box flexDirection="column">
+            <Text dimColor={true}>Teleport requires a Claude.ai account.</Text>
+            <Text dimColor={true}>
+              Your Claude Pro/Max subscription will be used by Claude Code.
+            </Text>
+          </Box>
+        );
+        $[16] = t9;
+      } else {
+        t9 = $[16];
       }
+      let t10;
+      if ($[17] === Symbol.for('react.memo_cache_sentinel')) {
+        t10 = (
+          <Dialog title="Log in to Claude" onCancel={onCancel}>
+            {t9}
+            <Select
+              options={[
+                {
+                  label: 'Login with Claude account',
+                  value: 'login',
+                },
+                {
+                  label: 'Exit',
+                  value: 'exit',
+                },
+              ]}
+              onChange={handleLoginDialogSelect}
+            />
+          </Dialog>
+        );
+        $[17] = t10;
+      } else {
+        t10 = $[17];
+      }
+      return t10;
+    }
   }
 }
 
@@ -177,7 +201,10 @@ function _temp() {
 }
 export async function getTeleportErrors(): Promise<Set<TeleportLocalErrorType>> {
   const errors = new Set<TeleportLocalErrorType>();
-  const [needsLogin, isGitClean] = await Promise.all([checkNeedsClaudeAiLogin(), checkIsGitClean()]);
+  const [needsLogin, isGitClean] = await Promise.all([
+    checkNeedsClaudeAiLogin(),
+    checkIsGitClean(),
+  ]);
   if (needsLogin) {
     errors.add('needsLogin');
   }

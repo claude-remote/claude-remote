@@ -1,7 +1,7 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
+import { c as _c } from 'react/compiler-runtime';
 import { Ansi, Box, Text, useAnimationFrame } from '../../ink.js';
-import { segmentTextByHighlights, type TextHighlight } from '../../utils/textHighlighting.js';
+import { type TextHighlight, segmentTextByHighlights } from '../../utils/textHighlighting.js';
 import { ShimmerChar } from '../Spinner/ShimmerChar.js';
 type Props = {
   text: string;
@@ -14,17 +14,14 @@ type LinePart = {
 };
 export function HighlightedInput(t0) {
   const $ = _c(23);
-  const {
-    text,
-    highlights
-  } = t0;
+  const { text, highlights } = t0;
   let lines;
   if ($[0] !== highlights || $[1] !== text) {
     const segments = segmentTextByHighlights(text, highlights);
     lines = [[]];
     let pos = 0;
     for (const segment of segments) {
-      const parts = segment.text.split("\n");
+      const parts = segment.text.split('\n');
       for (let i = 0; i < parts.length; i++) {
         if (i > 0) {
           lines.push([]);
@@ -35,7 +32,7 @@ export function HighlightedInput(t0) {
           lines[lines.length - 1].push({
             text: part,
             highlight: segment.highlight,
-            start: pos
+            start: pos,
           });
         }
         pos = pos + part.length;
@@ -59,8 +56,8 @@ export function HighlightedInput(t0) {
   let sweepStart = 0;
   let cycleLength = 1;
   if (hasShimmer) {
-    let lo = Infinity;
-    let hi = -Infinity;
+    let lo = Number.POSITIVE_INFINITY;
+    let hi = Number.NEGATIVE_INFINITY;
     if ($[5] !== hi || $[6] !== highlights || $[7] !== lo) {
       for (const h_0 of highlights) {
         if (h_0.shimmerColor) {
@@ -86,7 +83,7 @@ export function HighlightedInput(t0) {
       lines,
       hasShimmer,
       sweepStart,
-      cycleLength
+      cycleLength,
     };
     $[10] = cycleLength;
     $[11] = hasShimmer;
@@ -100,20 +97,50 @@ export function HighlightedInput(t0) {
     lines: lines_0,
     hasShimmer: hasShimmer_0,
     sweepStart: sweepStart_0,
-    cycleLength: cycleLength_0
+    cycleLength: cycleLength_0,
   } = t2;
   const [ref, time] = useAnimationFrame(hasShimmer_0 ? 50 : null);
-  const glimmerIndex = hasShimmer_0 ? sweepStart_0 + Math.floor(time / 50) % cycleLength_0 : -100;
+  const glimmerIndex = hasShimmer_0 ? sweepStart_0 + (Math.floor(time / 50) % cycleLength_0) : -100;
   let t3;
   if ($[15] !== glimmerIndex || $[16] !== lines_0) {
     let t4;
     if ($[18] !== glimmerIndex) {
-      t4 = (lineParts, lineIndex) => <Box key={lineIndex}>{lineParts.length === 0 ? <Text> </Text> : lineParts.map((part_0, partIndex) => {
-          if (part_0.highlight?.shimmerColor && part_0.highlight.color) {
-            return <Text key={partIndex}>{part_0.text.split("").map((char, charIndex) => <ShimmerChar key={charIndex} char={char} index={part_0.start + charIndex} glimmerIndex={glimmerIndex} messageColor={part_0.highlight.color} shimmerColor={part_0.highlight.shimmerColor} />)}</Text>;
-          }
-          return <Text key={partIndex} color={part_0.highlight?.color} dimColor={part_0.highlight?.dimColor} inverse={part_0.highlight?.inverse}><Ansi>{part_0.text}</Ansi></Text>;
-        })}</Box>;
+      t4 = (lineParts, lineIndex) => (
+        <Box key={lineIndex}>
+          {lineParts.length === 0 ? (
+            <Text> </Text>
+          ) : (
+            lineParts.map((part_0, partIndex) => {
+              if (part_0.highlight?.shimmerColor && part_0.highlight.color) {
+                return (
+                  <Text key={partIndex}>
+                    {part_0.text.split('').map((char, charIndex) => (
+                      <ShimmerChar
+                        key={charIndex}
+                        char={char}
+                        index={part_0.start + charIndex}
+                        glimmerIndex={glimmerIndex}
+                        messageColor={part_0.highlight.color}
+                        shimmerColor={part_0.highlight.shimmerColor}
+                      />
+                    ))}
+                  </Text>
+                );
+              }
+              return (
+                <Text
+                  key={partIndex}
+                  color={part_0.highlight?.color}
+                  dimColor={part_0.highlight?.dimColor}
+                  inverse={part_0.highlight?.inverse}
+                >
+                  <Ansi>{part_0.text}</Ansi>
+                </Text>
+              );
+            })
+          )}
+        </Box>
+      );
       $[18] = glimmerIndex;
       $[19] = t4;
     } else {
@@ -128,7 +155,11 @@ export function HighlightedInput(t0) {
   }
   let t4;
   if ($[20] !== ref || $[21] !== t3) {
-    t4 = <Box ref={ref} flexDirection="column">{t3}</Box>;
+    t4 = (
+      <Box ref={ref} flexDirection="column">
+        {t3}
+      </Box>
+    );
     $[20] = ref;
     $[21] = t3;
     $[22] = t4;

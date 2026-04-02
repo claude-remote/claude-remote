@@ -3,45 +3,45 @@
 // consumers treat 'unknown' identically to 'focused' (no throttling).
 // Subscribers are notified synchronously when focus changes, used by
 // TerminalFocusProvider to avoid polling.
-export type TerminalFocusState = 'focused' | 'blurred' | 'unknown'
+export type TerminalFocusState = 'focused' | 'blurred' | 'unknown';
 
-let focusState: TerminalFocusState = 'unknown'
-const resolvers: Set<() => void> = new Set()
-const subscribers: Set<() => void> = new Set()
+let focusState: TerminalFocusState = 'unknown';
+const resolvers: Set<() => void> = new Set();
+const subscribers: Set<() => void> = new Set();
 
 export function setTerminalFocused(v: boolean): void {
-  focusState = v ? 'focused' : 'blurred'
+  focusState = v ? 'focused' : 'blurred';
   // Notify useSyncExternalStore subscribers
   for (const cb of subscribers) {
-    cb()
+    cb();
   }
   if (!v) {
     for (const resolve of resolvers) {
-      resolve()
+      resolve();
     }
-    resolvers.clear()
+    resolvers.clear();
   }
 }
 
 export function getTerminalFocused(): boolean {
-  return focusState !== 'blurred'
+  return focusState !== 'blurred';
 }
 
 export function getTerminalFocusState(): TerminalFocusState {
-  return focusState
+  return focusState;
 }
 
 // For useSyncExternalStore
 export function subscribeTerminalFocus(cb: () => void): () => void {
-  subscribers.add(cb)
+  subscribers.add(cb);
   return () => {
-    subscribers.delete(cb)
-  }
+    subscribers.delete(cb);
+  };
 }
 
 export function resetTerminalFocusState(): void {
-  focusState = 'unknown'
+  focusState = 'unknown';
   for (const cb of subscribers) {
-    cb()
+    cb();
   }
 }

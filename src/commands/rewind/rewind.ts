@@ -1,13 +1,10 @@
-import type { LocalCommandResult } from '../../commands.js'
-import type { ToolUseContext } from '../../Tool.js'
+import type { ToolUseContext } from '../../Tool.js';
+import type { LocalCommandResult } from '../../commands.js';
 
-export async function call(
-  _args: string,
-  context: ToolUseContext,
-): Promise<LocalCommandResult> {
+export async function call(_args: string, context: ToolUseContext): Promise<LocalCommandResult> {
   if (context.openMessageSelector) {
-    context.openMessageSelector()
+    context.openMessageSelector();
   }
   // Return a skip message to not append any messages.
-  return { type: 'skip' }
+  return { type: 'skip' };
 }

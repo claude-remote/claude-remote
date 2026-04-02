@@ -35,26 +35,22 @@ import type {
   ResolvePrepareCaptureResult,
   RunningApp,
   ScreenshotResult,
-} from '@ant/computer-use-mcp'
+} from '@ant/computer-use-mcp';
 
-import { API_RESIZE_PARAMS, targetImageSize } from '@ant/computer-use-mcp'
-import { logForDebugging } from '../debug.js'
-import { errorMessage } from '../errors.js'
-import { execFileNoThrow } from '../execFileNoThrow.js'
-import { sleep } from '../sleep.js'
-import {
-  CLI_CU_CAPABILITIES,
-  CLI_HOST_BUNDLE_ID,
-  getTerminalBundleId,
-} from './common.js'
-import { drainRunLoop } from './drainRunLoop.js'
-import { notifyExpectedEscape } from './escHotkey.js'
-import { requireComputerUseInput } from './inputLoader.js'
-import { requireComputerUseSwift } from './swiftLoader.js'
+import { API_RESIZE_PARAMS, targetImageSize } from '@ant/computer-use-mcp';
+import { logForDebugging } from '../debug.js';
+import { errorMessage } from '../errors.js';
+import { execFileNoThrow } from '../execFileNoThrow.js';
+import { sleep } from '../sleep.js';
+import { CLI_CU_CAPABILITIES, CLI_HOST_BUNDLE_ID, getTerminalBundleId } from './common.js';
+import { drainRunLoop } from './drainRunLoop.js';
+import { notifyExpectedEscape } from './escHotkey.js';
+import { requireComputerUseInput } from './inputLoader.js';
+import { requireComputerUseSwift } from './swiftLoader.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const SCREENSHOT_JPEG_QUALITY = 0.75
+const SCREENSHOT_JPEG_QUALITY = 0.75;
 
 /** Logical → physical → API target dims. See `targetImageSize` + COORDINATES.md. */
 function computeTargetDims(
@@ -62,32 +58,32 @@ function computeTargetDims(
   logicalH: number,
   scaleFactor: number,
 ): [number, number] {
-  const physW = Math.round(logicalW * scaleFactor)
-  const physH = Math.round(logicalH * scaleFactor)
-  return targetImageSize(physW, physH, API_RESIZE_PARAMS)
+  const physW = Math.round(logicalW * scaleFactor);
+  const physH = Math.round(logicalH * scaleFactor);
+  return targetImageSize(physW, physH, API_RESIZE_PARAMS);
 }
 
 async function readClipboardViaPbpaste(): Promise<string> {
   const { stdout, code } = await execFileNoThrow('pbpaste', [], {
     useCwd: false,
-  })
+  });
   if (code !== 0) {
-    throw new Error(`pbpaste exited with code ${code}`)
+    throw new Error(`pbpaste exited with code ${code}`);
   }
-  return stdout
+  return stdout;
 }
 
 async function writeClipboardViaPbcopy(text: string): Promise<void> {
   const { code } = await execFileNoThrow('pbcopy', [], {
     input: text,
     useCwd: false,
-  })
+  });
   if (code !== 0) {
-    throw new Error(`pbcopy exited with code ${code}`)
+    throw new Error(`pbcopy exited with code ${code}`);
   }
 }
 
-type Input = ReturnType<typeof requireComputerUseInput>
+type Input = ReturnType<typeof requireComputerUseInput>;
 
 /**
  * Single-element key sequence matching "escape" or "esc" (case-insensitive).
@@ -95,9 +91,9 @@ type Input = ReturnType<typeof requireComputerUseInput>
  * accepts both spellings, so the tap must too.
  */
 function isBareEscape(parts: readonly string[]): boolean {
-  if (parts.length !== 1) return false
-  const lower = parts[0]!.toLowerCase()
-  return lower === 'escape' || lower === 'esc'
+  if (parts.length !== 1) return false;
+  const lower = parts[0]?.toLowerCase();
+  return lower === 'escape' || lower === 'esc';
 }
 
 /**
@@ -108,15 +104,11 @@ function isBareEscape(parts: readonly string[]): boolean {
  * decomposed mouseDown/moveMouse path, emitting stray `.leftMouseDragged`
  * events (toolCalls.ts handleScroll's mouse_full workaround).
  */
-const MOVE_SETTLE_MS = 50
+const MOVE_SETTLE_MS = 50;
 
-async function moveAndSettle(
-  input: Input,
-  x: number,
-  y: number,
-): Promise<void> {
-  await input.moveMouse(x, y, false)
-  await sleep(MOVE_SETTLE_MS)
+async function moveAndSettle(input: Input, x: number, y: number): Promise<void> {
+  await input.moveMouse(x, y, false);
+  await sleep(MOVE_SETTLE_MS);
 }
 
 /**
@@ -129,10 +121,10 @@ async function moveAndSettle(
  * orphaned flag stops the lambda at its NEXT check, not the current await.
  */
 async function releasePressed(input: Input, pressed: string[]): Promise<void> {
-  let k: string | undefined
+  let k: string | undefined;
   while ((k = pressed.pop()) !== undefined) {
     try {
-      await input.key(k, 'release')
+      await input.key(k, 'release');
     } catch {
       // Swallow — best-effort release.
     }
@@ -147,20 +139,16 @@ async function releasePressed(input: Input, pressed: string[]): Promise<void> {
  * Caller must already be inside drainRunLoop() — key() dispatches to the
  * main queue and needs the pump to resolve.
  */
-async function withModifiers<T>(
-  input: Input,
-  mods: string[],
-  fn: () => Promise<T>,
-): Promise<T> {
-  const pressed: string[] = []
+async function withModifiers<T>(input: Input, mods: string[], fn: () => Promise<T>): Promise<T> {
+  const pressed: string[] = [];
   try {
     for (const m of mods) {
-      await input.key(m, 'press')
-      pressed.push(m)
+      await input.key(m, 'press');
+      pressed.push(m);
     }
-    return await fn()
+    return await fn();
   } finally {
-    await releasePressed(input, pressed)
+    await releasePressed(input, pressed);
   }
 }
 
@@ -178,28 +166,26 @@ async function withModifiers<T>(
  *      user's clipboard clobbered. Restore failures are swallowed.
  */
 async function typeViaClipboard(input: Input, text: string): Promise<void> {
-  let saved: string | undefined
+  let saved: string | undefined;
   try {
-    saved = await readClipboardViaPbpaste()
+    saved = await readClipboardViaPbpaste();
   } catch {
-    logForDebugging(
-      '[computer-use] pbpaste before paste failed; proceeding without restore',
-    )
+    logForDebugging('[computer-use] pbpaste before paste failed; proceeding without restore');
   }
 
   try {
-    await writeClipboardViaPbcopy(text)
+    await writeClipboardViaPbcopy(text);
     if ((await readClipboardViaPbpaste()) !== text) {
-      throw new Error('Clipboard write did not round-trip.')
+      throw new Error('Clipboard write did not round-trip.');
     }
-    await input.keys(['command', 'v'])
-    await sleep(100)
+    await input.keys(['command', 'v']);
+    await sleep(100);
   } finally {
     if (typeof saved === 'string') {
       try {
-        await writeClipboardViaPbcopy(saved)
+        await writeClipboardViaPbcopy(saved);
       } catch {
-        logForDebugging('[computer-use] clipboard restore after paste failed')
+        logForDebugging('[computer-use] clipboard restore after paste failed');
       }
     }
   }
@@ -221,75 +207,73 @@ async function animatedMove(
   mouseAnimationEnabled: boolean,
 ): Promise<void> {
   if (!mouseAnimationEnabled) {
-    await moveAndSettle(input, targetX, targetY)
-    return
+    await moveAndSettle(input, targetX, targetY);
+    return;
   }
-  const start = await input.mouseLocation()
-  const deltaX = targetX - start.x
-  const deltaY = targetY - start.y
-  const distance = Math.hypot(deltaX, deltaY)
-  if (distance < 1) return
-  const durationSec = Math.min(distance / 2000, 0.5)
+  const start = await input.mouseLocation();
+  const deltaX = targetX - start.x;
+  const deltaY = targetY - start.y;
+  const distance = Math.hypot(deltaX, deltaY);
+  if (distance < 1) return;
+  const durationSec = Math.min(distance / 2000, 0.5);
   if (durationSec < 0.03) {
-    await moveAndSettle(input, targetX, targetY)
-    return
+    await moveAndSettle(input, targetX, targetY);
+    return;
   }
-  const frameRate = 60
-  const frameIntervalMs = 1000 / frameRate
-  const totalFrames = Math.floor(durationSec * frameRate)
+  const frameRate = 60;
+  const frameIntervalMs = 1000 / frameRate;
+  const totalFrames = Math.floor(durationSec * frameRate);
   for (let frame = 1; frame <= totalFrames; frame++) {
-    const t = frame / totalFrames
-    const eased = 1 - Math.pow(1 - t, 3)
+    const t = frame / totalFrames;
+    const eased = 1 - (1 - t) ** 3;
     await input.moveMouse(
       Math.round(start.x + deltaX * eased),
       Math.round(start.y + deltaY * eased),
       false,
-    )
+    );
     if (frame < totalFrames) {
-      await sleep(frameIntervalMs)
+      await sleep(frameIntervalMs);
     }
   }
   // Last frame has no trailing sleep — same HID round-trip before the
   // caller's mouseButton reads NSEvent.mouseLocation.
-  await sleep(MOVE_SETTLE_MS)
+  await sleep(MOVE_SETTLE_MS);
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────
 
 export function createCliExecutor(opts: {
-  getMouseAnimationEnabled: () => boolean
-  getHideBeforeActionEnabled: () => boolean
+  getMouseAnimationEnabled: () => boolean;
+  getHideBeforeActionEnabled: () => boolean;
 }): ComputerExecutor {
   if (process.platform !== 'darwin') {
     throw new Error(
       `createCliExecutor called on ${process.platform}. Computer control is macOS-only.`,
-    )
+    );
   }
 
   // Swift loaded once at factory time — every executor method needs it.
   // Input loaded lazily via requireComputerUseInput() on first mouse/keyboard
   // call — it caches internally, so screenshot-only flows never pull the
   // enigo .node.
-  const cu = requireComputerUseSwift()
+  const cu = requireComputerUseSwift();
 
-  const { getMouseAnimationEnabled, getHideBeforeActionEnabled } = opts
-  const terminalBundleId = getTerminalBundleId()
-  const surrogateHost = terminalBundleId ?? CLI_HOST_BUNDLE_ID
+  const { getMouseAnimationEnabled, getHideBeforeActionEnabled } = opts;
+  const terminalBundleId = getTerminalBundleId();
+  const surrogateHost = terminalBundleId ?? CLI_HOST_BUNDLE_ID;
   // Swift 0.2.1's captureExcluding/captureRegion take an ALLOW list despite the
   // name (apps#30355 — complement computed Swift-side against running apps).
   // The terminal isn't in the user's grants so it's naturally excluded, but if
   // the package ever passes it through we strip it here so the terminal never
   // photobombs a screenshot.
   const withoutTerminal = (allowed: readonly string[]): string[] =>
-    terminalBundleId === null
-      ? [...allowed]
-      : allowed.filter(id => id !== terminalBundleId)
+    terminalBundleId === null ? [...allowed] : allowed.filter((id) => id !== terminalBundleId);
 
   logForDebugging(
     terminalBundleId
       ? `[computer-use] terminal ${terminalBundleId} → surrogate host (hide-exempt, activate-skip, screenshot-excluded)`
       : '[computer-use] terminal not detected; falling back to sentinel host',
-  )
+  );
 
   return {
     capabilities: {
@@ -299,12 +283,9 @@ export function createCliExecutor(opts: {
 
     // ── Pre-action sequence (hide + defocus) ────────────────────────────
 
-    async prepareForAction(
-      allowlistBundleIds: string[],
-      displayId?: number,
-    ): Promise<string[]> {
+    async prepareForAction(allowlistBundleIds: string[], displayId?: number): Promise<string[]> {
       if (!getHideBeforeActionEnabled()) {
-        return []
+        return [];
       }
       // prepareDisplay isn't @MainActor (plain Task{}), but its .hide() calls
       // trigger window-manager events that queue on CFRunLoop. Without the
@@ -318,65 +299,52 @@ export function createCliExecutor(opts: {
       // frontmost gate in toolCalls.ts catches any actual unsafe state.
       return drainRunLoop(async () => {
         try {
-          const result = await cu.apps.prepareDisplay(
-            allowlistBundleIds,
-            surrogateHost,
-            displayId,
-          )
+          const result = await cu.apps.prepareDisplay(allowlistBundleIds, surrogateHost, displayId);
           if (result.activated) {
-            logForDebugging(
-              `[computer-use] prepareForAction: activated ${result.activated}`,
-            )
+            logForDebugging(`[computer-use] prepareForAction: activated ${result.activated}`);
           }
-          return result.hidden
+          return result.hidden;
         } catch (err) {
           logForDebugging(
             `[computer-use] prepareForAction failed; continuing to action: ${errorMessage(err)}`,
             { level: 'warn' },
-          )
-          return []
+          );
+          return [];
         }
-      })
+      });
     },
 
     async previewHideSet(
       allowlistBundleIds: string[],
       displayId?: number,
     ): Promise<Array<{ bundleId: string; displayName: string }>> {
-      return cu.apps.previewHideSet(
-        [...allowlistBundleIds, surrogateHost],
-        displayId,
-      )
+      return cu.apps.previewHideSet([...allowlistBundleIds, surrogateHost], displayId);
     },
 
     // ── Display ──────────────────────────────────────────────────────────
 
     async getDisplaySize(displayId?: number): Promise<DisplayGeometry> {
-      return cu.display.getSize(displayId)
+      return cu.display.getSize(displayId);
     },
 
     async listDisplays(): Promise<DisplayGeometry[]> {
-      return cu.display.listAll()
+      return cu.display.listAll();
     },
 
     async findWindowDisplays(
       bundleIds: string[],
     ): Promise<Array<{ bundleId: string; displayIds: number[] }>> {
-      return cu.apps.findWindowDisplays(bundleIds)
+      return cu.apps.findWindowDisplays(bundleIds);
     },
 
     async resolvePrepareCapture(opts: {
-      allowedBundleIds: string[]
-      preferredDisplayId?: number
-      autoResolve: boolean
-      doHide?: boolean
+      allowedBundleIds: string[];
+      preferredDisplayId?: number;
+      autoResolve: boolean;
+      doHide?: boolean;
     }): Promise<ResolvePrepareCaptureResult> {
-      const d = cu.display.getSize(opts.preferredDisplayId)
-      const [targetW, targetH] = computeTargetDims(
-        d.width,
-        d.height,
-        d.scaleFactor,
-      )
+      const d = cu.display.getSize(opts.preferredDisplayId);
+      const [targetW, targetH] = computeTargetDims(d.width, d.height, d.scaleFactor);
       return drainRunLoop(() =>
         cu.resolvePrepareCapture(
           withoutTerminal(opts.allowedBundleIds),
@@ -388,7 +356,7 @@ export function createCliExecutor(opts: {
           opts.autoResolve,
           opts.doHide,
         ),
-      )
+      );
     },
 
     /**
@@ -397,15 +365,11 @@ export function createCliExecutor(opts: {
      * packages/desktop/computer-use-mcp/COORDINATES.md.
      */
     async screenshot(opts: {
-      allowedBundleIds: string[]
-      displayId?: number
+      allowedBundleIds: string[];
+      displayId?: number;
     }): Promise<ScreenshotResult> {
-      const d = cu.display.getSize(opts.displayId)
-      const [targetW, targetH] = computeTargetDims(
-        d.width,
-        d.height,
-        d.scaleFactor,
-      )
+      const d = cu.display.getSize(opts.displayId);
+      const [targetW, targetH] = computeTargetDims(d.width, d.height, d.scaleFactor);
       return drainRunLoop(() =>
         cu.screenshot.captureExcluding(
           withoutTerminal(opts.allowedBundleIds),
@@ -414,7 +378,7 @@ export function createCliExecutor(opts: {
           targetH,
           opts.displayId,
         ),
-      )
+      );
     },
 
     async zoom(
@@ -422,12 +386,8 @@ export function createCliExecutor(opts: {
       allowedBundleIds: string[],
       displayId?: number,
     ): Promise<{ base64: string; width: number; height: number }> {
-      const d = cu.display.getSize(displayId)
-      const [outW, outH] = computeTargetDims(
-        regionLogical.w,
-        regionLogical.h,
-        d.scaleFactor,
-      )
+      const d = cu.display.getSize(displayId);
+      const [outW, outH] = computeTargetDims(regionLogical.w, regionLogical.h, d.scaleFactor);
       return drainRunLoop(() =>
         cu.screenshot.captureRegion(
           withoutTerminal(allowedBundleIds),
@@ -440,7 +400,7 @@ export function createCliExecutor(opts: {
           SCREENSHOT_JPEG_QUALITY,
           displayId,
         ),
-      )
+      );
     },
 
     // ── Keyboard ─────────────────────────────────────────────────────────
@@ -453,27 +413,27 @@ export function createCliExecutor(opts: {
      * nothing stuck. 8ms between iterations — 125Hz USB polling cadence.
      */
     async key(keySequence: string, repeat?: number): Promise<void> {
-      const input = requireComputerUseInput()
-      const parts = keySequence.split('+').filter(p => p.length > 0)
+      const input = requireComputerUseInput();
+      const parts = keySequence.split('+').filter((p) => p.length > 0);
       // Bare-only: the CGEventTap checks event.flags.isEmpty so ctrl+escape
       // etc. pass through without aborting.
-      const isEsc = isBareEscape(parts)
-      const n = repeat ?? 1
+      const isEsc = isBareEscape(parts);
+      const n = repeat ?? 1;
       await drainRunLoop(async () => {
         for (let i = 0; i < n; i++) {
           if (i > 0) {
-            await sleep(8)
+            await sleep(8);
           }
           if (isEsc) {
-            notifyExpectedEscape()
+            notifyExpectedEscape();
           }
-          await input.keys(parts)
+          await input.keys(parts);
         }
-      })
+      });
     },
 
     async holdKey(keyNames: string[], durationMs: number): Promise<void> {
-      const input = requireComputerUseInput()
+      const input = requireComputerUseInput();
       // Press/release each wrapped in drainRunLoop; the sleep sits outside so
       // durationMs isn't bounded by drainRunLoop's 30s timeout. `pressed`
       // tracks which presses landed so a mid-press throw still releases
@@ -484,38 +444,38 @@ export function createCliExecutor(opts: {
       // pump running, the orphaned lambda would continue pushing to `pressed`
       // after finally's releasePressed snapshotted the length — leaving keys
       // stuck. The flag stops the lambda at the next iteration.
-      const pressed: string[] = []
-      let orphaned = false
+      const pressed: string[] = [];
+      let orphaned = false;
       try {
         await drainRunLoop(async () => {
           for (const k of keyNames) {
-            if (orphaned) return
+            if (orphaned) return;
             // Bare Escape: notify the CGEventTap so it doesn't fire the
             // abort callback for a model-synthesized press. Same as key().
             if (isBareEscape([k])) {
-              notifyExpectedEscape()
+              notifyExpectedEscape();
             }
-            await input.key(k, 'press')
-            pressed.push(k)
+            await input.key(k, 'press');
+            pressed.push(k);
           }
-        })
-        await sleep(durationMs)
+        });
+        await sleep(durationMs);
       } finally {
-        orphaned = true
-        await drainRunLoop(() => releasePressed(input, pressed))
+        orphaned = true;
+        await drainRunLoop(() => releasePressed(input, pressed));
       }
     },
 
     async type(text: string, opts: { viaClipboard: boolean }): Promise<void> {
-      const input = requireComputerUseInput()
+      const input = requireComputerUseInput();
       if (opts.viaClipboard) {
         // keys(['command','v']) inside needs the pump.
-        await drainRunLoop(() => typeViaClipboard(input, text))
-        return
+        await drainRunLoop(() => typeViaClipboard(input, text));
+        return;
       }
       // `toolCalls.ts` handles the grapheme loop + 8ms sleeps and calls this
       // once per grapheme. typeText doesn't dispatch to the main queue.
-      await input.typeText(text)
+      await input.typeText(text);
     },
 
     readClipboard: readClipboardViaPbpaste,
@@ -525,7 +485,7 @@ export function createCliExecutor(opts: {
     // ── Mouse ────────────────────────────────────────────────────────────
 
     async moveMouse(x: number, y: number): Promise<void> {
-      await moveAndSettle(requireComputerUseInput(), x, y)
+      await moveAndSettle(requireComputerUseInput(), x, y);
     },
 
     /**
@@ -542,29 +502,27 @@ export function createCliExecutor(opts: {
       count: 1 | 2 | 3,
       modifiers?: string[],
     ): Promise<void> {
-      const input = requireComputerUseInput()
-      await moveAndSettle(input, x, y)
+      const input = requireComputerUseInput();
+      await moveAndSettle(input, x, y);
       if (modifiers && modifiers.length > 0) {
         await drainRunLoop(() =>
-          withModifiers(input, modifiers, () =>
-            input.mouseButton(button, 'click', count),
-          ),
-        )
+          withModifiers(input, modifiers, () => input.mouseButton(button, 'click', count)),
+        );
       } else {
-        await input.mouseButton(button, 'click', count)
+        await input.mouseButton(button, 'click', count);
       }
     },
 
     async mouseDown(): Promise<void> {
-      await requireComputerUseInput().mouseButton('left', 'press')
+      await requireComputerUseInput().mouseButton('left', 'press');
     },
 
     async mouseUp(): Promise<void> {
-      await requireComputerUseInput().mouseButton('left', 'release')
+      await requireComputerUseInput().mouseButton('left', 'release');
     },
 
     async getCursorPosition(): Promise<{ x: number; y: number }> {
-      return requireComputerUseInput().mouseLocation()
+      return requireComputerUseInput().mouseLocation();
     },
 
     /**
@@ -580,16 +538,16 @@ export function createCliExecutor(opts: {
       from: { x: number; y: number } | undefined,
       to: { x: number; y: number },
     ): Promise<void> {
-      const input = requireComputerUseInput()
+      const input = requireComputerUseInput();
       if (from !== undefined) {
-        await moveAndSettle(input, from.x, from.y)
+        await moveAndSettle(input, from.x, from.y);
       }
-      await input.mouseButton('left', 'press')
-      await sleep(MOVE_SETTLE_MS)
+      await input.mouseButton('left', 'press');
+      await sleep(MOVE_SETTLE_MS);
       try {
-        await animatedMove(input, to.x, to.y, getMouseAnimationEnabled())
+        await animatedMove(input, to.x, to.y, getMouseAnimationEnabled());
       } finally {
-        await input.mouseButton('left', 'release')
+        await input.mouseButton('left', 'release');
       }
     },
 
@@ -598,50 +556,50 @@ export function createCliExecutor(opts: {
      * axis; a horizontal failure shouldn't lose the vertical.
      */
     async scroll(x: number, y: number, dx: number, dy: number): Promise<void> {
-      const input = requireComputerUseInput()
-      await moveAndSettle(input, x, y)
+      const input = requireComputerUseInput();
+      await moveAndSettle(input, x, y);
       if (dy !== 0) {
-        await input.mouseScroll(dy, 'vertical')
+        await input.mouseScroll(dy, 'vertical');
       }
       if (dx !== 0) {
-        await input.mouseScroll(dx, 'horizontal')
+        await input.mouseScroll(dx, 'horizontal');
       }
     },
 
     // ── App management ───────────────────────────────────────────────────
 
     async getFrontmostApp(): Promise<FrontmostApp | null> {
-      const info = requireComputerUseInput().getFrontmostAppInfo()
-      if (!info || !info.bundleId) return null
-      return { bundleId: info.bundleId, displayName: info.appName }
+      const info = requireComputerUseInput().getFrontmostAppInfo();
+      if (!info || !info.bundleId) return null;
+      return { bundleId: info.bundleId, displayName: info.appName };
     },
 
     async appUnderPoint(
       x: number,
       y: number,
     ): Promise<{ bundleId: string; displayName: string } | null> {
-      return cu.apps.appUnderPoint(x, y)
+      return cu.apps.appUnderPoint(x, y);
     },
 
     async listInstalledApps(): Promise<InstalledApp[]> {
       // `ComputerUseInstalledApp` is `{bundleId, displayName, path}`.
       // `InstalledApp` adds optional `iconDataUrl` — left unpopulated;
       // the approval dialog fetches lazily via getAppIcon() below.
-      return drainRunLoop(() => cu.apps.listInstalled())
+      return drainRunLoop(() => cu.apps.listInstalled());
     },
 
     async getAppIcon(path: string): Promise<string | undefined> {
-      return cu.apps.iconDataUrl(path) ?? undefined
+      return cu.apps.iconDataUrl(path) ?? undefined;
     },
 
     async listRunningApps(): Promise<RunningApp[]> {
-      return cu.apps.listRunning()
+      return cu.apps.listRunning();
     },
 
     async openApp(bundleId: string): Promise<void> {
-      await cu.apps.open(bundleId)
+      await cu.apps.open(bundleId);
     },
-  }
+  };
 }
 
 /**
@@ -649,10 +607,8 @@ export function createCliExecutor(opts: {
  * `stopHooks.ts` / `query.ts`, outside the executor lifecycle. Fire-and-forget
  * at the call site; the caller `.catch()`es.
  */
-export async function unhideComputerUseApps(
-  bundleIds: readonly string[],
-): Promise<void> {
-  if (bundleIds.length === 0) return
-  const cu = requireComputerUseSwift()
-  await cu.apps.unhide([...bundleIds])
+export async function unhideComputerUseApps(bundleIds: readonly string[]): Promise<void> {
+  if (bundleIds.length === 0) return;
+  const cu = requireComputerUseSwift();
+  await cu.apps.unhide([...bundleIds]);
 }

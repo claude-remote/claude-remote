@@ -11,24 +11,24 @@
  *   Windows — Windows Terminal (wt.exe), PowerShell, cmd.exe
  */
 
-import { spawn } from 'child_process'
-import { basename } from 'path'
-import { getGlobalConfig } from '../config.js'
-import { logForDebugging } from '../debug.js'
-import { execFileNoThrow } from '../execFileNoThrow.js'
-import { which } from '../which.js'
+import { spawn } from 'node:child_process';
+import { basename } from 'node:path';
+import { getGlobalConfig } from '../config.js';
+import { logForDebugging } from '../debug.js';
+import { execFileNoThrow } from '../execFileNoThrow.js';
+import { which } from '../which.js';
 
 export type TerminalInfo = {
-  name: string
-  command: string
-}
+  name: string;
+  command: string;
+};
 
 // macOS terminals in preference order.
 // Each entry: [display name, app bundle name or CLI command, detection method]
 const MACOS_TERMINALS: Array<{
-  name: string
-  bundleId: string
-  app: string
+  name: string;
+  bundleId: string;
+  app: string;
 }> = [
   { name: 'iTerm2', bundleId: 'com.googlecode.iterm2', app: 'iTerm' },
   { name: 'Ghostty', bundleId: 'com.mitchellh.ghostty', app: 'Ghostty' },
@@ -40,7 +40,7 @@ const MACOS_TERMINALS: Array<{
     bundleId: 'com.apple.Terminal',
     app: 'Terminal',
   },
-]
+];
 
 // Linux terminals in preference order (command name)
 const LINUX_TERMINALS = [
@@ -54,7 +54,7 @@ const LINUX_TERMINALS = [
   'mate-terminal',
   'tilix',
   'xterm',
-]
+];
 
 /**
  * Detect the user's preferred terminal on macOS.
@@ -65,26 +65,24 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
   // Stored preference from a previous interactive session. This is the only
   // signal that survives into the headless LaunchServices context — the env
   // var check below never hits when we're launched from a browser link.
-  const stored = getGlobalConfig().deepLinkTerminal
+  const stored = getGlobalConfig().deepLinkTerminal;
   if (stored) {
-    const match = MACOS_TERMINALS.find(t => t.app === stored)
+    const match = MACOS_TERMINALS.find((t) => t.app === stored);
     if (match) {
-      return { name: match.name, command: match.app }
+      return { name: match.name, command: match.app };
     }
   }
 
   // Check the TERM_PROGRAM env var — if set, the user has a clear preference.
   // TERM_PROGRAM may include a .app suffix (e.g., "iTerm.app"), so strip it.
-  const termProgram = process.env.TERM_PROGRAM
+  const termProgram = process.env.TERM_PROGRAM;
   if (termProgram) {
-    const normalized = termProgram.replace(/\.app$/i, '').toLowerCase()
+    const normalized = termProgram.replace(/\.app$/i, '').toLowerCase();
     const match = MACOS_TERMINALS.find(
-      t =>
-        t.app.toLowerCase() === normalized ||
-        t.name.toLowerCase() === normalized,
-    )
+      (t) => t.app.toLowerCase() === normalized || t.name.toLowerCase() === normalized,
+    );
     if (match) {
-      return { name: match.name, command: match.app }
+      return { name: match.name, command: match.app };
     }
   }
 
@@ -97,27 +95,26 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
       'mdfind',
       [`kMDItemCFBundleIdentifier == "${terminal.bundleId}"`],
       { timeout: 5000, useCwd: false },
-    )
+    );
     if (code === 0 && stdout.trim().length > 0) {
-      return { name: terminal.name, command: terminal.app }
+      return { name: terminal.name, command: terminal.app };
     }
   }
 
   // Fallback: check /Applications directly (mdfind may not work if
   // Spotlight indexing is disabled or incomplete)
   for (const terminal of MACOS_TERMINALS) {
-    const { code: lsCode } = await execFileNoThrow(
-      'ls',
-      [`/Applications/${terminal.app}.app`],
-      { timeout: 1000, useCwd: false },
-    )
+    const { code: lsCode } = await execFileNoThrow('ls', [`/Applications/${terminal.app}.app`], {
+      timeout: 1000,
+      useCwd: false,
+    });
     if (lsCode === 0) {
-      return { name: terminal.name, command: terminal.app }
+      return { name: terminal.name, command: terminal.app };
     }
   }
 
   // Terminal.app is always available on macOS
-  return { name: 'Terminal.app', command: 'Terminal' }
+  return { name: 'Terminal.app', command: 'Terminal' };
 }
 
 /**
@@ -126,29 +123,29 @@ async function detectMacosTerminal(): Promise<TerminalInfo> {
  */
 async function detectLinuxTerminal(): Promise<TerminalInfo | null> {
   // Check $TERMINAL env var
-  const termEnv = process.env.TERMINAL
+  const termEnv = process.env.TERMINAL;
   if (termEnv) {
-    const resolved = await which(termEnv)
+    const resolved = await which(termEnv);
     if (resolved) {
-      return { name: basename(termEnv), command: resolved }
+      return { name: basename(termEnv), command: resolved };
     }
   }
 
   // Check x-terminal-emulator (Debian/Ubuntu alternative)
-  const xte = await which('x-terminal-emulator')
+  const xte = await which('x-terminal-emulator');
   if (xte) {
-    return { name: 'x-terminal-emulator', command: xte }
+    return { name: 'x-terminal-emulator', command: xte };
   }
 
   // Walk the priority list
   for (const terminal of LINUX_TERMINALS) {
-    const resolved = await which(terminal)
+    const resolved = await which(terminal);
     if (resolved) {
-      return { name: terminal, command: resolved }
+      return { name: terminal, command: resolved };
     }
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -156,25 +153,25 @@ async function detectLinuxTerminal(): Promise<TerminalInfo | null> {
  */
 async function detectWindowsTerminal(): Promise<TerminalInfo> {
   // Check for Windows Terminal first
-  const wt = await which('wt.exe')
+  const wt = await which('wt.exe');
   if (wt) {
-    return { name: 'Windows Terminal', command: wt }
+    return { name: 'Windows Terminal', command: wt };
   }
 
   // PowerShell 7+ (separate install)
-  const pwsh = await which('pwsh.exe')
+  const pwsh = await which('pwsh.exe');
   if (pwsh) {
-    return { name: 'PowerShell', command: pwsh }
+    return { name: 'PowerShell', command: pwsh };
   }
 
   // Windows PowerShell 5.1 (built into Windows)
-  const powershell = await which('powershell.exe')
+  const powershell = await which('powershell.exe');
   if (powershell) {
-    return { name: 'PowerShell', command: powershell }
+    return { name: 'PowerShell', command: powershell };
   }
 
   // cmd.exe is always available
-  return { name: 'Command Prompt', command: 'cmd.exe' }
+  return { name: 'Command Prompt', command: 'cmd.exe' };
 }
 
 /**
@@ -183,13 +180,13 @@ async function detectWindowsTerminal(): Promise<TerminalInfo> {
 export async function detectTerminal(): Promise<TerminalInfo | null> {
   switch (process.platform) {
     case 'darwin':
-      return detectMacosTerminal()
+      return detectMacosTerminal();
     case 'linux':
-      return detectLinuxTerminal()
+      return detectLinuxTerminal();
     case 'win32':
-      return detectWindowsTerminal()
+      return detectWindowsTerminal();
     default:
-      return null
+      return null;
   }
 }
 
@@ -214,41 +211,39 @@ export async function detectTerminal(): Promise<TerminalInfo | null> {
 export async function launchInTerminal(
   claudePath: string,
   action: {
-    query?: string
-    cwd?: string
-    repo?: string
-    lastFetchMs?: number
+    query?: string;
+    cwd?: string;
+    repo?: string;
+    lastFetchMs?: number;
   },
 ): Promise<boolean> {
-  const terminal = await detectTerminal()
+  const terminal = await detectTerminal();
   if (!terminal) {
-    logForDebugging('No terminal emulator detected', { level: 'error' })
-    return false
+    logForDebugging('No terminal emulator detected', { level: 'error' });
+    return false;
   }
 
-  logForDebugging(
-    `Launching in terminal: ${terminal.name} (${terminal.command})`,
-  )
-  const claudeArgs = ['--deep-link-origin']
+  logForDebugging(`Launching in terminal: ${terminal.name} (${terminal.command})`);
+  const claudeArgs = ['--deep-link-origin'];
   if (action.repo) {
-    claudeArgs.push('--deep-link-repo', action.repo)
+    claudeArgs.push('--deep-link-repo', action.repo);
     if (action.lastFetchMs !== undefined) {
-      claudeArgs.push('--deep-link-last-fetch', String(action.lastFetchMs))
+      claudeArgs.push('--deep-link-last-fetch', String(action.lastFetchMs));
     }
   }
   if (action.query) {
-    claudeArgs.push('--prefill', action.query)
+    claudeArgs.push('--prefill', action.query);
   }
 
   switch (process.platform) {
     case 'darwin':
-      return launchMacosTerminal(terminal, claudePath, claudeArgs, action.cwd)
+      return launchMacosTerminal(terminal, claudePath, claudeArgs, action.cwd);
     case 'linux':
-      return launchLinuxTerminal(terminal, claudePath, claudeArgs, action.cwd)
+      return launchLinuxTerminal(terminal, claudePath, claudeArgs, action.cwd);
     case 'win32':
-      return launchWindowsTerminal(terminal, claudePath, claudeArgs, action.cwd)
+      return launchWindowsTerminal(terminal, claudePath, claudeArgs, action.cwd);
     default:
-      return false
+      return false;
   }
 }
 
@@ -264,7 +259,7 @@ async function launchMacosTerminal(
     // macOS paths where shellQuote() correctness is load-bearing.
 
     case 'iTerm': {
-      const shCmd = buildShellCommand(claudePath, claudeArgs, cwd)
+      const shCmd = buildShellCommand(claudePath, claudeArgs, cwd);
       // If iTerm isn't running, `tell application` launches it and iTerm's
       // default startup behavior opens a window — so `create window` would
       // make a second one. Check `running` first: if already running (even
@@ -279,24 +274,24 @@ async function launchMacosTerminal(
   tell current session of current window
     write text ${appleScriptQuote(shCmd)}
   end tell
-end tell`
+end tell`;
       const { code } = await execFileNoThrow('osascript', ['-e', script], {
         useCwd: false,
-      })
-      if (code === 0) return true
-      break
+      });
+      if (code === 0) return true;
+      break;
     }
 
     case 'Terminal': {
-      const shCmd = buildShellCommand(claudePath, claudeArgs, cwd)
+      const shCmd = buildShellCommand(claudePath, claudeArgs, cwd);
       const script = `tell application "Terminal"
   do script ${appleScriptQuote(shCmd)}
   activate
-end tell`
+end tell`;
       const { code } = await execFileNoThrow('osascript', ['-e', script], {
         useCwd: false,
-      })
-      return code === 0
+      });
+      return code === 0;
     }
 
     // --- PURE ARGV PATHS (no shell, no shellQuote) ---
@@ -304,56 +299,49 @@ end tell`
     // terminal's native --working-directory + -e exec the command directly.
 
     case 'Ghostty': {
-      const args = [
-        '-na',
-        terminal.command,
-        '--args',
-        '--window-save-state=never',
-      ]
-      if (cwd) args.push(`--working-directory=${cwd}`)
-      args.push('-e', claudePath, ...claudeArgs)
-      const { code } = await execFileNoThrow('open', args, { useCwd: false })
-      if (code === 0) return true
-      break
+      const args = ['-na', terminal.command, '--args', '--window-save-state=never'];
+      if (cwd) args.push(`--working-directory=${cwd}`);
+      args.push('-e', claudePath, ...claudeArgs);
+      const { code } = await execFileNoThrow('open', args, { useCwd: false });
+      if (code === 0) return true;
+      break;
     }
 
     case 'Alacritty': {
-      const args = ['-na', terminal.command, '--args']
-      if (cwd) args.push('--working-directory', cwd)
-      args.push('-e', claudePath, ...claudeArgs)
-      const { code } = await execFileNoThrow('open', args, { useCwd: false })
-      if (code === 0) return true
-      break
+      const args = ['-na', terminal.command, '--args'];
+      if (cwd) args.push('--working-directory', cwd);
+      args.push('-e', claudePath, ...claudeArgs);
+      const { code } = await execFileNoThrow('open', args, { useCwd: false });
+      if (code === 0) return true;
+      break;
     }
 
     case 'kitty': {
-      const args = ['-na', terminal.command, '--args']
-      if (cwd) args.push('--directory', cwd)
-      args.push(claudePath, ...claudeArgs)
-      const { code } = await execFileNoThrow('open', args, { useCwd: false })
-      if (code === 0) return true
-      break
+      const args = ['-na', terminal.command, '--args'];
+      if (cwd) args.push('--directory', cwd);
+      args.push(claudePath, ...claudeArgs);
+      const { code } = await execFileNoThrow('open', args, { useCwd: false });
+      if (code === 0) return true;
+      break;
     }
 
     case 'WezTerm': {
-      const args = ['-na', terminal.command, '--args', 'start']
-      if (cwd) args.push('--cwd', cwd)
-      args.push('--', claudePath, ...claudeArgs)
-      const { code } = await execFileNoThrow('open', args, { useCwd: false })
-      if (code === 0) return true
-      break
+      const args = ['-na', terminal.command, '--args', 'start'];
+      if (cwd) args.push('--cwd', cwd);
+      args.push('--', claudePath, ...claudeArgs);
+      const { code } = await execFileNoThrow('open', args, { useCwd: false });
+      if (code === 0) return true;
+      break;
     }
   }
 
-  logForDebugging(
-    `Failed to launch ${terminal.name}, falling back to Terminal.app`,
-  )
+  logForDebugging(`Failed to launch ${terminal.name}, falling back to Terminal.app`);
   return launchMacosTerminal(
     { name: 'Terminal.app', command: 'Terminal' },
     claudePath,
     claudeArgs,
     cwd,
-  )
+  );
 }
 
 async function launchLinuxTerminal(
@@ -368,52 +356,52 @@ async function launchLinuxTerminal(
   // x-terminal-emulator / $TERMINAL), spawn({cwd}) sets the terminal
   // process's cwd — most inherit it for the child.
 
-  let args: string[]
-  let spawnCwd: string | undefined
+  let args: string[];
+  let spawnCwd: string | undefined;
 
   switch (terminal.name) {
     case 'gnome-terminal':
-      args = cwd ? [`--working-directory=${cwd}`, '--'] : ['--']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? [`--working-directory=${cwd}`, '--'] : ['--'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'konsole':
-      args = cwd ? ['--workdir', cwd, '-e'] : ['-e']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? ['--workdir', cwd, '-e'] : ['-e'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'kitty':
-      args = cwd ? ['--directory', cwd] : []
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? ['--directory', cwd] : [];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'wezterm':
-      args = cwd ? ['start', '--cwd', cwd, '--'] : ['start', '--']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? ['start', '--cwd', cwd, '--'] : ['start', '--'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'alacritty':
-      args = cwd ? ['--working-directory', cwd, '-e'] : ['-e']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? ['--working-directory', cwd, '-e'] : ['-e'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'ghostty':
-      args = cwd ? [`--working-directory=${cwd}`, '-e'] : ['-e']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? [`--working-directory=${cwd}`, '-e'] : ['-e'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'xfce4-terminal':
     case 'mate-terminal':
-      args = cwd ? [`--working-directory=${cwd}`, '-x'] : ['-x']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? [`--working-directory=${cwd}`, '-x'] : ['-x'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     case 'tilix':
-      args = cwd ? [`--working-directory=${cwd}`, '-e'] : ['-e']
-      args.push(claudePath, ...claudeArgs)
-      break
+      args = cwd ? [`--working-directory=${cwd}`, '-e'] : ['-e'];
+      args.push(claudePath, ...claudeArgs);
+      break;
     default:
       // xterm, x-terminal-emulator, $TERMINAL — no reliable cwd flag.
       // spawn({cwd}) sets the terminal's own cwd; most inherit.
-      args = ['-e', claudePath, ...claudeArgs]
-      spawnCwd = cwd
-      break
+      args = ['-e', claudePath, ...claudeArgs];
+      spawnCwd = cwd;
+      break;
   }
 
-  return spawnDetached(terminal.command, args, { cwd: spawnCwd })
+  return spawnDetached(terminal.command, args, { cwd: spawnCwd });
 }
 
 async function launchWindowsTerminal(
@@ -422,14 +410,14 @@ async function launchWindowsTerminal(
   claudeArgs: string[],
   cwd?: string,
 ): Promise<boolean> {
-  const args: string[] = []
+  const args: string[] = [];
 
   switch (terminal.name) {
     // --- PURE ARGV PATH ---
     case 'Windows Terminal':
-      if (cwd) args.push('-d', cwd)
-      args.push('--', claudePath, ...claudeArgs)
-      break
+      if (cwd) args.push('-d', cwd);
+      args.push('--', claudePath, ...claudeArgs);
+      break;
 
     // --- SHELL-STRING PATHS ---
     // PowerShell -Command and cmd /k take a command string. No argv exec
@@ -441,22 +429,22 @@ async function launchWindowsTerminal(
       // Single-quoted PowerShell strings have NO escape sequences (only
       // '' for a literal quote). Double-quoted strings interpret backtick
       // escapes — a query containing `" could break out.
-      const cdCmd = cwd ? `Set-Location ${psQuote(cwd)}; ` : ''
+      const cdCmd = cwd ? `Set-Location ${psQuote(cwd)}; ` : '';
       args.push(
         '-NoExit',
         '-Command',
         `${cdCmd}& ${psQuote(claudePath)} ${claudeArgs.map(psQuote).join(' ')}`,
-      )
-      break
+      );
+      break;
     }
 
     default: {
-      const cdCmd = cwd ? `cd /d ${cmdQuote(cwd)} && ` : ''
+      const cdCmd = cwd ? `cd /d ${cmdQuote(cwd)} && ` : '';
       args.push(
         '/k',
-        `${cdCmd}${cmdQuote(claudePath)} ${claudeArgs.map(a => cmdQuote(a)).join(' ')}`,
-      )
-      break
+        `${cdCmd}${cmdQuote(claudePath)} ${claudeArgs.map((a) => cmdQuote(a)).join(' ')}`,
+      );
+      break;
     }
   }
 
@@ -465,7 +453,7 @@ async function launchWindowsTerminal(
   // escape our already-cmdQuote'd string. Bypass it for cmd.exe only.
   return spawnDetached(terminal.command, args, {
     windowsVerbatimArguments: terminal.name === 'Command Prompt',
-  })
+  });
 }
 
 /**
@@ -478,37 +466,33 @@ function spawnDetached(
   args: string[],
   opts: { cwd?: string; windowsVerbatimArguments?: boolean } = {},
 ): Promise<boolean> {
-  return new Promise<boolean>(resolve => {
+  return new Promise<boolean>((resolve) => {
     const child = spawn(command, args, {
       detached: true,
       stdio: 'ignore',
       cwd: opts.cwd,
       windowsVerbatimArguments: opts.windowsVerbatimArguments,
-    })
-    child.once('error', err => {
+    });
+    child.once('error', (err) => {
       logForDebugging(`Failed to spawn ${command}: ${err.message}`, {
         level: 'error',
-      })
-      void resolve(false)
-    })
+      });
+      void resolve(false);
+    });
     child.once('spawn', () => {
-      child.unref()
-      void resolve(true)
-    })
-  })
+      child.unref();
+      void resolve(true);
+    });
+  });
 }
 
 /**
  * Build a single-quoted POSIX shell command string. ONLY used by the
  * AppleScript paths (iTerm, Terminal.app) which have no argv interface.
  */
-function buildShellCommand(
-  claudePath: string,
-  claudeArgs: string[],
-  cwd?: string,
-): string {
-  const cdPrefix = cwd ? `cd ${shellQuote(cwd)} && ` : ''
-  return `${cdPrefix}${[claudePath, ...claudeArgs].map(shellQuote).join(' ')}`
+function buildShellCommand(claudePath: string, claudeArgs: string[], cwd?: string): string {
+  const cdPrefix = cwd ? `cd ${shellQuote(cwd)} && ` : '';
+  return `${cdPrefix}${[claudePath, ...claudeArgs].map(shellQuote).join(' ')}`;
 }
 
 /**
@@ -517,14 +501,14 @@ function buildShellCommand(
  * Only used by buildShellCommand() for the AppleScript paths.
  */
 function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, "'\\''")}'`
+  return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
 /**
  * AppleScript string literal escaping (backslash then double-quote).
  */
 function appleScriptQuote(s: string): string {
-  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  return `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
 /**
@@ -534,7 +518,7 @@ function appleScriptQuote(s: string): string {
  * strings interpret `n `t `" etc. and can be escaped out of.
  */
 function psQuote(s: string): string {
-  return `'${s.replace(/'/g, "''")}'`
+  return `'${s.replace(/'/g, "''")}'`;
 }
 
 /**
@@ -551,7 +535,7 @@ function psQuote(s: string): string {
  * \ before our closing " would eat the close-quote.
  */
 function cmdQuote(arg: string): string {
-  const stripped = arg.replace(/"/g, '').replace(/%/g, '%%')
-  const escaped = stripped.replace(/(\\+)$/, '$1$1')
-  return `"${escaped}"`
+  const stripped = arg.replace(/"/g, '').replace(/%/g, '%%');
+  const escaped = stripped.replace(/(\\+)$/, '$1$1');
+  return `"${escaped}"`;
 }

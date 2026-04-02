@@ -3,10 +3,10 @@ import {
   CRON_DELETE_TOOL_NAME,
   DEFAULT_MAX_AGE_DAYS,
   isKairosCronEnabled,
-} from '../../tools/ScheduleCronTool/prompt.js'
-import { registerBundledSkill } from '../bundledSkills.js'
+} from '../../tools/ScheduleCronTool/prompt.js';
+import { registerBundledSkill } from '../bundledSkills.js';
 
-const DEFAULT_INTERVAL = '10m'
+const DEFAULT_INTERVAL = '10m';
 
 const USAGE_MESSAGE = `Usage: /loop [interval] <prompt>
 
@@ -20,7 +20,7 @@ Examples:
   /loop 30m check the deploy
   /loop 1h /standup 1
   /loop check the deploy          (defaults to ${DEFAULT_INTERVAL})
-  /loop check the deploy every 20m`
+  /loop check the deploy every 20m`;
 
 function buildPrompt(args: string): string {
   return `# /loop — schedule a recurring prompt
@@ -68,7 +68,7 @@ Supported suffixes: \`s\` (seconds, rounded up to nearest minute, min 1), \`m\` 
 
 ## Input
 
-${args}`
+${args}`;
 }
 
 export function registerLoopSkill(): void {
@@ -82,11 +82,11 @@ export function registerLoopSkill(): void {
     userInvocable: true,
     isEnabled: isKairosCronEnabled,
     async getPromptForCommand(args) {
-      const trimmed = args.trim()
+      const trimmed = args.trim();
       if (!trimmed) {
-        return [{ type: 'text', text: USAGE_MESSAGE }]
+        return [{ type: 'text', text: USAGE_MESSAGE }];
       }
-      return [{ type: 'text', text: buildPrompt(trimmed) }]
+      return [{ type: 'text', text: buildPrompt(trimmed) }];
     },
-  })
+  });
 }

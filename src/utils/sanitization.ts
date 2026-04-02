@@ -23,23 +23,23 @@
  */
 
 export function partiallySanitizeUnicode(prompt: string): string {
-  let current = prompt
-  let previous = ''
-  let iterations = 0
-  const MAX_ITERATIONS = 10 // Safety limit to prevent infinite loops
+  let current = prompt;
+  let previous = '';
+  let iterations = 0;
+  const MAX_ITERATIONS = 10; // Safety limit to prevent infinite loops
 
   // Iteratively sanitize until no more changes occur or max iterations reached
   while (current !== previous && iterations < MAX_ITERATIONS) {
-    previous = current
+    previous = current;
 
     // Apply NFKC normalization to handle composed character sequences
-    current = current.normalize('NFKC')
+    current = current.normalize('NFKC');
 
     // Remove dangerous Unicode categories using explicit character ranges
 
     // Method 1: Strip dangerous Unicode property classes
     // This is the primary defence and is the solution that is widely used in OSS libraries.
-    current = current.replace(/[\p{Cf}\p{Co}\p{Cn}]/gu, '')
+    current = current.replace(/[\p{Cf}\p{Co}\p{Cn}]/gu, '');
 
     // Method 2: Explicit character ranges. There are some subtle issues with the above method
     // failing in certain environments that don't support regexes for unicode property classes,
@@ -49,43 +49,42 @@ export function partiallySanitizeUnicode(prompt: string): string {
       .replace(/[\u202A-\u202E]/g, '') // Directional formatting characters
       .replace(/[\u2066-\u2069]/g, '') // Directional isolates
       .replace(/[\uFEFF]/g, '') // Byte order mark
-      .replace(/[\uE000-\uF8FF]/g, '') // Basic Multilingual Plane private use
+      .replace(/[\uE000-\uF8FF]/g, ''); // Basic Multilingual Plane private use
 
-    iterations++
+    iterations++;
   }
 
   // If we hit max iterations, crash loudly. This should only ever happen if there is a bug or if someone purposefully created a deeply nested unicode string.
   if (iterations >= MAX_ITERATIONS) {
     throw new Error(
       `Unicode sanitization reached maximum iterations (${MAX_ITERATIONS}) for input: ${prompt.slice(0, 100)}`,
-    )
+    );
   }
 
-  return current
+  return current;
 }
 
-export function recursivelySanitizeUnicode(value: string): string
-export function recursivelySanitizeUnicode<T>(value: T[]): T[]
-export function recursivelySanitizeUnicode<T extends object>(value: T): T
-export function recursivelySanitizeUnicode<T>(value: T): T
+export function recursivelySanitizeUnicode(value: string): string;
+export function recursivelySanitizeUnicode<T>(value: T[]): T[];
+export function recursivelySanitizeUnicode<T extends object>(value: T): T;
+export function recursivelySanitizeUnicode<T>(value: T): T;
 export function recursivelySanitizeUnicode(value: unknown): unknown {
   if (typeof value === 'string') {
-    return partiallySanitizeUnicode(value)
+    return partiallySanitizeUnicode(value);
   }
 
   if (Array.isArray(value)) {
-    return value.map(recursivelySanitizeUnicode)
+    return value.map(recursivelySanitizeUnicode);
   }
 
   if (value !== null && typeof value === 'object') {
-    const sanitized: Record<string, unknown> = {}
+    const sanitized: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
-      sanitized[recursivelySanitizeUnicode(key)] =
-        recursivelySanitizeUnicode(val)
+      sanitized[recursivelySanitizeUnicode(key)] = recursivelySanitizeUnicode(val);
     }
-    return sanitized
+    return sanitized;
   }
 
   // Return other primitive values (numbers, booleans, null, undefined) unchanged
-  return value
+  return value;
 }

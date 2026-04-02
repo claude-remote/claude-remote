@@ -1,5 +1,5 @@
-import type { Command } from '../../commands.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
+import type { Command } from '../../commands.js';
+import { isEnvTruthy } from '../../utils/envUtils.js';
 
 const compact = {
   type: 'local',
@@ -10,6 +10,6 @@ const compact = {
   supportsNonInteractive: true,
   argumentHint: '<optional custom summarization instructions>',
   load: () => import('./compact.js'),
-} satisfies Command
+} satisfies Command;
 
-export default compact
+export default compact;

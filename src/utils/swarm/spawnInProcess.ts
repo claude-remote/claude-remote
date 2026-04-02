@@ -13,81 +13,77 @@
  * 4. Returning spawn result for backend
  */
 
-import sample from 'lodash-es/sample.js'
-import { getSessionId } from '../../bootstrap/state.js'
-import { getSpinnerVerbs } from '../../constants/spinnerVerbs.js'
-import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js'
-import type { AppState } from '../../state/AppState.js'
-import { createTaskStateBase, generateTaskId } from '../../Task.js'
+import sample from 'lodash-es/sample.js';
+import { createTaskStateBase, generateTaskId } from '../../Task.js';
+import { getSessionId } from '../../bootstrap/state.js';
+import { getSpinnerVerbs } from '../../constants/spinnerVerbs.js';
+import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js';
+import type { AppState } from '../../state/AppState.js';
 import type {
   InProcessTeammateTaskState,
   TeammateIdentity,
-} from '../../tasks/InProcessTeammateTask/types.js'
-import { createAbortController } from '../abortController.js'
-import { formatAgentId } from '../agentId.js'
-import { registerCleanup } from '../cleanupRegistry.js'
-import { logForDebugging } from '../debug.js'
-import { emitTaskTerminatedSdk } from '../sdkEventQueue.js'
-import { evictTaskOutput } from '../task/diskOutput.js'
-import {
-  evictTerminalTask,
-  registerTask,
-  STOPPED_DISPLAY_MS,
-} from '../task/framework.js'
-import { createTeammateContext } from '../teammateContext.js'
+} from '../../tasks/InProcessTeammateTask/types.js';
+import { createAbortController } from '../abortController.js';
+import { formatAgentId } from '../agentId.js';
+import { registerCleanup } from '../cleanupRegistry.js';
+import { logForDebugging } from '../debug.js';
+import { emitTaskTerminatedSdk } from '../sdkEventQueue.js';
+import { evictTaskOutput } from '../task/diskOutput.js';
+import { STOPPED_DISPLAY_MS, evictTerminalTask, registerTask } from '../task/framework.js';
+import { createTeammateContext } from '../teammateContext.js';
 import {
   isPerfettoTracingEnabled,
   registerAgent as registerPerfettoAgent,
   unregisterAgent as unregisterPerfettoAgent,
-} from '../telemetry/perfettoTracing.js'
-import { removeMemberByAgentId } from './teamHelpers.js'
+} from '../telemetry/perfettoTracing.js';
+import { removeMemberByAgentId } from './teamHelpers.js';
 
-type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
+type SetAppStateFn = (updater: (prev: AppState) => AppState) => void;
 
 /**
  * Minimal context required for spawning an in-process teammate.
  * This is a subset of ToolUseContext - only what spawnInProcessTeammate actually uses.
  */
 export type SpawnContext = {
-  setAppState: SetAppStateFn
-  toolUseId?: string
-}
+  setAppState: SetAppStateFn;
+  toolUseId?: string;
+};
 
 /**
  * Configuration for spawning an in-process teammate.
  */
 export type InProcessSpawnConfig = {
   /** Display name for the teammate, e.g., "researcher" */
-  name: string
+  name: string;
   /** Team this teammate belongs to */
-  teamName: string
+  teamName: string;
   /** Initial prompt/task for the teammate */
-  prompt: string
+  prompt: string;
   /** Optional UI color for the teammate */
-  color?: string
+  color?: string;
   /** Whether teammate must enter plan mode before implementing */
-  planModeRequired: boolean
+  planModeRequired: boolean;
   /** Optional model override for this teammate */
-  model?: string
-}
+  model?: string;
+};
 
 /**
  * Result from spawning an in-process teammate.
  */
 export type InProcessSpawnOutput = {
   /** Whether spawn was successful */
-  success: boolean
+  success: boolean;
   /** Full agent ID (format: "name@team") */
-  agentId: string
+  agentId: string;
   /** Task ID for tracking in AppState */
-  taskId?: string
+  taskId?: string;
   /** AbortController for this teammate (linked to parent) */
-  abortController?: AbortController
+  abortController?: AbortController;
   /** Teammate context for AsyncLocalStorage */
-  teammateContext?: ReturnType<typeof createTeammateContext>
+  teammateContext?: ReturnType<typeof createTeammateContext>;
   /** Error message if spawn failed */
-  error?: string
-}
+  error?: string;
+};
 
 /**
  * Spawns an in-process teammate.
@@ -105,24 +101,22 @@ export async function spawnInProcessTeammate(
   config: InProcessSpawnConfig,
   context: SpawnContext,
 ): Promise<InProcessSpawnOutput> {
-  const { name, teamName, prompt, color, planModeRequired, model } = config
-  const { setAppState } = context
+  const { name, teamName, prompt, color, planModeRequired, model } = config;
+  const { setAppState } = context;
 
   // Generate deterministic agent ID
-  const agentId = formatAgentId(name, teamName)
-  const taskId = generateTaskId('in_process_teammate')
+  const agentId = formatAgentId(name, teamName);
+  const taskId = generateTaskId('in_process_teammate');
 
-  logForDebugging(
-    `[spawnInProcessTeammate] Spawning ${agentId} (taskId: ${taskId})`,
-  )
+  logForDebugging(`[spawnInProcessTeammate] Spawning ${agentId} (taskId: ${taskId})`);
 
   try {
     // Create independent AbortController for this teammate
     // Teammates should not be aborted when the leader's query is interrupted
-    const abortController = createAbortController()
+    const abortController = createAbortController();
 
     // Get parent session ID for transcript correlation
-    const parentSessionId = getSessionId()
+    const parentSessionId = getSessionId();
 
     // Create teammate identity (stored as plain data in AppState)
     const identity: TeammateIdentity = {
@@ -132,7 +126,7 @@ export async function spawnInProcessTeammate(
       color,
       planModeRequired,
       parentSessionId,
-    }
+    };
 
     // Create teammate context for AsyncLocalStorage
     // This will be used by runWithTeammateContext() during agent execution
@@ -144,23 +138,18 @@ export async function spawnInProcessTeammate(
       planModeRequired,
       parentSessionId,
       abortController,
-    })
+    });
 
     // Register agent in Perfetto trace for hierarchy visualization
     if (isPerfettoTracingEnabled()) {
-      registerPerfettoAgent(agentId, name, parentSessionId)
+      registerPerfettoAgent(agentId, name, parentSessionId);
     }
 
     // Create task state
-    const description = `${name}: ${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}`
+    const description = `${name}: ${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}`;
 
     const taskState: InProcessTeammateTaskState = {
-      ...createTaskStateBase(
-        taskId,
-        'in_process_teammate',
-        description,
-        context.toolUseId,
-      ),
+      ...createTaskStateBase(taskId, 'in_process_teammate', description, context.toolUseId),
       type: 'in_process_teammate',
       status: 'running',
       identity,
@@ -177,22 +166,20 @@ export async function spawnInProcessTeammate(
       lastReportedTokenCount: 0,
       pendingUserMessages: [],
       messages: [], // Initialize to empty array so getDisplayedMessages works immediately
-    }
+    };
 
     // Register cleanup handler for graceful shutdown
     const unregisterCleanup = registerCleanup(async () => {
-      logForDebugging(`[spawnInProcessTeammate] Cleanup called for ${agentId}`)
-      abortController.abort()
+      logForDebugging(`[spawnInProcessTeammate] Cleanup called for ${agentId}`);
+      abortController.abort();
       // Task state will be updated by the execution loop when it detects abort
-    })
-    taskState.unregisterCleanup = unregisterCleanup
+    });
+    taskState.unregisterCleanup = unregisterCleanup;
 
     // Register task in AppState
-    registerTask(taskState, setAppState)
+    registerTask(taskState, setAppState);
 
-    logForDebugging(
-      `[spawnInProcessTeammate] Registered ${agentId} in AppState`,
-    )
+    logForDebugging(`[spawnInProcessTeammate] Registered ${agentId} in AppState`);
 
     return {
       success: true,
@@ -200,18 +187,15 @@ export async function spawnInProcessTeammate(
       taskId,
       abortController,
       teammateContext,
-    }
+    };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during spawn'
-    logForDebugging(
-      `[spawnInProcessTeammate] Failed to spawn ${agentId}: ${errorMessage}`,
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during spawn';
+    logForDebugging(`[spawnInProcessTeammate] Failed to spawn ${agentId}: ${errorMessage}`);
     return {
       success: false,
       agentId,
       error: errorMessage,
-    }
+    };
   }
 }
 
@@ -224,54 +208,51 @@ export async function spawnInProcessTeammate(
  * @param setAppState - AppState setter
  * @returns true if killed successfully
  */
-export function killInProcessTeammate(
-  taskId: string,
-  setAppState: SetAppStateFn,
-): boolean {
-  let killed = false
-  let teamName: string | null = null
-  let agentId: string | null = null
-  let toolUseId: string | undefined
-  let description: string | undefined
+export function killInProcessTeammate(taskId: string, setAppState: SetAppStateFn): boolean {
+  let killed = false;
+  let teamName: string | null = null;
+  let agentId: string | null = null;
+  let toolUseId: string | undefined;
+  let description: string | undefined;
 
   setAppState((prev: AppState) => {
-    const task = prev.tasks[taskId]
+    const task = prev.tasks[taskId];
     if (!task || task.type !== 'in_process_teammate') {
-      return prev
+      return prev;
     }
 
-    const teammateTask = task as InProcessTeammateTaskState
+    const teammateTask = task as InProcessTeammateTaskState;
 
     if (teammateTask.status !== 'running') {
-      return prev
+      return prev;
     }
 
     // Capture identity for cleanup after state update
-    teamName = teammateTask.identity.teamName
-    agentId = teammateTask.identity.agentId
-    toolUseId = teammateTask.toolUseId
-    description = teammateTask.description
+    teamName = teammateTask.identity.teamName;
+    agentId = teammateTask.identity.agentId;
+    toolUseId = teammateTask.toolUseId;
+    description = teammateTask.description;
 
     // Abort the controller to stop execution
-    teammateTask.abortController?.abort()
+    teammateTask.abortController?.abort();
 
     // Call cleanup handler
-    teammateTask.unregisterCleanup?.()
+    teammateTask.unregisterCleanup?.();
 
     // Update task state and remove from teamContext.teammates
-    killed = true
+    killed = true;
 
     // Call pending idle callbacks to unblock any waiters (e.g., engine.waitForIdle)
-    teammateTask.onIdleCallbacks?.forEach(cb => cb())
+    teammateTask.onIdleCallbacks?.forEach((cb) => cb());
 
     // Remove from teamContext.teammates using the agentId
-    let updatedTeamContext = prev.teamContext
-    if (prev.teamContext && prev.teamContext.teammates && agentId) {
-      const { [agentId]: _, ...remainingTeammates } = prev.teamContext.teammates
+    let updatedTeamContext = prev.teamContext;
+    if (prev.teamContext?.teammates && agentId) {
+      const { [agentId]: _, ...remainingTeammates } = prev.teamContext.teammates;
       updatedTeamContext = {
         ...prev.teamContext,
         teammates: remainingTeammates,
-      }
+      };
     }
 
     return {
@@ -295,16 +276,16 @@ export function killInProcessTeammate(
           currentWorkAbortController: undefined,
         },
       },
-    }
-  })
+    };
+  });
 
   // Remove from team file (outside state updater to avoid file I/O in callback)
   if (teamName && agentId) {
-    removeMemberByAgentId(teamName, agentId)
+    removeMemberByAgentId(teamName, agentId);
   }
 
   if (killed) {
-    void evictTaskOutput(taskId)
+    void evictTaskOutput(taskId);
     // notified:true was pre-set so no XML notification fires; close the SDK
     // task_started bookend directly. The in-process runner's own
     // completion/failure emit guards on status==='running' so it won't
@@ -312,17 +293,14 @@ export function killInProcessTeammate(
     emitTaskTerminatedSdk(taskId, 'stopped', {
       toolUseId,
       summary: description,
-    })
-    setTimeout(
-      evictTerminalTask.bind(null, taskId, setAppState),
-      STOPPED_DISPLAY_MS,
-    )
+    });
+    setTimeout(evictTerminalTask.bind(null, taskId, setAppState), STOPPED_DISPLAY_MS);
   }
 
   // Release perfetto agent registry entry
   if (agentId) {
-    unregisterPerfettoAgent(agentId)
+    unregisterPerfettoAgent(agentId);
   }
 
-  return killed
+  return killed;
 }
