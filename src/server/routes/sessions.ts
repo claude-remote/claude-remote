@@ -122,8 +122,22 @@ export function registerSessionRoutes(app: Hono, hub: Hub): Hono {
       return context.json({ error: 'Message required' }, 400);
     }
 
-    // TODO(T03,T07): wire to hub chat engine with SSE streaming
-    return context.json({ sessionId, status: 'queued', message: body.message });
+    const session = hub.getSession(sessionId);
+    if (!session) {
+      return context.json({ error: 'Session not found' }, 404);
+    }
+
+    const now = Date.now();
+    const messageId = crypto.randomUUID();
+    hub.appendMessage(sessionId, {
+      id: messageId,
+      role: 'user',
+      content: [{ type: 'text', text: body.message }],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return context.json({ sessionId, status: 'queued', messageId, message: body.message });
   });
 
   // GET /api/sessions/:id/export — export conversation

@@ -157,6 +157,15 @@ function createMockHub() {
     getSession(sessionId: string) {
       return sessions.find((item) => item.id === sessionId) ?? null;
     },
+    appendMessage(sessionId: string, message: MockRouteSession['messages'][number]) {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) {
+        return null;
+      }
+      session.messages.push(message);
+      session.updatedAt = Math.max(session.updatedAt, message.updatedAt);
+      return session;
+    },
     archiveSession(sessionId: string) {
       const session = sessions.find((item) => item.id === sessionId);
       if (!session) {
@@ -401,6 +410,38 @@ describe('session routes', () => {
     expect(body.content).toContain('**user**');
     expect(body.content).toContain('hello');
     expect(body.content).toContain('**assistant**');
+  });
+
+  test('POST /api/sessions/:id/chat persists a user message and returns queued', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/sess-1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'ship it' }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.status).toBe('queued');
+    expect(body.messageId).toBeTruthy();
+
+    const historyRes = await app.request('/api/sessions/sess-1/messages');
+    const historyBody = await historyRes.json();
+    expect(historyBody.total).toBe(3);
+    expect(historyBody.messages[2].role).toBe('user');
+    expect(historyBody.messages[2].content[0].text).toBe('ship it');
+  });
+
+  test('POST /api/sessions/:id/chat returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/missing/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'hello' }),
+    });
+
+    expect(res.status).toBe(404);
   });
 });
 

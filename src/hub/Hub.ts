@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
-import type { SessionSnapshot } from '@/shared/types';
+import type { Message, SessionSnapshot } from '@/shared/types';
 import {
   type ClientCommand,
   type HubClientInfo,
@@ -65,6 +65,10 @@ export class Hub {
     },
   ): Session | undefined {
     return this.registry.updateSession(sessionId, updates);
+  }
+
+  appendMessage(sessionId: string, message: Message): Session | undefined {
+    return this.registry.appendMessage(sessionId, message);
   }
 
   getSessionSnapshot(sessionId: string): SessionSnapshot | null {

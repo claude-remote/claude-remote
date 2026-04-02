@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Message } from '@/shared/types';
 import type { HubClientInfo, Session } from './HubProtocol.js';
 
 type CreateSessionInput = {
@@ -68,6 +69,21 @@ export class SessionRegistry {
       ...session,
       name: updates.name ?? session.name,
       tags: updates.tags ?? session.tags ?? [],
+      updatedAt: Date.now(),
+    };
+    this.sessions.set(sessionId, updatedSession);
+    return updatedSession;
+  }
+
+  appendMessage(sessionId: string, message: Message): Session | undefined {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return undefined;
+    }
+
+    const updatedSession: Session = {
+      ...session,
+      messages: [...session.messages, message],
       updatedAt: Date.now(),
     };
     this.sessions.set(sessionId, updatedSession);
