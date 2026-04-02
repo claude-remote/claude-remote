@@ -14,7 +14,7 @@ import { registerMcpRoutes } from '@/server/routes/mcp';
 import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
-import type { Message } from '@/shared/types';
+import type { Message, SessionConfig } from '@/shared/types';
 
 type MockRouteSession = {
   id: string;
@@ -82,6 +82,30 @@ function createMockHub() {
       tags: [],
     },
   ];
+  const sessionConfigs = new Map<string, SessionConfig>([
+    [
+      'sess-1',
+      {
+        model: 'claude-sonnet',
+        effortLevel: 'medium' as const,
+        permissionMode: 'ask' as const,
+      },
+    ],
+    [
+      'sess-2',
+      {
+        model: 'claude-haiku',
+        effortLevel: 'low' as const,
+        permissionMode: 'approve' as const,
+      },
+    ],
+  ]);
+  let globalConfig = {
+    port: 7680,
+    tunnel: false,
+    maxSessions: 10,
+    maxConcurrentTools: 5,
+  };
 
   const buildSnapshot = (sessionId: string) => {
     const session = sessions.find((item) => item.id === sessionId);
@@ -106,13 +130,16 @@ function createMockHub() {
       pendingPermissions: session.pendingPermissions,
       clients: session.clients,
       availableSkills: [],
-      config: {
+      config: sessionConfigs.get(session.id) ?? {
         model: 'claude-sonnet',
         effortLevel: 'medium' as const,
         permissionMode: 'ask' as const,
       },
       configOptions: {
-        availableModels: [],
+        availableModels: [
+          { id: 'claude-sonnet', name: 'Claude Sonnet', supportsImages: true },
+          { id: 'claude-haiku', name: 'Claude Haiku', supportsImages: true },
+        ],
         effortLevels: ['low', 'medium', 'high'] as const,
         permissionModes: ['ask', 'approve', 'bypass'] as const,
       },
@@ -135,6 +162,16 @@ function createMockHub() {
     getStatus() {
       return { running: true, sessionCount: 2, connectionCount: 3, socketPath: '/tmp/test.sock' };
     },
+    getGlobalConfig() {
+      return globalConfig;
+    },
+    updateGlobalConfig(updates: Record<string, unknown>) {
+      globalConfig = {
+        ...globalConfig,
+        ...updates,
+      };
+      return globalConfig;
+    },
     listSessions() {
       return sessions;
     },
@@ -153,6 +190,11 @@ function createMockHub() {
         tags: [],
       };
       sessions.unshift(session);
+      sessionConfigs.set(session.id, {
+        model: 'claude-sonnet',
+        effortLevel: 'medium',
+        permissionMode: 'ask',
+      });
       return session;
     },
     getSessionSnapshot(sessionId: string) {
@@ -160,6 +202,28 @@ function createMockHub() {
     },
     getSession(sessionId: string) {
       return sessions.find((item) => item.id === sessionId) ?? null;
+    },
+    updateSessionConfig(
+      sessionId: string,
+      updates: Partial<SessionConfig>,
+    ) {
+      const session = sessions.find((item) => item.id === sessionId);
+      if (!session) {
+        return null;
+      }
+
+      const current = sessionConfigs.get(sessionId) ?? {
+        model: 'claude-sonnet',
+        effortLevel: 'medium' as const,
+        permissionMode: 'ask' as const,
+      };
+      const updated = {
+        ...current,
+        ...updates,
+      };
+      sessionConfigs.set(sessionId, updated);
+      session.updatedAt = 4500;
+      return updated;
     },
     appendMessage(sessionId: string, message: MockRouteSession['messages'][number]) {
       const session = sessions.find((item) => item.id === sessionId);
@@ -578,10 +642,40 @@ describe('config routes', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
     expect(body.config).toBeDefined();
-    expect(body.config.model).toBeDefined();
+    expect(body.config.model).toBe('claude-sonnet');
     expect(body.options).toBeDefined();
+    expect(Array.isArray(body.options.availableModels)).toBe(true);
     expect(Array.isArray(body.options.effortLevels)).toBe(true);
+  });
+
+  test('GET /api/sessions/:id/config returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/missing/config');
+
+    expect(res.status).toBe(404);
+  });
+
+  test('PATCH /api/sessions/:id/config updates and persists config', async () => {
+    const { app } = createTestApp();
+    const updateRes = await app.request('/api/sessions/sess-1/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-haiku', effortLevel: 'low' }),
+    });
+
+    expect(updateRes.status).toBe(200);
+    const updateBody = await updateRes.json();
+    expect(updateBody.ok).toBe(true);
+    expect(updateBody.updated.model).toBe('claude-haiku');
+    expect(updateBody.updated.effortLevel).toBe('low');
+
+    const getRes = await app.request('/api/sessions/sess-1/config');
+    const getBody = await getRes.json();
+    expect(getBody.config.model).toBe('claude-haiku');
+    expect(getBody.config.effortLevel).toBe('low');
+    expect(getBody.config.permissionMode).toBe('ask');
   });
 
   test('GET /api/sessions/:id/context returns usage', async () => {
@@ -590,8 +684,16 @@ describe('config routes', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
     expect(body.usage).toBeDefined();
     expect(typeof body.usage.percentage).toBe('number');
+  });
+
+  test('GET /api/sessions/:id/context returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/missing/context');
+
+    expect(res.status).toBe(404);
   });
 
   test('GET /api/sessions/:id/cost returns cost summary', async () => {
@@ -600,9 +702,17 @@ describe('config routes', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
     expect(body.cost).toBeDefined();
     expect(typeof body.cost.sessionCost).toBe('number');
     expect(typeof body.cost.formattedCost).toBe('string');
+  });
+
+  test('GET /api/sessions/:id/cost returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/missing/cost');
+
+    expect(res.status).toBe(404);
   });
 
   test('GET /api/config returns global config', async () => {
@@ -611,7 +721,28 @@ describe('config routes', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(typeof body.port).toBe('number');
+    expect(body.port).toBe(7680);
+    expect(body.maxSessions).toBe(10);
+  });
+
+  test('PATCH /api/config updates and persists global config', async () => {
+    const { app } = createTestApp();
+    const updateRes = await app.request('/api/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tunnel: true, maxConcurrentTools: 7 }),
+    });
+
+    expect(updateRes.status).toBe(200);
+    const updateBody = await updateRes.json();
+    expect(updateBody.ok).toBe(true);
+    expect(updateBody.updated.tunnel).toBe(true);
+    expect(updateBody.updated.maxConcurrentTools).toBe(7);
+
+    const getRes = await app.request('/api/config');
+    const getBody = await getRes.json();
+    expect(getBody.tunnel).toBe(true);
+    expect(getBody.maxConcurrentTools).toBe(7);
   });
 });
 

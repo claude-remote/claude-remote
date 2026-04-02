@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
-import type { Message, SessionSnapshot } from '@/shared/types';
+import { DEFAULT_HUB_CONFIG } from '@/hub/config';
+import type { ConfigOptions, Message, SessionConfig, SessionSnapshot } from '@/shared/types';
 import {
   type ClientCommand,
   type HubClientInfo,
@@ -15,10 +16,44 @@ type HubOptions = {
   socketPath: string;
 };
 
+type WebConfig = {
+  port: number;
+  tunnel: boolean;
+  maxSessions: number;
+  maxConcurrentTools: number;
+};
+
+function createDefaultSessionConfig(): SessionConfig {
+  return {
+    model: 'claude-sonnet',
+    effortLevel: 'medium',
+    permissionMode: 'ask',
+  };
+}
+
+function createDefaultConfigOptions(): ConfigOptions {
+  return {
+    availableModels: [
+      { id: 'claude-sonnet', name: 'Claude Sonnet', supportsImages: true },
+      { id: 'claude-opus', name: 'Claude Opus', supportsImages: true },
+      { id: 'claude-haiku', name: 'Claude Haiku', supportsImages: true },
+    ],
+    effortLevels: ['low', 'medium', 'high'],
+    permissionModes: ['ask', 'approve', 'bypass'],
+  };
+}
+
 export class Hub {
   private readonly registry = new SessionRegistry();
   private readonly socketServer: LocalSocketServer;
+  private readonly sessionConfigs = new Map<string, SessionConfig>();
   private readonly sockets = new Set<Socket>();
+  private globalConfig: WebConfig = {
+    port: DEFAULT_HUB_CONFIG.port,
+    tunnel: DEFAULT_HUB_CONFIG.tunnelAutoStart,
+    maxSessions: DEFAULT_HUB_CONFIG.maxSessions,
+    maxConcurrentTools: DEFAULT_HUB_CONFIG.maxConcurrentTools,
+  };
   private running = false;
 
   constructor(private readonly options: HubOptions) {
@@ -46,7 +81,9 @@ export class Hub {
   }
 
   createSession(input: { cwd: string; name?: string }): Session {
-    return this.registry.createSession(input);
+    const session = this.registry.createSession(input);
+    this.sessionConfigs.set(session.id, createDefaultSessionConfig());
+    return session;
   }
 
   getSession(sessionId: string): Session | undefined {
@@ -69,6 +106,39 @@ export class Hub {
 
   appendMessage(sessionId: string, message: Message): Session | undefined {
     return this.registry.appendMessage(sessionId, message);
+  }
+
+  getSessionConfig(sessionId: string): SessionConfig | undefined {
+    if (!this.registry.getSession(sessionId)) {
+      return undefined;
+    }
+    return this.sessionConfigs.get(sessionId) ?? createDefaultSessionConfig();
+  }
+
+  updateSessionConfig(sessionId: string, updates: Partial<SessionConfig>): SessionConfig | undefined {
+    if (!this.registry.getSession(sessionId)) {
+      return undefined;
+    }
+
+    const updated = {
+      ...this.getSessionConfig(sessionId),
+      ...updates,
+    };
+    this.sessionConfigs.set(sessionId, updated);
+    this.registry.updateSession(sessionId, {});
+    return updated;
+  }
+
+  getGlobalConfig(): WebConfig {
+    return this.globalConfig;
+  }
+
+  updateGlobalConfig(updates: Partial<WebConfig>): WebConfig {
+    this.globalConfig = {
+      ...this.globalConfig,
+      ...updates,
+    };
+    return this.globalConfig;
   }
 
   getSessionSnapshot(sessionId: string): SessionSnapshot | null {
@@ -99,16 +169,8 @@ export class Hub {
         connectedAt: client.connectedAt,
       })),
       availableSkills: [],
-      config: {
-        model: 'claude-sonnet',
-        effortLevel: 'medium',
-        permissionMode: 'ask',
-      },
-      configOptions: {
-        availableModels: [],
-        effortLevels: ['low', 'medium', 'high'],
-        permissionModes: ['ask', 'approve', 'bypass'],
-      },
+      config: this.getSessionConfig(session.id) ?? createDefaultSessionConfig(),
+      configOptions: createDefaultConfigOptions(),
       contextUsage: {
         usedTokens: 0,
         maxTokens: 200000,
