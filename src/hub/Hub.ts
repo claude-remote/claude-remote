@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { DEFAULT_HUB_CONFIG } from '@/hub/config';
+import { EventBus } from '@/hub/EventBus';
+import { SessionManager } from '@/hub/SessionManager';
+import type { SqliteStore } from '@/hub/store/SqliteStore';
 import type {
   ConfigOptions,
   McpServerInfo,
@@ -21,6 +24,7 @@ import { SessionRegistry } from './SessionRegistry.js';
 
 type HubOptions = {
   socketPath: string;
+  sessionManager?: SessionManager;
 };
 
 type WebConfig = {
@@ -29,14 +33,6 @@ type WebConfig = {
   maxSessions: number;
   maxConcurrentTools: number;
 };
-
-function createDefaultSessionConfig(): SessionConfig {
-  return {
-    model: 'claude-sonnet',
-    effortLevel: 'medium',
-    permissionMode: 'ask',
-  };
-}
 
 function createDefaultConfigOptions(): ConfigOptions {
   return {
@@ -69,11 +65,17 @@ function createDefaultSkills(): SkillInfo[] {
   ];
 }
 
+function createNoopStore(): SqliteStore {
+  return {
+    saveSession() {},
+  } as unknown as SqliteStore;
+}
+
 export class Hub {
   private readonly registry = new SessionRegistry();
   private readonly mcpServers = new Map<string, McpServerInfo>();
+  private readonly sessionManager: SessionManager;
   private readonly socketServer: LocalSocketServer;
-  private readonly sessionConfigs = new Map<string, SessionConfig>();
   private readonly skills: SkillInfo[] = createDefaultSkills();
   private readonly sockets = new Set<Socket>();
   private globalConfig: WebConfig = {
@@ -85,6 +87,11 @@ export class Hub {
   private running = false;
 
   constructor(private readonly options: HubOptions) {
+    this.sessionManager =
+      options.sessionManager ??
+      new SessionManager(createNoopStore(), new EventBus(), {
+        maxSessions: DEFAULT_HUB_CONFIG.maxSessions,
+      });
     this.socketServer = new LocalSocketServer(options.socketPath, (socket) =>
       this.handleConnection(socket),
     );
@@ -110,7 +117,7 @@ export class Hub {
 
   createSession(input: { cwd: string; name?: string }): Session {
     const session = this.registry.createSession(input);
-    this.sessionConfigs.set(session.id, createDefaultSessionConfig());
+    this.ensureSessionManagerSession(session);
     return session;
   }
 
@@ -137,22 +144,22 @@ export class Hub {
   }
 
   getSessionConfig(sessionId: string): SessionConfig | undefined {
-    if (!this.registry.getSession(sessionId)) {
+    const session = this.registry.getSession(sessionId);
+    if (!session) {
       return undefined;
     }
-    return this.sessionConfigs.get(sessionId) ?? createDefaultSessionConfig();
+    this.ensureSessionManagerSession(session);
+    return this.sessionManager.getConfig(sessionId) ?? undefined;
   }
 
   updateSessionConfig(sessionId: string, updates: Partial<SessionConfig>): SessionConfig | undefined {
-    if (!this.registry.getSession(sessionId)) {
+    const session = this.registry.getSession(sessionId);
+    if (!session) {
       return undefined;
     }
 
-    const updated = {
-      ...this.getSessionConfig(sessionId),
-      ...updates,
-    };
-    this.sessionConfigs.set(sessionId, updated);
+    this.ensureSessionManagerSession(session);
+    const updated = this.sessionManager.updateConfig(sessionId, updates);
     this.registry.updateSession(sessionId, {});
     return updated;
   }
@@ -242,6 +249,12 @@ export class Hub {
       return null;
     }
 
+    this.ensureSessionManagerSession(session);
+    const config = this.sessionManager.getConfig(session.id);
+    if (!config) {
+      return null;
+    }
+
     return {
       meta: {
         id: session.id,
@@ -264,7 +277,7 @@ export class Hub {
         connectedAt: client.connectedAt,
       })),
       availableSkills: this.listSkills(),
-      config: this.getSessionConfig(session.id) ?? createDefaultSessionConfig(),
+      config,
       configOptions: createDefaultConfigOptions(),
       contextUsage: {
         usedTokens: 0,
@@ -284,6 +297,14 @@ export class Hub {
       myWriterStatus: session.clients.length > 0 ? 'active' : 'standby',
       lastSeq: 0,
     };
+  }
+
+  private ensureSessionManagerSession(session: Session): void {
+    this.sessionManager.ensureSession({
+      id: session.id,
+      cwd: session.cwd,
+      name: session.name,
+    });
   }
 
   async stop(): Promise<void> {

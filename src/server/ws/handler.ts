@@ -2,8 +2,12 @@ import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 import type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
 import type { ClientType, SessionSnapshot, WriterStatus } from '@/shared/types';
 
+import { readFileContent } from '@/server/files/readFileContent';
 import type { EventBus } from '@/hub/EventBus';
+import type { Hub } from '@/hub/Hub';
 import type { SessionManager } from '@/hub/SessionManager';
+import { listEntries } from '@/server/files/listEntries';
+import { validatePath } from '@/server/files/pathValidator';
 import type { Connection, ConnectionManager, WebSocketLike } from '@/server/ws/ConnectionManager';
 import {
   checkPermission,
@@ -57,6 +61,7 @@ export interface WebSocketHandlerDeps {
   eventBus: EventBus;
   connectionManager: ConnectionManager;
   ticketValidator: WsTicketValidator;
+  hub?: Hub;
   /** Override for testing. Defaults to CLAUDE_REMOTE_VERSION. */
   hubVersion?: string;
   /** Override heartbeat intervals for testing (ms). */
@@ -80,6 +85,7 @@ export class WebSocketHandler {
   private readonly eventBus: EventBus;
   private readonly connectionManager: ConnectionManager;
   private readonly ticketValidator: WsTicketValidator;
+  private readonly hub?: Hub;
   private readonly hubVersion: string;
   private readonly heartbeatIntervalMs: number;
   private readonly heartbeatTimeoutMs: number;
@@ -96,6 +102,7 @@ export class WebSocketHandler {
     this.eventBus = deps.eventBus;
     this.connectionManager = deps.connectionManager;
     this.ticketValidator = deps.ticketValidator;
+    this.hub = deps.hub;
     this.hubVersion = deps.hubVersion ?? CLAUDE_REMOTE_VERSION;
     this.heartbeatIntervalMs = deps.heartbeatIntervalMs ?? HEARTBEAT_INTERVAL_MS;
     this.heartbeatTimeoutMs = deps.heartbeatTimeoutMs ?? HEARTBEAT_TIMEOUT_MS;
@@ -435,11 +442,134 @@ export class WebSocketHandler {
 
       case 'cwd:favorites':
       case 'cwd:browse':
-      case 'file:read':
-      case 'file:list':
       case 'file:search':
-      case 'chat:export':
         return { type: 'reply', cmdId: command.cmdId, data: null };
+
+      case 'file:read': {
+        const offset = command.offset ?? 0;
+        const limit = command.limit ?? 200;
+        const session = this.sessionManager.getSession(conn.sessionId);
+
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${conn.sessionId}`,
+          };
+        }
+
+        let safePath: string;
+        try {
+          safePath = validatePath(command.path, [session.cwd]);
+        } catch {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'path not allowed: outside session working directory',
+          };
+        }
+
+        try {
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: readFileContent(safePath, offset, limit) as Record<string, unknown>,
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'file:list': {
+        const session = this.sessionManager.getSession(conn.sessionId);
+
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${conn.sessionId}`,
+          };
+        }
+
+        let safePath: string;
+        try {
+          safePath = validatePath(command.path, [session.cwd]);
+        } catch {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'path not allowed: outside session working directory',
+          };
+        }
+
+        try {
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: {
+              path: safePath,
+              entries: listEntries(safePath),
+            },
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'chat:export': {
+        const session = this.sessionManager.getSession(conn.sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'Session not found',
+          };
+        }
+
+        const filename = `session-${session.id}.${command.format === 'json' ? 'json' : 'md'}`;
+        const content =
+          command.format === 'json'
+            ? JSON.stringify(session, null, 2)
+            : [
+                `# ${session.name}`,
+                '',
+                `- Session ID: ${session.id}`,
+                `- CWD: ${session.cwd}`,
+                `- Status: ${session.status}`,
+                '',
+                ...session.messages.flatMap((message) => [
+                  `## ${message.role} @ ${new Date(message.createdAt).toISOString()}`,
+                  '',
+                  ...message.content.map((block) => {
+                    if (block.type === 'text') {
+                      return `**${message.role}**: ${block.text}`;
+                    }
+
+                    return `**${message.role}**: [${block.type}]`;
+                  }),
+                  '',
+                ]),
+              ].join('\n');
+
+        return {
+          type: 'reply',
+          cmdId: command.cmdId,
+          data: {
+            sessionId: session.id,
+            content,
+            format: command.format,
+            filename,
+          },
+        };
+      }
 
       case 'history:search': {
         const session = this.sessionManager.getSession(sessionId);
@@ -475,6 +605,48 @@ export class WebSocketHandler {
         };
       }
 
+      case 'mcp:toggle': {
+        if (!this.hub) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'hub not available',
+          };
+        }
+
+        const server = this.hub.toggleMcpServer(command.serverId, command.enabled);
+        if (!server) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `MCP server '${command.serverId}' not found`,
+          };
+        }
+
+        return { type: 'reply', cmdId: command.cmdId, data: { ...server } };
+      }
+
+      case 'mcp:reconnect': {
+        if (!this.hub) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'hub not available',
+          };
+        }
+
+        const server = this.hub.reconnectMcpServer(command.serverId);
+        if (!server) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `MCP server '${command.serverId}' not found`,
+          };
+        }
+
+        return { type: 'reply', cmdId: command.cmdId, data: { ...server } };
+      }
+
       // Write commands that will be wired to subsystems in later tasks
       case 'chat':
       case 'chat:abort':
@@ -482,13 +654,37 @@ export class WebSocketHandler {
       case 'cwd:change':
       case 'cwd:addFavorite':
       case 'skill:invoke':
-      case 'config:set':
-      case 'mcp:toggle':
-      case 'mcp:reconnect':
       case 'chat:branch':
       case 'chat:compact':
       case 'chat:clear':
         return { type: 'reply', cmdId: command.cmdId, data: null };
+
+      case 'config:set': {
+        try {
+          const updated = this.sessionManager.updateConfig(sessionId, command.patch);
+          await this.eventBus.publish(sessionId, {
+            type: 'hub:config:changed',
+            sessionId,
+            config: updated,
+          } as any);
+
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: {
+              ok: true,
+              sessionId,
+              updated,
+            },
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
 
       default:
         return {

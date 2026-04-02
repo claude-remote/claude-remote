@@ -17,6 +17,7 @@ type PromiseWithResolvers<T> = {
 declare function resolveAntModel(...args: any[]): any;
 declare function getAntModels(...args: any[]): any;
 declare function getAntModelOverrideConfig(...args: any[]): any;
+declare const mkdirSync: typeof import('node:fs').mkdirSync;
 
 declare namespace JSX {
   type Element = {};

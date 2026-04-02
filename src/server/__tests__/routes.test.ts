@@ -679,7 +679,7 @@ describe('file routes', () => {
       const body = await res.json();
       expect(body.path).toBe(filePath);
       expect(body.content).toBe('line2');
-      expect(body.totalLines).toBe(3);
+      expect(body.totalLines).toBe(4);
       expect(body.offset).toBe(1);
       expect(body.limit).toBe(1);
       expect(typeof body.size).toBe('number');

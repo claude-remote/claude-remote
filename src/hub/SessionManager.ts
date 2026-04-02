@@ -11,6 +11,7 @@ import type { EventBus } from '@/hub/EventBus';
 import type { SqliteStore } from '@/hub/store/SqliteStore';
 
 export interface CreateSessionInput {
+  id?: string;
   cwd: string;
   name?: string;
   config?: Partial<SessionConfig>;
@@ -27,6 +28,14 @@ const VALID_TRANSITIONS: Record<SessionStatus, SessionStatus[]> = {
   interrupted: ['active', 'archived'],
   archived: [],
 };
+
+function createDefaultSessionConfig(): SessionConfig {
+  return {
+    model: 'claude-sonnet-4-20250514',
+    effortLevel: 'high',
+    permissionMode: 'ask',
+  };
+}
 
 function createDefaultSkills() {
   return [
@@ -49,6 +58,7 @@ function createDefaultSkills() {
 
 export class SessionManager {
   private sessions = new Map<string, Session>();
+  private sessionConfigs = new Map<string, SessionConfig>();
   private activeWriters = new Map<string, string>(); // sessionId → clientId
   private idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private config: SessionManagerConfig;
@@ -70,7 +80,7 @@ export class SessionManager {
     this.checkLimits();
 
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = input.id ?? crypto.randomUUID();
     const session: Session = {
       id,
       name: input.name ?? `session-${id.slice(0, 8)}`,
@@ -87,10 +97,33 @@ export class SessionManager {
     };
 
     this.sessions.set(id, session);
+    this.sessionConfigs.set(id, {
+      ...createDefaultSessionConfig(),
+      ...input.config,
+    });
     this.store.saveSession(session);
     this.resetIdleTimer(id);
 
     return this.toMeta(session);
+  }
+
+  ensureSession(input: CreateSessionInput): SessionMeta {
+    const existing = this.sessions.get(input.id ?? '');
+    if (existing) {
+      if (!this.sessionConfigs.has(existing.id)) {
+        this.sessionConfigs.set(existing.id, {
+          ...createDefaultSessionConfig(),
+          ...input.config,
+        });
+      }
+      return this.toMeta(existing);
+    }
+
+    if (!input.id) {
+      throw new Error('session id is required');
+    }
+
+    return this.createSession(input);
   }
 
   getSession(sessionId: string): Session | null {
@@ -137,10 +170,16 @@ export class SessionManager {
     } as any);
   }
 
-  updateConfig(_id: string, _config: Partial<SessionConfig>): void {
-    const session = this.requireSession(_id);
+  updateConfig(id: string, patch: Partial<SessionConfig>): SessionConfig {
+    const session = this.requireSession(id);
+    const updated = {
+      ...this.getConfigOrDefault(id),
+      ...patch,
+    };
+    this.sessionConfigs.set(id, updated);
     session.updatedAt = Date.now();
     this.store.saveSession(session);
+    return updated;
   }
 
   getSnapshot(_sessionId: string, _clientId: string): SessionSnapshot {
@@ -159,11 +198,7 @@ export class SessionManager {
       pendingPermissions: session.pendingPermissions,
       clients: session.clients,
       availableSkills: createDefaultSkills(),
-      config: {
-        model: 'claude-sonnet-4-20250514',
-        effortLevel: 'high',
-        permissionMode: 'ask',
-      },
+      config: this.getConfigOrDefault(_sessionId),
       configOptions: {
         availableModels: [
           { id: 'claude-sonnet', name: 'Claude Sonnet', supportsImages: true },
@@ -366,6 +401,18 @@ export class SessionManager {
       throw new Error(`session not found: ${id}`);
     }
     return session;
+  }
+
+  getConfig(sessionId: string): SessionConfig | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return null;
+    }
+    return this.getConfigOrDefault(sessionId);
+  }
+
+  private getConfigOrDefault(sessionId: string): SessionConfig {
+    return this.sessionConfigs.get(sessionId) ?? createDefaultSessionConfig();
   }
 
   private toMeta(session: Session): SessionMeta {

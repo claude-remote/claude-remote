@@ -185,6 +185,40 @@ describe('SessionManager CRUD', () => {
   test('getSnapshot throws for unknown session', () => {
     expect(() => manager.getSnapshot('missing', 'client-1')).toThrow('session not found');
   });
+
+  test('updateConfig merges patch with default config and returns merged result', () => {
+    const meta = manager.createSession({ cwd: '/tmp' });
+
+    const updated = manager.updateConfig(meta.id, {
+      permissionMode: 'approve',
+      maxThinkingTokens: 4096,
+    });
+
+    expect(updated).toEqual({
+      model: 'claude-sonnet-4-20250514',
+      effortLevel: 'high',
+      permissionMode: 'approve',
+      maxThinkingTokens: 4096,
+    });
+    expect(manager.getConfig(meta.id)).toEqual(updated);
+  });
+
+  test('getSnapshot returns config from the stored session config', () => {
+    const meta = manager.createSession({ cwd: '/tmp' });
+    manager.updateConfig(meta.id, {
+      model: 'claude-opus',
+      effortLevel: 'low',
+      permissionMode: 'bypass',
+    });
+
+    const snapshot = manager.getSnapshot(meta.id, 'client-1');
+
+    expect(snapshot.config).toEqual({
+      model: 'claude-opus',
+      effortLevel: 'low',
+      permissionMode: 'bypass',
+    });
+  });
 });
 
 // ── Status transitions ──────────────────────────────────────────────
