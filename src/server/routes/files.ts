@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import type { Hono } from 'hono';
 
 import type { Hub } from '@/hub/Hub';
@@ -16,6 +18,8 @@ interface FileContent {
   totalLines: number;
   offset: number;
   limit: number;
+  size: number;
+  modified: string;
 }
 
 export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
@@ -26,9 +30,33 @@ export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
       return context.json({ error: 'path query parameter required' }, 400);
     }
 
-    // TODO(T17): implement whitelisted directory listing with security checks
-    const entries: FileEntry[] = [];
-    return context.json({ path: dirPath, entries });
+    try {
+      const entries: FileEntry[] = readdirSync(dirPath, { withFileTypes: true })
+        .map((entry) => {
+          const path = join(dirPath, entry.name);
+          const stats = statSync(path);
+          return {
+            name: entry.name,
+            path,
+            type: entry.isDirectory()
+              ? 'directory'
+              : entry.isSymbolicLink()
+                ? 'symlink'
+                : 'file',
+            size: entry.isDirectory() ? undefined : stats.size,
+            modifiedAt: stats.mtimeMs,
+          } satisfies FileEntry;
+        })
+        .sort((a, b) => {
+          if (a.type === b.type) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.type === 'directory' ? -1 : 1;
+        });
+      return context.json({ path: dirPath, entries });
+    } catch (error) {
+      return context.json({ error: (error as Error).message }, 404);
+    }
   });
 
   // GET /api/files/read?path=xxx — read file content (with pagination)
@@ -41,16 +69,43 @@ export function registerFileRoutes(app: Hono, _hub: Hub): Hono {
     const offset = Number.parseInt(context.req.query('offset') ?? '0', 10);
     const limit = Number.parseInt(context.req.query('limit') ?? '200', 10);
 
-    // TODO(T17): implement whitelisted file reading with security checks
-    const result: FileContent = {
-      path: filePath,
-      content: '',
-      totalLines: 0,
-      offset,
-      limit,
-    };
+    try {
+      const content = readFileSync(filePath, 'utf8');
+      const stats = statSync(filePath);
+      const lines = content.replace(/\n$/, '').split('\n');
+      const pagedLines = lines.slice(offset, offset + limit);
+      const result: FileContent = {
+        path: filePath,
+        content: pagedLines.join('\n'),
+        totalLines: lines.filter((line) => line.length > 0 || lines.length === 1).length,
+        offset,
+        limit,
+        size: stats.size,
+        modified: stats.mtime.toISOString(),
+      };
 
-    return context.json(result);
+      return context.json(result);
+    } catch (error) {
+      return context.json({ error: (error as Error).message }, 404);
+    }
+  });
+
+  // GET /api/files/browse?path=xxx — list directories only for path picker
+  app.get('/api/files/browse', (context) => {
+    const dirPath = context.req.query('path');
+    if (!dirPath) {
+      return context.json({ error: 'path query parameter required' }, 400);
+    }
+
+    try {
+      const dirs = readdirSync(dirPath, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(dirPath, entry.name))
+        .sort((a, b) => basename(a).localeCompare(basename(b)));
+      return context.json({ path: dirPath, dirs });
+    } catch (error) {
+      return context.json({ error: (error as Error).message }, 404);
+    }
   });
 
   // GET /api/files — legacy endpoint (backward compat)

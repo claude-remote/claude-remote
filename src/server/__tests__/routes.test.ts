@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Hono } from 'hono';
 
 import { TokenService } from '@/server/auth/token';
@@ -11,6 +14,7 @@ import { registerMcpRoutes } from '@/server/routes/mcp';
 import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
 import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
+import type { Message } from '@/shared/types';
 
 type MockRouteSession = {
   id: string;
@@ -25,7 +29,7 @@ type MockRouteSession = {
     writerStatus: 'active' | 'standby';
     connectedAt: number;
   }>;
-  messages: unknown[];
+  messages: Message[];
   tasks: unknown[];
   pendingPermissions: unknown[];
   tags: string[];
@@ -454,13 +458,28 @@ describe('file routes', () => {
   });
 
   test('GET /api/files/list with path returns entries', async () => {
-    const { app } = createTestApp();
-    const res = await app.request('/api/files/list?path=/tmp');
+    const fixtureDir = mkdtempSync(join(tmpdir(), 'claude-remote-files-'));
+    mkdirSync(join(fixtureDir, 'nested'));
+    writeFileSync(join(fixtureDir, 'note.txt'), 'hello\nworld\n');
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.path).toBe('/tmp');
-    expect(Array.isArray(body.entries)).toBe(true);
+    const { app } = createTestApp();
+    const res = await app.request(`/api/files/list?path=${encodeURIComponent(fixtureDir)}`);
+
+    try {
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.path).toBe(fixtureDir);
+      expect(Array.isArray(body.entries)).toBe(true);
+      expect(body.entries).toHaveLength(2);
+      expect(body.entries[0].name).toBe('nested');
+      expect(body.entries[0].type).toBe('directory');
+      expect(body.entries[1].name).toBe('note.txt');
+      expect(body.entries[1].type).toBe('file');
+      expect(typeof body.entries[1].size).toBe('number');
+      expect(typeof body.entries[1].modifiedAt).toBe('number');
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
   });
 
   test('GET /api/files/read without path returns 400', async () => {
@@ -471,13 +490,47 @@ describe('file routes', () => {
   });
 
   test('GET /api/files/read with path returns content', async () => {
-    const { app } = createTestApp();
-    const res = await app.request('/api/files/read?path=/tmp/test.txt');
+    const fixtureDir = mkdtempSync(join(tmpdir(), 'claude-remote-file-read-'));
+    const filePath = join(fixtureDir, 'test.txt');
+    writeFileSync(filePath, 'line1\nline2\nline3\n');
 
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.path).toBe('/tmp/test.txt');
-    expect(typeof body.content).toBe('string');
+    const { app } = createTestApp();
+    const res = await app.request(
+      `/api/files/read?path=${encodeURIComponent(filePath)}&offset=1&limit=1`,
+    );
+
+    try {
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.path).toBe(filePath);
+      expect(body.content).toBe('line2');
+      expect(body.totalLines).toBe(3);
+      expect(body.offset).toBe(1);
+      expect(body.limit).toBe(1);
+      expect(typeof body.size).toBe('number');
+      expect(typeof body.modified).toBe('string');
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  test('GET /api/files/browse returns matching directories', async () => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), 'claude-remote-file-browse-'));
+    mkdirSync(join(fixtureDir, 'alpha'));
+    mkdirSync(join(fixtureDir, 'beta'));
+    writeFileSync(join(fixtureDir, 'ignore.txt'), 'x');
+
+    const { app } = createTestApp();
+    const res = await app.request(`/api/files/browse?path=${encodeURIComponent(fixtureDir)}`);
+
+    try {
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.path).toBe(fixtureDir);
+      expect(body.dirs).toEqual([join(fixtureDir, 'alpha'), join(fixtureDir, 'beta')]);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
   });
 });
 
