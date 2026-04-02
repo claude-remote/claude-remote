@@ -2203,7 +2203,7 @@ async function* executeHooks({
     try {
       const jsonInputRes = getJsonInput()
       if (!jsonInputRes.ok) {
-        const jsonInputError = jsonInputRes.error
+        const jsonInputError = 'error' in jsonInputRes ? jsonInputRes.error : 'unknown error'
         yield {
           message: createAttachmentMessage({
             type: 'hook_error_during_execution',

@@ -165,7 +165,7 @@ export function FileViewer({
                   {i + 1}
                 </span>
                 <span className="flex-1 whitespace-pre-wrap break-all pr-3">
-                  {highlightLine(line, lang)}
+                  {highlightLine(line, lang) as React.ReactNode}
                 </span>
               </div>
             ))}

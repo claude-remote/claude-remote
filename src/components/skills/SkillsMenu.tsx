@@ -76,7 +76,7 @@ export function SkillsMenu(t0) {
         groups[source].push(skill);
       }
     }
-    for (const group of Object.values(groups)) {
+    for (const group of Object.values(groups) as any[][]) {
       group.sort(_temp2);
     }
     $[2] = skills;

@@ -1915,7 +1915,10 @@ export type OrgValidationResult =
 export function getOrgValidationMessage(
   result: OrgValidationResult,
 ): string | null {
-  return result.valid ? null : result.message
+  if (result.valid) {
+    return null
+  }
+  return (result as { message: string }).message
 }
 
 /**

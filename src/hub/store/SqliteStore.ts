@@ -300,7 +300,7 @@ export class SqliteStore {
 
     this.#db!.run(
       `UPDATE sessions SET ${setClauses.join(', ')} WHERE id = ?`,
-      values,
+      values as any,
     );
   }
 
@@ -446,7 +446,7 @@ export class SqliteStore {
 
     this.#db!.run(
       `UPDATE tasks SET ${setClauses.join(', ')} WHERE id = ?`,
-      values,
+      values as any,
     );
   }
 
@@ -546,7 +546,7 @@ export class SqliteStore {
 
     this.#db!.run(
       `UPDATE tool_executions SET ${setClauses.join(', ')} WHERE id = ?`,
-      values,
+      values as any,
     );
   }
 

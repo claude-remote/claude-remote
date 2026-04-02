@@ -161,7 +161,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
     return this.isReadOnly?.(_input) ?? false;
   },
   isEnabled() {
-    return "external" !== 'ant';
+    return ('external' as string) !== 'ant';
   },
   isReadOnly(_input) {
     return true;
@@ -220,7 +220,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
       // Non-blocking: return current state
       if (task.status !== 'running' && task.status !== 'pending') {
         // Mark as notified
-        updateTaskState(task_id, toolUseContext.setAppState, t => ({
+        updateTaskState<TaskState>(task_id, toolUseContext.setAppState, t => ({
           ...t,
           notified: true
         }));
@@ -269,7 +269,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
     }
 
     // Mark as notified
-    updateTaskState(task_id, toolUseContext.setAppState, t => ({
+    updateTaskState<TaskState>(task_id, toolUseContext.setAppState, t => ({
       ...t,
       notified: true
     }));

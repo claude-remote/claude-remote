@@ -240,8 +240,8 @@ export function createLSPServerInstance(
       if (config.startupTimeout !== undefined) {
         await withTimeout(
           initPromise,
-          config.startupTimeout,
-          `LSP server '${name}' timed out after ${config.startupTimeout}ms during initialization`,
+          Number(config.startupTimeout),
+          `LSP server '${name}' timed out after ${Number(config.startupTimeout)}ms during initialization`,
         )
       } else {
         await initPromise

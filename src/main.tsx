@@ -78,7 +78,6 @@ const coordinatorModeModule = feature('COORDINATOR_MODE') ? require('./coordinat
 // Dead code elimination: conditional import for KAIROS (assistant mode)
 /* eslint-disable @typescript-eslint/no-require-imports */
 const assistantModule = feature('KAIROS') ? require('./assistant/index.js') as typeof import('./assistant/index.js') : null;
-const IS_ANT_BUILD = ('external' as string) === 'ant';
 const kairosGate = feature('KAIROS') ? require('./assistant/gate.js') as typeof import('./assistant/gate.js') : null;
 import { relative, resolve } from 'path';
 import { isAnalyticsDisabled } from 'src/services/analytics/config.js';

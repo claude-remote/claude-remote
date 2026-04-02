@@ -15,7 +15,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 /** Wrapper that extracts session id and renders sidebar + mobile nav. */
 function AppShell({ children }: { children: React.ReactNode }) {
-  const params = useParams<{ id?: string }>();
+  const params = useParams() as { id?: string };
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

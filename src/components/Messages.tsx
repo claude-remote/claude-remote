@@ -518,7 +518,7 @@ const MessagesImpl = ({
     const hasTruncatedMessages = shouldTruncate && briefFiltered.length > MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE;
     const {
       messages: groupedMessages
-    } = applyGrouping(messagesToShow, tools, verbose);
+    } = applyGrouping(messagesToShow as any, tools as any, verbose);
     const collapsed = collapseBackgroundBashNotifications(collapseHookSummaries(collapseTeammateShutdowns(collapseReadSearchGroups(groupedMessages, tools))), verbose);
     const lookups = buildMessageLookups(normalizedMessages, messagesToShow);
     const hiddenMessageCount = messagesToShowNotTruncated.length - MAX_MESSAGES_TO_SHOW_IN_TRANSCRIPT_MODE;

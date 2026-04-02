@@ -117,7 +117,7 @@ export class SessionManager {
       type: 'hub:session:cwdChanged',
       sessionId: id,
       cwd,
-    });
+    } as any);
   }
 
   updateConfig(_id: string, _config: Partial<SessionConfig>): void {
@@ -151,7 +151,7 @@ export class SessionManager {
       type: 'hub:session:statusChanged',
       sessionId: id,
       status: newStatus,
-    });
+    } as any);
   }
 
   // Public wrapper for tests and external callers
@@ -194,7 +194,7 @@ export class SessionManager {
       type: 'hub:writer:changed',
       sessionId,
       newWriterId: newClientId,
-    });
+    } as any);
   }
 
   getActiveWriter(sessionId: string): string | null {

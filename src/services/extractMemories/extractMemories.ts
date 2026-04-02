@@ -488,11 +488,11 @@ export function initExtractMemories(): void {
         `[extractMemories] writtenPaths=${writtenPaths.length} memoryPaths=${memoryPaths.length} appendSystemMessage defined=${appendSystemMessage != null}`,
       )
       if (memoryPaths.length > 0) {
-        const msg = createMemorySavedMessage(memoryPaths)
+        const msg = createMemorySavedMessage(memoryPaths) as any
         if (feature('TEAMMEM')) {
           msg.teamCount = teamCount
         }
-        appendSystemMessage?.(msg)
+        ;(appendSystemMessage as any)?.(msg)
       }
     } catch (error) {
       // Extraction is best-effort — log but don't notify on error

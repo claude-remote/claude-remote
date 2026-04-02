@@ -366,7 +366,7 @@ function ModeIndicator({
   // its click-target Box isn't nested inside the <Text wrap="truncate">
   // wrapper (reconciler throws on Box-in-Text).
   // Tmux pill (ant-only) — appears right after tasks in nav order
-  ...(IS_ANT_BUILD && hasTmuxSession ? [<TungstenPill key="tmux" selected={tmuxSelected} />] : []), ...(isAgentSwarmsEnabled() && hasTeams ? [<TeamStatus key="teams" teamsSelected={teamsSelected} showHint={showHint && !hasBackgroundTasks} />] : []), ...(shouldShowPrStatus ? [<PrBadge key="pr-status" number={prStatus.number!} url={prStatus.url!} reviewState={prStatus.reviewState!} />] : [])];
+  ...(IS_ANT_BUILD && hasTmuxSession ? [<Text key="tmux" color={tmuxSelected ? "warning" : undefined}>tmux</Text>] : []), ...(isAgentSwarmsEnabled() && hasTeams ? [<TeamStatus key="teams" teamsSelected={teamsSelected} showHint={showHint && !hasBackgroundTasks} />] : []), ...(shouldShowPrStatus ? [<PrBadge key="pr-status" number={prStatus.number!} url={prStatus.url!} reviewState={prStatus.reviewState!} />] : [])];
 
   // Check if any in-process teammates exist (for hint text cycling)
   const hasAnyInProcessTeammates = Object.values(tasks).some(t_2 => t_2.type === 'in_process_teammate' && t_2.status === 'running');

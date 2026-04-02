@@ -176,7 +176,7 @@ export class HubClient {
 
         const [cmdId, pending] = pendingEntry
         this.pending.delete(cmdId)
-        pending.resolve(response)
+        pending.resolve(response as any)
         continue
       }
 
@@ -190,7 +190,7 @@ export class HubClient {
       }
 
       this.pending.delete(response.cmdId)
-      pending.resolve(response)
+      pending.resolve(response as any)
     }
   }
 }

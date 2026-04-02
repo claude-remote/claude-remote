@@ -194,7 +194,7 @@ describe('SessionManager status transitions', () => {
     const calls = mockEventBus.publish.mock.calls;
     const statusEvent = calls.find(
       (c: any[]) => c[1]?.type === 'hub:session:statusChanged',
-    ) as [string, { status: string }] | undefined;
+    ) as unknown as [string, { status: string }] | undefined;
     expect(statusEvent).toBeTruthy();
     expect(statusEvent![1].status).toBe('idle');
   });
@@ -271,7 +271,7 @@ describe('SessionManager active writer', () => {
     const calls = mockEventBus.publish.mock.calls;
     const writerEvent = calls.find(
       (c: any[]) => c[1]?.type === 'hub:writer:changed',
-    ) as [string, { newWriterId: string }] | undefined;
+    ) as unknown as [string, { newWriterId: string }] | undefined;
     expect(writerEvent).toBeTruthy();
     expect(writerEvent![1].newWriterId).toBe('client-2');
   });

@@ -294,7 +294,9 @@ describe('serialization', () => {
     };
     const serialized = serializeEvent(event);
     const parsed = JSON.parse(serialized) as { type: string; event: HubEvent };
-    expect(parsed.event.seq).toBe(42);
+    expect((parsed.event as HubEvent & {
+      seq: number;
+    }).seq).toBe(42);
     expect(parsed.event.type).toBe('hub:client:joined');
     if (parsed.event.type === 'hub:client:joined') {
       expect(parsed.event.client.id).toBe('c1');

@@ -258,12 +258,12 @@ export async function startNodeRelay(
     // needed for correctness. Week-1 payloads won't stress the buffer.
     const adapter: ClientSocket = {
       write: payload => {
-        sock.write(typeof payload === 'string' ? payload : Buffer.from(payload))
+        sock.write(typeof payload === 'string' ? payload : Buffer.from(payload as any))
       },
       end: () => sock.end(),
     }
     sock.on('data', data =>
-      handleData(adapter, st, data, wsUrl, authHeader, wsAuthHeader),
+      handleData(adapter, st, data as any, wsUrl, authHeader, wsAuthHeader),
     )
     sock.on('close', () => cleanupConn(states.get(sock)))
     sock.on('error', err => {

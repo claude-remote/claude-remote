@@ -81,7 +81,7 @@ export type AutoRunIssueReason = 'feedback_survey_bad' | 'feedback_survey_good';
  */
 export function shouldAutoRunIssue(reason: AutoRunIssueReason): boolean {
   // Only for Ant users
-  if ("external" !== 'ant') {
+  if (('external' as string) !== 'ant') {
     return false;
   }
   switch (reason) {

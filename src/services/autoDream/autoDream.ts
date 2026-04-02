@@ -241,8 +241,8 @@ ${sessionIds.map(id => `- ${id}`).join('\n')}`
         isDreamTask(dreamState) &&
         dreamState.filesTouched.length > 0
       ) {
-        appendSystemMessage({
-          ...createMemorySavedMessage(dreamState.filesTouched),
+        ;(appendSystemMessage as any)({
+          ...(createMemorySavedMessage(dreamState.filesTouched) as any),
           verb: 'Improved',
         })
       }

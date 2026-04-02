@@ -467,7 +467,7 @@ describe('WebSocketHandler disconnect', () => {
       type: 'hub:session:statusChanged',
       sessionId: meta.id,
       status: 'idle',
-    });
+    } as any);
 
     // No new messages after disconnect
     expect(ws.sentMessages.length).toBe(msgCountBefore);

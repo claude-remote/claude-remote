@@ -80,9 +80,9 @@ async function createBedrockClient() {
 
   if (!skipAuth && !process.env.AWS_BEARER_TOKEN_BEDROCK) {
     // Only refresh credentials if not using API key authentication
-    const cachedCredentials = await refreshAndGetAwsCredentials()
+    const cachedCredentials = await refreshAndGetAwsCredentials() as any
     if (cachedCredentials) {
-      clientConfig.credentials = {
+      ;(clientConfig as any).credentials = {
         accessKeyId: cachedCredentials.accessKeyId,
         secretAccessKey: cachedCredentials.secretAccessKey,
         sessionToken: cachedCredentials.sessionToken,

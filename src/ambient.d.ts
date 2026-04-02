@@ -25,6 +25,17 @@ declare namespace JSX {
   }
 }
 
+declare namespace React {
+  namespace JSX {
+    interface IntrinsicElements {
+      'ink-box': any
+      'ink-text': any
+      'ink-link': any
+      'ink-raw-ansi': any
+    }
+  }
+}
+
 declare module 'react/compiler-runtime' {
   export const c: any;
 }
@@ -33,6 +44,100 @@ declare module 'qrcode' {
   export const toString: any;
   const qrcode: any;
   export default qrcode;
+}
+
+declare module 'bidi-js' {
+  const mod: any
+  export = mod
+}
+
+declare module 'code-excerpt' {
+  export type CodeExcerpt = {
+    line: number
+    value: string
+  }
+  const codeExcerpt: any
+  export default codeExcerpt
+}
+
+declare module 'signal-exit' {
+  export const onExit: any
+}
+
+declare module 'lru-cache' {
+  export class LRUCache<K = any, V = any> {
+    size: number
+    max: number
+    maxSize: number
+    calculatedSize: number
+    constructor(...args: any[])
+    get(...args: any[]): V | undefined
+    set(...args: any[]): this
+    has(...args: any[]): boolean
+    delete(...args: any[]): boolean
+    clear(...args: any[]): void
+    keys(...args: any[]): Generator<K, any, any>
+    entries(...args: any[]): Generator<[K, V], any, any>
+    dump(...args: any[]): any[]
+    load(...args: any[]): void
+    peek(...args: any[]): V | undefined
+  }
+  const mod: any
+  export default mod
+}
+
+declare module 'https-proxy-agent' {
+  export type HttpsProxyAgentOptions<T = any> = any
+  export type HttpsProxyAgent<T = any> = any
+  export const HttpsProxyAgent: any
+}
+
+declare module 'react-router-dom' {
+  export const BrowserRouter: any
+  export const Navigate: any
+  export const Route: any
+  export const Routes: any
+  export const useLocation: any
+  export const useNavigate: any
+  export const useParams: any
+  const mod: any
+  export default mod
+}
+
+declare module 'vite' {
+  export const defineConfig: any
+}
+
+declare module '@vitejs/plugin-react' {
+  const mod: any
+  export default mod
+}
+
+declare module '@anthropic-ai/sandbox-runtime' {
+  export type FsReadRestrictionConfig = any
+  export type FsWriteRestrictionConfig = any
+  export type IgnoreViolationsConfig = any
+  export type NetworkHostPattern = any
+  export type NetworkRestrictionConfig = any
+  export type SandboxAskCallback = any
+  export type SandboxDependencyCheck = any
+  export type SandboxRuntimeConfig = any
+  export type SandboxViolationEvent = any
+  export type SandboxViolationStore = any
+  export const SandboxManager: any
+  export const SandboxRuntimeConfigSchema: any
+  export const SandboxViolationStore: any
+}
+
+declare module 'ajv' {
+  export const Ajv: any
+  const Ajv: any
+  export default Ajv
+}
+
+declare module '@growthbook/growthbook' {
+  export type GrowthBook = any
+  export const GrowthBook: any
 }
 
 declare module 'ws' {
@@ -74,7 +179,7 @@ declare module '@modelcontextprotocol/sdk/types.js' {
   export const McpError: any;
   export type PromptMessage = any;
   export type PrimitiveSchemaDefinition = any;
-  export type ReadResourceResultSchema = any;
+  export const ReadResourceResultSchema: any;
   export type ReadResourceResult = any;
   export type Resource = any;
   export type ResourceLink = any;
@@ -114,6 +219,7 @@ declare module '@modelcontextprotocol/sdk/client/streamableHttp.js' {
 declare module '@modelcontextprotocol/sdk/client/auth.js' {
   export const auth: any;
   export const discoverAuthorizationServerMetadata: any;
+  export const discoverOAuthProtectedResourceMetadata: any;
   export const discoverOAuthServerInfo: any;
   export const exchangeAuthorization: any;
   export const refreshAuthorization: any;
@@ -177,6 +283,7 @@ declare module 'usehooks-ts' {
 }
 
 declare module 'fuse.js' {
+  export type Fuse<T = any> = any;
   const Fuse: any;
   export default Fuse;
 }
@@ -291,6 +398,13 @@ declare module 'vscode-languageserver-protocol' {
   export type ServerCapabilities = any;
   const mod: any;
   export = mod;
+}
+
+declare module 'highlight.js' {
+  export const getLanguage: any
+  export const highlight: any
+  const mod: any
+  export default mod
 }
 
 declare module 'plist' {
@@ -1006,6 +1120,7 @@ declare module '*bridge/webhookSanitizer.js' {
 }
 
 declare module '*ssh/SSHSessionManager.js' {
+  export type SSHSessionManager = any
   const mod: any;
   export = mod;
 }
@@ -1033,6 +1148,19 @@ declare module '*ink/devtools.js' {
 declare module '*services/tips/types.js' {
   const mod: any;
   export = mod;
+}
+
+declare module '*LocalWorkflowTask/LocalWorkflowTask.js' {
+  export type LocalWorkflowTaskState = any
+}
+
+declare module '*MonitorMcpTask/MonitorMcpTask.js' {
+  export type MonitorMcpTaskState = any
+}
+
+declare module '*types/tools.js' {
+  export type REPLToolProgress = any
+  export type ToolProgressData = any
 }
 
 declare module '*coordinator/workerAgent.js' {

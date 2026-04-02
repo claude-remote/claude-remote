@@ -31,6 +31,8 @@ export function isContextCollapseEnabled(): boolean {
   return false;
 }
 
+export function initContextCollapse(): void {}
+
 export function subscribe(_listener: () => void): () => void {
   return () => {};
 }

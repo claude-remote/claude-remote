@@ -408,7 +408,7 @@ export async function installResolvedPlugin({
     allowedCrossMarketplaces,
   )
   if (!resolution.ok) {
-    return { ok: false, reason: 'resolution-failed', resolution }
+    return { ok: false, reason: 'resolution-failed', resolution: resolution as any }
   }
 
   // ── Policy guard for transitive dependencies ──

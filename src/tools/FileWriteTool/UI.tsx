@@ -210,7 +210,7 @@ type WriteRejectionBodyProps = {
   filePath: string;
   firstLine: string | null;
   createFallback: React.ReactNode;
-  style: Output['style'];
+  style: any;
   verbose: boolean;
 };
 function WriteRejectionDiff(t0) {

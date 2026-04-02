@@ -9,12 +9,12 @@ import { logError } from '../../utils/log.js'
 import { dequeueAllMatching } from '../../utils/messageQueueManager.js'
 import { evictTaskOutput } from '../../utils/task/diskOutput.js'
 import { updateTaskState } from '../../utils/task/framework.js'
-import { isLocalShellTask } from './guards.js'
+import { isLocalShellTask, type LocalShellTaskState } from './guards.js'
 
 type SetAppStateFn = (updater: (prev: AppState) => AppState) => void
 
 export function killTask(taskId: string, setAppState: SetAppStateFn): void {
-  updateTaskState(taskId, setAppState, task => {
+  updateTaskState<LocalShellTaskState>(taskId, setAppState, task => {
     if (task.status !== 'running' || !isLocalShellTask(task)) {
       return task
     }

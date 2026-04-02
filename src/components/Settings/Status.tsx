@@ -59,19 +59,20 @@ function PropertyValue(t0) {
   const {
     value
   } = t0;
-  if (Array.isArray(value)) {
+  const resolvedValue = value as unknown;
+  if (Array.isArray(resolvedValue)) {
     let t1;
-    if ($[0] !== value) {
+    if ($[0] !== resolvedValue) {
       let t2;
-      if ($[2] !== value.length) {
-        t2 = (item, i) => <Text key={i}>{item}{i < value.length - 1 ? "," : ""}</Text>;
-        $[2] = value.length;
+      if ($[2] !== resolvedValue.length) {
+        t2 = (item, i) => <Text key={i}>{item}{i < resolvedValue.length - 1 ? "," : ""}</Text>;
+        $[2] = resolvedValue.length;
         $[3] = t2;
       } else {
         t2 = $[3];
       }
-      t1 = value.map(t2);
-      $[0] = value;
+      t1 = resolvedValue.map(t2);
+      $[0] = resolvedValue;
       $[1] = t1;
     } else {
       t1 = $[1];
@@ -86,18 +87,18 @@ function PropertyValue(t0) {
     }
     return t2;
   }
-  if (typeof value === "string") {
+  if (typeof resolvedValue === "string") {
     let t1;
-    if ($[6] !== value) {
-      t1 = <Text>{value}</Text>;
-      $[6] = value;
+    if ($[6] !== resolvedValue) {
+      t1 = <Text>{resolvedValue}</Text>;
+      $[6] = resolvedValue;
       $[7] = t1;
     } else {
       t1 = $[7];
     }
     return t1;
   }
-  return value;
+  return resolvedValue as any;
 }
 export function Status(t0) {
   const $ = _c(20);
@@ -206,7 +207,7 @@ function Diagnostics(t0) {
   const {
     promise
   } = t0;
-  const diagnostics = use(promise);
+  const diagnostics = use(promise) as Diagnostic[];
   if (diagnostics.length === 0) {
     return null;
   }

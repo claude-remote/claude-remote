@@ -1,4 +1,4 @@
-export type QueueOperation = 'enqueue' | 'dequeue';
+export type QueueOperation = 'enqueue' | 'dequeue' | 'remove' | 'popAll';
 
 export type QueueOperationMessage = {
   type: 'queue-operation';

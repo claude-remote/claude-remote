@@ -32,7 +32,7 @@ function getToolsWithGrouping(tools: Tools): Set<string> {
 }
 
 function getToolUseInfo(
-  msg: MessageWithoutProgress,
+  msg: any,
 ): { messageId: string; toolUseId: string; toolName: string } | null {
   const current = msg as any
   if (current.type === 'assistant' && current.message.content[0]?.type === 'tool_use') {
@@ -86,13 +86,13 @@ export function applyGrouping(
     string,
     NormalizedAssistantMessage<BetaToolUseBlock>[]
   >()
-  const groupedToolUseIds = new Set<string>()
+  const groupedToolUseIds = new Set<any>()
 
   for (const [key, group] of groups) {
     if (group.length >= 2) {
       validGroups.set(key, group)
       for (const msg of group) {
-        const info = getToolUseInfo(msg)
+        const info = getToolUseInfo(msg as any)
         if (info) {
           groupedToolUseIds.add(info.toolUseId)
         }

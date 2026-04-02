@@ -24,10 +24,10 @@ type CommandSearchItem = {
 // rather than on every keystroke.
 let fuseCache: {
   commands: Command[]
-  fuse: Fuse<CommandSearchItem>
+  fuse: any
 } | null = null
 
-function getCommandFuse(commands: Command[]): Fuse<CommandSearchItem> {
+function getCommandFuse(commands: Command[]): any {
   if (fuseCache?.commands === commands) {
     return fuseCache.fuse
   }
