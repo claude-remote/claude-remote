@@ -777,12 +777,30 @@ describe('history routes', () => {
 
   test('GET /api/history/search with query returns results', async () => {
     const { app } = createTestApp();
-    const res = await app.request('/api/history/search?q=test&scope=all');
+    const res = await app.request('/api/history/search?q=hello&scope=all');
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.query).toBe('test');
+    expect(body.query).toBe('hello');
     expect(body.scope).toBe('all');
     expect(Array.isArray(body.results)).toBe(true);
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0].sessionId).toBe('sess-1');
+    expect(body.results[0].messageId).toBe('msg-1');
+    expect(body.results[0].role).toBe('user');
+    expect(body.results[0].snippet).toContain('hello');
+  });
+
+  test('GET /api/history/search respects session filter and limit', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/history/search?q=h&scope=session&sessionId=sess-1&limit=1');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.scope).toBe('session');
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.limit).toBe(1);
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0].sessionId).toBe('sess-1');
   });
 });
