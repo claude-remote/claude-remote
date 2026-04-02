@@ -7,7 +7,10 @@ import { useAppState, useSetAppState } from 'src/state/AppState.js';
 import { applyPermissionUpdate, persistPermissionUpdate } from 'src/utils/permissions/PermissionUpdate.js';
 import type { PermissionUpdateDestination } from 'src/utils/permissions/PermissionUpdateSchema.js';
 import type { CommandResultDisplay } from '../../../commands.js';
-import { Select } from '../../../components/CustomSelect/select.js';
+import {
+  Select,
+  type OptionWithDescription,
+} from '../../../components/CustomSelect/select.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../../hooks/useExitOnCtrlCDWithKeybindings.js';
 import { useSearchInput } from '../../../hooks/useSearchInput.js';
 import type { KeyboardEvent } from '../../../ink/events/keyboard-event.js';
@@ -22,7 +25,6 @@ import { jsonStringify } from '../../../utils/slowOperations.js';
 import { Pane } from '../../design-system/Pane.js';
 import { Tab, Tabs, useTabHeaderFocus, useTabsWidth } from '../../design-system/Tabs.js';
 import { SearchBox } from '../../SearchBox.js';
-import type { Option } from '../../ui/option.js';
 import { AddPermissionRules } from './AddPermissionRules.js';
 import { AddWorkspaceDirectory } from './AddWorkspaceDirectory.js';
 import { PermissionRuleDescription } from './PermissionRuleDescription.js';
@@ -253,7 +255,7 @@ function RuleDetails(t0) {
   return t15;
 }
 type RulesTabContentProps = {
-  options: Option[];
+  options: OptionWithDescription<string>[];
   searchQuery: string;
   isSearchMode: boolean;
   isFocused: boolean;
@@ -519,7 +521,7 @@ export function PermissionRuleList(t0) {
     t4 = $[3];
   }
   const handleDenialStateChange = t4;
-  const [selectedRule, setSelectedRule] = useState();
+  const [selectedRule, setSelectedRule] = useState<PermissionRule | undefined>();
   const [lastFocusedRuleKey, setLastFocusedRuleKey] = useState();
   const [addingRuleToTab, setAddingRuleToTab] = useState(null);
   const [validatedRule, setValidatedRule] = useState(null);
@@ -795,7 +797,7 @@ export function PermissionRuleList(t0) {
   if ($[30] !== changes || $[31] !== onExit || $[32] !== onRetryDenials) {
     t18 = () => {
       const s_1 = denialStateRef.current;
-      const denialsFor = set => Array.from(set).map(idx => s_1.denials[idx]).filter(_temp2);
+      const denialsFor = (set: Set<number>) => Array.from(set).map(idx => s_1.denials[idx]).filter(_temp2);
       const retryDenials = denialsFor(s_1.retry);
       if (retryDenials.length > 0) {
         const commands = retryDenials.map(_temp3);
@@ -843,10 +845,11 @@ export function PermissionRuleList(t0) {
       if (!selectedRule) {
         return;
       }
+      const currentRule = selectedRule;
       const {
         options: options_0
-      } = getRulesOptions(selectedRule.ruleBehavior as TabType);
-      const selectedKey = jsonStringify(selectedRule);
+      } = getRulesOptions(currentRule.ruleBehavior as TabType);
+      const selectedKey = jsonStringify(currentRule);
       const ruleKeys = options_0.filter(_temp5).map(_temp6);
       const currentIndex = ruleKeys.indexOf(selectedKey);
       let nextFocusKey;
@@ -861,7 +864,7 @@ export function PermissionRuleList(t0) {
       }
       setLastFocusedRuleKey(nextFocusKey);
       deletePermissionRule({
-        rule: selectedRule,
+        rule: currentRule,
         initialContext: toolPermissionContext,
         setToolPermissionContext(toolPermissionContext_0) {
           setAppState(prev_1 => ({
@@ -870,7 +873,7 @@ export function PermissionRuleList(t0) {
           }));
         }
       });
-      setChanges(prev_2 => [...prev_2, `Deleted ${selectedRule.ruleBehavior} rule ${chalk.bold(permissionRuleValueToString(selectedRule.ruleValue))}`]);
+      setChanges(prev_2 => [...prev_2, `Deleted ${currentRule.ruleBehavior} rule ${chalk.bold(permissionRuleValueToString(currentRule.ruleValue))}`]);
       setSelectedRule(undefined);
     };
     $[36] = getRulesOptions;
@@ -951,7 +954,7 @@ export function PermissionRuleList(t0) {
     let t22;
     if ($[56] !== setAppState || $[57] !== toolPermissionContext) {
       t22 = (path_0, remember) => {
-        const destination = remember ? "localSettings" : "session";
+        const destination: PermissionUpdateDestination = remember ? "localSettings" : "session";
         const permissionUpdate = {
           type: "addDirectories" as const,
           directories: [path_0],

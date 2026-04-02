@@ -39,6 +39,20 @@ import { DBP, DFE, DISABLE_MOUSE_TRACKING, ENABLE_MOUSE_TRACKING, ENTER_ALT_SCRE
 import { CLEAR_ITERM2_PROGRESS, CLEAR_TAB_STATUS, setClipboard, supportsTabStatus, wrapForMultiplexer } from './termio/osc.js';
 import { TerminalWriteProvider } from './useTerminalNotification.js';
 
+const reconcilerCompat = reconciler as typeof reconciler & {
+  createContainer: (...args: any[]) => FiberRoot;
+  flushSyncFromReconciler?: () => void;
+  updateContainerSync?: (
+    children: ReactNode,
+    container: FiberRoot,
+    parentComponent: null,
+    callback: () => void,
+  ) => void;
+  flushSyncWork?: () => void;
+};
+const IS_DEVELOPMENT =
+  (process.env.NODE_ENV ?? '') === 'development';
+
 // Alt-screen: renderer.ts sets cursor.visible = !isTTY || screen.height===0,
 // which is always false in alt-screen (TTY + content fills screen).
 // Reusing a frozen object saves 1 allocation per frame.
@@ -257,9 +271,7 @@ export default class Ink {
       }
     };
 
-    // @ts-expect-error @types/react-reconciler@0.32.3 declares 11 args with transitionCallbacks,
-    // but react-reconciler 0.33.0 source only accepts 10 args (no transitionCallbacks)
-    this.container = reconciler.createContainer(this.rootNode, ConcurrentRoot, null, false, null, 'id', noop,
+    this.container = reconcilerCompat.createContainer(this.rootNode, ConcurrentRoot, null, false, null, 'id', noop,
     // onUncaughtError
     noop,
     // onCaughtError
@@ -267,7 +279,7 @@ export default class Ink {
     // onRecoverableError
     noop // onDefaultTransitionIndicator
     );
-    if ("production" === 'development') {
+    if (IS_DEVELOPMENT) {
       reconciler.injectIntoDevTools({
         bundleType: 0,
         // Reporting React DOM's version, not Ink's
@@ -789,8 +801,7 @@ export default class Ink {
   }
   pause(): void {
     // Flush pending React updates and render before pausing.
-    // @ts-expect-error flushSyncFromReconciler exists in react-reconciler 0.31 but not in @types/react-reconciler
-    reconciler.flushSyncFromReconciler();
+    reconcilerCompat.flushSyncFromReconciler?.();
     this.onRender();
     this.isPaused = true;
   }
@@ -1447,10 +1458,8 @@ export default class Ink {
         </TerminalWriteProvider>
       </App>;
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
-    reconciler.updateContainerSync(tree, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
-    reconciler.flushSyncWork();
+    reconcilerCompat.updateContainerSync?.(tree, this.container, null, noop);
+    reconcilerCompat.flushSyncWork?.();
   }
   unmount(error?: Error | number | null): void {
     if (this.isUnmounted) {
@@ -1514,10 +1523,8 @@ export default class Ink {
       this.drainTimer = null;
     }
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
-    reconciler.updateContainerSync(null, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
-    reconciler.flushSyncWork();
+    reconcilerCompat.updateContainerSync?.(null, this.container, null, noop);
+    reconcilerCompat.flushSyncWork?.();
     instances.delete(this.options.stdout);
 
     // Free the root yoga node, then clear its reference. Children are already

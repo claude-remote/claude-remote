@@ -263,8 +263,10 @@ function isBeingDebugged() {
   }
 }
 
+const IS_ANT_BUILD = ('external' as string) === 'ant';
+
 // Exit if we detect node debugging or inspection
-if ("external" !== 'ant' && isBeingDebugged()) {
+if (!IS_ANT_BUILD && isBeingDebugged()) {
   // Use process.exit directly here since we're in the top-level code before imports
   // and gracefulShutdown is not yet available
   // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -3209,7 +3211,7 @@ async function run(): Promise<CommanderCommand> {
         createSSHSession,
         createLocalSSHSession,
         SSHSessionError
-      } = await import('./ssh/createSSHSession.js');
+      } = await import('./ssh/createSSHSession.js') as any;
       let sshSession;
       try {
         if (_pendingSSH.local) {
@@ -4086,7 +4088,7 @@ async function run(): Promise<CommanderCommand> {
   if (feature('DIRECT_CONNECT')) {
     program.command('open <cc-url>').description('Connect to a Claude Code server (internal — use cc:// URLs)').option('-p, --print [prompt]', 'Print mode (headless)').option('--output-format <format>', 'Output format: text, json, stream-json', 'text').action(async (ccUrl: string, opts: {
       print?: string | boolean;
-      outputFormat: string;
+      outputFormat?: string;
     }) => {
       const {
         parseConnectUrl

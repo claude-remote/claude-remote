@@ -108,9 +108,7 @@ async function main(): Promise<void> {
   // workers are lean. If a worker kind needs configs/auth (assistant will),
   // it calls them inside its run() fn.
   if (feature('DAEMON') && args[0] === '--daemon-worker') {
-    const {
-      runDaemonWorker
-    } = await import('../daemon/workerRegistry.js');
+    const { runDaemonWorker } = require('../daemon/workerRegistry.js') as any;
     await runDaemonWorker(args[1]);
     return;
   }
@@ -191,9 +189,7 @@ async function main(): Promise<void> {
       initSinks
     } = await import('../utils/sinks.js');
     initSinks();
-    const {
-      daemonMain
-    } = await import('../daemon/main.js');
+    const { daemonMain } = require('../daemon/main.js') as any;
     await daemonMain(args.slice(1));
     return;
   }
@@ -244,9 +240,7 @@ async function main(): Promise<void> {
   // feature() must stay inline for build-time dead code elimination.
   if (feature('BYOC_ENVIRONMENT_RUNNER') && args[0] === 'environment-runner') {
     profileCheckpoint('cli_environment_runner_path');
-    const {
-      environmentRunnerMain
-    } = await import('../environment-runner/main.js');
+    const { environmentRunnerMain } = require('../environment-runner/main.js') as any;
     await environmentRunnerMain(args.slice(1));
     return;
   }
@@ -256,9 +250,7 @@ async function main(): Promise<void> {
   // heartbeat). feature() must stay inline for build-time dead code elimination.
   if (feature('SELF_HOSTED_RUNNER') && args[0] === 'self-hosted-runner') {
     profileCheckpoint('cli_self_hosted_runner_path');
-    const {
-      selfHostedRunnerMain
-    } = await import('../self-hosted-runner/main.js');
+    const { selfHostedRunnerMain } = require('../self-hosted-runner/main.js') as any;
     await selfHostedRunnerMain(args.slice(1));
     return;
   }

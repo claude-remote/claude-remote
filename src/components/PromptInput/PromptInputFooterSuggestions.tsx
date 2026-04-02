@@ -16,6 +16,11 @@ export type SuggestionItem = {
 };
 export type SuggestionType = 'command' | 'file' | 'directory' | 'agent' | 'shell' | 'custom-title' | 'slack-channel' | 'none';
 export const OVERLAY_MAX_ITEMS = 5;
+type SuggestionItemRowProps = {
+  item: SuggestionItem;
+  maxColumnWidth: number;
+  isSelected: boolean;
+};
 
 /**
  * Get the icon for a suggestion based on its type
@@ -34,7 +39,7 @@ function getIcon(itemId: string): string {
 function isUnifiedSuggestion(itemId: string): boolean {
   return itemId.startsWith('file-') || itemId.startsWith('mcp-resource-') || itemId.startsWith('agent-');
 }
-const SuggestionItemRow = memo(function SuggestionItemRow(t0) {
+const SuggestionItemRow = memo(function SuggestionItemRow(t0: SuggestionItemRowProps) {
   const $ = _c(36);
   const {
     item,

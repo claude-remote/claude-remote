@@ -255,6 +255,56 @@ declare module '@opentelemetry/exporter-trace-otlp-proto' {
   export const OTLPTraceExporter: any;
 }
 
+declare module '*ReviewArtifactTool/ReviewArtifactTool.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ReviewArtifactPermissionRequest/ReviewArtifactPermissionRequest.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*WorkflowTool/WorkflowTool.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*WorkflowTool/WorkflowPermissionRequest.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*MonitorTool/MonitorTool.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*MonitorPermissionRequest/MonitorPermissionRequest.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*LocalWorkflowTask/LocalWorkflowTask.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*MonitorMcpTask/MonitorMcpTask.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*WorkflowDetailDialog.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*MonitorMcpDetailDialog.js' {
+  const mod: any;
+  export = mod;
+}
+
 declare module '*types/message.js' {
   export type AssistantMessage = any;
   export type AttachmentMessage<T = any> = any;
@@ -780,6 +830,98 @@ declare module '*types/messageQueueTypes.js' {
 }
 
 declare module '*types/notebook.js' {
+  export type NotebookCellType = any;
+  export type NotebookCellOutput = any;
+  export type NotebookCell = any;
+  export type NotebookContent = any;
+}
+
+declare module '*daemon/*.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/skillSearch/signals.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/skillSearch/featureCheck.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*assistant/AssistantSessionChooser.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*commands/assistant/assistant.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*bridge/webhookSanitizer.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ssh/SSHSessionManager.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ink/events/paste-event.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ink/events/resize-event.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ink/cursor.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*ink/devtools.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*services/tips/types.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*coordinator/workerAgent.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*bridge/peerSessions.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*types/message.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/attributionTrailer.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/udsClient.js' {
+  const mod: any;
+  export = mod;
+}
+
+declare module '*utils/protectedNamespace.js' {
   const mod: any;
   export = mod;
 }

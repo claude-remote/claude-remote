@@ -121,6 +121,7 @@ export type ClientCommand = { cmdId: string } & (
 
 export type HubReplyData =
   | SessionSnapshot
+  | SessionMeta
   | SessionMeta[]
   | PermissionRequest
   | SkillInfo[]

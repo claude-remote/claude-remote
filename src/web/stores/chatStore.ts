@@ -8,7 +8,7 @@ interface ChatStoreState {
   pendingPermissions: PermissionRequest[];
 
   addMessage: (message: Message) => void;
-  setMessages: (messages: Message[]) => void;
+  setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
   setStreaming: (streaming: boolean) => void;
   addPermission: (request: PermissionRequest) => void;
   resolvePermission: (id: string) => void;
@@ -34,8 +34,13 @@ export const useChatStore = create<ChatStoreState>((set) => ({
     });
   },
 
-  setMessages(messages: Message[]) {
-    set({ messages });
+  setMessages(messages: Message[] | ((prev: Message[]) => Message[])) {
+    set((state) => ({
+      messages:
+        typeof messages === 'function'
+          ? messages(state.messages)
+          : messages,
+    }));
   },
 
   setStreaming(streaming: boolean) {

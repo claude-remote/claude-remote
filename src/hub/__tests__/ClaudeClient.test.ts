@@ -166,7 +166,7 @@ describe('ClaudeClient', () => {
       toolEngine: {
         execute: toolExecuteMock as any,
         buildPermissionRequest: mock() as any,
-      },
+      } as any,
       apiKey: 'test-key',
       baseUrl: 'https://test.api.anthropic.com',
     };
@@ -416,8 +416,12 @@ describe('ClaudeClient', () => {
 
     const events1: HubEvent[] = [];
     const events2: HubEvent[] = [];
-    eventBus.subscribe('sess-a', (e) => events1.push(e));
-    eventBus.subscribe('sess-b', (e) => events2.push(e));
+    eventBus.subscribe('sess-a', (e) => {
+      events1.push(e);
+    });
+    eventBus.subscribe('sess-b', (e) => {
+      events2.push(e);
+    });
 
     await Promise.all([
       client.sendMessage({
@@ -457,7 +461,9 @@ describe('ClaudeClient', () => {
     ) as any;
 
     const collected: HubEvent[] = [];
-    eventBus.subscribe('sess-err', (e) => collected.push(e));
+    eventBus.subscribe('sess-err', (e) => {
+      collected.push(e);
+    });
 
     await client.sendMessage({
       sessionId: 'sess-err',

@@ -41,6 +41,11 @@ let stylePool: StylePool | undefined
 let charPool: CharPool | undefined
 let hyperlinkPool: HyperlinkPool | undefined
 let output: Output | undefined
+const reconcilerCompat = reconciler as typeof reconciler & {
+  createContainer: (...args: any[]) => unknown
+  updateContainerSync?: (...args: any[]) => void
+  flushSyncWork?: () => void
+}
 
 const timing = { reconcile: 0, yoga: 0, paint: 0, scan: 0, calls: 0 }
 const LOG_EVERY = 20
@@ -66,8 +71,7 @@ export function renderToScreen(
     stylePool = new StylePool()
     charPool = new CharPool()
     hyperlinkPool = new HyperlinkPool()
-    // @ts-expect-error react-reconciler 0.33 takes 10 args; @types says 11
-    container = reconciler.createContainer(
+    container = reconcilerCompat.createContainer(
       root,
       LegacyRoot,
       null,
@@ -82,10 +86,8 @@ export function renderToScreen(
   }
 
   const t0 = performance.now()
-  // @ts-expect-error updateContainerSync exists but not in @types
-  reconciler.updateContainerSync(el, container, null, noop)
-  // @ts-expect-error flushSyncWork exists but not in @types
-  reconciler.flushSyncWork()
+  reconcilerCompat.updateContainerSync?.(el, container, null, noop)
+  reconcilerCompat.flushSyncWork?.()
   const t1 = performance.now()
 
   // Yoga layout. Root might not have a yogaNode if the tree is empty.
@@ -117,10 +119,8 @@ export function renderToScreen(
   const t3 = performance.now()
 
   // Unmount so next call gets a fresh tree. Leaves root/container/pools.
-  // @ts-expect-error updateContainerSync exists but not in @types
-  reconciler.updateContainerSync(null, container, null, noop)
-  // @ts-expect-error flushSyncWork exists but not in @types
-  reconciler.flushSyncWork()
+  reconcilerCompat.updateContainerSync?.(null, container, null, noop)
+  reconcilerCompat.flushSyncWork?.()
 
   timing.reconcile += t1 - t0
   timing.yoga += t2 - t1

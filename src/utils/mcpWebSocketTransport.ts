@@ -18,6 +18,7 @@ type WebSocketLike = {
   close(): void
   send(data: string): void
 }
+type NodeWebSocket = any
 
 export class WebSocketTransport implements Transport {
   private started = false
@@ -44,7 +45,7 @@ export class WebSocketTransport implements Transport {
         nws.addEventListener('open', onOpen)
         nws.addEventListener('error', onError)
       } else {
-        const nws = this.ws as unknown as WsWebSocket
+        const nws = this.ws as unknown as NodeWebSocket
         nws.on('open', () => {
           resolve()
         })
@@ -62,7 +63,7 @@ export class WebSocketTransport implements Transport {
       nws.addEventListener('error', this.onBunError)
       nws.addEventListener('close', this.onBunClose)
     } else {
-      const nws = this.ws as unknown as WsWebSocket
+      const nws = this.ws as unknown as NodeWebSocket
       nws.on('message', this.onNodeMessage)
       nws.on('error', this.onNodeError)
       nws.on('close', this.onNodeClose)
@@ -129,7 +130,7 @@ export class WebSocketTransport implements Transport {
       nws.removeEventListener('error', this.onBunError)
       nws.removeEventListener('close', this.onBunClose)
     } else {
-      const nws = this.ws as unknown as WsWebSocket
+      const nws = this.ws as unknown as NodeWebSocket
       nws.off('message', this.onNodeMessage)
       nws.off('error', this.onNodeError)
       nws.off('close', this.onNodeClose)
@@ -183,7 +184,7 @@ export class WebSocketTransport implements Transport {
         this.ws.send(json)
       } else {
         await new Promise<void>((resolve, reject) => {
-          ;(this.ws as unknown as WsWebSocket).send(json, error => {
+          ;(this.ws as unknown as NodeWebSocket).send(json, (error: unknown) => {
             if (error) {
               reject(error)
             } else {

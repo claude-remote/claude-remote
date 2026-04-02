@@ -51,9 +51,14 @@ export type NotebookCell = {
   source: string | string[];
   execution_count?: number | null;
   outputs?: NotebookCellOutput[];
+  metadata?: Record<string, unknown>;
 };
 
+export type NotebookCellType = NotebookCell['cell_type'];
+
 export type NotebookContent = {
+  nbformat?: number;
+  nbformat_minor?: number;
   metadata: {
     language_info?: {
       name?: string;

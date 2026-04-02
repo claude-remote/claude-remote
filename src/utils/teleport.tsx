@@ -844,7 +844,11 @@ export async function teleportToRemote(options: {
           signal
         });
         if (!bundle.success) {
-          logError(new Error(`Bundle upload failed: ${bundle.error}`));
+          const failed = bundle as Exclude<
+            Awaited<ReturnType<typeof createAndUploadGitBundle>>,
+            { success: true }
+          >;
+          logError(new Error(`Bundle upload failed: ${failed.error}`));
           return null;
         }
         seedBundleFileId = bundle.fileId;
@@ -1008,11 +1012,15 @@ export async function teleportToRemote(options: {
         signal
       });
       if (!bundle.success) {
-        logError(new Error(`Bundle upload failed: ${bundle.error}`));
+        const failed = bundle as Exclude<
+          Awaited<ReturnType<typeof createAndUploadGitBundle>>,
+          { success: true }
+        >;
+        logError(new Error(`Bundle upload failed: ${failed.error}`));
         // Only steer users to GitHub setup when there's a remote to clone from.
         const setup = repoInfo ? '. Please setup GitHub on https://claude.ai/code' : '';
         let msg: string;
-        switch (bundle.failReason) {
+        switch (failed.failReason) {
           case 'empty_repo':
             msg = 'Repository has no commits — run `git add . && git commit -m "initial"` then retry';
             break;
@@ -1020,16 +1028,16 @@ export async function teleportToRemote(options: {
             msg = `Repo is too large to teleport${setup}`;
             break;
           case 'git_error':
-            msg = `Failed to create git bundle (${bundle.error})${setup}`;
+            msg = `Failed to create git bundle (${failed.error})${setup}`;
             break;
           case undefined:
-            msg = `Bundle upload failed: ${bundle.error}${setup}`;
+            msg = `Bundle upload failed: ${failed.error}${setup}`;
             break;
           default:
             {
-              const _exhaustive: never = bundle.failReason;
+              const _exhaustive: never = failed.failReason;
               void _exhaustive;
-              msg = `Bundle upload failed: ${bundle.error}`;
+              msg = `Bundle upload failed: ${failed.error}`;
             }
         }
         options.onBundleFail?.(msg);

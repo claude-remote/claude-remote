@@ -32,10 +32,12 @@ export function isModelSupportedForCacheEditing(_model: string): boolean {
 export function getCachedMCConfig(): {
   triggerThreshold: number
   keepRecent: number
+  supportedModels: string[]
 } {
   return {
     triggerThreshold: 0,
     keepRecent: 0,
+    supportedModels: [],
   }
 }
 

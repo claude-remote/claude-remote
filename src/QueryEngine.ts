@@ -1062,9 +1062,13 @@ export class QueryEngine {
     // is a type predicate (message is Message), so inside the false branch
     // `result` narrows to never and these accesses don't typecheck.
     const edeResultType = result?.type ?? 'undefined'
+    const resultLastContent =
+      result?.type === 'assistant'
+        ? (last(result.message.content) as ContentBlockParam | undefined)
+        : undefined
     const edeLastContentType =
       result?.type === 'assistant'
-        ? (last(result.message.content)?.type ?? 'none')
+        ? (resultLastContent?.type ?? 'none')
         : 'n/a'
 
     // Flush buffered transcript writes before yielding result.
@@ -1122,7 +1126,9 @@ export class QueryEngine {
     let isApiError = false
 
     if (result.type === 'assistant') {
-      const lastContent = last(result.message.content)
+      const lastContent = last(result.message.content) as
+        | ContentBlockParam
+        | undefined
       if (
         lastContent?.type === 'text' &&
         !SYNTHETIC_MESSAGES.has(lastContent.text)
@@ -1246,7 +1252,7 @@ export async function* ask({
   setSDKStatus?: (status: SDKStatus) => void
   orphanedPermission?: OrphanedPermission
 }): AsyncGenerator<SDKMessage, void, unknown> {
-  const engine = new QueryEngine({
+  const engine = new QueryEngine(({
     cwd,
     tools,
     commands,
@@ -1282,7 +1288,7 @@ export async function* ask({
           },
         }
       : {}),
-  })
+  }) as any)
 
   try {
     yield* engine.submitMessage(prompt, {

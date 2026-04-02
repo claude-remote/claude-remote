@@ -174,7 +174,7 @@ export class WebSocketHandler {
         connectedAt: conn.connectedAt,
         userAgent: payload.userAgent,
       },
-    });
+    } as any);
 
     // 9. Start heartbeat
     this.startHeartbeat(clientId, ws);
@@ -285,7 +285,7 @@ export class WebSocketHandler {
           type: 'hub:writer:changed',
           sessionId: conn.sessionId,
           newWriterId: next.clientId,
-        });
+        } as any);
       }
     }
 
@@ -294,7 +294,7 @@ export class WebSocketHandler {
       type: 'hub:client:left',
       sessionId: conn.sessionId,
       clientId,
-    });
+    } as any);
   }
 
   // ── Command routing ───────────────────────────────────────────────
@@ -365,7 +365,7 @@ export class WebSocketHandler {
           sessionId,
           requesterId: conn.clientId,
           requesterType: conn.clientType,
-        });
+        } as any);
         return { type: 'reply', cmdId: command.cmdId, data: null };
       }
 
@@ -399,7 +399,7 @@ export class WebSocketHandler {
           type: 'hub:writer:changed',
           sessionId,
           newWriterId: this.sessionManager.getActiveWriter(sessionId),
-        });
+        } as any);
 
         return { type: 'reply', cmdId: command.cmdId, data: null };
       }
@@ -438,7 +438,7 @@ export class WebSocketHandler {
       default:
         return {
           type: 'error',
-          cmdId: command.cmdId,
+          cmdId: (command as any).cmdId,
           error: `unhandled command: ${(command as { cmd: string }).cmd}`,
         };
     }

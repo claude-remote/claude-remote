@@ -525,31 +525,32 @@ export async function installPluginFromMarketplace({
     })
 
     if (!result.ok) {
-      switch (result.reason) {
+      const failed = result as Exclude<InstallCoreResult, { ok: true }>
+      switch (failed.reason) {
         case 'local-source-no-location':
           return {
             success: false,
-            error: `Cannot install local plugin "${result.pluginName}" without marketplace install location`,
+            error: `Cannot install local plugin "${failed.pluginName}" without marketplace install location`,
           }
         case 'settings-write-failed':
           return {
             success: false,
-            error: `Failed to update settings: ${result.message}`,
+            error: `Failed to update settings: ${failed.message}`,
           }
         case 'resolution-failed':
           return {
             success: false,
-            error: formatResolutionError(result.resolution),
+            error: formatResolutionError(failed.resolution),
           }
         case 'blocked-by-policy':
           return {
             success: false,
-            error: `Plugin "${result.pluginName}" is blocked by your organization's policy and cannot be installed`,
+            error: `Plugin "${failed.pluginName}" is blocked by your organization's policy and cannot be installed`,
           }
         case 'dependency-blocked-by-policy':
           return {
             success: false,
-            error: `Cannot install "${result.pluginName}": dependency "${result.blockedDependency}" is blocked by your organization's policy`,
+            error: `Cannot install "${failed.pluginName}": dependency "${failed.blockedDependency}" is blocked by your organization's policy`,
           }
       }
     }

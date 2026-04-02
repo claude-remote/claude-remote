@@ -95,6 +95,7 @@ import { isHumanTurn } from '../utils/messagePredicates.js';
 import { logError } from '../utils/log.js';
 // Dead code elimination: conditional imports
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
+const IS_ANT_BUILD = ('external' as string) === 'ant';
 const useVoiceIntegration: typeof import('../hooks/useVoiceIntegration.js').useVoiceIntegration = feature('VOICE_MODE') ? require('../hooks/useVoiceIntegration.js').useVoiceIntegration : () => ({
   stripTrailing: () => 0,
   handleKeyEvent: () => {},
@@ -220,9 +221,8 @@ import { IdeOnboardingDialog } from '../components/IdeOnboardingDialog.js';
 import { EffortCallout, shouldShowEffortCallout } from '../components/EffortCallout.js';
 import type { EffortValue } from '../utils/effort.js';
 import { RemoteCallout } from '../components/RemoteCallout.js';
-import { launchUltraplan } from '../commands/ultraplan.tsx';
+import { launchUltraplan } from '../commands/ultraplan.js';
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-const IS_ANT_BUILD = ('external' as string) === 'ant';
 const AntModelSwitchCallout = IS_ANT_BUILD ? require('../components/AntModelSwitchCallout.js').AntModelSwitchCallout : null;
 const shouldShowAntModelSwitch = IS_ANT_BUILD ? require('../components/AntModelSwitchCallout.js').shouldShowModelSwitchCallout : (): boolean => false;
 const UndercoverAutoCallout = IS_ANT_BUILD ? require('../components/UndercoverAutoCallout.js').UndercoverAutoCallout : null;
@@ -2610,7 +2610,7 @@ export function REPL({
         if (feature('PROACTIVE') || feature('KAIROS')) {
           proactiveModule?.setContextBlocked(false);
         }
-      } else if (newMessage.type === 'progress' && isEphemeralToolProgress(newMessage.data.type)) {
+      } else if ((newMessage as any).type === 'progress' && isEphemeralToolProgress((newMessage as any).data.type)) {
         // Replace the previous ephemeral progress tick for the same tool
         // call instead of appending. Sleep/Bash emit a tick per second and
         // only the last one is rendered; appending blows up the messages
@@ -2623,7 +2623,7 @@ export function REPL({
         // "Initializing…" because it renders the full progress trail.
         setMessages(oldMessages => {
           const last = oldMessages.at(-1) as any;
-          if (last?.type === 'progress' && last.parentToolUseID === newMessage.parentToolUseID && last.data.type === newMessage.data.type) {
+          if (last?.type === 'progress' && last.parentToolUseID === (newMessage as any).parentToolUseID && last.data.type === (newMessage as any).data.type) {
             const copy = oldMessages.slice();
             copy[copy.length - 1] = newMessage;
             return copy;

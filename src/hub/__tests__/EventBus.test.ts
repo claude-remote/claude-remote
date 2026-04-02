@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventBus } from '@/hub/EventBus';
 import type { HubEvent } from '@/shared/protocol';
 
+type SeqHubEvent = HubEvent & { seq: number };
+
 function makeEvent(
   overrides: Partial<HubEvent> = {},
 ): Omit<HubEvent, 'seq'> {
@@ -41,7 +43,7 @@ describe('EventBus', () => {
   it('seq is monotonically incrementing per session', async () => {
     const bus = new EventBus();
     const seqs: number[] = [];
-    bus.subscribe('sess-1', (e) => { seqs.push(e.seq); });
+    bus.subscribe('sess-1', (e) => { seqs.push((e as SeqHubEvent).seq); });
 
     for (let i = 0; i < 10; i++) {
       await bus.publish('sess-1', makeEvent());
@@ -66,9 +68,9 @@ describe('EventBus', () => {
     expect(r2).toHaveLength(1);
     expect(r3).toHaveLength(1);
     // All received the same seq
-    expect(r1[0]!.seq).toBe(1);
-    expect(r2[0]!.seq).toBe(1);
-    expect(r3[0]!.seq).toBe(1);
+    expect((r1[0] as SeqHubEvent).seq).toBe(1);
+    expect((r2[0] as SeqHubEvent).seq).toBe(1);
+    expect((r3[0] as SeqHubEvent).seq).toBe(1);
   });
 
   it('session isolation: events on session A do not reach session B listeners', async () => {
@@ -246,8 +248,8 @@ describe('EventBus', () => {
     const seqsA: number[] = [];
     const seqsB: number[] = [];
 
-    bus.subscribe('sess-a', (e) => { seqsA.push(e.seq); });
-    bus.subscribe('sess-b', (e) => { seqsB.push(e.seq); });
+    bus.subscribe('sess-a', (e) => { seqsA.push((e as SeqHubEvent).seq); });
+    bus.subscribe('sess-b', (e) => { seqsB.push((e as SeqHubEvent).seq); });
 
     await bus.publish('sess-a', makeEvent({ sessionId: 'sess-a' } as Partial<HubEvent>));
     await bus.publish('sess-a', makeEvent({ sessionId: 'sess-a' } as Partial<HubEvent>));

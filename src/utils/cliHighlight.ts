@@ -8,8 +8,8 @@
 import { extname } from 'path'
 
 export type CliHighlight = {
-  highlight: typeof import('cli-highlight').highlight
-  supportsLanguage: typeof import('cli-highlight').supportsLanguage
+  highlight: (...args: any[]) => string
+  supportsLanguage: (language: string) => boolean
 }
 
 // One promise shared by Fallback.tsx, markdown.ts, events.ts, getLanguageName.
@@ -18,13 +18,15 @@ export type CliHighlight = {
 // faulted in.
 let cliHighlightPromise: Promise<CliHighlight | null> | undefined
 
-let loadedGetLanguage: typeof import('highlight.js').getLanguage | undefined
+let loadedGetLanguage:
+  | ((language: string) => { name?: string } | undefined)
+  | undefined
 
 async function loadCliHighlight(): Promise<CliHighlight | null> {
   try {
-    const cliHighlight = await import('cli-highlight')
+    const cliHighlight = (await import('cli-highlight')) as any
     // cache hit — cli-highlight already loaded highlight.js
-    const highlightJs = await import('highlight.js')
+    const highlightJs = (await import('highlight.js')) as any
     loadedGetLanguage = highlightJs.getLanguage
     return {
       highlight: cliHighlight.highlight,

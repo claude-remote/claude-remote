@@ -115,7 +115,6 @@ export class SessionManager {
 
     this.eventBus.publish(id, {
       type: 'hub:session:cwdChanged',
-      seq: this.eventBus.nextSeq(id),
       sessionId: id,
       cwd,
     });
@@ -150,7 +149,6 @@ export class SessionManager {
 
     await this.eventBus.publish(id, {
       type: 'hub:session:statusChanged',
-      seq: this.eventBus.nextSeq(id),
       sessionId: id,
       status: newStatus,
     });
@@ -194,7 +192,6 @@ export class SessionManager {
 
     await this.eventBus.publish(sessionId, {
       type: 'hub:writer:changed',
-      seq: this.eventBus.nextSeq(sessionId),
       sessionId,
       newWriterId: newClientId,
     });

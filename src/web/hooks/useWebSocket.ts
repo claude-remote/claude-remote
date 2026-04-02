@@ -13,7 +13,9 @@ export interface UseWebSocketReturn {
   connected: boolean;
   connecting: boolean;
   snapshot: SessionSnapshot | null;
+  lastMessage: HubResponse | null;
   send: (command: ClientCommand) => void;
+  sendCommand: (command: ClientCommand) => void;
   reconnect: () => void;
   onEvent: (handler: (event: HubEvent) => void) => () => void;
 }
@@ -21,10 +23,13 @@ export interface UseWebSocketReturn {
 const MIN_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 30000;
 
-export function useWebSocket({ ticket, onEvent, onSnapshot }: UseWebSocketOptions): UseWebSocketReturn {
+export function useWebSocket(
+  { ticket = null, onEvent, onSnapshot }: Partial<UseWebSocketOptions> = {},
+): UseWebSocketReturn {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [snapshot, setSnapshot] = useState<SessionSnapshot | null>(null);
+  const [lastMessage, setLastMessage] = useState<HubResponse | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectDelayRef = useRef(MIN_RECONNECT_DELAY);
@@ -76,6 +81,7 @@ export function useWebSocket({ ticket, onEvent, onSnapshot }: UseWebSocketOption
       } catch {
         return;
       }
+      setLastMessage(msg);
 
       switch (msg.type) {
         case 'snapshot': {
@@ -164,7 +170,9 @@ export function useWebSocket({ ticket, onEvent, onSnapshot }: UseWebSocketOption
     connected,
     connecting,
     snapshot,
+    lastMessage,
     send,
+    sendCommand: send,
     reconnect,
     onEvent: registerEventHandler,
   };

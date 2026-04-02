@@ -105,12 +105,12 @@ import type { SkillToolProgress as Progress } from '../../types/tools.js'
 // feature('EXPERIMENTAL_SKILL_SEARCH') guards, so remoteSkillModules is
 // non-null at every call site.
 /* eslint-disable @typescript-eslint/no-require-imports */
-const remoteSkillModules = feature('EXPERIMENTAL_SKILL_SEARCH')
+const remoteSkillModules: any = feature('EXPERIMENTAL_SKILL_SEARCH')
   ? {
-      ...(require('../../services/skillSearch/remoteSkillState.js') as typeof import('../../services/skillSearch/remoteSkillState.js')),
-      ...(require('../../services/skillSearch/remoteSkillLoader.js') as typeof import('../../services/skillSearch/remoteSkillLoader.js')),
-      ...(require('../../services/skillSearch/telemetry.js') as typeof import('../../services/skillSearch/telemetry.js')),
-      ...(require('../../services/skillSearch/featureCheck.js') as typeof import('../../services/skillSearch/featureCheck.js')),
+      ...(require('../../services/skillSearch/remoteSkillState.js') as any),
+      ...(require('../../services/skillSearch/remoteSkillLoader.js') as any),
+      ...(require('../../services/skillSearch/telemetry.js') as any),
+      ...(require('../../services/skillSearch/featureCheck.js') as any),
     }
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */

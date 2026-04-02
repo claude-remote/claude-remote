@@ -48,7 +48,7 @@ type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
 export function Chat() {
   const sessionId = useMemo(() => getSessionIdFromPath(), []);
-  const { connected, lastMessage, sendCommand } = useWebSocket();
+  const { connected, connecting, lastMessage, sendCommand } = useWebSocket();
   const { messages, setMessages } = useChatStore();
   const { activeSnapshot, setSnapshot } = useSessionStore();
 
@@ -74,7 +74,11 @@ export function Chat() {
   // Branch menu
   const branchMenu = useBranchMenu();
 
-  const connectionStatus: ConnectionStatus = connected ? 'connected' : 'disconnected';
+  const connectionStatus: ConnectionStatus = connected
+    ? 'connected'
+    : connecting
+      ? 'connecting'
+      : 'disconnected';
 
   // Derive state from snapshot or use defaults
   const session: SessionMeta = activeSnapshot?.meta ?? {
@@ -489,7 +493,13 @@ export function Chat() {
       )}
 
       {/* Floating panels / dialogs */}
-      <SkillPalette skills={skills} />
+      <SkillPalette
+        visible={false}
+        query=""
+        skills={skills}
+        onSelect={() => {}}
+        onClose={() => {}}
+      />
       <McpPanel servers={servers} sendCommand={sendCommand} />
       <SettingsDrawer
         open={settingsOpen}

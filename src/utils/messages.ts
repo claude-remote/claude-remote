@@ -907,7 +907,7 @@ export function reorderMessagesInUI(
     }
 
     // Handle tool results
-    if (current.type === 'user' && currentContent0?.type === 'tool_result') {
+    if ((current as any).type === 'user' && currentContent0?.type === 'tool_result') {
       const toolUseID = currentContent0.tool_use_id
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
@@ -975,13 +975,13 @@ export function reorderMessagesInUI(
       continue
     }
 
-    if (current.type === 'user' && currentContent0?.type === 'tool_result') {
+    if ((current as any).type === 'user' && currentContent0?.type === 'tool_result') {
       // Skip - already handled in tool use groups
       continue
     }
 
     // Handle api error messages (only keep the last one)
-    if (current.type === 'system' && current.subtype === 'api_error') {
+    if ((current as any).type === 'system' && (current as any).subtype === 'api_error') {
       const last = result.at(-1)
       const previous = last as any
       if (previous?.type === 'system' && previous.subtype === 'api_error') {
