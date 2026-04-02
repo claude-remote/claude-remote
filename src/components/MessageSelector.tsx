@@ -28,6 +28,7 @@ import { count } from '../utils/array.js';
 import { formatRelativeTimeAgo, truncate } from '../utils/format.js';
 import type { Theme } from '../utils/theme.js';
 import { Divider } from './design-system/Divider.js';
+const IS_ANT_BUILD = ('external' as string) === 'ant';
 type RestoreOption = 'both' | 'conversation' | 'code' | 'summarize' | 'summarize_up_to' | 'nevermind';
 function isSummarizeOption(option: RestoreOption | null): option is 'summarize' | 'summarize_up_to' {
   return option === 'summarize' || option === 'summarize_up_to';
@@ -118,7 +119,7 @@ export function MessageSelector({
       ...summarizeInputProps,
       onChange: setSummarizeFromFeedback
     });
-    if ("external" === 'ant') {
+    if (IS_ANT_BUILD) {
       baseOptions.push({
         value: 'summarize_up_to',
         label: 'Summarize up to here',
@@ -798,20 +799,21 @@ export function selectableUserMessagesFilter(message: Message): message is UserM
  */
 export function messagesAfterAreOnlySynthetic(messages: Message[], fromIndex: number): boolean {
   for (let i = fromIndex + 1; i < messages.length; i++) {
-    const msg = messages[i];
-    if (!msg) continue;
+    const msg = messages[i]
+    const current = msg as any
+    if (!current) continue;
 
     // Skip known non-meaningful message types
-    if (isSyntheticMessage(msg)) continue;
-    if (isToolUseResultMessage(msg)) continue;
-    if (msg.type === 'progress') continue;
-    if (msg.type === 'system') continue;
-    if (msg.type === 'attachment') continue;
-    if (msg.type === 'user' && msg.isMeta) continue;
+    if (isSyntheticMessage(current as any)) continue;
+    if (isToolUseResultMessage(current as any)) continue;
+    if ((current as any).type === 'progress') continue;
+    if ((current as any).type === 'system') continue;
+    if ((current as any).type === 'attachment') continue;
+    if ((current as any).type === 'user' && (current as any).isMeta) continue;
 
     // Assistant with actual content = meaningful
-    if (msg.type === 'assistant') {
-      const content = msg.message.content;
+    if ((current as any).type === 'assistant') {
+      const content = (current as any).message.content;
       if (Array.isArray(content)) {
         const hasMeaningfulContent = content.some(block => block.type === 'text' && block.text.trim() || block.type === 'tool_use');
         if (hasMeaningfulContent) return false;
@@ -820,7 +822,7 @@ export function messagesAfterAreOnlySynthetic(messages: Message[], fromIndex: nu
     }
 
     // User messages that aren't synthetic or meta = meaningful
-    if (msg.type === 'user') {
+    if ((current as any).type === 'user') {
       return false;
     }
 

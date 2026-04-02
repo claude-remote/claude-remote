@@ -895,17 +895,19 @@ export function collapseReadSearchGroups(
         scanBashResultForGitOps(msg, currentGroup)
       }
     } else if (currentGroup.messages.length > 0 && isPreToolHookSummary(msg)) {
+      const hookSummary = msg as any
       // Absorb PreToolUse hook summaries into the group instead of deferring
-      currentGroup.hookCount += msg.hookCount
+      currentGroup.hookCount += hookSummary.hookCount
       currentGroup.hookTotalMs +=
-        msg.totalDurationMs ??
-        msg.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
-      currentGroup.hookInfos.push(...msg.hookInfos)
+        hookSummary.totalDurationMs ??
+        hookSummary.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
+      currentGroup.hookInfos.push(...hookSummary.hookInfos)
     } else if (
       currentGroup.messages.length > 0 &&
-      msg.type === 'attachment' &&
-      msg.attachment.type === 'relevant_memories'
+      (msg as any).type === 'attachment' &&
+      (msg as any).attachment.type === 'relevant_memories'
     ) {
+      const current = msg as any
       // Absorb auto-injected memory attachments so "recalled N memories"
       // renders inline with "ran N bash commands" instead of as a separate
       // ⏺ block. Do NOT add paths to readFilePaths/memoryReadFilePaths —
@@ -914,7 +916,7 @@ export function collapseReadSearchGroups(
       // suppresses the fallback). createCollapsedGroup adds .length to
       // memoryReadCount after the readCount subtraction instead.
       currentGroup.relevantMemories ??= []
-      currentGroup.relevantMemories.push(...msg.attachment.memories)
+      currentGroup.relevantMemories.push(...current.attachment.memories)
     } else if (shouldSkipMessage(msg)) {
       // Don't flush the group for skippable messages (thinking, attachments, system)
       // If a group is in progress, defer these messages to output after the collapsed group
@@ -924,7 +926,7 @@ export function collapseReadSearchGroups(
       // ⎿ Loaded lines cluster tightly instead of being split by the badge's marginTop.
       if (
         currentGroup.messages.length > 0 &&
-        !(msg.type === 'attachment' && msg.attachment.type === 'nested_memory')
+        !((msg as any).type === 'attachment' && (msg as any).attachment.type === 'nested_memory')
       ) {
         deferredSkippable.push(msg)
       } else {

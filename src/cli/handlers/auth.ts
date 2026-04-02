@@ -24,6 +24,7 @@ import {
   clearOAuthTokenCache,
   getAnthropicApiKeyWithSource,
   getAuthTokenSource,
+  getOrgValidationMessage,
   getOauthAccountInfo,
   getSubscriptionType,
   isUsing3PServices,
@@ -158,8 +159,9 @@ export async function authLogin({
       await installOAuthTokens(tokens)
 
       const orgResult = await validateForceLoginOrg()
-      if (!orgResult.valid) {
-        process.stderr.write(orgResult.message + '\n')
+      const orgMessage = getOrgValidationMessage(orgResult)
+      if (orgMessage) {
+        process.stderr.write(orgMessage + '\n')
         process.exit(1)
       }
 
@@ -208,8 +210,9 @@ export async function authLogin({
     await installOAuthTokens(result)
 
     const orgResult = await validateForceLoginOrg()
-    if (!orgResult.valid) {
-      process.stderr.write(orgResult.message + '\n')
+    const orgMessage = getOrgValidationMessage(orgResult)
+    if (orgMessage) {
+      process.stderr.write(orgMessage + '\n')
       process.exit(1)
     }
 

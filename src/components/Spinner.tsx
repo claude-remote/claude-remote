@@ -37,8 +37,16 @@ import { TeammateSpinnerTree } from './Spinner/TeammateSpinnerTree.js';
 import { useAnimationFrame } from '../ink.js';
 import { getGlobalConfig } from '../utils/config.js';
 export type { SpinnerMode } from './Spinner/index.js';
+const IS_ANT_BUILD = ('external' as string) === 'ant';
 const DEFAULT_CHARACTERS = getDefaultCharacters();
 const SPINNER_FRAMES = [...DEFAULT_CHARACTERS, ...[...DEFAULT_CHARACTERS].reverse()];
+type ApiMetricsEntry = {
+  ttftMs: number;
+  firstTokenTime: number;
+  lastTokenTime: number;
+  responseLengthBaseline: number;
+  endResponseLength: number;
+};
 type Props = {
   mode: SpinnerMode;
   loadingStartTimeRef: React.RefObject<number>;
@@ -52,9 +60,23 @@ type Props = {
   spinnerSuffix?: string | null;
   verbose: boolean;
   hasActiveTools?: boolean;
+  apiMetricsRef?: React.RefObject<ApiMetricsEntry[]>;
   /** Leader's turn has completed (no active query). Used to suppress stall-red spinner when only teammates are running. */
   leaderIsIdle?: boolean;
 };
+
+function computeTtftText(entries: ApiMetricsEntry[]): string | null {
+  if (entries.length === 0) {
+    return null;
+  }
+  const ttfts = entries.map(entry => entry.ttftMs).sort((a, b) => a - b);
+  const middle = Math.floor(ttfts.length / 2);
+  const ttftMs =
+    ttfts.length % 2 === 0
+      ? Math.round((ttfts[middle - 1]! + ttfts[middle]!) / 2)
+      : ttfts[middle]!;
+  return `TTFT ${formatSecondsShort(ttftMs / 1000)}`;
+}
 
 // Thin wrapper: branches on isBriefOnly so the two variants have independent
 // hook call chains. Without this split, toggling /brief mid-render would
@@ -92,6 +114,7 @@ function SpinnerWithVerbInner({
   spinnerSuffix,
   verbose,
   hasActiveTools = false,
+  apiMetricsRef,
   leaderIsIdle = false
 }: Props): React.ReactNode {
   const settings = useSettings();
@@ -219,7 +242,7 @@ function SpinnerWithVerbInner({
   // doesn't trigger re-renders; we pick up updates on the parent's ~25x/turn
   // re-render cadence, same as the old ApiMetricsLine did.
   let ttftText: string | null = null;
-  if ("external" === 'ant' && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
+  if (IS_ANT_BUILD && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
     ttftText = computeTtftText(apiMetricsRef.current);
   }
 

@@ -798,3 +798,14 @@ declare module '*tools/VerifyPlanExecutionTool/constants.js' {
   const mod: any;
   export = mod;
 }
+
+declare module '*services/compact/cachedMicrocompact.js' {
+  export type CacheEditsBlock = any;
+  export type PinnedCacheEdits = any;
+  export type CachedMCState = {
+    pinnedEdits: PinnedCacheEdits[];
+  };
+  export function createCachedMCState(): CachedMCState;
+  export function markToolsSentToAPI(state: CachedMCState): void;
+  export function resetCachedMCState(state: CachedMCState): void;
+}

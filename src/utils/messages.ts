@@ -870,6 +870,10 @@ export function reorderMessagesInUI(
   // First pass: group messages by tool use ID
   for (const message of messages) {
     const current = message as any
+    const currentAttachment = isHookAttachmentMessage(current)
+      ? (current as any).attachment
+      : null
+    const currentContent0 = (current as any).message?.content?.[0]
     // Handle tool use messages
     if (isToolUseRequestMessage(current)) {
       const toolUseID = current.message.content[0]?.id
@@ -888,11 +892,8 @@ export function reorderMessagesInUI(
     }
 
     // Handle pre-tool-use hooks
-    if (
-      isHookAttachmentMessage(current) &&
-      current.attachment.hookEvent === 'PreToolUse'
-    ) {
-      const toolUseID = current.attachment.toolUseID
+    if (currentAttachment?.hookEvent === 'PreToolUse') {
+      const toolUseID = currentAttachment.toolUseID
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -906,11 +907,8 @@ export function reorderMessagesInUI(
     }
 
     // Handle tool results
-    if (
-      current.type === 'user' &&
-      current.message.content[0]?.type === 'tool_result'
-    ) {
-      const toolUseID = current.message.content[0].tool_use_id
+    if (current.type === 'user' && currentContent0?.type === 'tool_result') {
+      const toolUseID = currentContent0.tool_use_id
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -924,11 +922,8 @@ export function reorderMessagesInUI(
     }
 
     // Handle post-tool-use hooks
-    if (
-      isHookAttachmentMessage(current) &&
-      current.attachment.hookEvent === 'PostToolUse'
-    ) {
-      const toolUseID = current.attachment.toolUseID
+    if (currentAttachment?.hookEvent === 'PostToolUse') {
+      const toolUseID = currentAttachment.toolUseID
       if (!toolUseGroups.has(toolUseID)) {
         toolUseGroups.set(toolUseID, {
           toolUse: null,
@@ -948,6 +943,10 @@ export function reorderMessagesInUI(
 
   for (const message of messages) {
     const current = message as any
+    const currentAttachment = isHookAttachmentMessage(current)
+      ? (current as any).attachment
+      : null
+    const currentContent0 = (current as any).message?.content?.[0]
     // Check if this is a tool use
     if (isToolUseRequestMessage(current)) {
       const toolUseID = current.message.content[0]?.id
@@ -969,18 +968,14 @@ export function reorderMessagesInUI(
 
     // Check if this message is part of a tool use group
     if (
-      isHookAttachmentMessage(current) &&
-      (current.attachment.hookEvent === 'PreToolUse' ||
-        current.attachment.hookEvent === 'PostToolUse')
+      currentAttachment?.hookEvent === 'PreToolUse' ||
+      currentAttachment?.hookEvent === 'PostToolUse'
     ) {
       // Skip - already handled in tool use groups
       continue
     }
 
-    if (
-      current.type === 'user' &&
-      current.message.content[0]?.type === 'tool_result'
-    ) {
+    if (current.type === 'user' && currentContent0?.type === 'tool_result') {
       // Skip - already handled in tool use groups
       continue
     }

@@ -1912,6 +1912,12 @@ export type OrgValidationResult =
   | { valid: true }
   | { valid: false; message: string }
 
+export function getOrgValidationMessage(
+  result: OrgValidationResult,
+): string | null {
+  return result.valid ? null : result.message
+}
+
 /**
  * Validate that the active OAuth token belongs to the organization required
  * by `forceLoginOrgUUID` in managed settings. Returns a result object

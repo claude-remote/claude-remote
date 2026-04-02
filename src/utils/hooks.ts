@@ -2203,13 +2203,14 @@ async function* executeHooks({
     try {
       const jsonInputRes = getJsonInput()
       if (!jsonInputRes.ok) {
+        const jsonInputError = jsonInputRes.error
         yield {
           message: createAttachmentMessage({
             type: 'hook_error_during_execution',
             hookName,
             toolUseID,
             hookEvent,
-            content: `Failed to prepare hook input: ${errorMessage(jsonInputRes.error)}`,
+            content: `Failed to prepare hook input: ${errorMessage(jsonInputError)}`,
             command: hookCommand,
             durationMs: Date.now() - hookStartMs,
           }),
@@ -2555,12 +2556,8 @@ async function* executeHooks({
         })
 
         // Handle suppressOutput (skip for async responses)
-        if (
-          isSyncHookJSONOutput(json) &&
-          !json.suppressOutput &&
-          plainText &&
-          result.status === 0
-        ) {
+        const syncJson = isSyncHookJSONOutput(json) ? (json as any) : null
+        if (syncJson && !syncJson.suppressOutput && plainText && result.status === 0) {
           // Still show non-JSON output if not suppressed
           const content = `${chalk.bold(hookName)} completed`
           emitHookResponse({
@@ -3114,14 +3111,13 @@ async function executeHooksOutsideREPL({
             }
           }
 
+          const syncJson = isSyncHookJSONOutput(json) ? (json as any) : null
           const output =
             hookEvent === 'WorktreeCreate' &&
-            isSyncHookJSONOutput(json) &&
-            json.hookSpecificOutput?.hookEventName === 'WorktreeCreate'
-              ? json.hookSpecificOutput.worktreePath
-              : json.systemMessage || ''
-          const blocked =
-            isSyncHookJSONOutput(json) && json.decision === 'block'
+            syncJson?.hookSpecificOutput?.hookEventName === 'WorktreeCreate'
+              ? syncJson.hookSpecificOutput.worktreePath
+              : syncJson?.systemMessage || ''
+          const blocked = syncJson?.decision === 'block'
 
           logForDebugging(`${hookName} [callback] completed successfully`)
 
@@ -3234,11 +3230,13 @@ async function executeHooksOutsideREPL({
               { level: 'verbose' },
             )
           }
-          const jsonBlocked =
+          const syncHttpJson =
             httpJson &&
             !isAsyncHookJSONOutput(httpJson) &&
-            isSyncHookJSONOutput(httpJson) &&
-            httpJson.decision === 'block'
+            isSyncHookJSONOutput(httpJson)
+              ? (httpJson as any)
+              : null
+          const jsonBlocked = syncHttpJson?.decision === 'block'
 
           // WorktreeCreate's consumer reads `output` as the bare filesystem
           // path. Command hooks provide it via stdout; http hooks provide it
@@ -3247,10 +3245,9 @@ async function executeHooksOutsideREPL({
           // raw '{}' body as a path.
           const output =
             hookEvent === 'WorktreeCreate'
-              ? httpJson &&
-                isSyncHookJSONOutput(httpJson) &&
-                httpJson.hookSpecificOutput?.hookEventName === 'WorktreeCreate'
-                ? httpJson.hookSpecificOutput.worktreePath
+              ? syncHttpJson?.hookSpecificOutput?.hookEventName ===
+                  'WorktreeCreate'
+                ? syncHttpJson.hookSpecificOutput.worktreePath
                 : ''
               : httpResult.body
 
@@ -3326,11 +3323,11 @@ async function executeHooksOutsideREPL({
         }
 
         // Blocked if exit code 2 or JSON decision: 'block'
-        const jsonBlocked =
-          json &&
-          !isAsyncHookJSONOutput(json) &&
-          isSyncHookJSONOutput(json) &&
-          json.decision === 'block'
+        const syncJson =
+          json && !isAsyncHookJSONOutput(json) && isSyncHookJSONOutput(json)
+            ? (json as any)
+            : null
+        const jsonBlocked = syncJson?.decision === 'block'
         const blocked = result.status === 2 || !!jsonBlocked
 
         // For successful hooks (exit code 0), use stdout; for failed hooks, use stderr
@@ -3338,15 +3335,12 @@ async function executeHooksOutsideREPL({
           result.status === 0 ? result.stdout || '' : result.stderr || ''
 
         const watchPaths =
-          json &&
-          isSyncHookJSONOutput(json) &&
-          json.hookSpecificOutput &&
-          'watchPaths' in json.hookSpecificOutput
-            ? json.hookSpecificOutput.watchPaths
+          syncJson?.hookSpecificOutput &&
+          'watchPaths' in syncJson.hookSpecificOutput
+            ? syncJson.hookSpecificOutput.watchPaths
             : undefined
 
-        const systemMessage =
-          json && isSyncHookJSONOutput(json) ? json.systemMessage : undefined
+        const systemMessage = syncJson?.systemMessage
 
         return {
           command: hook.command,
@@ -4420,18 +4414,19 @@ function parseElicitationHookOutput(
     if (!isSyncHookJSONOutput(parsed)) {
       return {}
     }
+    const syncParsed = parsed as any
 
     // Check for top-level decision: 'block' (exit code 0 + JSON block)
-    if (parsed.decision === 'block' || result.blocked) {
+    if (syncParsed.decision === 'block' || result.blocked) {
       return {
         blockingError: {
-          blockingError: parsed.reason || 'Elicitation blocked by hook',
+          blockingError: syncParsed.reason || 'Elicitation blocked by hook',
           command: result.command,
         },
       }
     }
 
-    const specific = parsed.hookSpecificOutput
+    const specific = syncParsed.hookSpecificOutput
     if (!specific || specific.hookEventName !== expectedEventName) {
       return {}
     }
@@ -4453,7 +4448,7 @@ function parseElicitationHookOutput(
     if (specific.action === 'decline') {
       out.blockingError = {
         blockingError:
-          parsed.reason ||
+          syncParsed.reason ||
           (expectedEventName === 'Elicitation'
             ? 'Elicitation denied by hook'
             : 'Elicitation result blocked by hook'),

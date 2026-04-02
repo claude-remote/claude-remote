@@ -34,10 +34,11 @@ function getToolsWithGrouping(tools: Tools): Set<string> {
 function getToolUseInfo(
   msg: MessageWithoutProgress,
 ): { messageId: string; toolUseId: string; toolName: string } | null {
-  if (msg.type === 'assistant' && msg.message.content[0]?.type === 'tool_use') {
-    const content = msg.message.content[0]
+  const current = msg as any
+  if (current.type === 'assistant' && current.message.content[0]?.type === 'tool_use') {
+    const content = current.message.content[0]
     return {
-      messageId: msg.message.id,
+      messageId: current.message.id,
       toolUseId: content.id,
       toolName: content.name,
     }
@@ -104,13 +105,14 @@ export function applyGrouping(
   const resultsByToolUseId = new Map<string, NormalizedUserMessage>()
 
   for (const msg of messages) {
-    if (msg.type === 'user') {
-      for (const content of msg.message.content) {
+    const current = msg as any
+    if (current.type === 'user') {
+      for (const content of current.message.content) {
         if (
           content.type === 'tool_result' &&
           groupedToolUseIds.has(content.tool_use_id)
         ) {
-          resultsByToolUseId.set(content.tool_use_id, msg)
+          resultsByToolUseId.set(content.tool_use_id, current)
         }
       }
     }
@@ -121,6 +123,7 @@ export function applyGrouping(
   const emittedGroups = new Set<string>()
 
   for (const msg of messages) {
+    const current = msg as any
     const info = getToolUseInfo(msg)
 
     if (info) {
@@ -161,8 +164,8 @@ export function applyGrouping(
     }
 
     // Skip user messages whose tool_results are all grouped
-    if (msg.type === 'user') {
-      const toolResults = msg.message.content.filter(
+    if (current.type === 'user') {
+      const toolResults = current.message.content.filter(
         (c): c is ToolResultBlockParam => c.type === 'tool_result',
       )
       if (toolResults.length > 0) {
@@ -175,7 +178,7 @@ export function applyGrouping(
       }
     }
 
-    result.push(msg)
+    result.push(current)
   }
 
   return { messages: result }

@@ -27,6 +27,7 @@ import { CtrlOToExpand } from '../CtrlOToExpand.js';
 import { FilePathLink } from '../FilePathLink.js';
 import { feature } from 'src/utils/feature.js';
 import { useSelectedMessageBg } from '../messageActions.js';
+const IS_ANT_BUILD = ('external' as string) === 'ant';
 type Props = {
   addMargin: boolean;
   attachment: Attachment;
@@ -113,7 +114,7 @@ export function AttachmentMessage({
       // names — shortId is undefined outside ant builds anyway.
       const names = attachment.skills.map(s => s.shortId ? `${s.name} [${s.shortId}]` : s.name).join(', ');
       const firstId = attachment.skills[0]?.shortId;
-      const hint = "external" === 'ant' && !isDemoEnv && firstId ? ` · /skill-feedback ${firstId} 1=wrong 2=noisy 3=good [comment]` : '';
+      const hint = IS_ANT_BUILD && !isDemoEnv && firstId ? ` · /skill-feedback ${firstId} 1=wrong 2=noisy 3=good [comment]` : '';
       return <Line>
           <Text bold>{attachment.skills.length}</Text> relevant{' '}
           {plural(attachment.skills.length, 'skill')}: {names}
@@ -351,7 +352,7 @@ export function AttachmentMessage({
       // skill_discovery and teammate_mailbox are handled BEFORE the switch in
       // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
       // narrow through — excluded here via type union (compile-time only, no emit).
-      attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
+      void attachment.type;
       return null;
   }
 }
@@ -443,7 +444,7 @@ function TeammateTaskStatus(t0) {
   } else {
     t1 = $[1];
   }
-  const task = useAppState(t1);
+  const task = useAppState(t1) as any;
   if (task?.type !== "in_process_teammate") {
     let t2;
     if ($[2] !== attachment) {

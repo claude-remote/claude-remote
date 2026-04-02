@@ -10,7 +10,7 @@ import { useKeybinding } from '../keybindings/useKeybinding.js';
 import { getSSLErrorHint } from '../services/api/errorUtils.js';
 import { sendNotification } from '../services/notifier.js';
 import { OAuthService } from '../services/oauth/index.js';
-import { getOauthAccountInfo, validateForceLoginOrg } from '../utils/auth.js';
+import { getOauthAccountInfo, getOrgValidationMessage, validateForceLoginOrg } from '../utils/auth.js';
 import { logError } from '../utils/log.js';
 import { getSettings_DEPRECATED } from '../utils/settings/settings.js';
 import { Select } from './CustomSelect/select.js';
@@ -234,8 +234,9 @@ export function ConsoleOAuthFlow({
       } else {
         await installOAuthTokens(result);
         const orgResult = await validateForceLoginOrg();
-        if (!orgResult.valid) {
-          throw new Error(orgResult.message);
+        const orgMessage = getOrgValidationMessage(orgResult);
+        if (orgMessage) {
+          throw new Error(orgMessage);
         }
         setOAuthStatus({
           state: 'success'
