@@ -20,6 +20,22 @@ import {
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const HEARTBEAT_TIMEOUT_MS = 10_000;
 
+function getMessageText(message: SessionSnapshot['recentMessages'][number]): string {
+  return message.content
+    .map((block) => {
+      if (block.type === 'text') {
+        return block.text;
+      }
+      if (block.type === 'tool_result' && typeof block.content === 'string') {
+        return block.content;
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface WsTicketValidator {
@@ -422,9 +438,42 @@ export class WebSocketHandler {
       case 'file:read':
       case 'file:list':
       case 'file:search':
-      case 'history:search':
       case 'chat:export':
         return { type: 'reply', cmdId: command.cmdId, data: null };
+
+      case 'history:search': {
+        const session = this.sessionManager.getSession(sessionId);
+        const normalizedQuery = command.query.trim().toLowerCase();
+        const limit = command.limit ?? 20;
+        const results =
+          session?.messages
+            .map((message) => {
+              const text = getMessageText(message);
+              if (!text || !text.toLowerCase().includes(normalizedQuery)) {
+                return null;
+              }
+              return {
+                sessionId,
+                sessionName: session.name,
+                messageId: message.id,
+                role: message.role === 'assistant' ? 'assistant' : 'user',
+                snippet: text,
+                timestamp: message.createdAt,
+              };
+            })
+            .filter((result) => result !== null)
+            .slice(0, limit) ?? [];
+        return {
+          type: 'reply',
+          cmdId: command.cmdId,
+          data: {
+            query: command.query,
+            scope: command.scope,
+            limit,
+            results,
+          },
+        };
+      }
 
       // Write commands that will be wired to subsystems in later tasks
       case 'chat':

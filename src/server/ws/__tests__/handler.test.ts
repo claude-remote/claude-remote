@@ -417,6 +417,53 @@ describe('WebSocketHandler command routing', () => {
     handler.handleDisconnect(clientId!);
     handler.destroy();
   });
+
+  test('returns matching messages for history:search', async () => {
+    const meta = sessionManager.createSession({ cwd: '/tmp' });
+    const session = sessionManager.getSession(meta.id)!;
+    session.messages.push(
+      {
+        id: 'msg-1',
+        role: 'user',
+        content: [{ type: 'text', text: 'hello websocket history' }],
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      {
+        id: 'msg-2',
+        role: 'assistant',
+        content: [{ type: 'text', text: 'different text' }],
+        createdAt: 2,
+        updatedAt: 2,
+      },
+    );
+
+    const handler = new WebSocketHandler({
+      sessionManager,
+      eventBus,
+      connectionManager,
+      ticketValidator: createValidTicketValidator({ sessionId: meta.id }),
+      heartbeatIntervalMs: 999999,
+    });
+
+    const ws = createMockWs();
+    const clientId = handler.handleUpgrade(ws, { ticket: 'valid' });
+    ws.sentMessages.length = 0;
+
+    await handler.handleMessage(
+      clientId!,
+      JSON.stringify({ cmdId: 'c1', cmd: 'history:search', query: 'hello', scope: 'session' }),
+    );
+
+    const reply = parseSent(ws, 0);
+    expect(reply.type).toBe('reply');
+    expect(Array.isArray((reply as any).data.results)).toBe(true);
+    expect((reply as any).data.results).toHaveLength(1);
+    expect((reply as any).data.results[0].messageId).toBe('msg-1');
+
+    handler.handleDisconnect(clientId!);
+    handler.destroy();
+  });
 });
 
 // ── Heartbeat tests ─────────────────────────────────────────────────
