@@ -6,6 +6,7 @@ import type {
   McpServerInfo,
   Message,
   SessionConfig,
+  SkillInfo,
   SessionSnapshot,
 } from '@/shared/types';
 import {
@@ -49,11 +50,31 @@ function createDefaultConfigOptions(): ConfigOptions {
   };
 }
 
+function createDefaultSkills(): SkillInfo[] {
+  return [
+    {
+      name: 'commit',
+      description: 'Create a git commit from staged changes',
+      aliases: ['ci'],
+      userInvocable: true,
+      arguments: ['message'],
+      source: 'bundled',
+    },
+    {
+      name: 'review',
+      description: 'Review the current diff for bugs and risks',
+      userInvocable: true,
+      source: 'bundled',
+    },
+  ];
+}
+
 export class Hub {
   private readonly registry = new SessionRegistry();
   private readonly mcpServers = new Map<string, McpServerInfo>();
   private readonly socketServer: LocalSocketServer;
   private readonly sessionConfigs = new Map<string, SessionConfig>();
+  private readonly skills: SkillInfo[] = createDefaultSkills();
   private readonly sockets = new Set<Socket>();
   private globalConfig: WebConfig = {
     port: DEFAULT_HUB_CONFIG.port,
@@ -186,6 +207,35 @@ export class Hub {
     return updated;
   }
 
+  listSkills(): SkillInfo[] {
+    return [...this.skills];
+  }
+
+  getSessionSkills(sessionId: string): SkillInfo[] | undefined {
+    if (!this.registry.getSession(sessionId)) {
+      return undefined;
+    }
+    return this.listSkills();
+  }
+
+  invokeSkill(name: string, args?: string, sessionId?: string) {
+    const skill = this.skills.find((item) => item.name === name || item.aliases?.includes(name));
+    if (!skill) {
+      return null;
+    }
+    if (sessionId && !this.registry.getSession(sessionId)) {
+      return undefined;
+    }
+
+    return {
+      ok: true,
+      skill: skill.name,
+      args: args ?? null,
+      sessionId: sessionId ?? null,
+      status: 'queued' as const,
+    };
+  }
+
   getSessionSnapshot(sessionId: string): SessionSnapshot | null {
     const session = this.registry.getSession(sessionId);
     if (!session) {
@@ -213,7 +263,7 @@ export class Hub {
         writerStatus: index === 0 ? 'active' : 'standby',
         connectedAt: client.connectedAt,
       })),
-      availableSkills: [],
+      availableSkills: this.listSkills(),
       config: this.getSessionConfig(session.id) ?? createDefaultSessionConfig(),
       configOptions: createDefaultConfigOptions(),
       contextUsage: {

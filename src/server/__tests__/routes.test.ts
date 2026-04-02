@@ -14,7 +14,7 @@ import { registerMcpRoutes } from '@/server/routes/mcp';
 import { registerSessionRoutes } from '@/server/routes/sessions';
 import { registerSkillRoutes } from '@/server/routes/skills';
 import { CLAUDE_REMOTE_VERSION, SESSION_COOKIE_NAME } from '@/shared/constants';
-import type { McpServerInfo, Message, SessionConfig } from '@/shared/types';
+import type { McpServerInfo, Message, SessionConfig, SkillInfo } from '@/shared/types';
 
 type MockRouteSession = {
   id: string;
@@ -120,6 +120,22 @@ function createMockHub() {
       },
     ],
   ]);
+  const skills: SkillInfo[] = [
+    {
+      name: 'commit',
+      description: 'Create a git commit from staged changes',
+      aliases: ['ci'],
+      userInvocable: true,
+      arguments: ['message'],
+      source: 'bundled',
+    },
+    {
+      name: 'review',
+      description: 'Review the current diff for bugs and risks',
+      userInvocable: true,
+      source: 'bundled',
+    },
+  ];
 
   const buildSnapshot = (sessionId: string) => {
     const session = sessions.find((item) => item.id === sessionId);
@@ -143,7 +159,7 @@ function createMockHub() {
       activeTasks: session.tasks,
       pendingPermissions: session.pendingPermissions,
       clients: session.clients,
-      availableSkills: [],
+      availableSkills: skills,
       config: sessionConfigs.get(session.id) ?? {
         model: 'claude-sonnet',
         effortLevel: 'medium' as const,
@@ -185,6 +201,31 @@ function createMockHub() {
         ...updates,
       };
       return globalConfig;
+    },
+    listSkills() {
+      return skills;
+    },
+    getSessionSkills(sessionId: string) {
+      if (!sessions.some((item) => item.id === sessionId)) {
+        return null;
+      }
+      return skills;
+    },
+    invokeSkill(name: string, args?: string, sessionId?: string) {
+      const skill = skills.find((item) => item.name === name || item.aliases?.includes(name));
+      if (!skill) {
+        return null;
+      }
+      if (sessionId && !sessions.some((item) => item.id === sessionId)) {
+        return undefined;
+      }
+      return {
+        ok: true,
+        skill: skill.name,
+        args: args ?? null,
+        sessionId: sessionId ?? null,
+        status: 'queued' as const,
+      };
     },
     listMcpServers() {
       return Array.from(mcpServers.values());
@@ -689,13 +730,32 @@ describe('file routes', () => {
 });
 
 describe('skill routes', () => {
-  test('GET /api/skills returns empty skills list', async () => {
+  test('GET /api/skills returns available skills list', async () => {
     const { app } = createTestApp();
     const res = await app.request('/api/skills');
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body.skills)).toBe(true);
+    expect(body.skills).toHaveLength(2);
+    expect(body.skills[0].name).toBe('commit');
+  });
+
+  test('GET /api/sessions/:id/skills returns session skills', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/sess-1/skills');
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sessionId).toBe('sess-1');
+    expect(body.skills).toHaveLength(2);
+  });
+
+  test('GET /api/sessions/:id/skills returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/sessions/missing/skills');
+
+    expect(res.status).toBe(404);
   });
 
   test('POST /api/skills/invoke without name returns 400', async () => {
@@ -722,6 +782,28 @@ describe('skill routes', () => {
     expect(body.ok).toBe(true);
     expect(body.skill).toBe('commit');
     expect(body.status).toBe('queued');
+  });
+
+  test('POST /api/skills/invoke returns 404 for missing skill', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/skills/invoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'missing-skill' }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  test('POST /api/skills/invoke returns 404 for missing session', async () => {
+    const { app } = createTestApp();
+    const res = await app.request('/api/skills/invoke', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'commit', sessionId: 'missing-session' }),
+    });
+
+    expect(res.status).toBe(404);
   });
 });
 
