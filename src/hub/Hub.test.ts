@@ -4,6 +4,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Hub } from './Hub.js';
+import type { ClaudeClient, ClaudeChatRequest, ClaudeStreamHandle } from './ClaudeClient.js';
 
 const socketPath = join(tmpdir(), `claude-remote-hub-${process.pid}.sock`);
 
@@ -54,5 +55,78 @@ describe('Hub', () => {
 
     const snapshot = hub.getSessionSnapshot(session.id);
     expect(snapshot?.config).toEqual(managerConfig);
+  });
+
+  test('sendChat appends user message and calls ClaudeClient', async () => {
+    const mockSendMessage = mock(async (_req: ClaudeChatRequest): Promise<ClaudeStreamHandle> => {
+      return { cancel: async () => {} };
+    });
+    const mockAbort = mock(async () => {});
+    const mockShutdown = mock(() => {});
+
+    const mockClient = {
+      sendMessage: mockSendMessage,
+      abort: mockAbort,
+      shutdown: mockShutdown,
+    } as unknown as ClaudeClient;
+
+    const hub = new Hub({ socketPath, claudeClient: mockClient });
+    const session = hub.createSession({ cwd: '/tmp/test', name: 'chat-test' });
+
+    const result = await hub.sendChat(session.id, 'hello claude');
+    expect(result).toEqual({ ok: true });
+
+    // Verify user message was appended
+    const updatedSession = hub.getSession(session.id);
+    expect(updatedSession?.messages).toHaveLength(1);
+    expect(updatedSession?.messages[0]?.role).toBe('user');
+    expect(updatedSession?.messages[0]?.content[0]).toMatchObject({
+      type: 'text',
+      text: 'hello claude',
+    });
+
+    // Verify ClaudeClient.sendMessage was called
+    expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    const callArgs = mockSendMessage.mock.calls[0]![0] as ClaudeChatRequest;
+    expect(callArgs.sessionId).toBe(session.id);
+    expect(callArgs.messages).toHaveLength(1);
+  });
+
+  test('sendChat returns error for nonexistent session', async () => {
+    const hub = new Hub({ socketPath });
+    const result = await hub.sendChat('nonexistent', 'hello');
+    expect(result).toMatchObject({ ok: false });
+    expect((result as any).error).toContain('not found');
+  });
+
+  test('sendChat returns error when ClaudeClient throws', async () => {
+    const mockClient = {
+      sendMessage: mock(async () => {
+        throw new Error('API key invalid');
+      }),
+      abort: mock(async () => {}),
+      shutdown: mock(() => {}),
+    } as unknown as ClaudeClient;
+
+    const hub = new Hub({ socketPath, claudeClient: mockClient });
+    const session = hub.createSession({ cwd: '/tmp/test', name: 'error-test' });
+
+    const result = await hub.sendChat(session.id, 'hello');
+    expect(result).toMatchObject({ ok: false, error: 'API key invalid' });
+  });
+
+  test('abortChat calls ClaudeClient.abort', async () => {
+    const mockAbort = mock(async () => {});
+    const mockClient = {
+      sendMessage: mock(async () => ({ cancel: async () => {} })),
+      abort: mockAbort,
+      shutdown: mock(() => {}),
+    } as unknown as ClaudeClient;
+
+    const hub = new Hub({ socketPath, claudeClient: mockClient });
+    const session = hub.createSession({ cwd: '/tmp/test', name: 'abort-test' });
+
+    await hub.abortChat(session.id);
+    expect(mockAbort).toHaveBeenCalledWith(session.id);
   });
 });

@@ -7,7 +7,6 @@ describe('HubReplAdapter', () => {
       mapHubChatErrorToNotice({
         type: 'error',
         cmdId: '1',
-        code: 'not_implemented',
         error: 'chat is not implemented in Local Hub Baseline',
       }),
     ).toContain('not implemented');

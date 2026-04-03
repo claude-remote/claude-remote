@@ -1,6 +1,8 @@
 import type { Message, PermissionRequest, Task } from '@/shared/types';
 
-export type SessionStatus = 'active' | 'idle' | 'archived';
+// Re-export from shared/protocol so existing importers don't break
+export type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
+import type { HubResponse } from '@/shared/protocol';
 
 export type HubClientInfo = {
   id: string;
@@ -14,7 +16,7 @@ export type Session = {
   cwd: string;
   createdAt: number;
   updatedAt: number;
-  status: SessionStatus;
+  status: 'active' | 'idle' | 'archived';
   clients: HubClientInfo[];
   messages: Message[];
   tasks: Task[];
@@ -27,30 +29,10 @@ export type Snapshot = {
   connectionState: 'connected';
 };
 
-export type HubEvent =
-  | { type: 'session:created'; session: Session }
-  | { type: 'session:attached'; sessionId: string; clientId: string }
-  | { type: 'session:updated'; session: Session }
-  | { type: 'hub:shutdown' };
-
-export type ClientCommand =
-  | { cmdId: string; cmd: 'session:create'; cwd: string; name?: string }
-  | { cmdId: string; cmd: 'session:list' }
-  | { cmdId: string; cmd: 'session:attach'; sessionId: string }
-  | { cmdId: string; cmd: 'chat'; text: string }
-  | { cmdId: string; cmd: 'hub:status' };
-
-export type HubResponse =
-  | { type: 'snapshot'; session: Session }
-  | { type: 'event'; event: HubEvent }
-  | { type: 'reply'; cmdId: string; data: unknown }
-  | { type: 'error'; cmdId: string; error: string; code?: string };
-
 export function createNotImplementedChatError(cmdId: string): HubResponse {
   return {
     type: 'error',
     cmdId,
-    code: 'not_implemented',
     error: 'chat is not implemented in Local Hub Baseline',
   };
 }
@@ -61,5 +43,5 @@ export function isHubResponse(value: unknown): value is HubResponse {
   }
 
   const type = (value as { type?: unknown }).type;
-  return type === 'snapshot' || type === 'event' || type === 'reply' || type === 'error';
+  return type === 'hello' || type === 'snapshot' || type === 'event' || type === 'reply' || type === 'error';
 }

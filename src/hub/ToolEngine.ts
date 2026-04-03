@@ -18,6 +18,11 @@ export type ToolExecutionStatus =
   | 'interrupted'
   | 'crashed';
 
+export type ToolRunner = (
+  input: Record<string, unknown>,
+  signal: AbortSignal,
+) => Promise<string>;
+
 export interface ToolExecutionResult {
   executionId: string;
   toolName: string;
@@ -84,6 +89,8 @@ export class ToolEngine {
   private readonly QUEUE_TIMEOUT_MS: number;
   /** Resolvers waiting for a global slot to open. */
   private waiters: Array<() => void> = [];
+  /** Registered tool runners keyed by tool name. */
+  private runners = new Map<string, ToolRunner>();
 
   constructor(
     private deps: ToolEngineDeps,
@@ -95,15 +102,22 @@ export class ToolEngine {
 
   /* ======================== Public API ======================== */
 
+  /** Register a runner for a named tool. */
+  registerRunner(toolName: string, runner: ToolRunner): void {
+    this.runners.set(toolName, runner);
+  }
+
   /**
    * Execute a tool within a session.
    *
    * - Same session: serial (queued behind previous execution)
    * - Cross session: parallel up to MAX_CONCURRENT
+   * - If no explicit runner is passed, uses a registered runner.
+   * - If no registered runner exists, returns an error.
    */
   async execute(
     input: ToolExecutionInput,
-    /** The actual work to run. Receives an AbortSignal for cancellation. */
+    /** Override runner. If omitted, falls back to registered runner. */
     runner?: (signal: AbortSignal) => Promise<string>,
   ): Promise<ToolExecutionResult> {
     const { sessionId, toolName } = input;
@@ -291,9 +305,25 @@ export class ToolEngine {
     }
 
     try {
+      const registeredRunner = this.runners.get(input.toolName);
+      if (!runner && !registeredRunner) {
+        const errorMsg = `Tool ${input.toolName} not implemented`;
+        this.deps.store.updateToolExecution(executionId, {
+          status: 'failed',
+          result: errorMsg,
+          finishedAt: Math.floor(Date.now() / 1000),
+        });
+        return {
+          executionId,
+          toolName: input.toolName,
+          status: 'failed',
+          error: errorMsg,
+        };
+      }
+
       const output = runner
         ? await runner(abortController.signal)
-        : `Tool ${input.toolName} not implemented`;
+        : await registeredRunner!(input.input, abortController.signal);
 
       this.deps.store.updateToolExecution(executionId, {
         status: 'completed',

@@ -220,11 +220,11 @@ describe('ToolEngine', () => {
     expect((lastUpdate.args[1] as Record<string, unknown>).status).toBe('completed');
   });
 
-  it('uses a placeholder result when no runner is provided', async () => {
+  it('returns error when no runner is registered and none provided', async () => {
     const result = await engine.execute(makeInput({ toolName: 'BashTool' }));
 
-    expect(result.status).toBe('completed');
-    expect(result.output).toBe('Tool BashTool not implemented');
+    expect(result.status).toBe('failed');
+    expect(result.error).toBe('Tool BashTool not implemented');
   });
 
   /* ---------- Status tracking: failed ---------- */

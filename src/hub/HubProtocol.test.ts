@@ -9,7 +9,7 @@ describe('HubProtocol', () => {
     expect(response).toMatchObject({
       type: 'error',
       cmdId: 'cmd-1',
-      code: 'not_implemented',
+      error: 'chat is not implemented in Local Hub Baseline',
     });
   });
 });

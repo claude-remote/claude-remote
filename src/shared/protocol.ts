@@ -91,6 +91,7 @@ export type ClientCommand = { cmdId: string } & (
   | { cmd: 'session:list' }
   | { cmd: 'session:switch'; sessionId: string }
   | { cmd: 'session:rename'; name: string }
+  | { cmd: 'session:attach'; sessionId: string }
   | { cmd: 'session:archive'; sessionId: string }
   | { cmd: 'session:takeOver' }
   | { cmd: 'session:takeOver:approve' }
@@ -117,6 +118,7 @@ export type ClientCommand = { cmdId: string } & (
   | { cmd: 'file:list'; path: string; pattern?: string }
   | { cmd: 'file:search'; pattern: string; path?: string }
   | { cmd: 'history:search'; query: string; scope: 'session' | 'all'; limit?: number }
+  | { cmd: 'hub:status' }
 );
 
 export type HubReplyData =

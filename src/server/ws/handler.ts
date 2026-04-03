@@ -2,7 +2,10 @@ import { CLAUDE_REMOTE_VERSION } from '@/shared/constants';
 import type { ClientCommand, HubEvent, HubResponse } from '@/shared/protocol';
 import type { ClientType, SessionSnapshot, WriterStatus } from '@/shared/types';
 
+import { readdirSync, statSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { readFileContent } from '@/server/files/readFileContent';
+import { searchFiles } from '@/server/files/searchFiles';
 import type { EventBus } from '@/hub/EventBus';
 import type { Hub } from '@/hub/Hub';
 import type { SessionManager } from '@/hub/SessionManager';
@@ -440,10 +443,82 @@ export class WebSocketHandler {
         return { type: 'reply', cmdId: command.cmdId, data: { skills: snapshot.availableSkills } };
       }
 
-      case 'cwd:favorites':
-      case 'cwd:browse':
-      case 'file:search':
-        return { type: 'reply', cmdId: command.cmdId, data: null };
+      case 'cwd:favorites': {
+        const snapshot = this.sessionManager.getSnapshot(sessionId, conn.clientId);
+        // Favorites are stored at the session level; return from snapshot or empty
+        return {
+          type: 'reply',
+          cmdId: command.cmdId,
+          data: { favorites: (snapshot as any).favorites ?? [] },
+        };
+      }
+
+      case 'cwd:browse': {
+        const session = this.sessionManager.getSession(conn.sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${conn.sessionId}`,
+          };
+        }
+
+        let safePath: string;
+        try {
+          safePath = validatePath(command.path, [session.cwd]);
+        } catch {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'path not allowed: outside session working directory',
+          };
+        }
+
+        try {
+          const dirs = readdirSync(safePath, { withFileTypes: true })
+            .filter((entry) => entry.isDirectory())
+            .map((entry) => join(safePath, entry.name))
+            .sort((a, b) => basename(a).localeCompare(basename(b)));
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: { path: safePath, dirs },
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'file:search': {
+        const session = this.sessionManager.getSession(conn.sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${conn.sessionId}`,
+          };
+        }
+
+        const searchPath = command.path ?? session.cwd;
+        try {
+          const result = searchFiles(command.pattern, searchPath, [session.cwd]);
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: { ...result } as Record<string, unknown>,
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
 
       case 'file:read': {
         const offset = command.offset ?? 0;
@@ -647,17 +722,286 @@ export class WebSocketHandler {
         return { type: 'reply', cmdId: command.cmdId, data: { ...server } };
       }
 
-      // Write commands that will be wired to subsystems in later tasks
-      case 'chat':
-      case 'chat:abort':
-      case 'control:respond':
-      case 'cwd:change':
-      case 'cwd:addFavorite':
-      case 'skill:invoke':
-      case 'chat:branch':
-      case 'chat:compact':
-      case 'chat:clear':
-        return { type: 'reply', cmdId: command.cmdId, data: null };
+      case 'cwd:change': {
+        try {
+          const stats = statSync(command.path);
+          if (!stats.isDirectory()) {
+            return {
+              type: 'error',
+              cmdId: command.cmdId,
+              error: `not a directory: ${command.path}`,
+            };
+          }
+        } catch {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `directory not accessible: ${command.path}`,
+          };
+        }
+
+        try {
+          this.sessionManager.switchCwd(sessionId, command.path);
+          return { type: 'reply', cmdId: command.cmdId, data: { cwd: command.path } };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'cwd:addFavorite': {
+        const favoriteId = `fav-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        try {
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: {
+              id: favoriteId,
+              path: command.path,
+              label: command.label ?? command.path,
+            },
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'skill:invoke': {
+        if (!this.hub) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'hub not available',
+          };
+        }
+
+        const result = this.hub.invokeSkill(command.name, command.args, sessionId);
+        if (result === null) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `skill not found: ${command.name}`,
+          };
+        }
+        if (result === undefined) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        return { type: 'reply', cmdId: command.cmdId, data: result };
+      }
+
+      case 'chat': {
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        // Build user message
+        const now = Date.now();
+        const messageId = `msg-${now}-${Math.random().toString(36).slice(2, 6)}`;
+        const userMessage = {
+          id: messageId,
+          role: 'user' as const,
+          content: [{ type: 'text' as const, text: command.text }],
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        // Append to session messages
+        session.messages.push(userMessage);
+        session.updatedAt = now;
+
+        // Publish status change
+        await this.eventBus.publish(sessionId, {
+          type: 'hub:session:statusChanged',
+          sessionId,
+          status: 'active',
+        } as any);
+
+        // Fire sendChat in background (non-blocking)
+        if (this.hub) {
+          const config = this.sessionManager.getConfig(sessionId);
+          this.hub.sendChat(sessionId, command.text, config ?? undefined).catch(() => {
+            // Errors are published via EventBus by ClaudeClient
+          });
+        }
+
+        return { type: 'reply', cmdId: command.cmdId, data: { messageId } };
+      }
+
+      case 'chat:clear': {
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        session.messages = [];
+        session.updatedAt = Date.now();
+
+        await this.eventBus.publish(sessionId, {
+          type: 'hub:chat:cleared',
+          sessionId,
+        } as any);
+
+        return { type: 'reply', cmdId: command.cmdId, data: { ok: true } };
+      }
+
+      case 'chat:compact': {
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        if (!this.hub) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: 'hub not available',
+          };
+        }
+
+        try {
+          const config = this.sessionManager.getConfig(sessionId) ?? {
+            model: 'claude-sonnet-4-20250514',
+            effortLevel: 'medium' as const,
+            permissionMode: 'ask' as const,
+          };
+          const compacted = await this.hub.getClaudeClient().compact(sessionId, session.messages, config);
+          session.messages = compacted;
+          session.updatedAt = Date.now();
+
+          await this.eventBus.publish(sessionId, {
+            type: 'hub:chat:compacted',
+            sessionId,
+          } as any);
+
+          return {
+            type: 'reply',
+            cmdId: command.cmdId,
+            data: { ok: true, messageCount: compacted.length },
+          };
+        } catch (err) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: (err as Error).message,
+          };
+        }
+      }
+
+      case 'chat:branch': {
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        const branchIdx = session.messages.findIndex((m) => m.id === command.messageId);
+        if (branchIdx === -1) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `message not found: ${command.messageId}`,
+          };
+        }
+
+        const branchedMessages = session.messages.slice(0, branchIdx + 1);
+        const newMeta = this.sessionManager.createSession({
+          cwd: session.cwd,
+          name: command.name ?? `branch-${session.name}`,
+        });
+
+        // Copy messages into the new session
+        const newSession = this.sessionManager.getSession(newMeta.id);
+        if (newSession) {
+          newSession.messages = branchedMessages.map((m) => ({ ...m }));
+        }
+
+        await this.eventBus.publish(sessionId, {
+          type: 'hub:chat:branched',
+          sessionId,
+          newSessionId: newMeta.id,
+        } as any);
+
+        return { type: 'reply', cmdId: command.cmdId, data: newMeta };
+      }
+
+      case 'chat:abort': {
+        if (this.hub) {
+          await this.hub.abortChat(sessionId);
+        }
+
+        this.eventBus.publish(sessionId, {
+          type: 'hub:session:statusChanged',
+          sessionId,
+          status: 'interrupted',
+        } as any);
+
+        return { type: 'reply', cmdId: command.cmdId, data: { ok: true } };
+      }
+
+      case 'control:respond': {
+        const session = this.sessionManager.getSession(sessionId);
+        if (!session) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `session not found: ${sessionId}`,
+          };
+        }
+
+        // Find the pending permission request
+        const permIdx = session.pendingPermissions.findIndex(
+          (p) => p.id === command.requestId,
+        );
+        if (permIdx === -1) {
+          return {
+            type: 'error',
+            cmdId: command.cmdId,
+            error: `permission request not found: ${command.requestId}`,
+          };
+        }
+
+        // Remove from pending
+        const [perm] = session.pendingPermissions.splice(permIdx, 1);
+
+        // Publish the control response event
+        await this.eventBus.publish(sessionId, {
+          type: 'sdk:control:response',
+          sessionId,
+          requestId: command.requestId,
+          toolName: perm!.toolName,
+          payload: command.response,
+        } as any);
+
+        return { type: 'reply', cmdId: command.cmdId, data: { ok: true } };
+      }
 
       case 'config:set': {
         try {

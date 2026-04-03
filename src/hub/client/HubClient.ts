@@ -86,7 +86,7 @@ export class HubClient {
       throw new Error('expected session:create reply');
     }
 
-    return response.data as Session;
+    return response.data as unknown as Session;
   }
 
   async listSessions(): Promise<Session[]> {
@@ -98,7 +98,7 @@ export class HubClient {
       throw new Error('expected session:list reply');
     }
 
-    return response.data as Session[];
+    return response.data as unknown as Session[];
   }
 
   async attachSession(sessionId: string): Promise<Snapshot> {
@@ -178,6 +178,10 @@ export class HubClient {
       }
 
       if (response.type !== 'reply' && response.type !== 'error') {
+        continue;
+      }
+
+      if (!response.cmdId) {
         continue;
       }
 

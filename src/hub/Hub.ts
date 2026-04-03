@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
+import { ClaudeClient, type ClaudeClientDeps } from '@/hub/ClaudeClient';
 import { DEFAULT_HUB_CONFIG } from '@/hub/config';
 import { EventBus } from '@/hub/EventBus';
 import { SessionManager } from '@/hub/SessionManager';
+import { ToolEngine, type ToolEngineDeps } from '@/hub/ToolEngine';
 import type { SqliteStore } from '@/hub/store/SqliteStore';
 import type {
   ConfigOptions,
@@ -25,6 +27,10 @@ import { SessionRegistry } from './SessionRegistry.js';
 type HubOptions = {
   socketPath: string;
   sessionManager?: SessionManager;
+  claudeClient?: ClaudeClient;
+  eventBus?: EventBus;
+  toolEngine?: ToolEngine;
+  apiKey?: string;
 };
 
 type WebConfig = {
@@ -75,6 +81,9 @@ export class Hub {
   private readonly registry = new SessionRegistry();
   private readonly mcpServers = new Map<string, McpServerInfo>();
   private readonly sessionManager: SessionManager;
+  private readonly eventBus: EventBus;
+  private readonly toolEngine: ToolEngine;
+  private readonly claudeClient: ClaudeClient;
   private readonly socketServer: LocalSocketServer;
   private readonly skills: SkillInfo[] = createDefaultSkills();
   private readonly sockets = new Set<Socket>();
@@ -87,11 +96,32 @@ export class Hub {
   private running = false;
 
   constructor(private readonly options: HubOptions) {
+    this.eventBus = options.eventBus ?? new EventBus();
+
+    const noopStore = createNoopStore();
     this.sessionManager =
       options.sessionManager ??
-      new SessionManager(createNoopStore(), new EventBus(), {
+      new SessionManager(noopStore, this.eventBus, {
         maxSessions: DEFAULT_HUB_CONFIG.maxSessions,
       });
+
+    const toolEngineDeps: ToolEngineDeps = {
+      store: {
+        createToolExecution() {},
+        updateToolExecution() {},
+      },
+      eventBus: this.eventBus,
+    };
+    this.toolEngine = options.toolEngine ?? new ToolEngine(toolEngineDeps, {
+      maxConcurrent: DEFAULT_HUB_CONFIG.maxConcurrentTools,
+    });
+
+    this.claudeClient = options.claudeClient ?? new ClaudeClient({
+      eventBus: this.eventBus,
+      toolEngine: this.toolEngine,
+      apiKey: options.apiKey ?? process.env.ANTHROPIC_API_KEY,
+    });
+
     this.socketServer = new LocalSocketServer(options.socketPath, (socket) =>
       this.handleConnection(socket),
     );
@@ -141,6 +171,75 @@ export class Hub {
 
   appendMessage(sessionId: string, message: Message): Session | undefined {
     return this.registry.appendMessage(sessionId, message);
+  }
+
+  /** Send a chat message to Claude and stream the response via EventBus. */
+  async sendChat(
+    sessionId: string,
+    text: string,
+    config?: Partial<SessionConfig>,
+  ): Promise<{ ok: true } | { ok: false; error: string }> {
+    const session = this.registry.getSession(sessionId);
+    if (!session) {
+      return { ok: false, error: `session ${sessionId} not found` };
+    }
+
+    // Build and append user message
+    const now = Date.now();
+    const userMessage: Message = {
+      id: `msg-${now}-${Math.random().toString(36).slice(2, 6)}`,
+      role: 'user',
+      content: [{ type: 'text', text }],
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.registry.appendMessage(sessionId, userMessage);
+
+    // Resolve config
+    this.ensureSessionManagerSession(session);
+    const sessionConfig = this.sessionManager.getConfig(sessionId);
+    const mergedConfig: SessionConfig = {
+      ...(sessionConfig ?? {
+        model: 'claude-sonnet-4-20250514',
+        effortLevel: 'medium' as const,
+        permissionMode: 'ask' as const,
+      }),
+      ...config,
+    };
+
+    // Get updated session with the user message
+    const updatedSession = this.registry.getSession(sessionId)!;
+
+    try {
+      await this.claudeClient.sendMessage({
+        sessionId,
+        messages: updatedSession.messages,
+        config: mergedConfig,
+      });
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+  }
+
+  /** Abort an in-flight chat for a session. */
+  async abortChat(sessionId: string): Promise<void> {
+    await this.claudeClient.abort(sessionId);
+  }
+
+  /** Get the ClaudeClient instance (for WS handler integration). */
+  getClaudeClient(): ClaudeClient {
+    return this.claudeClient;
+  }
+
+  /** Get the ToolEngine instance. */
+  getToolEngine(): ToolEngine {
+    return this.toolEngine;
+  }
+
+  /** Get the EventBus instance. */
+  getEventBus(): EventBus {
+    return this.eventBus;
   }
 
   getSessionConfig(sessionId: string): SessionConfig | undefined {
@@ -308,6 +407,8 @@ export class Hub {
   }
 
   async stop(): Promise<void> {
+    this.claudeClient.shutdown();
+    await this.toolEngine.shutdown();
     await this.socketServer.stop();
     this.running = false;
   }
@@ -349,7 +450,6 @@ export class Hub {
       this.writeResponse(socket, {
         type: 'error',
         cmdId: 'unknown',
-        code: 'bad_request',
         error: 'invalid json payload',
       });
       return;
@@ -386,7 +486,6 @@ export class Hub {
           this.writeResponse(socket, {
             type: 'error',
             cmdId: command.cmdId,
-            code: 'not_found',
             error: `session ${command.sessionId} not found`,
           });
           return;
@@ -411,7 +510,7 @@ export class Hub {
     }
   }
 
-  private writeResponse(socket: Socket, response: HubResponse): void {
+  private writeResponse(socket: Socket, response: HubResponse | Record<string, unknown>): void {
     socket.write(`${JSON.stringify(response)}\n`);
   }
 }
